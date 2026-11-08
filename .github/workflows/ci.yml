@@ -20,7 +20,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          bash -n bootstrap/install.sh scripts/package-manager.sh tests/package-manager-test.sh tests/bootstrap-test.sh tests/native-smoke.sh tests/native-package-integration.sh
+          bash -n bootstrap/install.sh scripts/package-manager.sh tests/package-manager-test.sh tests/bootstrap-test.sh tests/native-smoke.sh tests/native-package-integration.sh scripts/config.sh tests/config-test.sh
           test -s src/bxcachy.bxs
           for command in version doctor prerequisites desktop-list tui-list web-list optional-list optional-plan profile-list profile-plan plan apps-doctor dev-plan help; do
             grep -Fq "\"$command\"" src/bxcachy.bxs
@@ -33,6 +33,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: bash tests/package-manager-test.sh
       - run: bash tests/bootstrap-test.sh
+      - run: bash tests/config-test.sh
   arch:
     name: 3 - Arch Linux prerequisites
     needs: package-tests
