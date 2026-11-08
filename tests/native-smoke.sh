@@ -10,7 +10,7 @@ test -x "$binary"
 "$binary" web-list | grep -F 'github.com'
 "$binary" optional-list | grep -F 'optional'
 "$binary" dev-plan | grep -F 'jdk21-openjdk'
-"$binary" install | grep -F 'not yet implemented'
+if "$binary" install >/dev/null 2>&1; then echo 'FAIL: unconfirmed install accepted' >&2; exit 1; fi
 
 "$binary" optional-plan obs chromium | grep -F 'obs-studio'
 "$binary" optional-plan obs chromium | grep -F 'chromium'
@@ -24,8 +24,8 @@ test -x "$binary"
 "$binary" profile-plan invalid | grep -F 'Unknown profile'
 "$binary" profile-plan | grep -F 'Usage:'
 
-"$binary" profile-install jvm --yes | grep -F 'no changes made'
-"$binary" optional-install obs --yes | grep -F 'no changes made'
+if "$binary" profile-install jvm >/dev/null 2>&1; then echo 'FAIL: unconfirmed profile install accepted' >&2; exit 1; fi
+if "$binary" optional-install invalid --yes >/dev/null 2>&1; then echo 'FAIL: invalid optional package accepted' >&2; exit 1; fi
 "$binary" help | grep -F 'profile-install'
 
 "$binary" install-plan | grep -F 'pacseek'
@@ -65,3 +65,5 @@ fi
 [[ "$source_code" -eq 2 ]] || { echo "FAIL: expected exit 2, got $source_code" >&2; exit 1; }
 grep -F 'Usage:' <<< "$source_output"
 "$binary" help | grep -F 'package-source'
+
+if "$binary" profile-install invalid --yes >/dev/null 2>&1; then echo 'FAIL: invalid profile accepted' >&2; exit 1; fi
