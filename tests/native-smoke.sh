@@ -17,3 +17,9 @@ test -x "$binary"
 "$binary" optional-plan invalid | grep -F 'Unknown optional application'
 "$binary" optional-plan | grep -F 'Usage:'
 "$binary" help | grep -F 'optional-plan'
+
+"$binary" profile-list | grep -F 'containers: podman'
+"$binary" profile-plan jvm | grep -F 'jdk21-openjdk'
+"$binary" profile-plan terminal | grep -F 'lazygit'
+"$binary" profile-plan invalid | grep -F 'Unknown profile'
+"$binary" profile-plan | grep -F 'Usage:'
