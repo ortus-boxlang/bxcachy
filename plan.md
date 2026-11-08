@@ -284,3 +284,88 @@ Every bug fix should add a regression test; every mutating command should test s
 Update this file in the same commit as any material scope/architecture/acceptance change. Update checkboxes only when supported by code and tests. Attach a passing run URL, commit SHA, tested environment and any caveats to milestone sign-off. Keep `docs/PORT-STATUS.md` synchronized and avoid optimistic “complete” claims. When new legacy files are recovered, expand the parity matrix rather than silently dropping features.
 
 **Current bottom line:** native CLI, safe package planning/install, configuration backup/restore, ordered CI, native compilation, and MatchBox bootstrap are implemented; the user reports CI passing. **Full BVM/BoxLang pinned bootstrap, real CachyOS validation, native configuration integration and complete legacy feature parity are still pending.**
+
+
+## 17. Audited historical v0.10.0 source archive — recovered 2026-11-08
+
+**New evidence:** The actual original file `BxCachy-v0.10.0-integration-hardening.zip` was recovered from prior conversation artifacts and inspected, rather than inferred from README statements. The ZIP has **104 files**, including **44 executable files under `BxCachy/bin/`** and **20 Python test files** (including two legacy tests). Its SHA-256 is `94e1722eb7d5e915a357a98f02fbbf3f7d2ae5dce01cdbdd1b20b1072a4e5819`. This is the precise historical reference to preserve. The current native CLI is **not** equivalent to those 44 entrypoints.
+
+### Complete original executable inventory and migration tracking
+
+Status **P** = planned/not demonstrated as equivalent in the new native CLI; **S** = partial native scaffold exists, but legacy behavior is not yet feature-parity audited. A native command with a similar name is not proof of behavioral equivalence.
+
+| Original executable | Native parity | Migration workstream |
+| --- | --- | --- |
+| `bxcachy` | S | M0/M6 root dispatcher |
+| `bxcachy-apps` | S | M1 app catalog and installation |
+| `bxcachy-app-manager` | S | M1 install/update/remove/selection |
+| `bxcachy-catalog` | S | M1 catalog browsing/import |
+| `bxcachy-profile` | S | M1 profile resolution |
+| `bxcachy-base` | P | M1 base workstation setup |
+| `bxcachy-extras` | P | M1 optional tools |
+| `bxcachy-dev` | S | M1 Java/BoxLang/developer tooling |
+| `bxcachy-podman` | P | M3 rootless containers |
+| `bxcachy-ai` | P | M3 local inference |
+| `bxcachy-vector` | P | M3 vector stores |
+| `bxcachy-db` | P | M3 databases |
+| `bxcachy-db-center` | P | M3 database service management |
+| `bxcachy-vm` | P | M3 virtualization |
+| `bxcachy-network` | P | M3 network tooling |
+| `bxcachy-cloud` | P | M4 cloud setup |
+| `bxcachy-cloud-center` | P | M4 cloud center |
+| `bxcachy-cloud-services` | P | M4 rclone/systemd |
+| `bxcachy-files` | P | M4 file integration |
+| `bxcachy-quicklook` | P | M5 Dolphin preview |
+| `bxcachy-dictation` | P | M5 speech input |
+| `bxcachy-integrations` | P | M5 integration orchestration |
+| `bxcachy-desktop` | P | M2 KDE/optional Hyprland desktop |
+| `bxcachy-desktop-keys` | P | M2 desktop key bindings |
+| `bxcachy-mac-keys` | P | M2 macOS-like keyboard mapping |
+| `bxcachy-omarchy-base` | P | M2 Omarchy-inspired defaults |
+| `bxcachy-layout` | P | M2 tiling/floating |
+| `bxcachy-themes` | P | M2 theme management |
+| `bxcachy-icons` | P | M2 icon assets |
+| `bxcachy-runner` | P | M2 launcher provider selection |
+| `bxcachy-menu` | P | M2 task menu |
+| `omarchy-menu` | P | M2 terminal menu |
+| `omarchy-gui` | P | M2 graphical menu |
+| `shortcuts` | P | M2 shortcuts |
+| `theme-manager` | P | M2 theme utility |
+| `bxcachy-web` | P | M1 web app links |
+| `bxcachy-system` | P | M2/M3 system health |
+| `bxcachy-config` | S | M0 native configuration integration |
+| `bxcachy-first-run` | P | M0 onboarding |
+| `install` | S | M0 installer parity |
+| `provision` | S | M0 provisioning |
+| `desktop-install` | P | M2 graphical dependencies |
+| `menu-install` | P | M2 menu installation |
+| `setup-tui` | P | M2 terminal setup |
+
+### Original automated tests (20 files)
+
+`test_dev.py`, `test_extras.py`, `legacy/test_provision.py`, `legacy/test_v05.py`, `test_integrations_099.py`, `test_app_manager.py`, `test_catalog_v087.py`, `test_bxcachy.py`, `test_phases.py`, `test_v085.py`, `test_integrations_100.py`, `test_v08.py`, `test_layout.py`, `test_ai_extended.py`, `test_icons.py`, `test_ai.py`, `test_base.py`, `test_vector.py`, `test_omarchy_base.py`, `test_runner_backends.py`.
+
+Each test suite should be mapped to equivalent native unit/integration assertions; retain the historical Python suite only as archival regression evidence, not as a production dependency.
+
+### Previously omitted implementation and design details recovered
+
+1. **Launcher portability:** `runner show|set|doctor`, provider options `system`, `noctalia`, `rofi`, `walker`, `krunner`, `custom`. `system` must not override the existing launcher; custom commands use JSON argv arrays, not shell expansion. Preserve Hyprland `Super+Space`.
+2. **Shortcut isolation:** `~/.config/bxcachy/shortcuts.json` and generated `~/.config/hypr/bxcachy-keys.conf`. Default BxCachy shortcut `Super+Alt+Space` is **generated but not activated**. Do not modify KDE shortcuts. Hyprland Lua-managed configurations need explicit handling.
+3. **Window management:** original `layout window toggle|float|tile` and `layout workspace toggle|float|tile`; original bindings `Super+V` and `Super+Alt+V`. Requires active Hyprland/hyprctl; **not** a KDE window-button replacement.
+4. **Menu:** Rofi-wayland graphical menu, terminal menu and user overrides in `~/.config/bxcachy/menu.json`; menu actions are argv arrays. Phosphor icon identifiers and cached official SVGs were used.
+5. **Podman:** original package manifest included conmon, crun, containers-common, passt, slirp4netns, fuse-overlayfs, netavark, aardvark-dns, Buildah, Skopeo, podman-compose and shadow; optional rootless socket and compose doctor. Never overwrite Btrfs storage config or replace Docker automatically.
+6. **Developer setup:** original installer offered SDKMAN!, Java 21 selection, Maven, Gradle, BoxLang Quick Installer, BVM and MVM. External scripts were downloaded to temporary files and required an additional typed `EXECUTE` confirmation. Distinguish single-version BoxLang quick installer from BVM runtime management.
+7. **Dolphin Quick Look:** v0.10.0 explicitly supports a **Dolphin context-menu action**, not an unsupported global Spacebar interception. Qt/PySide6 dependencies and service-menu installation were part of the original workflow.
+8. **Dictation:** original Hyprland shortcut template is generated automatically but **activation remains opt-in** because `Alt+Space` may conflict. Superwhisper/Voxtype command compatibility must be checked on the target workstation.
+9. **Cloud services:** idempotent per-user systemd units; never overwrite user-modified units. `cloud-services install REMOTE --yes` requires an already authenticated rclone remote. An rclone mount **is not offline synchronization**.
+10. **App selection UI:** historical interactive catalog picker had **397 entries** and **29 original defaults** at one review point; later v0.9.x picker versions revised catalog/selection. The authoritative final default set must be extracted from the archived `catalog/apps.json` and `catalog/app-profile.json`, not reconstructed from screenshots or older HTML.
+11. **Historical assets:** archive contains `catalog/apps.json`, `catalog/app-profile.json`, `catalog/installers.json`, `catalog/app-picker.html`, `config/bxcachy.json`, `config/shortcuts.json`, `config/omarchy-keys.conf`, `config/omarchy-keys.lua`, `menu/default.json` and `menu/custom.example.json`, plus version-specific READMEs and icons.
+12. **No premature GUI:** the Quasar/Vue + Tauri unified Control Center was already explicitly deferred in v0.10.0. A Rofi menu is an existing legacy integration, not the deferred Control Center.
+
+### Archive preservation and validation procedure
+
+Canonical historical filename: `BxCachy-v0.10.0-integration-hardening.zip`. Expected SHA-256: `94e1722eb7d5e915a357a98f02fbbf3f7d2ae5dce01cdbdd1b20b1072a4e5819`. Expected: 104 files, 44 bin entrypoints, 20 tests. Preserve the original ZIP **without modifying its bytes**, ideally under `artifacts/legacy/` or as a versioned GitHub release asset. Add an archival README containing this checksum and the rule that legacy Python must not become a native runtime dependency. **Archival repository upload is not yet verified; do not claim it is committed until the exact ZIP is present in GitHub.**
+
+### Audit limitations
+
+This audit combines the actual recovered v0.10.0 archive inventory and its documented behavior with accessible BxCachy discussion history and the current repository. It is more complete than the initial plan, but it is **not yet a function-by-function diff of all 104 archived files**. Each row marked S/P needs a command-level behavioral test and a final owner/acceptance record. The historical ZIP must be preserved in the repository before deleting or replacing any external copy.
