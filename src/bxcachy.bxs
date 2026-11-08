@@ -49,6 +49,27 @@ switch ( cmd ) {
    }
   }
   break;
+ case "profile-list":
+  println( "Available workstation profiles:" );
+  println( "core: git curl jq unzip" );
+  println( "jvm: jdk21-openjdk maven gradle" );
+  println( "containers: podman buildah skopeo" );
+  println( "terminal: btop neovim lazygit yazi" );
+  break;
+ case "profile-plan":
+  if ( p.len() != 2 ) {
+   println( "Usage: bxcachy profile-plan core|jvm|containers|terminal" );
+   break;
+  }
+  profile = p[2];
+  switch ( profile ) {
+   case "core": println( "git curl jq unzip" ); break;
+   case "jvm": println( "jdk21-openjdk maven gradle" ); break;
+   case "containers": println( "podman buildah skopeo" ); break;
+   case "terminal": println( "btop neovim lazygit yazi" ); break;
+   default: println( "Unknown profile: " & profile );
+  }
+  break;
  case "dev-plan":
   println( "Java: jdk21-openjdk via pacman" );
   println( "Maven: maven via pacman" );
@@ -62,7 +83,7 @@ switch ( cmd ) {
   println( "Use the documented bootstrap or the legacy tool until the native installer is tested." );
   break;
  case "help":
-  println( "BxCachy commands: version, doctor, prerequisites, desktop-list, tui-list, web-list, optional-list, optional-plan, plan, apps-doctor, dev-plan, help" );
+  println( "BxCachy commands: version, doctor, prerequisites, desktop-list, tui-list, web-list, optional-list, optional-plan, profile-list, profile-plan, plan, apps-doctor, dev-plan, help" );
   break;
  default:
   println( "Unsupported command: " & cmd );
