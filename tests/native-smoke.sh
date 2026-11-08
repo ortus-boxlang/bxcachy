@@ -11,3 +11,9 @@ test -x "$binary"
 "$binary" optional-list | grep -F 'optional'
 "$binary" dev-plan | grep -F 'jdk21-openjdk'
 "$binary" install | grep -F 'not yet supported'
+
+"$binary" optional-plan obs chromium | grep -F 'obs-studio'
+"$binary" optional-plan obs chromium | grep -F 'chromium'
+"$binary" optional-plan invalid | grep -F 'Unknown optional application'
+"$binary" optional-plan | grep -F 'Usage:'
+"$binary" help | grep -F 'optional-plan'
