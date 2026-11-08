@@ -23,6 +23,7 @@ available=(); unavailable=()
 for pkg in "${missing[@]}"; do if pacman -Si "$pkg" >/dev/null 2>&1; then available+=("$pkg"); else unavailable+=("$pkg"); fi; done
 if [[ ${#unavailable[@]} -gt 0 ]]; then
  printf 'Unavailable in pacman repositories: %s\n' "${unavailable[*]}" >&2
- [[ $action == optional-install ]] && exit 3
+ echo 'No packages installed: resolve missing repository packages first.' >&2
+ exit 3
 fi
 if [[ ${#available[@]} -gt 0 ]]; then sudo pacman -S --needed "${available[@]}"; fi
