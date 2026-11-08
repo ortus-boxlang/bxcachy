@@ -27,3 +27,10 @@ test -x "$binary"
 "$binary" profile-install jvm --yes | grep -F 'no changes made'
 "$binary" optional-install obs --yes | grep -F 'no changes made'
 "$binary" help | grep -F 'profile-install'
+
+"$binary" install-plan | grep -F 'pacseek'
+"$binary" install-plan | grep -F 'No packages installed'
+"$binary" profile-install-plan jvm | grep -F 'jdk21-openjdk maven gradle'
+"$binary" profile-install-plan invalid | grep -F 'Unknown profile'
+"$binary" profile-install-plan | grep -F 'Usage:'
+"$binary" help | grep -F 'profile-install-plan'
