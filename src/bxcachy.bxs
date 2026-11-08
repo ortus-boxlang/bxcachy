@@ -1,14 +1,43 @@
-// BxCachy native CLI entry point. Compile with MatchBox.
-// Keep this entrypoint free of JVM-only APIs.
+// Native BxCachy app catalog CLI (BoxLang/MatchBox).
+// Safe-by-default: only explicitly requested installs modify the system.
 args = CLIGetArgs();
-command = args.positionals.len() ? args.positionals[1] : "help";
-switch ( command ) {
-  case "version":
-    println( "BxCachy 0.11.0-dev" );
-    break;
-  case "doctor":
-    println( "BxCachy native CLI is operational" );
-    break;
-  default:
-    println( "Usage: bxcachy [version|doctor]" );
+items = args.positionals;
+action = items.len() >= 1 ? items[1] : "help";
+basePackages = [ "localsend", "mpv", "pacseek" ];
+desktop = { localsend: "localsend", mpv: "mpv", obs: "obs-studio", kdenlive: "kdenlive", pinta: "pinta", chromium: "chromium", obsidian: "obsidian", libreoffice: "libreoffice-fresh" };
+tui = { lazygit: "lazygit", btop: "btop", neovim: "neovim", pacseek: "pacseek", yazi: "yazi" };
+optional = { obs: "obs-studio", kdenlive: "kdenlive", pinta: "pinta", chromium: "chromium", obsidian: "obsidian", libreoffice: "libreoffice-fresh" };
+web = { github: "https://github.com", "boxlang-docs": "https://boxlang.ortusbooks.com", youtube: "https://youtube.com" };
+switch ( action ) {
+ case "version":
+  println( "BxCachy 0.11.0-dev" );
+  break;
+ case "doctor":
+ case "prerequisites":
+  println( "BxCachy requires Java 21, BVM, MVM, BoxLang and MatchBox for development." );
+  break;
+ case "desktop-list":
+  for ( key in desktop ) println( key & ": " & desktop[key] );
+  break;
+ case "tui-list":
+  for ( key in tui ) println( key & ": " & tui[key] );
+  break;
+ case "web-list":
+  for ( key in web ) println( key & ": " & web[key] );
+  break;
+ case "optional-list":
+  for ( key in optional ) println( key & ": " & optional[key] & " (optional)" );
+  break;
+ case "plan":
+ case "apps-doctor":
+  println( "Base packages (pacman first):" );
+  for ( pkg in basePackages ) println( pkg );
+  break;
+ case "help":
+  println( "BxCachy native CLI" );
+  println( "version | doctor | prerequisites | desktop-list | tui-list | web-list | optional-list | plan | apps-doctor" );
+  break;
+ default:
+  println( "Unsupported native command: " & action );
+  println( "Use help for available commands." );
 }
