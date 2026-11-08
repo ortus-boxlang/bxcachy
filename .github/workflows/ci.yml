@@ -49,6 +49,7 @@ jobs:
           rustup toolchain install stable --profile minimal
           rustup default stable
           cargo --version
+          rustc --version
       - uses: actions/checkout@v4
       - run: bash -n bootstrap/install.sh
   native:
@@ -80,6 +81,7 @@ jobs:
           set -euo pipefail
           candidate="$(find . -maxdepth 5 -type f -executable \( -name bxcachy -o -name 'bxcachy.bxs' \) -print -quit)"
           test -n "$candidate" || { echo "::error::No compiled executable found"; exit 1; }
+          candidate="$(realpath "$candidate")"
           bash tests/native-smoke.sh "$candidate"
           mkdir -p dist
           cp "$candidate" dist/bxcachy
