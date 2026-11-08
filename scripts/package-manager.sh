@@ -19,11 +19,24 @@ for pkg in "${packages[@]}"; do
 done
 [[ $action == plan || $action == doctor ]] && exit 0
 [[ $yes_flag -eq 1 ]] || { echo 'Installation requires --yes' >&2; exit 2; }
-available=(); unavailable=()
-for pkg in "${missing[@]}"; do if pacman -Si "$pkg" >/dev/null 2>&1; then available+=("$pkg"); else unavailable+=("$pkg"); fi; done
+pacman_packages=(); aur_packages=(); unavailable=()
+for pkg in "${missing[@]}"; do
+  if pacman -Si "$pkg" >/dev/null 2>&1; then
+    pacman_packages+=("$pkg")
+  elif command -v yay >/dev/null 2>&1 && yay -Si "$pkg" >/dev/null 2>&1; then
+    aur_packages+=("$pkg")
+  else
+    unavailable+=("$pkg")
+  fi
+done
 if [[ ${#unavailable[@]} -gt 0 ]]; then
- printf 'Unavailable in pacman repositories: %s\n' "${unavailable[*]}" >&2
- echo 'No packages installed: resolve missing repository packages first.' >&2
- exit 3
+  printf 'Unavailable in pacman and yay repositories: %s\\n' "${unavailable[*]}" >&2
+  echo 'No packages installed: resolve missing repository packages first.' >&2
+  exit 3
 fi
-if [[ ${#available[@]} -gt 0 ]]; then sudo pacman -S --needed "${available[@]}"; fi
+if [[ ${#pacman_packages[@]} -gt 0 ]]; then
+  sudo pacman -S --needed "${pacman_packages[@]}"
+fi
+if [[ ${#aur_packages[@]} -gt 0 ]]; then
+  yay -S --needed "${aur_packages[@]}"
+fi
