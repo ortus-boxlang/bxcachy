@@ -1,0 +1,14 @@
+// BxCachy native CLI entry point. Compile with MatchBox.
+// Keep this entrypoint free of JVM-only APIs.
+args = CLIGetArgs();
+command = args.positionals.len() ? args.positionals[1] : "help";
+switch ( command ) {
+  case "version":
+    println( "BxCachy 0.11.0-dev" );
+    break;
+  case "doctor":
+    println( "BxCachy native CLI is operational" );
+    break;
+  default:
+    println( "Usage: bxcachy [version|doctor]" );
+}
