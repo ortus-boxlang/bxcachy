@@ -15,8 +15,8 @@ export PATH="$tmp:$PATH" PACMAN_TEST_LOG="$tmp/install.log"
 bash "$script" plan | grep 'mpv: installed'
 bash "$script" plan | grep 'pacseek: missing'
 if bash "$script" install >/dev/null 2>&1; then echo 'FAIL: missing confirmation' >&2; exit 1; fi
-bash "$script" install --yes >/dev/null
-grep -- '-S --needed localsend' "$PACMAN_TEST_LOG"
+if bash "$script" install --yes >/dev/null 2>&1; then echo 'FAIL: unavailable base package accepted' >&2; exit 1; fi
+if [[ -s "$PACMAN_TEST_LOG" ]]; then echo 'FAIL: partial install performed' >&2; exit 1; fi
 if grep -q pacseek "$PACMAN_TEST_LOG"; then echo 'FAIL: unavailable package installed' >&2; exit 1; fi
 if bash "$script" optional-install invalid --yes >/dev/null 2>&1; then echo 'FAIL: invalid optional name accepted' >&2; exit 1; fi
 bash "$script" optional-install obs --yes >/dev/null
