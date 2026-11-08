@@ -10,7 +10,7 @@ test -x "$binary"
 "$binary" web-list | grep -F 'github.com'
 "$binary" optional-list | grep -F 'optional'
 "$binary" dev-plan | grep -F 'jdk21-openjdk'
-"$binary" install | grep -F 'not yet supported'
+"$binary" install | grep -F 'not yet implemented'
 
 "$binary" optional-plan obs chromium | grep -F 'obs-studio'
 "$binary" optional-plan obs chromium | grep -F 'chromium'
@@ -23,3 +23,7 @@ test -x "$binary"
 "$binary" profile-plan terminal | grep -F 'lazygit'
 "$binary" profile-plan invalid | grep -F 'Unknown profile'
 "$binary" profile-plan | grep -F 'Usage:'
+
+"$binary" profile-install jvm --yes | grep -F 'no changes made'
+"$binary" optional-install obs --yes | grep -F 'no changes made'
+"$binary" help | grep -F 'profile-install'
