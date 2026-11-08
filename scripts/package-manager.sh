@@ -33,13 +33,21 @@ for pkg in "${missing[@]}"; do
   fi
 done
 if [[ ${#unavailable[@]} -gt 0 ]]; then
-  printf 'Unavailable in pacman and yay repositories: %s\\n' "${unavailable[*]}" >&2
+  printf 'Unavailable in pacman and yay repositories: %s\n' "${unavailable[*]}" >&2
   echo 'No packages installed: resolve missing repository packages first.' >&2
   exit 3
+fi
+if [[ ${#aur_packages[@]} -gt 0 && "$(id -u)" -eq 0 ]]; then
+  echo "AUR installs must run as an unprivileged user; no packages installed" >&2
+  exit 4
 fi
 if [[ ${#pacman_packages[@]} -gt 0 ]]; then
   sudo pacman -S --needed "${pacman_packages[@]}"
 fi
 if [[ ${#aur_packages[@]} -gt 0 ]]; then
+  if [[ "$(id -u)" -eq 0 ]]; then
+    echo "AUR installs must run as an unprivileged user" >&2
+    exit 4
+  fi
   yay -S --needed "${aur_packages[@]}"
 fi
