@@ -17,6 +17,18 @@ bash "$script" plan | grep 'pacseek: missing'
 if bash "$script" install >/dev/null 2>&1; then echo 'FAIL: missing confirmation' >&2; exit 1; fi
 if bash "$script" install --yes >/dev/null 2>&1; then echo 'FAIL: unavailable base package accepted' >&2; exit 1; fi
 if [[ -s "$PACMAN_TEST_LOG" ]]; then echo 'FAIL: partial install performed' >&2; exit 1; fi
+cat > "$tmp/yay" <<'MOCK'
+#!/usr/bin/env bash
+case "$1" in
+  -Si) [[ "$2" == pacseek ]] ;;
+  -S) printf 'yay %s\\n' "$*" >> "$PACMAN_TEST_LOG" ;;
+  *) exit 1 ;;
+esac
+MOCK
+chmod +x "$tmp/yay"
+bash "$script" install --yes >/dev/null
+grep -Fq -- '-S --needed localsend' "$PACMAN_TEST_LOG"
+grep -Fq -- 'yay -S --needed pacseek' "$PACMAN_TEST_LOG"
 if bash "$script" optional-install invalid --yes >/dev/null 2>&1; then echo 'FAIL: invalid optional name accepted' >&2; exit 1; fi
 bash "$script" optional-install obs --yes >/dev/null
 [[ -s "$PACMAN_TEST_LOG" ]] || { echo 'FAIL: expected optional installation' >&2; exit 1; }
