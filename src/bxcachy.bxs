@@ -175,9 +175,7 @@ switch ( cmd ) {
   } else {
    if ( p.len() < 2 || !structKeyExists( args.options, "yes" ) ) valid = false;
    for ( i = 2; i <= p.len(); i++ ) {
-    if ( p[i] == "--yes" ) {
-     confirmed = true;
-    } else if ( structKeyExists( optional, p[i] ) ) {
+    if ( structKeyExists( optional, p[i] ) ) {
      installPackages.append( optional[p[i]] );
     } else {
      valid = false;
