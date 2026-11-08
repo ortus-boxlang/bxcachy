@@ -8,24 +8,42 @@ on:
 permissions:
   contents: read
 jobs:
-  static:
+  source-and-bootstrap:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate bootstrap and smoke test
+      - name: Shell validation
+        shell: bash
         run: |
+          set -euo pipefail
           bash -n bootstrap/install.sh
           bash -n tests/native-smoke.sh
           test -s src/bxcachy.bxs
+      - name: CLI catalog contract (source-only, not runtime verification)
+        shell: bash
+        run: |
+          set -euo pipefail
+          for command in version doctor prerequisites desktop-list tui-list web-list optional-list plan apps-doctor dev-plan help; do
+            grep -Fq "\"$command\"" src/bxcachy.bxs
+          done
   arch-prerequisites:
     runs-on: ubuntu-latest
-    container: archlinux:latest
+    container:
+      image: archlinux:latest
     steps:
-      - name: Install Java 21 and build tools
+      - name: Install Arch prerequisites
+        shell: bash
         run: |
+          set -euo pipefail
           pacman -Syu --noconfirm --needed jdk21-openjdk git curl unzip rustup bash
           java -version
-          cargo --version || true
+          rustup --version
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          cargo --version
       - uses: actions/checkout@v4
-      - name: Validate bootstrap
+      - name: Validate bootstrap syntax
+        shell: bash
         run: bash -n bootstrap/install.sh
+# MatchBox compile and native smoke-test job intentionally not added:
+# no compiler installation or version pin has been verified in CI.
