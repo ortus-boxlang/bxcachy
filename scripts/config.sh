@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Idempotent, atomic user configuration deployment with backup and restore.
 set -euo pipefail
-usage() { echo "Usage: config.sh apply SOURCE DESTINATION --yes | restore DESTINATION BACKUP --yes" >&2; exit 2; }
+usage() { echo "Usage: config.sh apply SOURCE DESTINATION --yes | restore BACKUP DESTINATION --yes" >&2; exit 2; }
 [[ $# -eq 4 && "$4" == --yes ]] || usage
 action="$1"; source="$2"; destination="$3"
 [[ "$action" == apply || "$action" == restore ]] || usage
