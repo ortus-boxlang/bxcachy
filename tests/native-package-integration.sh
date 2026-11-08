@@ -43,4 +43,19 @@ if MOCK_UID=0 "$binary" install --yes >/dev/null 2>&1; then
   echo 'FAIL: root AUR installation accepted' >&2; exit 1
 fi
 [[ ! -s "$INSTALL_TEST_LOG" ]] || { echo 'FAIL: partial install under root' >&2; exit 1; }
+# Fail preflight before any mutation when a package is absent in both repositories.
+cat > "$tmp/yay" <<'MOCK'
+#!/usr/bin/env bash
+case "$1" in
+  -Si) exit 1 ;;
+  -S) echo 'FAIL: unexpected AUR install' >&2; exit 9 ;;
+  *) exit 9 ;;
+esac
+MOCK
+chmod +x "$tmp/yay"
+: > "$INSTALL_TEST_LOG"
+if MOCK_UID=1000 "$binary" install --yes >/dev/null 2>&1; then
+  echo 'FAIL: unavailable package accepted' >&2; exit 1
+fi
+[[ ! -s "$INSTALL_TEST_LOG" ]] || { echo 'FAIL: unavailable package caused partial install' >&2; exit 1; }
 echo 'native package integration tests passed'
