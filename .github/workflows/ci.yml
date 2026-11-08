@@ -71,9 +71,10 @@ jobs:
         run: |
           set -euo pipefail
           export PATH="$HOME/.mvm/bin:$PATH"
-          mvm install latest
-          mvm use latest
+          mvm install 0.12.0
+          mvm use 0.12.0
           matchbox --version
+          matchbox --version | grep -F '0.12.0'
           matchbox --target native src/bxcachy.bxs
       - name: Run smoke tests on compiled executable
         shell: bash
