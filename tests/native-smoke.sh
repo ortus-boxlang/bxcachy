@@ -66,4 +66,14 @@ fi
 grep -F 'Usage:' <<< "$source_output"
 "$binary" help | grep -F 'package-source'
 
-if "$binary" profile-install invalid --yes >/dev/null 2>&1; then echo 'FAIL: invalid profile accepted' >&2; exit 1; fi
+echo 'Checking invalid profile-install rejection'
+profile_output=""
+if profile_output="$("$binary" profile-install invalid --yes 2>&1)"; then
+  echo "FAIL: invalid profile accepted: $profile_output" >&2
+  exit 1
+else
+  profile_code=$?
+  echo "Invalid profile rejected with exit $profile_code: $profile_output"
+fi
+[[ "$profile_code" -eq 2 ]] || { echo "FAIL: invalid profile returned $profile_code instead of 2" >&2; exit 1; }
+echo 'native smoke tests passed'
