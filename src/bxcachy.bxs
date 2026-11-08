@@ -49,6 +49,23 @@ switch ( cmd ) {
    }
   }
   break;
+ case "package-status":
+  if ( p.len() != 2 || !reFind( "^[a-zA-Z0-9@._+-]+$", p[2] ) ) {
+   println( "Usage: bxcachy package-status PACKAGE" );
+   CLIExit( 2 );
+  }
+  result = systemExecute( name = "pacman", arguments = "-Qq " & p[2], timeout = 15, terminateOnTimeout = true );
+  if ( result.timeout ) {
+   println( p[2] & ": package check timed out" );
+   CLIExit( 3 );
+  }
+  if ( result.exitCode == 0 ) {
+   println( p[2] & ": installed" );
+  } else {
+   println( p[2] & ": missing or pacman unavailable" );
+   CLIExit( 1 );
+  }
+  break;
  case "install-plan":
   println( "Base installation plan (pacman first, yay fallback):" );
   for ( pkg in base ) println( pkg );
@@ -103,7 +120,7 @@ switch ( cmd ) {
   println( "Use scripts/package-manager.sh on CachyOS until native execution is verified." );
   break;
  case "help":
-  println( "BxCachy commands: version, doctor, prerequisites, desktop-list, tui-list, web-list, optional-list, optional-plan, profile-list, profile-plan, profile-install-plan, install-plan, profile-install, plan, apps-doctor, dev-plan, help" );
+  println( "BxCachy commands: version, doctor, prerequisites, desktop-list, tui-list, web-list, optional-list, optional-plan, profile-list, profile-plan, profile-install-plan, install-plan, package-status, profile-install, plan, apps-doctor, dev-plan, help" );
   break;
  default:
   println( "Unsupported command: " & cmd );
