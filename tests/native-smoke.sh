@@ -41,3 +41,11 @@ if "$binary" package-status 'bad;name' >/dev/null 2>&1; then
   exit 1
 fi
 "$binary" package-status 'bad;name' 2>&1 | grep -F 'Usage:'
+
+# Invalid names must fail before repository tools are invoked.
+if "$binary" package-source 'bad;name' >/dev/null 2>&1; then
+  echo 'FAIL: unsafe repository lookup accepted' >&2
+  exit 1
+fi
+"$binary" package-source 'bad;name' 2>&1 | grep -F 'Usage:'
+"$binary" help | grep -F 'package-source'
