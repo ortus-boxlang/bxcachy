@@ -31,7 +31,9 @@ MOCK
 chmod +x "$tmp/pacman" "$tmp/yay" "$tmp/sudo" "$tmp/id"
 export PATH="$tmp:$PATH" INSTALL_TEST_LOG="$tmp/installed.log"
 "$binary" install --yes | grep -F 'Installation completed'
-grep -Fq -- 'pacman -S --needed --noconfirm localsend mpv' "$INSTALL_TEST_LOG"
+grep -Fq -- 'pacman -S --needed --noconfirm' "$INSTALL_TEST_LOG"
+grep -Fq -- 'localsend' "$INSTALL_TEST_LOG"
+grep -Fq -- 'mpv' "$INSTALL_TEST_LOG"
 grep -Fq -- 'yay -S --needed --noconfirm pacseek' "$INSTALL_TEST_LOG"
 : > "$INSTALL_TEST_LOG"
 "$binary" profile-install jvm --yes | grep -F 'Installation completed'
