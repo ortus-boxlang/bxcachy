@@ -288,7 +288,7 @@ Update this file in the same commit as any material scope/architecture/acceptanc
 
 ## 17. Audited historical v0.10.0 source archive — recovered 2026-11-08
 
-**New evidence:** The actual original file `BxCachy-v0.10.0-integration-hardening.zip` was recovered from prior conversation artifacts and inspected, rather than inferred from README statements. The ZIP has **104 files**, including **44 executable files under `BxCachy/bin/`** and **20 Python test files** (including two legacy tests). Its SHA-256 is `94e1722eb7d5e915a357a98f02fbbf3f7d2ae5dce01cdbdd1b20b1072a4e5819`. This is the precise historical reference to preserve. The current native CLI is **not** equivalent to those 44 entrypoints.
+**New evidence:** The actual original file `BxCachy-v0.10.0-integration-hardening.zip` was recovered from prior conversation artifacts and inspected, rather than inferred from README statements. The ZIP has **115 archive entries (including directories)**, including **44 executable files under `BxCachy/bin/`** and **20 Python test files** (including two legacy tests). Its SHA-256 is `94e1722eb7d5e915a357a98f02fbbf3f7d2ae5dce01cdbdd1b20b1072a4e5819`. This is the precise historical reference to preserve. The current native CLI is **not** equivalent to those 44 entrypoints.
 
 ### Complete original executable inventory and migration tracking
 
@@ -364,7 +364,7 @@ Each test suite should be mapped to equivalent native unit/integration assertion
 
 ### Archive preservation and validation procedure
 
-Canonical historical filename: `BxCachy-v0.10.0-integration-hardening.zip`. Expected SHA-256: `94e1722eb7d5e915a357a98f02fbbf3f7d2ae5dce01cdbdd1b20b1072a4e5819`. Expected: 104 files, 44 bin entrypoints, 20 tests. Preserve the original ZIP **without modifying its bytes**, ideally under `artifacts/legacy/` or as a versioned GitHub release asset. Add an archival README containing this checksum and the rule that legacy Python must not become a native runtime dependency. **Archival repository upload is not yet verified; do not claim it is committed until the exact ZIP is present in GitHub.**
+Canonical historical filename: `BxCachy-v0.10.0-integration-hardening.zip`. Expected SHA-256: `94e1722eb7d5e915a357a98f02fbbf3f7d2ae5dce01cdbdd1b20b1072a4e5819`. Expected: 115 archive entries (including directories); verify 44 bin entrypoints and 20 tests against the manifest. Preserve the original ZIP **without modifying its bytes**, ideally under `artifacts/legacy/` or as a versioned GitHub release asset. Add an archival README containing this checksum and the rule that legacy Python must not become a native runtime dependency. **Archival repository upload is not yet verified; do not claim it is committed until the exact ZIP is present in GitHub.**
 
 ### Audit limitations
 
