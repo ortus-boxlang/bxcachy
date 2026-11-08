@@ -30,7 +30,9 @@ if [[ "$1" == -u ]]; then printf '%s\n' "${MOCK_UID:-1000}"; else /usr/bin/id "$
 MOCK
 chmod +x "$tmp/pacman" "$tmp/yay" "$tmp/sudo" "$tmp/id"
 export PATH="$tmp:$PATH" INSTALL_TEST_LOG="$tmp/installed.log"
-"$binary" install --yes | grep -F 'Installation completed'
+install_output="$("$binary" install --yes 2>&1)" || { echo "Native install failed: $install_output" >&2; exit 1; }
+printf '%s\n' "$install_output"
+grep -F 'Installation completed' <<< "$install_output"
 grep -Fq -- 'pacman -S --needed --noconfirm' "$INSTALL_TEST_LOG"
 grep -Fq -- 'localsend' "$INSTALL_TEST_LOG"
 grep -Fq -- 'mpv' "$INSTALL_TEST_LOG"
