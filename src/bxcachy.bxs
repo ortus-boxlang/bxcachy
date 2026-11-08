@@ -49,6 +49,25 @@ switch ( cmd ) {
    }
   }
   break;
+ case "install-plan":
+  println( "Base installation plan (pacman first, yay fallback):" );
+  for ( pkg in base ) println( pkg );
+  println( "No packages installed. Run the tested package adapter to apply this plan." );
+  break;
+ case "profile-install-plan":
+  if ( p.len() != 2 ) {
+   println( "Usage: bxcachy profile-install-plan core|jvm|containers|terminal" );
+   break;
+  }
+  switch ( p[2] ) {
+   case "core": println( "git curl jq unzip" ); break;
+   case "jvm": println( "jdk21-openjdk maven gradle" ); break;
+   case "containers": println( "podman buildah skopeo" ); break;
+   case "terminal": println( "btop neovim lazygit yazi" ); break;
+   default: println( "Unknown profile: " & p[2] );
+  }
+  println( "Read-only plan; no packages installed." );
+  break;
  case "profile-list":
   println( "Available workstation profiles:" );
   println( "core: git curl jq unzip" );
@@ -84,7 +103,7 @@ switch ( cmd ) {
   println( "Use scripts/package-manager.sh on CachyOS until native execution is verified." );
   break;
  case "help":
-  println( "BxCachy commands: version, doctor, prerequisites, desktop-list, tui-list, web-list, optional-list, optional-plan, profile-list, profile-plan, profile-install, plan, apps-doctor, dev-plan, help" );
+  println( "BxCachy commands: version, doctor, prerequisites, desktop-list, tui-list, web-list, optional-list, optional-plan, profile-list, profile-plan, profile-install-plan, install-plan, profile-install, plan, apps-doctor, dev-plan, help" );
   break;
  default:
   println( "Unsupported command: " & cmd );
