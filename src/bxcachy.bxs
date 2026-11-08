@@ -156,12 +156,12 @@ switch ( cmd ) {
   // drawn exclusively from the internal catalog, never from raw user input.
   installPackages = [];
   valid = true;
-  confirmed = false;
+  confirmed = structKeyExists( args.options, "yes" );
   if ( cmd == "install" ) {
    installPackages = base;
-   if ( p.len() != 2 || p[2] != "--yes" ) valid = false;
+   if ( p.len() != 1 || !structKeyExists( args.options, "yes" ) ) valid = false;
   } else if ( cmd == "profile-install" ) {
-   if ( p.len() != 3 || p[3] != "--yes" ) {
+   if ( p.len() != 2 || !structKeyExists( args.options, "yes" ) ) {
     valid = false;
    } else {
     switch ( p[2] ) {
@@ -173,7 +173,7 @@ switch ( cmd ) {
     }
    }
   } else {
-   if ( p.len() < 3 ) valid = false;
+   if ( p.len() < 2 || !structKeyExists( args.options, "yes" ) ) valid = false;
    for ( i = 2; i <= p.len(); i++ ) {
     if ( p[i] == "--yes" ) {
      confirmed = true;
