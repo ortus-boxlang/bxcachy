@@ -1,20 +1,20 @@
-// Native BxCachy app catalog CLI (BoxLang/MatchBox).
-// Safe-by-default: only explicitly requested installs modify the system.
+// BxCachy native command line, designed for MatchBox.
 args = CLIGetArgs();
-items = args.positionals;
-action = items.len() >= 1 ? items[1] : "help";
-basePackages = [ "localsend", "mpv", "pacseek" ];
+p = args.positionals;
+cmd = p.len() ? p[1] : "help";
+base = [ "localsend", "mpv", "pacseek" ];
 desktop = { localsend: "localsend", mpv: "mpv", obs: "obs-studio", kdenlive: "kdenlive", pinta: "pinta", chromium: "chromium", obsidian: "obsidian", libreoffice: "libreoffice-fresh" };
 tui = { lazygit: "lazygit", btop: "btop", neovim: "neovim", pacseek: "pacseek", yazi: "yazi" };
 optional = { obs: "obs-studio", kdenlive: "kdenlive", pinta: "pinta", chromium: "chromium", obsidian: "obsidian", libreoffice: "libreoffice-fresh" };
 web = { github: "https://github.com", "boxlang-docs": "https://boxlang.ortusbooks.com", youtube: "https://youtube.com" };
-switch ( action ) {
+switch ( cmd ) {
  case "version":
   println( "BxCachy 0.11.0-dev" );
   break;
  case "doctor":
  case "prerequisites":
-  println( "BxCachy requires Java 21, BVM, MVM, BoxLang and MatchBox for development." );
+  println( "Workstation prerequisites: Java 21, BVM, MVM, BoxLang, MatchBox" );
+  println( "Native build prerequisites: Rust and Cargo" );
   break;
  case "desktop-list":
   for ( key in desktop ) println( key & ": " & desktop[key] );
@@ -30,14 +30,21 @@ switch ( action ) {
   break;
  case "plan":
  case "apps-doctor":
-  println( "Base packages (pacman first):" );
-  for ( pkg in basePackages ) println( pkg );
+  println( "Base packages (pacman):" );
+  for ( pkg in base ) println( pkg );
+  break;
+ case "dev-plan":
+  println( "Java: jdk21-openjdk via pacman" );
+  println( "Maven: maven via pacman" );
+  println( "Gradle: gradle via pacman" );
+  println( "BVM: https://install-bvm.boxlang.io" );
+  println( "MVM: https://raw.githubusercontent.com/ortus-boxlang/matchbox-quick-installer/main/install/install.sh" );
+  println( "BoxLang: https://install.boxlang.io" );
   break;
  case "help":
-  println( "BxCachy native CLI" );
-  println( "version | doctor | prerequisites | desktop-list | tui-list | web-list | optional-list | plan | apps-doctor" );
+  println( "BxCachy commands: version, doctor, prerequisites, desktop-list, tui-list, web-list, optional-list, plan, apps-doctor, dev-plan, help" );
   break;
  default:
-  println( "Unsupported native command: " & action );
-  println( "Use help for available commands." );
+  println( "Unsupported command: " & cmd );
+  println( "Run bxcachy help" );
 }
