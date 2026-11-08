@@ -34,3 +34,10 @@ test -x "$binary"
 "$binary" profile-install-plan invalid | grep -F 'Unknown profile'
 "$binary" profile-install-plan | grep -F 'Usage:'
 "$binary" help | grep -F 'profile-install-plan'
+
+# Package status must reject unsafe names before spawning pacman.
+if "$binary" package-status 'bad;name' >/dev/null 2>&1; then
+  echo 'FAIL: unsafe package name accepted' >&2
+  exit 1
+fi
+"$binary" package-status 'bad;name' 2>&1 | grep -F 'Usage:'
