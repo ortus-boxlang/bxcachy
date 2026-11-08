@@ -34,4 +34,9 @@ bash "$script" optional-install obs --yes >/dev/null
 [[ -s "$PACMAN_TEST_LOG" ]] || { echo 'FAIL: expected optional installation' >&2; exit 1; }
 grep -Fq -- '-S --needed obs-studio' "$PACMAN_TEST_LOG"
 bash "$script" optional-list | grep 'obs: obs-studio'
+bash "$script" profile-list | grep -F 'jvm: jdk21-openjdk maven gradle'
+bash "$script" profile-install jvm --yes >/dev/null
+grep -Fq -- '-S --needed jdk21-openjdk maven gradle' "$PACMAN_TEST_LOG"
+if bash "$script" profile-install unknown --yes >/dev/null 2>&1; then echo 'FAIL: unknown profile accepted' >&2; exit 1; fi
+if bash "$script" profile-install core >/dev/null 2>&1; then echo 'FAIL: profile installed without consent' >&2; exit 1; fi
 echo 'package-manager tests passed'
