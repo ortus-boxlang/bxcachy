@@ -26,7 +26,14 @@ case "$1" in
 esac
 MOCK
 chmod +x "$tmp/yay"
-bash "$script" install --yes >/dev/null
+cat > "$tmp/id" <<'MOCK'
+#!/usr/bin/env bash
+if [[ "$1" == -u ]]; then echo "${MOCK_UID:-1000}"; else /usr/bin/id "$@"; fi
+MOCK
+chmod +x "$tmp/id"
+if MOCK_UID=0 bash "$script" install --yes >/dev/null 2>&1; then echo 'FAIL: root AUR install accepted' >&2; exit 1; fi
+if [[ -s "$PACMAN_TEST_LOG" ]]; then echo 'FAIL: root AUR attempt mutated packages' >&2; exit 1; fi
+MOCK_UID=1000 bash "$script" install --yes >/dev/null
 grep -Fq -- '-S --needed localsend' "$PACMAN_TEST_LOG"
 grep -Fq -- 'yay -S --needed pacseek' "$PACMAN_TEST_LOG"
 if bash "$script" optional-install invalid --yes >/dev/null 2>&1; then echo 'FAIL: invalid optional name accepted' >&2; exit 1; fi
