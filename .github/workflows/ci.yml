@@ -1,0 +1,47 @@
+name: BxCachy CI
+on:
+  push:
+    branches: [development]
+  pull_request:
+    branches: [development]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile Python sources
+        run: |
+          python -m compileall -q bin tests
+      - name: Run unit tests
+        run: |
+          python -m unittest discover -s tests -p 'test_*.py' -v
+
+  arch-integration:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+    steps:
+      - name: Install base tools
+        run: pacman -Syu --noconfirm --needed git python bash coreutils
+      - uses: actions/checkout@v4
+      - name: Syntax and dependency checks
+        run: |
+          python -m compileall -q bin tests
+          bash -n install.sh 2>/dev/null || test ! -f install.sh
+      - name: Arch package availability
+        run: |
+          pacman -Syu --noconfirm --needed python-pyside6 kio-extras qt6-imageformats ffmpegthumbs kdegraphics-thumbnailers rclone fuse3
+      - name: CLI smoke tests
+        run: |
+          test -f bin/bxcachy
+          test -f bin/bxcachy-integrations
+          python bin/bxcachy-integrations --help
+          python -m unittest discover -s tests -p 'test_*.py' -v
