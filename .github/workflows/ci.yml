@@ -20,7 +20,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          bash -n bootstrap/install.sh scripts/package-manager.sh tests/package-manager-test.sh tests/bootstrap-test.sh tests/native-smoke.sh
+          bash -n bootstrap/install.sh scripts/package-manager.sh tests/package-manager-test.sh tests/bootstrap-test.sh tests/native-smoke.sh tests/native-package-integration.sh
           test -s src/bxcachy.bxs
           for command in version doctor prerequisites desktop-list tui-list web-list optional-list optional-plan profile-list profile-plan plan apps-doctor dev-plan help; do
             grep -Fq "\"$command\"" src/bxcachy.bxs
@@ -83,6 +83,7 @@ jobs:
           test -n "$candidate" || { echo "::error::No compiled executable found"; exit 1; }
           candidate="$(realpath "$candidate")"
           bash tests/native-smoke.sh "$candidate"
+          bash tests/native-package-integration.sh "$candidate"
           mkdir -p dist
           cp "$candidate" dist/bxcachy
           chmod +x dist/bxcachy
