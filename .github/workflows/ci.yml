@@ -84,7 +84,7 @@ jobs:
           test -n "$candidate" || { echo "::error::No compiled executable found"; exit 1; }
           candidate="$(realpath "$candidate")"
           bash tests/native-smoke.sh "$candidate"
-          bash tests/native-package-integration.sh "$candidate"
+          bash -x tests/native-package-integration.sh "$candidate"
           mkdir -p dist
           cp "$candidate" dist/bxcachy
           chmod +x dist/bxcachy
