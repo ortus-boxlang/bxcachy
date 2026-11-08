@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+script="$(cd "$(dirname "$0")/.." && pwd)/scripts/package-manager.sh"
+tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
+cat > "$tmp/pacman" <<'MOCK'
+#!/usr/bin/env bash
+case "$1" in -Qq) [[ $2 == mpv ]] ;; -Si) [[ $2 != pacseek ]] ;; -S) printf '%s\n' "$*" >> "$PACMAN_TEST_LOG" ;; *) exit 1 ;; esac
+MOCK
+cat > "$tmp/sudo" <<'MOCK'
+#!/usr/bin/env bash
+"$@"
+MOCK
+chmod +x "$tmp/pacman" "$tmp/sudo"
+export PATH="$tmp:$PATH" PACMAN_TEST_LOG="$tmp/install.log"
+bash "$script" plan | grep 'mpv: installed'
+bash "$script" plan | grep 'pacseek: missing'
+if bash "$script" install >/dev/null 2>&1; then echo 'FAIL: missing confirmation' >&2; exit 1; fi
+bash "$script" install --yes >/dev/null
+grep -- '-S --needed localsend' "$PACMAN_TEST_LOG"
+if grep -q pacseek "$PACMAN_TEST_LOG"; then echo 'FAIL: unavailable package installed' >&2; exit 1; fi
+if bash "$script" optional-install invalid --yes >/dev/null 2>&1; then echo 'FAIL: invalid optional name accepted' >&2; exit 1; fi
+bash "$script" optional-install obs --yes >/dev/null
+bash "$script" optional-list | grep 'obs: obs-studio'
+echo 'package-manager tests passed'
