@@ -10,3 +10,4 @@ test -x "$binary"
 "$binary" web-list | grep -F 'github.com'
 "$binary" optional-list | grep -F 'optional'
 "$binary" dev-plan | grep -F 'jdk21-openjdk'
+"$binary" install | grep -F 'not yet supported'
