@@ -40,12 +40,28 @@ if "$binary" package-status 'bad;name' >/dev/null 2>&1; then
   echo 'FAIL: unsafe package name accepted' >&2
   exit 1
 fi
-"$binary" package-status 'bad;name' 2>&1 | grep -F 'Usage:'
+status_output=""
+if status_output="$("$binary" package-status 'bad;name' 2>&1)"; then
+  echo 'FAIL: unsafe package-status name unexpectedly succeeded' >&2
+  exit 1
+else
+  status_code=$?
+fi
+[[ "$status_code" -eq 2 ]] || { echo "FAIL: expected exit 2, got $status_code" >&2; exit 1; }
+grep -F 'Usage:' <<< "$status_output"
 
 # Invalid names must fail before repository tools are invoked.
 if "$binary" package-source 'bad;name' >/dev/null 2>&1; then
   echo 'FAIL: unsafe repository lookup accepted' >&2
   exit 1
 fi
-"$binary" package-source 'bad;name' 2>&1 | grep -F 'Usage:'
+source_output=""
+if source_output="$("$binary" package-source 'bad;name' 2>&1)"; then
+  echo 'FAIL: unsafe package-source name unexpectedly succeeded' >&2
+  exit 1
+else
+  source_code=$?
+fi
+[[ "$source_code" -eq 2 ]] || { echo "FAIL: expected exit 2, got $source_code" >&2; exit 1; }
+grep -F 'Usage:' <<< "$source_output"
 "$binary" help | grep -F 'package-source'
