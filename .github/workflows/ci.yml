@@ -8,7 +8,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: bxcachy-ci-${{ github.workflow }}-${{ github.ref }}
+  group: bxcachy-ci-global
   cancel-in-progress: true
 jobs:
   validate:
