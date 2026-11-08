@@ -1,4 +1,4 @@
-name: BxCachy native CI
+name: BxCachy CI
 on:
   push:
     branches: [development]
@@ -7,43 +7,85 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: bxcachy-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
-  source-and-bootstrap:
+  validate:
+    name: 1 - Validate source and scripts
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Shell validation
+      - name: Validate shell syntax and CLI contract
         shell: bash
         run: |
           set -euo pipefail
-          bash -n bootstrap/install.sh
-          bash -n tests/native-smoke.sh
+          bash -n bootstrap/install.sh scripts/package-manager.sh tests/package-manager-test.sh tests/native-smoke.sh
           test -s src/bxcachy.bxs
-      - name: CLI catalog contract (source-only, not runtime verification)
-        shell: bash
-        run: |
-          set -euo pipefail
-          for command in version doctor prerequisites desktop-list tui-list web-list optional-list plan apps-doctor dev-plan help; do
+          for command in version doctor prerequisites desktop-list tui-list web-list optional-list optional-plan profile-list profile-plan plan apps-doctor dev-plan help; do
             grep -Fq "\"$command\"" src/bxcachy.bxs
           done
-  arch-prerequisites:
+  package-tests:
+    name: 2 - Mocked package-manager tests
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash tests/package-manager-test.sh
+  arch:
+    name: 3 - Arch Linux prerequisites
+    needs: package-tests
     runs-on: ubuntu-latest
     container:
       image: archlinux:latest
     steps:
-      - name: Install Arch prerequisites
+      - name: Install and verify toolchains
         shell: bash
         run: |
           set -euo pipefail
           pacman -Syu --noconfirm --needed jdk21-openjdk git curl unzip rustup bash
           java -version
-          rustup --version
           rustup toolchain install stable --profile minimal
           rustup default stable
           cargo --version
       - uses: actions/checkout@v4
-      - name: Validate bootstrap syntax
+      - run: bash -n bootstrap/install.sh
+  native:
+    name: 4 - MatchBox compile and native tests
+    needs: arch
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install MVM
         shell: bash
-        run: bash -n bootstrap/install.sh
-# MatchBox compile and native smoke-test job intentionally not added:
-# no compiler installation or version pin has been verified in CI.
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/ortus-boxlang/matchbox-quick-installer/main/install/install.sh -o /tmp/install-mvm.sh
+          bash /tmp/install-mvm.sh
+          echo "$HOME/.mvm/bin" >> "$GITHUB_PATH"
+      - name: Install MatchBox and compile
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.mvm/bin:$PATH"
+          mvm install latest
+          mvm use latest
+          matchbox --version
+          matchbox --target native src/bxcachy.bxs
+      - name: Run smoke tests on compiled executable
+        shell: bash
+        run: |
+          set -euo pipefail
+          candidate="$(find . -maxdepth 5 -type f -executable \( -name bxcachy -o -name 'bxcachy.bxs' \) -print -quit)"
+          test -n "$candidate" || { echo "::error::No compiled executable found"; exit 1; }
+          bash tests/native-smoke.sh "$candidate"
+          mkdir -p dist
+          cp "$candidate" dist/bxcachy
+          chmod +x dist/bxcachy
+      - name: Publish verified native artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bxcachy-linux-native
+          path: dist/bxcachy
+          if-no-files-found: error
