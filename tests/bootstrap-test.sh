@@ -25,4 +25,7 @@ fi
 if bash "$root/bootstrap/install.sh" --unknown >/dev/null 2>&1; then
   echo 'FAIL: invalid bootstrap command accepted' >&2; exit 1
 fi
+if bash "$root/bootstrap/install.sh" --install-toolchains >/dev/null 2>&1; then
+  echo 'FAIL: toolchain installation without confirmation' >&2; exit 1
+fi
 echo 'bootstrap check tests passed'
