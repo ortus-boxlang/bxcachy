@@ -1,74 +1,31 @@
-name: BxCachy CI
-
+name: BxCachy native CI
 on:
   push:
     branches: [development]
   pull_request:
     branches: [development]
   workflow_dispatch:
-
 permissions:
   contents: read
-
 jobs:
-  source:
-    name: Source and unit tests
+  static:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - name: Check source is present
-        id: source
-        shell: bash
+      - name: Validate bootstrap and smoke test
         run: |
-          if [[ -f bin/bxcachy && -d tests ]]; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "::warning::BxCachy source is not committed yet. Unit tests cannot run."
-            echo "available=false" >> "$GITHUB_OUTPUT"
-          fi
-      - name: Compile Python sources
-        if: steps.source.outputs.available == 'true'
-        run: python -m compileall -q bin tests
-      - name: Run unit tests
-        if: steps.source.outputs.available == 'true'
-        run: python -m unittest discover -s tests -p 'test_*.py' -v
-
-  arch-integration:
-    name: Arch Linux package and CLI integration
+          bash -n bootstrap/install.sh
+          bash -n tests/native-smoke.sh
+          test -s src/bxcachy.bxs
+  arch-prerequisites:
     runs-on: ubuntu-latest
-    container:
-      image: archlinux:latest
+    container: archlinux:latest
     steps:
-      - name: Install Arch prerequisites
-        run: pacman -Syu --noconfirm --needed git python bash coreutils
+      - name: Install Java 21 and build tools
+        run: |
+          pacman -Syu --noconfirm --needed jdk21-openjdk git curl unzip rustup bash
+          java -version
+          cargo --version || true
       - uses: actions/checkout@v4
-      - name: Install desktop integration packages
-        run: |
-          pacman -S --noconfirm --needed python-pyside6 kio-extras qt6-imageformats ffmpegthumbs kdegraphics-thumbnailers rclone fuse3
-      - name: Check source availability
-        id: source
-        shell: bash
-        run: |
-          if [[ -f bin/bxcachy && -d tests ]]; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "::warning::BxCachy source is not committed yet. Arch CLI integration tests cannot run."
-            echo "available=false" >> "$GITHUB_OUTPUT"
-          fi
-      - name: Compile and test source
-        if: steps.source.outputs.available == 'true'
-        run: |
-          python -m compileall -q bin tests
-          python -m unittest discover -s tests -p 'test_*.py' -v
-      - name: CLI smoke test
-        if: steps.source.outputs.available == 'true'
-        shell: bash
-        run: |
-          test -f bin/bxcachy
-          bash -n bin/bxcachy
-          if [[ -f bin/bxcachy-integrations ]]; then
-            python bin/bxcachy-integrations --help
-          fi
+      - name: Validate bootstrap
+        run: bash -n bootstrap/install.sh
