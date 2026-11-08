@@ -34,6 +34,21 @@ switch ( cmd ) {
   println( "Base packages (pacman first):" );
   for ( pkg in base ) println( pkg );
   break;
+ case "optional-plan":
+  if ( p.len() < 2 ) {
+   println( "Usage: bxcachy optional-plan NAME [NAME...]" );
+   break;
+  }
+  println( "Optional packages (pacman-first plan):" );
+  for ( i = 2; i <= p.len(); i++ ) {
+   name = p[i];
+   if ( structKeyExists( optional, name ) ) {
+    println( name & ": " & optional[name] );
+   } else {
+    println( "Unknown optional application: " & name );
+   }
+  }
+  break;
  case "dev-plan":
   println( "Java: jdk21-openjdk via pacman" );
   println( "Maven: maven via pacman" );
@@ -47,7 +62,7 @@ switch ( cmd ) {
   println( "Use the documented bootstrap or the legacy tool until the native installer is tested." );
   break;
  case "help":
-  println( "BxCachy commands: version, doctor, prerequisites, desktop-list, tui-list, web-list, optional-list, plan, apps-doctor, dev-plan, help" );
+  println( "BxCachy commands: version, doctor, prerequisites, desktop-list, tui-list, web-list, optional-list, optional-plan, plan, apps-doctor, dev-plan, help" );
   break;
  default:
   println( "Unsupported command: " & cmd );
