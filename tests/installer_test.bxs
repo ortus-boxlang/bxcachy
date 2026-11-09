@@ -1,0 +1,59 @@
+// Installer: step building and running with a recording runner (nothing touches the system).
+// Run from src/: (cd src && matchbox ../tests/installer_test.bxs)
+failures = 0;
+function check( label, ok ) { if ( ok ) println( "ok   " & label ); else { println( "FAIL " & label ); failures++; } }
+function app( id, source, targets, extra = {} ) {
+ a = { id: id, source: source, targets: targets };
+ for ( k in extra ) a[k] = extra[k];
+ return a;
+}
+calls = [];
+failOn = "";
+runner = function( argv, timeout ) {
+ calls.append( argv.toList( " " ) );
+ if ( len( failOn ) && find( failOn, argv.toList( " " ) ) ) return { exitCode: 1, timeout: false, output: "" };
+ return { exitCode: 0, timeout: false, output: "0" };
+};
+inst = new bxcachy.Installer( runner );
+sel = [ app( "git", "pacman", [ "git" ] ), app( "podman", "pacman", [ "podman", "buildah", "skopeo" ] ),
+        app( "vscode", "aur", [ "visual-studio-code-bin" ] ), app( "brave", "aur", [ "brave-bin" ] ) ];
+b = inst.steps( sel, false );
+check( "one pacman step for all pacman apps", b.steps[1].kind == "pacman" && b.steps[1].ids.toList() == "git,podman" );
+check( "pacman uses sudo and lists every target once", b.steps[1].commands[1].toList( " " ) == "sudo pacman -S --needed --noconfirm git podman buildah skopeo" );
+check( "aur apps are one step each, after pacman", b.steps.len() == 3 && b.steps[2].commands[1].toList( " " ) == "yay -S --needed --noconfirm visual-studio-code-bin" && b.steps[3].ids[1] == "brave" );
+b = inst.steps( [ app( "git", "pacman", [ "git" ] ) ], true );
+check( "root: no sudo", b.steps[1].commands[1][1] == "pacman" );
+b = inst.steps( [ app( "omazed", "pkgbuild", [ "omazed" ], { pkgbuild: { repo: "omacom/omarchy-pkgs", path: "pkgbuilds/omazed", ref: "master" } } ),
+                  app( "boxlang-docs", "web", [] ), app( "intellij", "unresolved", [ "x" ] ) ], false );
+check( "unpinned pkgbuild, web and unresolved are blocked, no steps", b.steps.len() == 0 && b.blocked.len() == 3 );
+check( "blocked reasons are explicit", find( "not pinned", b.blocked[1].error ) && find( "web app launchers", b.blocked[2].error ) && find( "no installable source", b.blocked[3].error ) );
+b = inst.steps( [ app( "omazed", "pkgbuild", [ "omazed" ], { pkgbuild: { repo: "omacom/omarchy-pkgs", path: "pkgbuilds/omazed", ref: "abc1234" } } ) ], false );
+cmds = b.steps[1].commands;
+check( "pinned pkgbuild: clone, checkout the ref, makepkg in the path", b.steps.len() == 1 && find( "https://github.com/omacom/omarchy-pkgs.git", cmds[1].toList( " " ) ) && cmds[2][6] == "abc1234" && cmds[3][3] == b.steps[1].dir & "/pkgbuilds/omazed" && cmds[3][4] == "makepkg" );
+// running
+calls = [];
+b = inst.steps( sel, false );
+r = inst.run( b.steps );
+check( "run: every step executed in order", calls.len() == 3 && find( "sudo pacman", calls[1] ) && find( "visual-studio-code-bin", calls[2] ) );
+check( "run: all done, exit 0", r.done.len() == 4 && r.failed.len() == 0 && inst.exitCode( r ) == 0 );
+calls = []; failOn = "brave-bin";
+r = inst.run( b.steps );
+check( "run: a failing aur app fails alone, exit 7", r.failed.len() == 1 && r.failed[1].id == "brave" && r.done.len() == 3 && inst.exitCode( r ) == 7 );
+failOn = "sudo pacman";
+r = inst.run( b.steps );
+check( "run: pacman failing does not stop the aur steps", r.failed.len() == 2 && r.done.len() == 2 && inst.exitCode( r ) == 7 );
+failOn = "pacman"; onlyPacman = inst.steps( [ app( "git", "pacman", [ "git" ] ) ], false );
+r = inst.run( onlyPacman.steps );
+check( "run: only pacman failed gives exit 5", inst.exitCode( r ) == 5 && find( "exit 1", r.failed[1].error ) );
+failOn = "yay"; onlyAur = inst.steps( [ app( "vscode", "aur", [ "x" ] ) ], false );
+r = inst.run( onlyAur.steps );
+check( "run: only aur failed gives exit 6", inst.exitCode( r ) == 6 );
+timeoutRunner = function( argv, timeout ) { return { exitCode: 0, timeout: true, output: "" }; };
+r = new bxcachy.Installer( timeoutRunner ).run( onlyPacman.steps );
+check( "run: a timeout is a failure", r.failed.len() == 1 && find( "timed out", r.failed[1].error ) );
+// root detection
+rootRunner = function( argv, timeout ) { return { exitCode: 0, timeout: false, output: "0" + chr( 10 ) }; };
+userRunner = function( argv, timeout ) { return { exitCode: 0, timeout: false, output: "1000" }; };
+check( "isRoot", new bxcachy.Installer( rootRunner ).isRoot() && !new bxcachy.Installer( userRunner ).isRoot() );
+if ( failures > 0 ) { println( failures & " failed" ); CLIExit( 1 ); }
+println( "installer tests passed" );

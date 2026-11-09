@@ -6,8 +6,8 @@ class Cli {
     }
 
     // One JSON object on stdout, nothing else.
-    function envelope( command, exitCode, data ) {
-        return jsonSerialize( { schema: 1, command: command, version: variables.version, ok: exitCode == 0, exit: exitCode, dry_run: false, data: data, warnings: [] } );
+    function envelope( command, exitCode, data, dryRun = false ) {
+        return jsonSerialize( { schema: 1, command: command, version: variables.version, ok: exitCode == 0, exit: exitCode, dry_run: dryRun, data: data, warnings: [] } );
     }
 
     // Prints a key/value listing as lines, or as the JSON envelope with --json.

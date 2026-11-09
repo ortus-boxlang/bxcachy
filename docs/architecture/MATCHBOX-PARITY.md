@@ -40,3 +40,10 @@ Lifecycle for a script or class run (no web scopes): application defined on firs
 3. Application.bx for scripts and classes, with the lifecycle above.
 
 Native builds resolve classes at compile time, so mapped directories must exist when `matchbox --target native` runs; the Application.bx settings that affect compilation (mappings) are read at build time, and the lifecycle runs inside the binary.
+
+## MatchBox VM bugs found while building the installer (to be fixed upstream)
+
+- `break` inside a `for ( x in list )` that is nested in another `for ( y in list )` leaves the outer iterator in a bad state: `Internal VM error: iterator cursor is not a number`. Workaround in `Installer.run`: no `break`, use `continue` and a flag.
+- A class method with a `switch` whose `case` bodies declare `var` and take a `pkgbuild` struct member made the process exit with code 101 and no message at all (no panic text, even with RUST_BACKTRACE=1). Reproduced with `Installer.steps` before it was rewritten as an `if`/`else` chain plus a helper method; a small script version did not reproduce it.
+- `variables.name( args )` on a function stored in the `variables` scope fails with `Method name not found on variables scope`; copy it to a local first (`var f = variables.name; f( args )`).
+- Writing to a closed pipe panics (`failed printing to stdout: Broken pipe`), so `cmd | head` and `grep -q` can break a native binary. Tests read all output.

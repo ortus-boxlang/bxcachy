@@ -66,6 +66,85 @@ class Packages {
         return 0;
     }
 
+    // Turns a command line into a resolver request. Returns { bad, usage, req }; bad means a usage error (exit 2).
+    // Commands taking a profile name (profile-plan, profile-install-plan, profile-install) read it from the argument.
+    function request( cmd, p, options ) {
+        var profileCmd = arrayFind( [ "profile-plan", "profile-install-plan", "profile-install" ], cmd );
+        var ids = [];
+        var profile = structKeyExists( options, "profile" ) ? options.profile : "";
+        if ( profileCmd ) {
+            if ( p.len() == 2 ) profile = p[2];
+        } else {
+            for ( var i = 2; i <= p.len(); i++ ) ids.append( p[i] );
+        }
+        var shell = structKeyExists( options, "shell" ) ? options.shell : defaultShell();
+        var bad = !isSimpleValue( profile ) || profile == true || !isSimpleValue( shell ) || shell == true
+            || ( profileCmd && p.len() != 2 )
+            || ( arrayFind( [ "optional-plan", "optional-install" ], cmd ) && !ids.len() );
+        var what = profileCmd ? " NAME" : ( arrayFind( [ "optional-plan", "optional-install" ], cmd ) ? " ID [ID...]" : " [ID...] [--profile=NAME]" );
+        var usage = "Usage: bxcachy " & cmd & what & " [--optional] [--shell=hyprland|plasma|all] [--json]" & ( findNoCase( "install", cmd ) && !findNoCase( "plan", cmd ) ? " [--yes] [--dry-run]" : "" );
+        return { bad: bad, usage: usage, req: { ids: ids, profile: profile, optional: structKeyExists( options, "optional" ), shell: shell } };
+    }
+
+    // install and its aliases. Rules: no --yes prints the plan and exits 2; --dry-run prints it and exits 0; nothing
+    // is changed when a preflight check fails (exit 3 a named app has no source, 4 root with AUR or PKGBUILD builds).
+    // Exit after a run: 0 all done, 5 or 6 nothing done, 7 some done and some failed.
+    function install( cmd, req, asJson, yes, dryRun, runner = "" ) {
+        var names = installedNames();
+        var self = this;
+        req.installed = function( a ) { return self.isInstalled( a, names ); };
+        var res = new bxcachy.Resolver().resolve( variables.cat, req );
+        if ( res.errors.len() ) {
+            for ( var e in res.errors ) println( "error: " & e );
+            return 2;
+        }
+        var selection = { mode: res.mode, ids: req.ids, profile: req.profile, optional: req.optional, shell: req.shell };
+        if ( res.failed.len() ) {
+            for ( var f in res.failed ) println( "Failed: " & f.id & " (" & f.error & "). Nothing was changed." );
+            if ( asJson ) println( variables.cli.envelope( cmd, 3, { selection: selection, would_install: [], done: [], failed: res.failed, skipped: res.skipped } ) );
+            return 3;
+        }
+        var inst = new bxcachy.Installer( runner );
+        var built = inst.steps( res.selected, inst.isRoot() );
+        var wouldInstall = res.selected.map( function( a ) { return { id: a.id, source: a.source, targets: structKeyExists( a, "targets" ) ? a.targets : [] }; } );
+        if ( !yes && !dryRun || dryRun ) {
+            var code = dryRun ? 0 : 2;
+            if ( asJson ) {
+                println( variables.cli.envelope( cmd, code, { selection: selection, would_install: wouldInstall, steps: built.steps, done: [], failed: built.blocked, skipped: res.skipped }, dryRun ) );
+                return code;
+            }
+            println( ( dryRun ? "Dry run" : "Plan" ) & ": " & wouldInstall.len() & " apps, " & built.steps.len() & " steps" );
+            for ( var step in built.steps ) for ( var c in step.commands ) println( "  " & step.kind & ": " & c.toList( " " ) );
+            for ( var b in built.blocked ) println( "  cannot install " & b.id & ": " & b.error );
+            println( dryRun ? "Nothing was changed." : "Nothing was changed. Add --yes to apply." );
+            return code;
+        }
+        var needsUser = false; var needsYay = false;
+        for ( var st in built.steps ) {
+            if ( st.kind == "aur" ) { needsUser = true; needsYay = true; }
+            if ( st.kind == "pkgbuild" ) needsUser = true;
+        }
+        if ( needsUser && inst.isRoot() ) {
+            println( "AUR and PKGBUILD builds never run as root. Nothing was changed." );
+            return 4;
+        }
+        if ( needsYay && !inst.hasCommand( "yay" ) ) {
+            println( "yay is not installed (bootstrap/install.sh installs it). Nothing was changed." );
+            return 4;
+        }
+        var result = inst.run( built.steps );
+        for ( var b in built.blocked ) result.failed.append( b );
+        var exit = ( !built.steps.len() && built.blocked.len() ) ? 3 : inst.exitCode( result );
+        if ( asJson ) {
+            println( variables.cli.envelope( cmd, exit, { selection: selection, would_install: [], done: result.done, failed: result.failed, skipped: res.skipped } ) );
+            return exit;
+        }
+        if ( !result.done.len() && !result.failed.len() ) println( "Nothing to do." );
+        for ( var d in result.done ) println( "Installed: " & d.id & "  [" & d.source & "]" );
+        for ( var f in result.failed ) println( "Failed: " & f.id & "  [" & f.source & "]: " & f.error );
+        return exit;
+    }
+
     // plan and its aliases: the resolver's answer, nothing installed. Exit 2 usage, 3 a named app has no source.
     function plan( command, req, asJson ) {
         var names = installedNames();

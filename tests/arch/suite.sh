@@ -111,11 +111,13 @@ else
   step native-mock-install 0 bash tests/native-package-integration.sh "$BIN"
 
   # --- Real pacman, no mocks ---
-  step_grep real-pkg-status-installed   0 "installed"   "$BIN" package-status pacman
-  step real-pkg-status-missing          1               "$BIN" package-status bxcachy-no-such-pkg
-  step_grep real-pkg-source-installed   0 "installed"   "$BIN" package-source pacman
-  step_grep real-pkg-source-official    0 "pacman"      bash -c "sudo pacman -Sy >/dev/null; '$BIN' package-source cowsay"
-  step real-pkg-source-unavailable      1               "$BIN" package-source bxcachy-no-such-pkg
+  step_grep real-pkg-status-installed   0 "installed"   "$BIN" package-status git
+  step real-pkg-status-missing          1               "$BIN" package-status yazi
+  step real-pkg-status-unknown-id       3               "$BIN" package-status bxcachy-no-such-app
+  step_grep real-pkg-source-catalog     0 "pacman"      "$BIN" package-source git
+  step_grep real-pkg-source-aur         0 "aur"         "$BIN" package-source vscode
+  step real-pkg-source-unknown-id       3               "$BIN" package-source bxcachy-no-such-app
+  step_grep real-plan-core              0 "to install"  "$BIN" plan --profile=core
   step real-install-no-yes              2               "$BIN" profile-install core
   step real-install-profile-core        0               "$BIN" profile-install core --yes
   step real-install-profile-core-rerun  0               "$BIN" profile-install core --yes

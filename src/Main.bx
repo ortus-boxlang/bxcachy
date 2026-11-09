@@ -21,7 +21,6 @@ class {
             }
         }
         var base = [ "localsend", "mpv", "pacseek" ];
-        var optional = { obs: "obs-studio", kdenlive: "kdenlive", pinta: "pinta", chromium: "chromium", obsidian: "obsidian", libreoffice: "libreoffice-fresh" };
 
         switch ( cmd ) {
          case "version":
@@ -55,23 +54,13 @@ class {
          case "profile-plan":
          case "profile-install-plan":
           // Selection comes from the arguments and flags; the resolver decides, nothing is installed.
-          planIds = [];
-          planProfile = structKeyExists( args.options, "profile" ) ? args.options.profile : "";
-          if ( cmd == "profile-plan" || cmd == "profile-install-plan" ) {
-           if ( p.len() == 2 ) planProfile = p[2];
-          } else {
-           for ( i = 2; i <= p.len(); i++ ) planIds.append( p[i] );
-          }
-          planBad = !isSimpleValue( planProfile ) || planProfile == true
-           || ( ( cmd == "profile-plan" || cmd == "profile-install-plan" ) && p.len() != 2 )
-           || ( cmd == "optional-plan" && !planIds.len() );
           pk = new bxcachy.Packages( cli, catalog.load() );
-          planShell = structKeyExists( args.options, "shell" ) ? args.options.shell : pk.defaultShell();
-          if ( planBad || !isSimpleValue( planShell ) || planShell == true ) {
-           println( "Usage: bxcachy " & cmd & ( cmd == "profile-plan" || cmd == "profile-install-plan" ? " NAME" : ( cmd == "optional-plan" ? " ID [ID...]" : " [ID...] [--profile=NAME]" ) ) & " [--optional] [--shell=hyprland|plasma|all] [--json]" );
+          planReq = pk.request( cmd, p, args.options );
+          if ( planReq.bad ) {
+           println( planReq.usage );
            CLIExit( 2 );
           }
-          CLIExit( pk.plan( cmd, { ids: planIds, profile: planProfile, optional: structKeyExists( args.options, "optional" ), shell: planShell }, asJson ) );
+          CLIExit( pk.plan( cmd, planReq.req, asJson ) );
           break;
          case "package-status":
          case "package-source":
@@ -92,95 +81,14 @@ class {
          case "install":
          case "optional-install":
          case "profile-install":
-          // Resolve all packages before performing any mutation. Package names are
-          // drawn exclusively from the internal catalog, never from raw user input.
-          installPackages = [];
-          valid = true;
-          confirmed = structKeyExists( args.options, "yes" );
-          if ( cmd == "install" ) {
-           installPackages = base;
-           if ( p.len() != 1 || !structKeyExists( args.options, "yes" ) ) valid = false;
-          } else if ( cmd == "profile-install" ) {
-           if ( p.len() != 2 || !structKeyExists( args.options, "yes" ) ) {
-            valid = false;
-           } else {
-            switch ( p[2] ) {
-             case "core": installPackages = [ "git", "curl", "jq", "unzip" ]; break;
-             case "jvm": installPackages = [ "jdk21-openjdk", "maven", "gradle" ]; break;
-             case "containers": installPackages = [ "podman", "buildah", "skopeo" ]; break;
-             case "terminal": installPackages = [ "btop", "neovim", "lazygit", "yazi" ]; break;
-             default: valid = false;
-            }
-           }
-          } else {
-           if ( p.len() < 2 || !structKeyExists( args.options, "yes" ) ) valid = false;
-           for ( i = 2; i <= p.len(); i++ ) {
-            if ( structKeyExists( optional, p[i] ) ) {
-             installPackages.append( optional[p[i]] );
-            } else {
-             valid = false;
-            }
-           }
-           if ( !confirmed || installPackages.len() == 0 ) valid = false;
-          }
-          if ( !valid ) {
-           println( "Invalid installation request. Specify catalog names and --yes." );
+          // Selection as for plan; the installer runs it. Without --yes the plan is printed and nothing changes.
+          pk = new bxcachy.Packages( cli, catalog.load() );
+          instReq = pk.request( cmd, p, args.options );
+          if ( instReq.bad ) {
+           println( instReq.usage );
            CLIExit( 2 );
           }
-          officialPackages = [];
-          aurPackages = [];
-          unavailablePackages = [];
-          for ( var packageName in installPackages ) {
-           installed = systemExecute( name = "pacman", arguments = "-Qq " & packageName, timeout = 15, terminateOnTimeout = true );
-           if ( installed.timeout ) {
-            println( "Package status timed out: " & packageName );
-            CLIExit( 3 );
-           }
-           if ( installed.exitCode == 0 ) continue;
-           official = systemExecute( name = "pacman", arguments = "-Si " & packageName, timeout = 15, terminateOnTimeout = true );
-           if ( official.timeout ) {
-            println( "Official repository lookup timed out: " & packageName );
-            CLIExit( 3 );
-           }
-           if ( official.exitCode == 0 ) {
-            officialPackages.append( packageName );
-            continue;
-           }
-           aur = systemExecute( name = "yay", arguments = "-Si " & packageName, timeout = 15, terminateOnTimeout = true );
-           if ( aur.timeout ) {
-            println( "AUR repository lookup timed out: " & packageName );
-            CLIExit( 3 );
-           }
-           if ( aur.exitCode == 0 ) aurPackages.append( packageName );
-           else unavailablePackages.append( packageName );
-          }
-          if ( unavailablePackages.len() ) {
-           println( "Unavailable packages: " & unavailablePackages.toList( ", " ) );
-           println( "No packages installed." );
-           CLIExit( 3 );
-          }
-          if ( aurPackages.len() ) {
-           uidCheck = systemExecute( name = "id", arguments = "-u", timeout = 10, terminateOnTimeout = true );
-           if ( uidCheck.exitCode != 0 || trim( uidCheck.output ) == "0" ) {
-            println( "AUR installs require a non-root user. No packages installed." );
-            CLIExit( 4 );
-           }
-          }
-          if ( officialPackages.len() ) {
-           officialInstall = systemExecute( name = "sudo", arguments = "pacman -S --needed --noconfirm " & officialPackages.toList( " " ), timeout = 1800, terminateOnTimeout = true );
-           if ( officialInstall.timeout || officialInstall.exitCode != 0 ) {
-            println( "pacman installation failed; AUR installation skipped." );
-            CLIExit( 5 );
-           }
-          }
-          if ( aurPackages.len() ) {
-           aurInstall = systemExecute( name = "yay", arguments = "-S --needed --noconfirm " & aurPackages.toList( " " ), timeout = 1800, terminateOnTimeout = true );
-           if ( aurInstall.timeout || aurInstall.exitCode != 0 ) {
-            println( "yay installation failed." );
-            CLIExit( 6 );
-           }
-          }
-          println( "Installation completed." );
+          CLIExit( pk.install( cmd, instReq.req, asJson, structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ) ) );
           break;
          case "catalog":
           catVerb = p.len() >= 2 ? p[2] : "";

@@ -210,4 +210,6 @@ Human output is the same lists, one app per line with its source.
 
 - Catalog 0.3.0: `profiles`, per-profile tier, `shells` (section 11, `catalog/README.md`).
 - `Resolver` class (selection) and `Packages` class (read-only commands). `plan`, `install-plan`, `optional-plan`, `profile-plan`, `profile-install-plan`, `package-status`, `package-source`, `profile-list`, `desktop-list`, `tui-list`, `web-list`, `optional-list` run on the catalog. Installed state comes from one `pacman -Qq` call (web apps: launcher file).
-- Not yet on the catalog: `install`, `optional-install`, `profile-install` (B2.4), `apps-doctor`, `dev-plan`.
+- `install`, `optional-install`, `profile-install` run on the catalog through `Installer` (one `pacman -S` call, `yay` per AUR app, pinned PKGBUILDs via `git clone` + `makepkg -si`). Rules as in sections 2 and 11: no `--yes` prints the plan (exit 2), `--dry-run` exits 0, root with AUR or PKGBUILD builds exits 4 before any change, a named app without a source exits 3, partial results exit 7 (5 or 6 when nothing succeeded).
+- Not installable yet, reported as `failed`: `web` apps (launcher format and browser undecided), all 31 `pkgbuild` apps (refs still `master`, must be pinned to commits). Until then a plain `bxcachy install` ends with exit 7.
+- Not on the catalog: `apps-doctor`, `dev-plan`.

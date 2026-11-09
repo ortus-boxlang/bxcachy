@@ -1,0 +1,87 @@
+PanicHookInfo {
+    payload: Any { .. },
+    location: Location {
+        file: "crates/matchbox-vm/src/vm/scopes.rs",
+        line: 154,
+        column: 45,
+    },
+    can_unwind: true,
+    force_no_backtrace: false,
+}
+
+   0: matchbox::run::{closure#0}
+             at /home/user/matchbox/src/lib.rs:775:25
+   1: <alloc::boxed::Box<dyn for<'a, 'b> core::ops::function::Fn<(&'a std::panic::PanicHookInfo<'b>,), Output = ()> + core::marker::Sync + core::marker::Send> as core::ops::function::Fn<(&std::panic::PanicHookInfo,)>>::call
+             at /rustc/2d8144b7880597b6e6d3dfd63a9a9efae3f533d3/library/alloc/src/boxed.rs:2289:9
+   2: std::panicking::panic_with_hook
+             at /rustc/2d8144b7880597b6e6d3dfd63a9a9efae3f533d3/library/std/src/panicking.rs:833:13
+   3: std::panicking::panic_handler::{closure#0}
+             at /rustc/2d8144b7880597b6e6d3dfd63a9a9efae3f533d3/library/std/src/panicking.rs:698:13
+   4: std::sys::backtrace::__rust_end_short_backtrace::<std::panicking::panic_handler::{closure#0}, !>
+             at /rustc/2d8144b7880597b6e6d3dfd63a9a9efae3f533d3/library/std/src/sys/backtrace.rs:182:18
+   5: __rustc::rust_begin_unwind
+             at /rustc/2d8144b7880597b6e6d3dfd63a9a9efae3f533d3/library/std/src/panicking.rs:689:5
+   6: core::panicking::panic_fmt
+             at /rustc/2d8144b7880597b6e6d3dfd63a9a9efae3f533d3/library/core/src/panicking.rs:80:14
+   7: core::panicking::panic_bounds_check
+             at /rustc/2d8144b7880597b6e6d3dfd63a9a9efae3f533d3/library/core/src/panicking.rs:271:5
+   8: <usize as core::slice::index::SliceIndex<[matchbox_vm::types::BxValue]>>::index
+             at /rustc/2d8144b7880597b6e6d3dfd63a9a9efae3f533d3/library/core/src/slice/index.rs:272:10
+   9: <[matchbox_vm::types::BxValue] as core::ops::index::Index<usize>>::index
+             at /rustc/2d8144b7880597b6e6d3dfd63a9a9efae3f533d3/library/core/src/slice/index.rs:19:15
+  10: <alloc::vec::Vec<matchbox_vm::types::BxValue> as core::ops::index::Index<usize>>::index
+             at /rustc/2d8144b7880597b6e6d3dfd63a9a9efae3f533d3/library/alloc/src/vec/mod.rs:3864:9
+  11: <matchbox_vm::vm::VM>::bind_local
+             at /home/user/matchbox/crates/matchbox-vm/src/vm/scopes.rs:154:45
+  12: <matchbox_vm::vm::VM>::run_fiber_inner
+             at /home/user/matchbox/crates/matchbox-vm/src/vm/mod.rs:5055:26
+  13: <matchbox_vm::vm::VM>::run_fiber
+             at /home/user/matchbox/crates/matchbox-vm/src/vm/mod.rs:4287:27
+  14: <matchbox_vm::vm::VM>::run_all
+             at /home/user/matchbox/crates/matchbox-vm/src/vm/mod.rs:4068:28
+  15: <matchbox_vm::vm::VM>::interpret_chunk_shared
+             at /home/user/matchbox/crates/matchbox-vm/src/vm/mod.rs:3532:24
+  16: <matchbox_vm::vm::VM>::interpret_chunk_borrowed
+             at /home/user/matchbox/crates/matchbox-vm/src/vm/mod.rs:3443:14
+  17: <matchbox_vm::vm::VM>::interpret
+             at /home/user/matchbox/crates/matchbox-vm/src/vm/mod.rs:3432:14
+  18: matchbox::run_chunk_with_args
+             at /home/user/matchbox/src/lib.rs:2137:32
+  19: matchbox::process_file_with_args
+             at /home/user/matchbox/src/lib.rs:1976:13
+  20: matchbox::run
+             at /home/user/matchbox/src/lib.rs:961:17
+  21: matchbox::main
+             at /home/user/matchbox/src/main.rs:2:5
+  22: <fn() -> core::result::Result<(), anyhow::Error> as core::ops::function::FnOnce<()>>::call_once
+             at /rustc/2d8144b7880597b6e6d3dfd63a9a9efae3f533d3/library/core/src/ops/function.rs:250:5
+  23: std::sys::backtrace::__rust_begin_short_backtrace::<fn() -> core::result::Result<(), anyhow::Error>, core::result::Result<(), anyhow::Error>>
+             at /rustc/2d8144b7880597b6e6d3dfd63a9a9efae3f533d3/library/std/src/sys/backtrace.rs:166:18
+  24: std::rt::lang_start::<core::result::Result<(), anyhow::Error>>::{closure#0}
+             at /rustc/2d8144b7880597b6e6d3dfd63a9a9efae3f533d3/library/std/src/rt.rs:206:18
+  25: <&dyn core::ops::function::Fn<(), Output = i32> + core::marker::Sync + core::panic::unwind_safe::RefUnwindSafe as core::ops::function::FnOnce<()>>::call_once
+             at /rustc/2d8144b7880597b6e6d3dfd63a9a9efae3f533d3/library/core/src/ops/function.rs:287:21
+  26: std::panicking::catch_unwind::do_call::<&dyn core::ops::function::Fn<(), Output = i32> + core::marker::Sync + core::panic::unwind_safe::RefUnwindSafe, i32>
+             at /rustc/2d8144b7880597b6e6d3dfd63a9a9efae3f533d3/library/std/src/panicking.rs:581:40
+  27: std::panicking::catch_unwind::<i32, &dyn core::ops::function::Fn<(), Output = i32> + core::marker::Sync + core::panic::unwind_safe::RefUnwindSafe>
+             at /rustc/2d8144b7880597b6e6d3dfd63a9a9efae3f533d3/library/std/src/panicking.rs:544:19
+  28: std::panic::catch_unwind::<&dyn core::ops::function::Fn<(), Output = i32> + core::marker::Sync + core::panic::unwind_safe::RefUnwindSafe, i32>
+             at /rustc/2d8144b7880597b6e6d3dfd63a9a9efae3f533d3/library/std/src/panic.rs:359:14
+  29: std::rt::lang_start_internal::{closure#0}
+             at /rustc/2d8144b7880597b6e6d3dfd63a9a9efae3f533d3/library/std/src/rt.rs:175:24
+  30: std::panicking::catch_unwind::do_call::<std::rt::lang_start_internal::{closure#0}, isize>
+             at /rustc/2d8144b7880597b6e6d3dfd63a9a9efae3f533d3/library/std/src/panicking.rs:581:40
+  31: std::panicking::catch_unwind::<isize, std::rt::lang_start_internal::{closure#0}>
+             at /rustc/2d8144b7880597b6e6d3dfd63a9a9efae3f533d3/library/std/src/panicking.rs:544:19
+  32: std::panic::catch_unwind::<std::rt::lang_start_internal::{closure#0}, isize>
+             at /rustc/2d8144b7880597b6e6d3dfd63a9a9efae3f533d3/library/std/src/panic.rs:359:14
+  33: std::rt::lang_start_internal
+             at /rustc/2d8144b7880597b6e6d3dfd63a9a9efae3f533d3/library/std/src/rt.rs:171:5
+  34: std::rt::lang_start::<core::result::Result<(), anyhow::Error>>
+             at /rustc/2d8144b7880597b6e6d3dfd63a9a9efae3f533d3/library/std/src/rt.rs:205:5
+  35: main
+  36: __libc_start_call_main
+             at ./csu/../sysdeps/nptl/libc_start_call_main.h:58:16
+  37: __libc_start_main_impl
+             at ./csu/../csu/libc-start.c:360:3
+  38: _start
