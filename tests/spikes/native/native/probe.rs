@@ -8,6 +8,11 @@ use std::io::Write;
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 
+/// Strings are created through the VM: `BxValue::new_ptr(vm.string_new(..))` (there is no `new_string`).
+fn string(vm: &mut dyn BxVM, value: String) -> BxValue {
+    BxValue::new_ptr(vm.string_new(value))
+}
+
 fn text(vm: &mut dyn BxVM, args: &[BxValue], i: usize, name: &str) -> Result<String, String> {
     if args.len() <= i {
         return Err(format!("{}: missing argument {}", name, i + 1));
@@ -29,13 +34,13 @@ pub fn bx_is_symlink(vm: &mut dyn BxVM, args: &[BxValue]) -> Result<BxValue, Str
 pub fn bx_file_mode(vm: &mut dyn BxVM, args: &[BxValue]) -> Result<BxValue, String> {
     let p = text(vm, args, 0, "bxFileMode")?;
     let m = fs::metadata(&p).map_err(|e| format!("bxFileMode: {}: {}", p, e))?;
-    Ok(BxValue::new_string(format!("{:o}", m.permissions().mode() & 0o7777)))
+    Ok(string(vm, format!("{:o}", m.permissions().mode() & 0o7777)))
 }
 
 pub fn bx_read_text(vm: &mut dyn BxVM, args: &[BxValue]) -> Result<BxValue, String> {
     let p = text(vm, args, 0, "bxReadText")?;
     let s = fs::read_to_string(&p).map_err(|e| format!("bxReadText: {}: {}", p, e))?;
-    Ok(BxValue::new_string(s))
+    Ok(string(vm, s))
 }
 
 pub fn bx_count_files(vm: &mut dyn BxVM, args: &[BxValue]) -> Result<BxValue, String> {
@@ -47,7 +52,7 @@ pub fn bx_count_files(vm: &mut dyn BxVM, args: &[BxValue]) -> Result<BxValue, St
 pub fn bx_sha256(vm: &mut dyn BxVM, args: &[BxValue]) -> Result<BxValue, String> {
     let p = text(vm, args, 0, "bxSha256")?;
     let bytes = fs::read(&p).map_err(|e| format!("bxSha256: {}: {}", p, e))?;
-    Ok(BxValue::new_string(format!("{:x}", Sha256::digest(&bytes))))
+    Ok(string(vm, format!("{:x}", Sha256::digest(&bytes))))
 }
 
 /// Atomic replace: write a temp file in the same directory, flush it to disk, set the mode,
@@ -76,7 +81,7 @@ pub fn bx_write_atomic(vm: &mut dyn BxVM, args: &[BxValue]) -> Result<BxValue, S
         let _ = fs::remove_file(&tmp);
         return Err(format!("bxWriteAtomic: {}: {}", path, e));
     }
-    Ok(BxValue::new_string("ok".to_string()))
+    Ok(string(vm, "ok".to_string()))
 }
 
 pub fn register_bifs() -> HashMap<String, BxNativeFunction> {
