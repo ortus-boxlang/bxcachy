@@ -10,7 +10,7 @@ bxcachy <group> <verb> [args...] [--yes] [--dry-run] [--json] [--quiet]
 
 - Groups mirror the legacy dispatcher so users keep their muscle memory: `apps app-manager catalog profile base extras dev web podman ai vector db db-center vm network cloud cloud-center cloud-services files quicklook dictation integrations desktop desktop-keys mac-keys omarchy-base layout themes icons runner menu shortcuts system config first-run doctor setup`.
 - Global verbs on every group: `plan` (read-only), `status` (read-only), `doctor` (read-only checks), `help`.
-- Mutating verbs: `install`, `apply`, `remove`, `restore`, `enable`, `disable`. All require `--yes`.
+- Mutating verbs: `install`, `apply`, `remove`, `enable`, `disable`. All require `--yes`.
 - Existing flat commands (`install`, `optional-install`, `profile-install`, `package-status`, `package-source`, ...) stay as aliases until the grouped form ships, then print a deprecation note.
 - Unknown flags, duplicate flags, empty arguments and extra positionals are usage errors (exit 2). Nothing runs.
 - Note from M0 history: BoxLang `CLIGetArgs()` puts flags in `args.options`, not `args.positionals`. The parser is one shared function, tested once.
