@@ -279,11 +279,6 @@
     },
     {
       "group": "desktop",
-      "title": "Education",
-      "order": 2
-    },
-    {
-      "group": "desktop",
       "title": "File Management",
       "order": 3
     },
@@ -2699,35 +2694,6 @@
       "origin": [
         "omarchy-desktop"
       ],
-      "verified_on": "2026-11-09",
-      "shells": [
-        "hyprland"
-      ]
-    },
-    {
-      "id": "learn-omarchy",
-      "name": "Learn Omarchy",
-      "description": "Interactive, theme-aware courses for learning Omarchy",
-      "description_source": "pkgbuild",
-      "kind": "desktop",
-      "group": "desktop",
-      "category": "Education",
-      "tier": "optional",
-      "source": "pkgbuild",
-      "targets": [
-        "learn-omarchy"
-      ],
-      "pkgbuild": {
-        "repo": "omacom/omarchy-pkgs",
-        "path": "pkgbuilds/learn-omarchy",
-        "ref": "master"
-      },
-      "homepage": "https://github.com/DanWahlin/learn-omarchy",
-      "macos": "Tips",
-      "origin": [
-        "omarchy-desktop"
-      ],
-      "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
       "verified_on": "2026-11-09",
       "shells": [
         "hyprland"

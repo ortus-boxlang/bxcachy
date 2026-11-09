@@ -46,10 +46,12 @@ jq -e '[.data.would_install[].id]|index("eza")|not' <<<"$out" >/dev/null || fail
 # shells
 out="$(env -i HOME="$tmp/home" PATH="$tmp/bin:$PATH" XDG_CURRENT_DESKTOP=KDE "$bin" plan --json)"
 [[ "$(jq -r '.data.selection.shell' <<<"$out")" == plasma ]] || fail 'KDE detected as plasma'
-out="$(j plan --shell=plasma --optional)"
+out="$(j plan --shell=plasma)"
 jq -e '[.data.skipped[]|select(.reason=="wrong_shell").id]|index("walker")' <<<"$out" >/dev/null || fail 'walker is wrong_shell on plasma'
 out="$(j plan --shell=hyprland --optional)"
 jq -e '[.data.skipped[]|select(.reason=="wrong_shell").id]|index("walker")|not' <<<"$out" >/dev/null || fail 'walker stays on hyprland'
+out="$(j plan --shell=plasma)"
+jq -e '[.data.skipped[]|select(.reason=="optional").id]|index("walker")|not' <<<"$out" >/dev/null || fail 'walker is not reported optional on plasma'
 [[ "$(rc run "$bin" plan --shell=gnome)" == 2 ]] || fail 'unknown shell exits 2'
 
 # named apps

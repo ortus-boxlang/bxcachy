@@ -63,8 +63,9 @@ class Resolver {
        if ( !structKeyExists( app, "profiles" ) || !structKeyExists( app.profiles, profile ) ) continue;
        tier = app.profiles[profile];
       }
-      if ( tier == "optional" && !wantOptional ) { out.skipped.append( { id: app.id, reason: "optional" } ); continue; }
+      // The shell is checked first so a Hyprland-only app is always reported as wrong_shell on Plasma.
       if ( structKeyExists( app, "shells" ) && shell != "" && shell != "all" && !arrayFind( app.shells, shell ) ) { out.skipped.append( { id: app.id, reason: "wrong_shell" } ); continue; }
+      if ( tier == "optional" && !wantOptional ) { out.skipped.append( { id: app.id, reason: "optional" } ); continue; }
       if ( app.source == "unresolved" ) { out.skipped.append( { id: app.id, reason: "unresolved" } ); continue; }
       if ( isInstalled( app ) ) { out.skipped.append( { id: app.id, reason: "installed" } ); continue; }
       out.selected.append( app );
