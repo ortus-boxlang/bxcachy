@@ -205,3 +205,9 @@ Human output is the same lists, one app per line with its source.
 ### Open questions
 
 1. Decided: a `web` app counts as installed when its launcher file exists.
+
+## 12. Implemented so far, B2 (2026-11-09)
+
+- Catalog 0.3.0: `profiles`, per-profile tier, `shells` (section 11, `catalog/README.md`).
+- `Resolver` class (selection) and `Packages` class (read-only commands). `plan`, `install-plan`, `optional-plan`, `profile-plan`, `profile-install-plan`, `package-status`, `package-source`, `profile-list`, `desktop-list`, `tui-list`, `web-list`, `optional-list` run on the catalog. Installed state comes from one `pacman -Qq` call (web apps: launcher file).
+- Not yet on the catalog: `install`, `optional-install`, `profile-install` (B2.4), `apps-doctor`, `dev-plan`.

@@ -4,36 +4,40 @@ binary="${1:-./bxcachy}"
 test -x "$binary"
 "$binary" version | grep -F 'BxCachy 0.11.0-dev'
 "$binary" doctor | grep -F 'Java 21'
-"$binary" plan | grep -F 'localsend'
-"$binary" desktop-list | grep -F 'obs-studio'
-"$binary" tui-list | grep -F 'lazygit'
-"$binary" web-list | grep -F 'github.com'
-"$binary" optional-list | grep -F 'optional'
-"$binary" dev-plan | grep -F 'jdk21-openjdk'
+has() { grep -F -- "$1" >/dev/null; }
+usage_exit2() { local out rc=0; out="$("$@" 2>&1)" || rc=$?; [[ "$rc" -eq 2 ]] || { echo "FAIL: $* exited $rc, wanted 2" >&2; exit 1; }; grep -Fq 'Usage:' <<<"$out" || { echo "FAIL: $*: no usage text" >&2; exit 1; }; }
+expect_error() { local needle="$1"; shift; local out rc=0; out="$("$@" 2>&1)" || rc=$?; [[ "$rc" -eq 2 ]] || { echo "FAIL: $* exited $rc, wanted 2" >&2; exit 1; }; grep -Fq -- "$needle" <<<"$out" || { echo "FAIL: $*: missing '$needle'" >&2; exit 1; }; }
+"$binary" plan | has 'Plan (default tier'
+"$binary" plan | has 'neovim  [pacman]'
+"$binary" desktop-list | has 'Visual Studio Code'
+"$binary" tui-list | has 'lazygit'
+"$binary" web-list | has 'boxlang-docs'
+"$binary" optional-list | has '[optional]'
+"$binary" dev-plan | has 'jdk21-openjdk'
 if "$binary" install >/dev/null 2>&1; then echo 'FAIL: unconfirmed install accepted' >&2; exit 1; fi
 
-"$binary" optional-plan obs chromium | grep -F 'obs-studio'
-"$binary" optional-plan obs chromium | grep -F 'chromium'
-"$binary" optional-plan invalid | grep -F 'Unknown optional application'
-"$binary" optional-plan | grep -F 'Usage:'
-"$binary" help | grep -F 'optional-plan'
+"$binary" optional-plan obs chromium | has 'obs  ['
+"$binary" optional-plan obs chromium | has 'chromium  ['
+expect_error 'unknown app invalid' "$binary" optional-plan invalid
+usage_exit2 "$binary" optional-plan
+"$binary" help | has 'optional-plan'
 
-"$binary" profile-list | grep -F 'containers: podman'
-"$binary" profile-plan jvm | grep -F 'jdk21-openjdk'
-"$binary" profile-plan terminal | grep -F 'lazygit'
-"$binary" profile-plan invalid | grep -F 'Unknown profile'
-"$binary" profile-plan | grep -F 'Usage:'
+"$binary" profile-list | has 'containers: Containers'
+"$binary" profile-plan jvm | has 'jdk21'
+"$binary" profile-plan terminal | has 'lazygit'
+expect_error 'unknown profile invalid' "$binary" profile-plan invalid
+usage_exit2 "$binary" profile-plan
 
 if "$binary" profile-install jvm >/dev/null 2>&1; then echo 'FAIL: unconfirmed profile install accepted' >&2; exit 1; fi
 if "$binary" optional-install invalid --yes >/dev/null 2>&1; then echo 'FAIL: invalid optional package accepted' >&2; exit 1; fi
-"$binary" help | grep -F 'profile-install'
+"$binary" help | has 'profile-install'
 
-"$binary" install-plan | grep -F 'pacseek'
-"$binary" install-plan | grep -F 'No packages installed'
-"$binary" profile-install-plan jvm | grep -F 'jdk21-openjdk maven gradle'
-"$binary" profile-install-plan invalid | grep -F 'Unknown profile'
-"$binary" profile-install-plan | grep -F 'Usage:'
-"$binary" help | grep -F 'profile-install-plan'
+"$binary" install-plan | has 'neovim'
+"$binary" install-plan | has 'nothing was installed'
+"$binary" profile-install-plan jvm | has 'maven'
+expect_error 'unknown profile invalid' "$binary" profile-install-plan invalid
+usage_exit2 "$binary" profile-install-plan
+"$binary" help | has 'profile-install-plan'
 
 # Package status must reject unsafe names before spawning pacman.
 if "$binary" package-status 'bad;name' >/dev/null 2>&1; then
