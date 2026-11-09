@@ -9,7 +9,7 @@ MIN_FREE_GB=5
 BOXLANG_LATEST_URL="https://downloads.ortussolutions.com/ortussolutions/boxlang/version-latest.properties"
 
 usage() {
-  echo "Usage: install.sh --check | --plan | --install --yes | --install-toolchains --yes [--allow-external-scripts] | --install-binary --yes [--binary PATH] [--force]" >&2
+  echo "Usage: install.sh --check | --plan | --all --yes [--allow-external-scripts] | --install --yes | --install-toolchains --yes [--allow-external-scripts] | --install-binary --yes [--binary PATH] [--force]" >&2
   exit 2
 }
 [[ $# -gt 0 ]] || usage
@@ -17,7 +17,7 @@ mode="$1"; shift
 case "$mode" in
   --check|--plan) [[ $# -eq 0 ]] || usage ;;
   --install) [[ $# -eq 1 && "$1" == --yes ]] || usage ;;
-  --install-toolchains)
+  --all|--install-toolchains)
     yes=0; allow_external=0
     for arg in "$@"; do
       case "$arg" in --yes) yes=1 ;; --allow-external-scripts) allow_external=1 ;; *) usage ;; esac
@@ -37,6 +37,19 @@ case "$mode" in
   *) usage ;;
 esac
 allow_external="${allow_external:-0}"
+
+# ---- --all --yes: every stage in order (packages, toolchains, bxcachy binary). Each stage is re-runnable. ----
+# BXCACHY_ALL_SCRIPT replaces the script the stages are delegated to (tests only).
+if [[ "$mode" == --all ]]; then
+  [[ "$(id -u)" != 0 ]] || { echo "Run as a regular user; sudo is used only for pacman steps" >&2; exit 1; }
+  all_self="${BXCACHY_ALL_SCRIPT:-${BASH_SOURCE[0]}}"
+  all_ext=(); (( allow_external )) && all_ext=(--allow-external-scripts)
+  echo "== 1/3 packages, yay and Rust =="; bash "$all_self" --install --yes || exit $?
+  echo "== 2/3 Java 21 check, mvm, MatchBox, bvm and BoxLang =="; bash "$all_self" --install-toolchains --yes ${all_ext[@]+"${all_ext[@]}"} || exit $?
+  echo "== 3/3 the bxcachy binary =="; bash "$all_self" --install-binary --yes || exit $?
+  echo "Everything is installed. Run: bxcachy doctor"
+  exit 0
+fi
 
 command -v pacman >/dev/null 2>&1 || {
   echo "BxCachy requires Arch Linux/CachyOS (pacman)" >&2
@@ -184,7 +197,7 @@ build_steps() {
   if (( ! have_yay )); then
     steps+=("yay|sudo pacman -S --needed yay|AUR helper, found in the cachyos repository; only runs if yay is absent (part of --install)")
   fi
-  if (( ! have_mvm )) && [[ -z "$MATCHBOX_DOWNLOADS" ]]; then
+  if (( ! have_mvm )); then
     steps+=("mvm|download and run $MVM_URL|external script, shown first; typed EXECUTE or --allow-external-scripts")
   fi
   if [[ "$mb_ver" != "$MATCHBOX_VERSION" ]]; then
@@ -250,7 +263,7 @@ report_plan() {
     i=$((i+1)); IFS='|' read -r name cmd why <<<"$line"
     printf '%d. %s\n   run: %s\n   why: %s\n' "$i" "$name" "$cmd" "$why"
   done
-  echo "To apply the package steps: install.sh --install --yes. Toolchain steps: install.sh --install-toolchains --yes."
+  echo "Everything at once: install.sh --all --yes [--allow-external-scripts]. Or by stage: --install --yes (packages), --install-toolchains --yes, --install-binary --yes."
 }
 
 if [[ "$mode" == --check || "$mode" == --plan ]] && (( ! manifest_ok )); then
@@ -307,7 +320,7 @@ if [[ "$mode" == --install-toolchains ]]; then
   }
 
   done_any=0
-  if (( ! have_mvm )) && [[ -z "$MATCHBOX_DOWNLOADS" ]]; then
+  if (( ! have_mvm )); then
     run_external mvm "$MVM_URL" ${BXCACHY_MVM_VERSION:+MVM_VERSION="$BXCACHY_MVM_VERSION"}; done_any=1
     tool_path mvm >/dev/null || { echo "MVM installation failed: mvm not found afterwards" >&2; exit 1; }
   fi
@@ -433,4 +446,4 @@ case ":$PATH:" in
      echo "  bash/zsh: export PATH=\"$BIN_DIR:\$PATH\""
      echo "  fish:     fish_add_path $BIN_DIR" ;;
 esac
-echo "Next: install.sh --install-toolchains --yes"
+echo "Next: install.sh --install-toolchains --yes (or install.sh --all --yes does every stage)"

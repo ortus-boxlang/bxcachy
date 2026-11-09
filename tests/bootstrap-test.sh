@@ -434,19 +434,22 @@ mock curl 'url=""; out=""; while [[ $# -gt 0 ]]; do case "$1" in -o) out="$2"; s
 case "$url" in
   *bxcachy/matchbox/matchbox-linux-x86_64.sha256) echo "${MB_SUM:-$GOOD_SUM}  matchbox-linux-x86_64" > "$out" ;;
   *bxcachy/matchbox/matchbox-linux-x86_64) cat "$MB_FILE" > "$out" ;;
+  *matchbox-quick-installer*) printf "%s\n" "$MVM_FAKE" > "$out" ;;
   *install-bvm*) printf "%s\n" "$BVM_FAKE" > "$out" ;;
   *version-latest.properties*) printf "version=1.19.0+1\n" ;;
   *) exit 22 ;;
 esac'
-drun() { env -i HOME="$home" PATH="$bin:$sys" BXCACHY_SKIP_NETWORK=1 BXCACHY_OS_RELEASE="$tmp/os-arch" MOCK_INSTALLED="$MOCK_INSTALLED" CURL_LOG="$tmp/curl.log" BVM_FAKE="$BVM_FAKE" MB_FILE="$tmp/mb-good" GOOD_SUM="$GOOD_SUM" MB_SUM="${MB_SUM:-$GOOD_SUM}" MOCK_UID="${MOCK_UID:-1000}" BXCACHY_MANIFEST="$tmp/box-dl.json" "$@"; }
+drun() { env -i MVM_FAKE="$MVM_FAKE" HOME="$home" PATH="$bin:$sys" BXCACHY_SKIP_NETWORK=1 BXCACHY_OS_RELEASE="$tmp/os-arch" MOCK_INSTALLED="$MOCK_INSTALLED" CURL_LOG="$tmp/curl.log" BVM_FAKE="$BVM_FAKE" MB_FILE="$tmp/mb-good" GOOD_SUM="$GOOD_SUM" MB_SUM="${MB_SUM:-$GOOD_SUM}" MOCK_UID="${MOCK_UID:-1000}" BXCACHY_MANIFEST="$tmp/box-dl.json" "$@"; }
 fresh_home
 plan="$(drun bash "$repo/bootstrap/install.sh" --plan)"
-need "$plan" 'download https://downloads.example.test/bxcachy/matchbox/matchbox-linux-x86_64 and check its sha256'; refuse "$plan" 'mvm install'; refuse "$plan" 'matchbox-quick-installer'
-# install: downloaded, verified, kept under ~/.local/share/bxcachy/matchbox, mvm not involved
+need "$plan" 'download https://downloads.example.test/bxcachy/matchbox/matchbox-linux-x86_64 and check its sha256'; refuse "$plan" 'mvm install'
+need "$plan" 'download and run https://raw.githubusercontent.com/ortus-boxlang/matchbox-quick-installer'   # mvm is always installed
+# install: downloaded, verified, kept under ~/.local/share/bxcachy/matchbox; mvm is installed too but does not manage this MatchBox
 out="$(drun bash "$repo/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null 2>&1)"
 need "$out" 'MatchBox 0.13.0 installed and verified.'
-[[ -x "$home/.local/share/bxcachy/matchbox/bin/matchbox" && ! -e "$home/.mvm" ]] || { echo 'FAIL: MatchBox not installed under the bxcachy home, or mvm ran' >&2; exit 1; }
-need "$(cat "$tmp/curl.log")" 'bxcachy/matchbox/matchbox-linux-x86_64.sha256'; refuse "$(cat "$tmp/curl.log")" 'matchbox-quick-installer'
+[[ -x "$home/.local/share/bxcachy/matchbox/bin/matchbox" && -x "$home/.mvm/bin/mvm" ]] || { echo 'FAIL: MatchBox not under the bxcachy home, or mvm missing' >&2; exit 1; }
+[[ ! -e "$home/.mvm/bin/matchbox" ]] || { echo 'FAIL: mvm installed a MatchBox of its own' >&2; exit 1; }
+need "$(cat "$tmp/curl.log")" 'bxcachy/matchbox/matchbox-linux-x86_64.sha256'; need "$(cat "$tmp/curl.log")" 'matchbox-quick-installer'
 # a second run changes nothing
 : > "$tmp/curl.log"; drun bash "$repo/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null >/dev/null 2>&1
 refuse "$(cat "$tmp/curl.log")" 'matchbox-linux-x86_64'
@@ -464,3 +467,25 @@ fresh_home; : > "$tmp/curl.log"
 out="$(drun env BXCACHY_MATCHBOX_FILE="$tmp/mb-good" bash "$repo/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null 2>&1)"
 need "$out" 'MatchBox 0.13.0 installed and verified.'; refuse "$(cat "$tmp/curl.log")" 'matchbox-linux-x86_64'
 echo 'bootstrap matchbox download tests passed'
+
+# ---- --all: every stage in order, flags forwarded, stops at the first failing stage ----
+mkdir -p "$tmp/all/bin"
+printf '#!/usr/bin/env bash\nif [[ "$1" == -u ]]; then echo 1000; else /usr/bin/id "$@"; fi\n' > "$tmp/all/bin/id"; chmod +x "$tmp/all/bin/id"
+cat > "$tmp/all/stage.sh" <<'STAGE'
+#!/usr/bin/env bash
+echo "$*" >> "$ALL_LOG"
+[[ "${ALL_FAIL:-}" == "$1" ]] && exit 7
+exit 0
+STAGE
+: > "$tmp/all/log"
+out="$(env PATH="$tmp/all/bin:$PATH" ALL_LOG="$tmp/all/log" BXCACHY_ALL_SCRIPT="$tmp/all/stage.sh" bash "$root/bootstrap/install.sh" --all --yes --allow-external-scripts 2>&1)"
+[[ "$(paste -sd'|' "$tmp/all/log")" == '--install --yes|--install-toolchains --yes --allow-external-scripts|--install-binary --yes' ]] || { echo "FAIL: --all stage order or flags: $(paste -sd'|' "$tmp/all/log")" >&2; exit 1; }
+: > "$tmp/all/log"
+env PATH="$tmp/all/bin:$PATH" ALL_LOG="$tmp/all/log" BXCACHY_ALL_SCRIPT="$tmp/all/stage.sh" bash "$root/bootstrap/install.sh" --all --yes >/dev/null 2>&1
+[[ "$(sed -n 2p "$tmp/all/log")" == '--install-toolchains --yes' ]] || { echo 'FAIL: --all forwarded --allow-external-scripts without being given it' >&2; exit 1; }
+: > "$tmp/all/log"
+if env PATH="$tmp/all/bin:$PATH" ALL_FAIL=--install-toolchains ALL_LOG="$tmp/all/log" BXCACHY_ALL_SCRIPT="$tmp/all/stage.sh" bash "$root/bootstrap/install.sh" --all --yes >/dev/null 2>&1; then echo 'FAIL: --all ignored a failing stage' >&2; exit 1; fi
+[[ "$(wc -l < "$tmp/all/log")" == 2 ]] || { echo 'FAIL: --all went on after a failing stage' >&2; exit 1; }
+if bash "$root/bootstrap/install.sh" --all >/dev/null 2>&1; then echo 'FAIL: --all without --yes accepted' >&2; exit 1; fi
+echo 'bootstrap --all tests passed'
+if env PATH="$tmp/all/bin:$PATH" ALL_LOG="$tmp/all/log" BXCACHY_ALL_SCRIPT="$tmp/all/stage.sh" bash -c 'id() { echo 0; }; export -f id; exec bash "$0" "$@"' "$root/bootstrap/install.sh" --all --yes >/dev/null 2>&1; then :; fi
