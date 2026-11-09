@@ -56,9 +56,13 @@ step bootstrap-needs-confirm  2 bash bootstrap/install.sh --install
 step bootstrap-install        0 bash bootstrap/install.sh --install --yes
 step bootstrap-install-rerun  0 bash bootstrap/install.sh --install --yes
 step rust-default             0 rustup default stable
+# Unattended runs must refuse to execute external installers without the flag (nothing is installed yet here).
+step_grep bootstrap-toolchains-refuses-unattended 2 'allow-external-scripts' bash -c 'bash bootstrap/install.sh --install-toolchains --yes </dev/null 2>&1'
 if [[ $NET == 1 ]]; then
-  step bootstrap-toolchains     0 bash bootstrap/install.sh --install-toolchains --yes
-  step bootstrap-toolchains-rerun 0 bash bootstrap/install.sh --install-toolchains --yes
+  step bootstrap-toolchains       0 bash -c 'bash bootstrap/install.sh --install-toolchains --yes --allow-external-scripts </dev/null'
+  step_grep bootstrap-toolchains-rerun 0 'Nothing to do' bash -c 'bash bootstrap/install.sh --install-toolchains --yes --allow-external-scripts </dev/null'
+  step_grep bootstrap-pins-boxlang   0 'boxlang: 1.19.0' bash bootstrap/install.sh --check
+  step_grep bootstrap-pins-matchbox  0 'matchbox: 0.12.0' bash bootstrap/install.sh --check
 else
   skip bootstrap-toolchains "GitHub unreachable"; skip bootstrap-toolchains-rerun "GitHub unreachable"
 fi

@@ -10,16 +10,23 @@ BVM_URL="https://install-bvm.boxlang.io"
 MVM_URL="https://raw.githubusercontent.com/ortus-boxlang/matchbox-quick-installer/main/install/install.sh"
 
 usage() {
-  echo "Usage: install.sh --check | --plan | --install --yes | --install-toolchains --yes" >&2
+  echo "Usage: install.sh --check | --plan | --install --yes | --install-toolchains --yes [--allow-external-scripts]" >&2
   exit 2
 }
 [[ $# -gt 0 ]] || usage
 mode="$1"; shift
 case "$mode" in
   --check|--plan) [[ $# -eq 0 ]] || usage ;;
-  --install|--install-toolchains) [[ $# -eq 1 && "$1" == --yes ]] || usage ;;
+  --install) [[ $# -eq 1 && "$1" == --yes ]] || usage ;;
+  --install-toolchains)
+    yes=0; allow_external=0
+    for arg in "$@"; do
+      case "$arg" in --yes) yes=1 ;; --allow-external-scripts) allow_external=1 ;; *) usage ;; esac
+    done
+    [[ $yes -eq 1 ]] || usage ;;
   *) usage ;;
 esac
+allow_external="${allow_external:-0}"
 
 command -v pacman >/dev/null 2>&1 || {
   echo "BxCachy requires Arch Linux/CachyOS (pacman)" >&2
@@ -80,7 +87,7 @@ build_steps() {
     steps+=("matchbox|mvm install $MATCHBOX_VERSION && mvm use $MATCHBOX_VERSION|pinned MatchBox compiler")
   fi
   if (( ! have_bvm )); then
-    steps+=("bvm|download and run $BVM_URL|external script, shown first; typed EXECUTE or --allow-external-scripts")
+    steps+=("bvm|download and run $BVM_URL|external script, shown first; typed EXECUTE or --allow-external-scripts; it may add BVM to your shell startup files")
   fi
   if [[ "$bl_ver" != "$BOXLANG_VERSION" ]]; then
     steps+=("boxlang|bvm install $BOXLANG_VERSION && bvm use $BOXLANG_VERSION|pinned BoxLang runtime")
@@ -140,25 +147,62 @@ if [[ "$mode" == --check || "$mode" == --plan ]]; then
 fi
 
 if [[ "$mode" == --install-toolchains ]]; then
+  # Re-runnable: only the steps still needed are performed. Runs as the normal user.
   command -v curl >/dev/null 2>&1 || { echo "curl is required" >&2; exit 1; }
-  command -v java >/dev/null 2>&1 || { echo "Java 21 is required" >&2; exit 1; }
-  java -version 2>&1 | grep -Eq 'version "21[."]|openjdk 21' || { echo "Java 21 is required" >&2; exit 1; }
   [[ "$(id -u)" != 0 ]] || { echo "Toolchains must be installed as a regular user" >&2; exit 1; }
-  if ! command -v mvm >/dev/null 2>&1; then
-    installer="$(mktemp)"
-    trap 'rm -f "$installer"' EXIT
-    curl -fsSL https://raw.githubusercontent.com/ortus-boxlang/matchbox-quick-installer/main/install/install.sh -o "$installer"
-    bash "$installer"
-    rm -f "$installer"
-    trap - EXIT
+  inspect
+  [[ "$java_major" == "$JAVA_MAJOR" ]] || { echo "Java $JAVA_MAJOR is required (found: ${java_ver:-none})" >&2; exit 1; }
+  export PATH="$probe_path"
+  cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/bxcachy/external"
+
+  is_interactive() { [[ "${BXCACHY_INTERACTIVE:-0}" == 1 || ( -t 0 && -t 1 ) ]]; }
+  # Download an external installer, show what it is, and run it only after approval:
+  # typed EXECUTE when interactive, or --allow-external-scripts when unattended.
+  run_external() {  # NAME URL
+    local name="$1" url="$2" file hash lines answer
+    mkdir -p "$cache_dir"; chmod 700 "$cache_dir"
+    file="$(mktemp "$cache_dir/$name.XXXXXX.sh")"
+    if ! curl -fsSL --retry 3 --retry-delay 2 "$url" -o "$file"; then echo "Download failed: $url" >&2; rm -f "$file"; exit 1; fi
+    [[ -s "$file" ]] || { echo "Empty download: $url" >&2; rm -f "$file"; exit 1; }
+    chmod 600 "$file"
+    hash="$(sha256sum "$file" | cut -d' ' -f1)"; lines="$(wc -l < "$file")"
+    printf 'External script: %s\n  url:    %s\n  saved:  %s (%s lines)\n  sha256: %s\n  first lines:\n' "$name" "$url" "$file" "$lines" "$hash"
+    head -n 15 "$file" | sed 's/^/    | /'
+    if (( allow_external )); then
+      echo "  approved by --allow-external-scripts"
+    elif is_interactive; then
+      printf 'Type EXECUTE to run this script as %s (read it first: %s), anything else cancels: ' "$(id -un)" "$file"
+      read -r answer || answer=""
+      [[ "$answer" == EXECUTE ]] || { echo "Cancelled. Nothing was run." >&2; exit 2; }
+    else
+      echo "Not running $name unattended. Re-run with --allow-external-scripts to approve external scripts." >&2
+      exit 2
+    fi
+    if ! bash "$file"; then echo "$name installer failed (script kept at $file)" >&2; exit 1; fi
+  }
+
+  done_any=0
+  if (( ! have_mvm )); then
+    run_external mvm "$MVM_URL"; done_any=1
+    tool_path mvm >/dev/null || { echo "MVM installation failed: mvm not found afterwards" >&2; exit 1; }
   fi
-  export PATH="$HOME/.mvm/bin:$PATH"
-  command -v mvm >/dev/null 2>&1 || { echo "MVM installation failed" >&2; exit 1; }
-  mvm install "$MATCHBOX_VERSION"
-  mvm use "$MATCHBOX_VERSION"
-  matchbox --version | grep -F "$MATCHBOX_VERSION"
-  echo "MatchBox $MATCHBOX_VERSION installed and verified."
-  echo "BVM and BoxLang provisioning remains pending."
+  if [[ "$(tool_version matchbox)" != "$MATCHBOX_VERSION" ]]; then
+    mvm install "$MATCHBOX_VERSION"; mvm use "$MATCHBOX_VERSION"; done_any=1
+    [[ "$(tool_version matchbox)" == "$MATCHBOX_VERSION" ]] || { echo "MatchBox $MATCHBOX_VERSION not active after install" >&2; exit 1; }
+    echo "MatchBox $MATCHBOX_VERSION installed and verified."
+  fi
+  if (( ! have_bvm )); then
+    run_external bvm "$BVM_URL"; done_any=1
+    tool_path bvm >/dev/null || { echo "BVM installation failed: bvm not found afterwards" >&2; exit 1; }
+    echo "Note: the BVM installer may add BVM to your shell startup files; open a new shell to pick that up."
+  fi
+  if [[ "$(tool_version boxlang)" != "$BOXLANG_VERSION" ]]; then
+    bvm install "$BOXLANG_VERSION"; bvm use "$BOXLANG_VERSION"; done_any=1
+    [[ "$(tool_version boxlang)" == "$BOXLANG_VERSION" ]] || { echo "BoxLang $BOXLANG_VERSION not active after install (found: $(tool_version boxlang))" >&2; exit 1; }
+    echo "BoxLang $BOXLANG_VERSION installed and verified."
+  fi
+  if (( ! done_any )); then echo "Nothing to do: MVM, MatchBox $MATCHBOX_VERSION, BVM and BoxLang $BOXLANG_VERSION are already installed."; fi
+  echo "Rust and the bxcachy binary are handled by later steps."
   exit 0
 fi
 

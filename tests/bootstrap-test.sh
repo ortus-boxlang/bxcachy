@@ -33,7 +33,7 @@ echo 'bootstrap check tests passed'
 # ---- B1/B2: read-only --check and --plan, with a fully isolated PATH and HOME ----
 sys="$tmp/sys"; bin="$tmp/bin"; home="$tmp/home"
 mkdir -p "$sys" "$bin" "$home/.local/bin"
-for t in bash env grep awk df id uname head tr cat sort dirname mktemp sed cut; do
+for t in bash env grep awk df id uname head tr cat sort dirname mktemp sed cut mkdir chmod rm wc sha256sum basename ls; do
   p="$(command -v "$t")" && ln -sf "$p" "$sys/$t"
 done
 mock() { printf '#!/usr/bin/env bash\n%s\n' "$2" > "$bin/$1"; chmod +x "$bin/$1"; }
@@ -88,3 +88,83 @@ out="$(OSREL="$tmp/os-ubuntu" run bash "$root/bootstrap/install.sh" --check)"; n
 if run bash "$root/bootstrap/install.sh" --plan extra >/dev/null 2>&1; then echo 'FAIL: --plan accepted an argument' >&2; exit 1; fi
 if run bash "$root/bootstrap/install.sh" --check --yes >/dev/null 2>&1; then echo 'FAIL: --check accepted --yes' >&2; exit 1; fi
 echo 'bootstrap check/plan tests passed'
+
+# ---- B3: toolchain install behind the EXECUTE gate (all downloads are mocked) ----
+MVM_FAKE='mkdir -p "$HOME/.mvm/bin"
+cat > "$HOME/.mvm/bin/mvm" <<"M"
+#!/usr/bin/env bash
+case "$1" in
+  install) : ;;
+  use) printf "#!/usr/bin/env bash\necho \"MatchBox %s\"\n" "$2" > "$HOME/.mvm/bin/matchbox"; chmod +x "$HOME/.mvm/bin/matchbox" ;;
+  --version) echo "MVM version: 2.0.1" ;;
+esac
+M
+chmod +x "$HOME/.mvm/bin/mvm"
+echo "MARK-MVM-RAN" >> "$HOME/ran.log"'
+BVM_FAKE='mkdir -p "$HOME/.bvm/bin"
+cat > "$HOME/.bvm/bin/bvm" <<"M"
+#!/usr/bin/env bash
+case "$1" in
+  install) : ;;
+  use) printf "#!/usr/bin/env bash\necho \"Ortus BoxLang v%s+1\"\n" "$2" > "$HOME/.bvm/bin/boxlang"; chmod +x "$HOME/.bvm/bin/boxlang" ;;
+  --version) echo "bvm 1.40.0" ;;
+esac
+M
+chmod +x "$HOME/.bvm/bin/bvm"
+echo "MARK-BVM-RAN" >> "$HOME/ran.log"'
+export MVM_FAKE BVM_FAKE
+fresh_home() { rm -rf "$home"; mkdir -p "$home/.local/bin"; : > "$tmp/curl.log"; }
+reset_mocks; MOCK_INSTALLED="jdk21-openjdk git curl unzip rustup base-devel"
+mock sudo 'exit 9'
+mock java 'echo "openjdk version \"21.0.13\" 2026-04-21" >&2'
+mock curl 'url=""; out=""; while [[ $# -gt 0 ]]; do case "$1" in -o) out="$2"; shift 2 ;; http*) url="$1"; shift ;; *) shift ;; esac; done
+echo "$url" >> "$CURL_LOG"
+[[ "${MOCK_CURL_FAIL:-0}" == 1 ]] && exit 22
+case "$url" in
+  *matchbox-quick-installer*) printf "%s\n" "$MVM_FAKE" > "$out" ;;
+  *install-bvm*) printf "%s\n" "$BVM_FAKE" > "$out" ;;
+  *) exit 22 ;;
+esac'
+trun() { env -i HOME="$home" PATH="$bin:$sys" BXCACHY_SKIP_NETWORK=1 BXCACHY_OS_RELEASE="$tmp/os-arch" MOCK_INSTALLED="$MOCK_INSTALLED" CURL_LOG="$tmp/curl.log" MVM_FAKE="$MVM_FAKE" BVM_FAKE="$BVM_FAKE" "$@"; }
+
+# 1. Unattended without the flag: refuses, runs nothing.
+fresh_home
+if out="$(trun bash "$root/bootstrap/install.sh" --install-toolchains --yes </dev/null 2>&1)"; then echo 'FAIL: unattended run without --allow-external-scripts succeeded' >&2; exit 1; fi
+need "$out" 'Re-run with --allow-external-scripts'
+[[ ! -e "$home/.mvm" && ! -e "$home/.bvm" && ! -e "$home/ran.log" ]] || { echo 'FAIL: something ran without approval' >&2; exit 1; }
+
+# 2. Interactive: wrong answer cancels, typed EXECUTE proceeds.
+fresh_home
+if out="$(echo no | trun env BXCACHY_INTERACTIVE=1 bash "$root/bootstrap/install.sh" --install-toolchains --yes 2>&1)"; then echo 'FAIL: cancelled run succeeded' >&2; exit 1; fi
+need "$out" 'Cancelled. Nothing was run.'; [[ ! -e "$home/ran.log" ]] || { echo 'FAIL: script ran after cancel' >&2; exit 1; }
+printf 'EXECUTE\nEXECUTE\n' | trun env BXCACHY_INTERACTIVE=1 bash "$root/bootstrap/install.sh" --install-toolchains --yes >/dev/null 2>&1 || { echo 'FAIL: typed EXECUTE did not proceed' >&2; exit 1; }
+grep -q MARK-MVM-RAN "$home/ran.log" && grep -q MARK-BVM-RAN "$home/ran.log" || { echo 'FAIL: installers did not run after EXECUTE' >&2; exit 1; }
+
+# 3. Flag approves; end state is at the pins; the script shows url, sha256 and its first lines.
+fresh_home
+out="$(trun bash "$root/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null 2>&1)"
+for x in 'External script: mvm' 'External script: bvm' 'sha256: ' 'first lines:' 'approved by --allow-external-scripts' 'MatchBox 0.12.0 installed and verified.' 'BoxLang 1.19.0 installed and verified.'; do need "$out" "$x"; done
+chk="$(trun env PATH="$home/.local/bin:$bin:$sys" bash "$root/bootstrap/install.sh" --check)"; need "$chk" 'matchbox: 0.12.0'; need "$chk" 'boxlang: 1.19.0'
+[[ "$(stat -c %a "$home/.cache/bxcachy/external")" == 700 ]] || { echo 'FAIL: cache dir not private' >&2; exit 1; }
+
+# 4. Second run: nothing to do, nothing downloaded.
+: > "$tmp/curl.log"
+out="$(trun bash "$root/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null 2>&1)"
+need "$out" 'Nothing to do'; [[ ! -s "$tmp/curl.log" ]] || { echo 'FAIL: rerun downloaded something' >&2; exit 1; }
+
+# 5. Partial state: MVM+MatchBox present, BVM missing -> only the BVM script is fetched.
+rm -rf "$home/.bvm"; : > "$tmp/curl.log"
+trun bash "$root/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null >/dev/null 2>&1
+[[ "$(wc -l < "$tmp/curl.log")" == 1 ]] && grep -q install-bvm "$tmp/curl.log" || { echo 'FAIL: partial recovery fetched the wrong scripts' >&2; cat "$tmp/curl.log" >&2; exit 1; }
+
+# 6. Failures: download error, wrong Java, root, unknown flag.
+fresh_home
+if out="$(trun env MOCK_CURL_FAIL=1 bash "$root/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null 2>&1)"; then echo 'FAIL: download failure ignored' >&2; exit 1; fi
+need "$out" 'Download failed'
+mock java 'echo "openjdk version \"17.0.9\" 2024-01-01" >&2'
+if out="$(trun bash "$root/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null 2>&1)"; then echo 'FAIL: wrong Java accepted' >&2; exit 1; fi; need "$out" 'Java 21 is required'
+mock java 'echo "openjdk version \"21.0.13\" 2026-04-21" >&2'
+if out="$(trun env MOCK_UID=0 bash "$root/bootstrap/install.sh" --install-toolchains --yes </dev/null 2>&1)"; then echo 'FAIL: root accepted' >&2; exit 1; fi; need "$out" 'regular user'
+if trun bash "$root/bootstrap/install.sh" --install-toolchains --yes --bogus >/dev/null 2>&1; then echo 'FAIL: unknown flag accepted' >&2; exit 1; fi
+if trun bash "$root/bootstrap/install.sh" --install --yes --allow-external-scripts >/dev/null 2>&1; then echo 'FAIL: --install accepted the external-scripts flag' >&2; exit 1; fi
+echo 'bootstrap toolchain tests passed'
