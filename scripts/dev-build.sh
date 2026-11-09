@@ -9,5 +9,5 @@ mb="${MATCHBOX:-/home/user/matchbox/target/debug/matchbox}"
 [[ -x "$mb" ]] || { echo "MatchBox not found at $mb (build it: cd /home/user/matchbox && cargo build)" >&2; exit 4; }
 mkdir -p "$root/dist"
 "$root/bootstrap/gen-catalog.sh" >/dev/null
-(cd "$root" && "$mb" --target native --output "$root/dist/bxcachy" src/bxcachy.bxs)
+(cd "$root" && "$mb" --target native --output "$root/dist/bxcachy" src/Bxcachy.bx)
 echo "built $root/dist/bxcachy with $("$mb" --version 2>&1 | head -1)"

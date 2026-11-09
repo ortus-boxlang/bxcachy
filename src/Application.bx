@@ -1,0 +1,14 @@
+// Application listener for the bxcachy CLI (BoxLang Application.bx; MatchBox PR #154).
+class {
+
+    this.name = "bxcachy";
+    this.mappings = { "/bxcachy": getDirectoryFromPath( getCurrentTemplatePath() ) & "bxcachy" };
+
+    // An unexpected error is an internal error: exit code 9 (docs/architecture/COMMAND-CONTRACT.md section 3).
+    function onError( exception, eventName ) {
+        println( "bxcachy: internal error: " & exception.message );
+        CLIExit( 9 );
+        return true;
+    }
+
+}

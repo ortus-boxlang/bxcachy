@@ -1,0 +1,401 @@
+// BxCachy: a kickstarter for developers on CachyOS. Entry point class: `bxcachy <command> ...`
+// runs main( args ) (BoxLang class entry, MatchBox PR #152). Application.bx adds the lifecycle.
+class {
+
+    property name="version" default="0.11.0-dev";
+
+    function main( rawArgs = [] ) {
+        var args = CLIGetArgs();
+        var p = args.positionals;
+        var cmd = p.len() ? p[1] : "help";
+        var appVersion = "0.11.0-dev";
+        var asJson = structKeyExists( args.options, "json" );
+        var cli = new bxcachy.Cli( appVersion );
+        var catalog = new bxcachy.Catalog();
+        var config = new bxcachy.ConfigService();
+        // One shared flag check for every command: unknown flags are usage errors and nothing runs.
+        for ( var flag in args.options ) {
+            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source" ], flag ) ) {
+                println( "Unknown option: --" & flag );
+                CLIExit( 2 );
+            }
+        }
+        var base = [ "localsend", "mpv", "pacseek" ];
+        var desktop = { localsend: "localsend", mpv: "mpv", obs: "obs-studio", kdenlive: "kdenlive", pinta: "pinta", chromium: "chromium", obsidian: "obsidian", libreoffice: "libreoffice-fresh" };
+        var tui = { lazygit: "lazygit", btop: "btop", neovim: "neovim", pacseek: "pacseek", yazi: "yazi" };
+        var optional = { obs: "obs-studio", kdenlive: "kdenlive", pinta: "pinta", chromium: "chromium", obsidian: "obsidian", libreoffice: "libreoffice-fresh" };
+        var web = { github: "https://github.com", "boxlang-docs": "https://boxlang.ortusbooks.com", youtube: "https://youtube.com" };
+
+        switch ( cmd ) {
+         case "version":
+          if ( asJson ) println( cli.envelope( "version", 0, { name: "BxCachy", version: appVersion } ) );
+          else println( "BxCachy 0.11.0-dev" );
+          break;
+         case "doctor":
+         case "prerequisites":
+          println( "Workstation prerequisites: Java 21, BVM, MVM, BoxLang, MatchBox" );
+          println( "Native build prerequisites: Rust and Cargo" );
+          break;
+         case "desktop-list":
+          cli.emitMap( "desktop-list", asJson, desktop, "" );
+          break;
+         case "tui-list":
+          cli.emitMap( "tui-list", asJson, tui, "" );
+          break;
+         case "web-list":
+          cli.emitMap( "web-list", asJson, web, "" );
+          break;
+         case "optional-list":
+          cli.emitMap( "optional-list", asJson, optional, " (optional)" );
+          break;
+         case "plan":
+         case "apps-doctor":
+          println( "Base packages (pacman first):" );
+          for ( pkg in base ) println( pkg );
+          break;
+         case "optional-plan":
+          if ( p.len() < 2 ) {
+           println( "Usage: bxcachy optional-plan NAME [NAME...]" );
+           break;
+          }
+          println( "Optional packages (pacman-first plan):" );
+          for ( i = 2; i <= p.len(); i++ ) {
+           name = p[i];
+           if ( structKeyExists( optional, name ) ) {
+            println( name & ": " & optional[name] );
+           } else {
+            println( "Unknown optional application: " & name );
+           }
+          }
+          break;
+         case "package-status":
+          if ( p.len() != 2 || !reFind( "^[a-zA-Z0-9@._+-]+$", p[2] ) ) {
+           println( "Usage: bxcachy package-status PACKAGE" );
+           CLIExit( 2 );
+          }
+          result = systemExecute( name = "pacman", arguments = "-Qq " & p[2], timeout = 15, terminateOnTimeout = true );
+          if ( result.timeout ) {
+           println( p[2] & ": package check timed out" );
+           CLIExit( 3 );
+          }
+          if ( result.exitCode == 0 ) {
+           println( p[2] & ": installed" );
+          } else {
+           println( p[2] & ": missing or pacman unavailable" );
+           CLIExit( 1 );
+          }
+          break;
+         case "package-source":
+          if ( p.len() != 2 || !reFind( "^[a-zA-Z0-9@._+-]+$", p[2] ) ) {
+           println( "Usage: bxcachy package-source PACKAGE" );
+           CLIExit( 2 );
+          }
+          packageName = p[2];
+          installedCheck = systemExecute( name = "pacman", arguments = "-Qq " & packageName, timeout = 15, terminateOnTimeout = true );
+          if ( installedCheck.timeout ) {
+           println( packageName & ": installed-package check timed out" );
+           CLIExit( 3 );
+          }
+          if ( installedCheck.exitCode == 0 ) {
+           println( packageName & ": installed" );
+           break;
+          }
+          officialCheck = systemExecute( name = "pacman", arguments = "-Si " & packageName, timeout = 15, terminateOnTimeout = true );
+          if ( officialCheck.timeout ) {
+           println( packageName & ": official repository check timed out" );
+           CLIExit( 3 );
+          }
+          if ( officialCheck.exitCode == 0 ) {
+           println( packageName & ": pacman" );
+           break;
+          }
+          aurCheck = systemExecute( name = "yay", arguments = "-Si " & packageName, timeout = 15, terminateOnTimeout = true );
+          if ( aurCheck.timeout ) {
+           println( packageName & ": AUR repository check timed out" );
+           CLIExit( 3 );
+          }
+          if ( aurCheck.exitCode == 0 ) {
+           println( packageName & ": yay" );
+          } else {
+           println( packageName & ": unavailable" );
+           CLIExit( 1 );
+          }
+          break;
+         case "install-plan":
+          println( "Base installation plan (pacman first, yay fallback):" );
+          for ( pkg in base ) println( pkg );
+          println( "No packages installed. Run the tested package adapter to apply this plan." );
+          break;
+         case "profile-install-plan":
+          if ( p.len() != 2 ) {
+           println( "Usage: bxcachy profile-install-plan core|jvm|containers|terminal" );
+           break;
+          }
+          switch ( p[2] ) {
+           case "core": println( "git curl jq unzip" ); break;
+           case "jvm": println( "jdk21-openjdk maven gradle" ); break;
+           case "containers": println( "podman buildah skopeo" ); break;
+           case "terminal": println( "btop neovim lazygit yazi" ); break;
+           default: println( "Unknown profile: " & p[2] );
+          }
+          println( "Read-only plan; no packages installed." );
+          break;
+         case "profile-list":
+          profileMap = { core: "git curl jq unzip", jvm: "jdk21-openjdk maven gradle", containers: "podman buildah skopeo", terminal: "btop neovim lazygit yazi" };
+          if ( asJson ) {
+           println( cli.envelope( "profile-list", 0, profileMap ) );
+          } else {
+           println( "Available workstation profiles:" );
+           cli.emitMap( "profile-list", false, profileMap, "" );
+          }
+          break;
+         case "profile-plan":
+          if ( p.len() != 2 ) {
+           println( "Usage: bxcachy profile-plan core|jvm|containers|terminal" );
+           break;
+          }
+          profile = p[2];
+          switch ( profile ) {
+           case "core": println( "git curl jq unzip" ); break;
+           case "jvm": println( "jdk21-openjdk maven gradle" ); break;
+           case "containers": println( "podman buildah skopeo" ); break;
+           case "terminal": println( "btop neovim lazygit yazi" ); break;
+           default: println( "Unknown profile: " & profile );
+          }
+          break;
+         case "dev-plan":
+          println( "Java: jdk21-openjdk via pacman" );
+          println( "Maven: maven via pacman" );
+          println( "Gradle: gradle via pacman" );
+          println( "BVM: https://install-bvm.boxlang.io" );
+          println( "MVM: https://raw.githubusercontent.com/ortus-boxlang/matchbox-quick-installer/main/install/install.sh" );
+          break;
+         case "install":
+         case "optional-install":
+         case "profile-install":
+          // Resolve all packages before performing any mutation. Package names are
+          // drawn exclusively from the internal catalog, never from raw user input.
+          installPackages = [];
+          valid = true;
+          confirmed = structKeyExists( args.options, "yes" );
+          if ( cmd == "install" ) {
+           installPackages = base;
+           if ( p.len() != 1 || !structKeyExists( args.options, "yes" ) ) valid = false;
+          } else if ( cmd == "profile-install" ) {
+           if ( p.len() != 2 || !structKeyExists( args.options, "yes" ) ) {
+            valid = false;
+           } else {
+            switch ( p[2] ) {
+             case "core": installPackages = [ "git", "curl", "jq", "unzip" ]; break;
+             case "jvm": installPackages = [ "jdk21-openjdk", "maven", "gradle" ]; break;
+             case "containers": installPackages = [ "podman", "buildah", "skopeo" ]; break;
+             case "terminal": installPackages = [ "btop", "neovim", "lazygit", "yazi" ]; break;
+             default: valid = false;
+            }
+           }
+          } else {
+           if ( p.len() < 2 || !structKeyExists( args.options, "yes" ) ) valid = false;
+           for ( i = 2; i <= p.len(); i++ ) {
+            if ( structKeyExists( optional, p[i] ) ) {
+             installPackages.append( optional[p[i]] );
+            } else {
+             valid = false;
+            }
+           }
+           if ( !confirmed || installPackages.len() == 0 ) valid = false;
+          }
+          if ( !valid ) {
+           println( "Invalid installation request. Specify catalog names and --yes." );
+           CLIExit( 2 );
+          }
+          officialPackages = [];
+          aurPackages = [];
+          unavailablePackages = [];
+          for ( packageName in installPackages ) {
+           installed = systemExecute( name = "pacman", arguments = "-Qq " & packageName, timeout = 15, terminateOnTimeout = true );
+           if ( installed.timeout ) {
+            println( "Package status timed out: " & packageName );
+            CLIExit( 3 );
+           }
+           if ( installed.exitCode == 0 ) continue;
+           official = systemExecute( name = "pacman", arguments = "-Si " & packageName, timeout = 15, terminateOnTimeout = true );
+           if ( official.timeout ) {
+            println( "Official repository lookup timed out: " & packageName );
+            CLIExit( 3 );
+           }
+           if ( official.exitCode == 0 ) {
+            officialPackages.append( packageName );
+            continue;
+           }
+           aur = systemExecute( name = "yay", arguments = "-Si " & packageName, timeout = 15, terminateOnTimeout = true );
+           if ( aur.timeout ) {
+            println( "AUR repository lookup timed out: " & packageName );
+            CLIExit( 3 );
+           }
+           if ( aur.exitCode == 0 ) aurPackages.append( packageName );
+           else unavailablePackages.append( packageName );
+          }
+          if ( unavailablePackages.len() ) {
+           println( "Unavailable packages: " & unavailablePackages.toList( ", " ) );
+           println( "No packages installed." );
+           CLIExit( 3 );
+          }
+          if ( aurPackages.len() ) {
+           uidCheck = systemExecute( name = "id", arguments = "-u", timeout = 10, terminateOnTimeout = true );
+           if ( uidCheck.exitCode != 0 || trim( uidCheck.output ) == "0" ) {
+            println( "AUR installs require a non-root user. No packages installed." );
+            CLIExit( 4 );
+           }
+          }
+          if ( officialPackages.len() ) {
+           officialInstall = systemExecute( name = "sudo", arguments = "pacman -S --needed --noconfirm " & officialPackages.toList( " " ), timeout = 1800, terminateOnTimeout = true );
+           if ( officialInstall.timeout || officialInstall.exitCode != 0 ) {
+            println( "pacman installation failed; AUR installation skipped." );
+            CLIExit( 5 );
+           }
+          }
+          if ( aurPackages.len() ) {
+           aurInstall = systemExecute( name = "yay", arguments = "-S --needed --noconfirm " & aurPackages.toList( " " ), timeout = 1800, terminateOnTimeout = true );
+           if ( aurInstall.timeout || aurInstall.exitCode != 0 ) {
+            println( "yay installation failed." );
+            CLIExit( 6 );
+           }
+          }
+          println( "Installation completed." );
+          break;
+         case "catalog":
+          catVerb = p.len() >= 2 ? p[2] : "";
+          catArg = p.len() >= 3 ? p[3] : "";
+          catBad = p.len() > 3 || !arrayFind( [ "list", "show", "groups", "check", "version" ], catVerb ) || ( catVerb == "show" && p.len() != 3 ) || ( catVerb != "show" && p.len() > 2 );
+          catOpts = [ "json", "group", "category", "tier", "kind", "source" ];
+          for ( o in args.options ) if ( !arrayFind( catOpts, o ) && !arrayFind( [ "yes", "dry-run", "force", "quiet" ], o ) ) catBad = true;
+          if ( catBad ) {
+           println( "Usage: bxcachy catalog list [--group=G] [--category=C] [--tier=default|optional] [--kind=K] [--source=S] [--json] | show ID | groups | check | version" );
+           CLIExit( 2 );
+          }
+          cat = catalog.load();
+          if ( catVerb == "version" ) {
+           if ( asJson ) println( cli.envelope( "catalog version", 0, { catalog_version: cat.catalog_version, schema: cat.schema, apps: cat.apps.len() } ) );
+           else println( "catalog " & cat.catalog_version & " (schema " & cat.schema & ", " & cat.apps.len() & " apps)" );
+           break;
+          }
+          if ( catVerb == "groups" ) {
+           rows = [];
+           for ( g in cat.groups ) {
+            cs = cat.categories.filter( function( c ) { return c.group == g.id; } ).map( function( c ) { return c.title; } );
+            n = cat.apps.filter( function( a ) { return a.group == g.id; } ).len();
+            rows.append( { id: g.id, title: g.title, blurb: g.blurb, order: g.order, apps: n, categories: cs } );
+           }
+           if ( asJson ) println( cli.envelope( "catalog groups", 0, rows ) );
+           else for ( r in rows ) println( r.id & ": " & r.title & " (" & r.apps & " apps) - " & r.categories.toList( ", " ) );
+           break;
+          }
+          if ( catVerb == "show" ) {
+           found = catalog.find( cat, catArg );
+           if ( structIsEmpty( found ) ) {
+            println( "Unknown catalog id: " & catArg );
+            CLIExit( 3 );
+           }
+           if ( asJson ) {
+            println( cli.envelope( "catalog show", 0, found ) );
+           } else {
+            println( found.name & " (" & found.id & ")" );
+            println( found.description );
+            println( "group: " & found.group & "/" & found.category & "  tier: " & found.tier & "  kind: " & found.kind );
+            println( "source: " & found.source & ( structKeyExists( found, "targets" ) ? "  targets: " & found.targets.toList( " " ) : "" ) & ( structKeyExists( found, "url" ) ? "  url: " & found.url : "" ) );
+            if ( structKeyExists( found, "homepage" ) ) println( "homepage: " & found.homepage );
+            if ( !isNull( found.macos ) ) println( "macOS: " & found.macos );
+            if ( structKeyExists( found, "note" ) ) println( "note: " & found.note );
+           }
+           break;
+          }
+          if ( catVerb == "check" ) {
+           res = catalog.check( cat );
+           code = res.errors.len() ? 1 : 0;
+           if ( asJson ) {
+            println( cli.envelope( "catalog check", code, res ) );
+           } else {
+            for ( e in res.errors ) println( "error: " & e );
+            for ( w in res.warnings ) println( "warning: " & w );
+            println( "catalog check: " & res.errors.len() & " errors, " & res.warnings.len() & " warnings, " & cat.apps.len() & " apps" );
+           }
+           CLIExit( code );
+          }
+          // list
+          sel = cat.apps.filter( function( a ) {
+           if ( structKeyExists( args.options, "group" ) && a.group != args.options.group ) return false;
+           if ( structKeyExists( args.options, "category" ) && a.category != args.options.category ) return false;
+           if ( structKeyExists( args.options, "tier" ) && a.tier != args.options.tier ) return false;
+           if ( structKeyExists( args.options, "kind" ) && a.kind != args.options.kind ) return false;
+           if ( structKeyExists( args.options, "source" ) && a.source != args.options.source ) return false;
+           return true;
+          } );
+          if ( asJson ) println( cli.envelope( "catalog list", 0, sel ) );
+          else for ( a in sel ) println( catalog.row( a ) );
+          break;
+         case "config":
+          cfgVerb = p.len() >= 2 ? p[2] : "";
+          cfgName = p.len() >= 3 ? p[3] : "";
+          cfgBad = !len( getSystemSetting( "HOME", "" ) ) || p.len() > 4 || ( p.len() == 4 && cfgVerb != "restore" ) || !arrayFind( [ "list", "diff", "apply", "restore", "history" ], cfgVerb );
+          if ( cfgBad ) {
+           println( "Usage: bxcachy config list|diff NAME|apply NAME|restore NAME ID|history [NAME] [--yes] [--dry-run] [--force] [--json]" );
+           CLIExit( 2 );
+          }
+          yes = structKeyExists( args.options, "yes" );
+          dryRun = structKeyExists( args.options, "dry-run" );
+          force = structKeyExists( args.options, "force" );
+          nl = chr( 10 );
+          managed = { bxcachy: { name: "bxcachy", target: config.cfgHome() & "/bxcachy/bxcachy.json", mode: "600", content: '{' & nl & '  "schema_version": 1,' & nl & '  "desktop": "auto"' & nl & '}' & nl } };
+          if ( cfgVerb == "list" || cfgVerb == "history" ) {
+           rows = [];
+           if ( cfgVerb == "list" ) {
+            for ( key in managed ) rows.append( { name: key, target: managed[key].target, state: config.configState( managed[key] ) } );
+           } else {
+            rows = config.journalEntries( cfgName );
+           }
+           if ( asJson ) {
+            println( jsonSerialize( rows ) );
+           } else if ( cfgVerb == "list" ) {
+            for ( r in rows ) println( r.name & ": " & r.state & " (" & r.target & ")" );
+           } else {
+            for ( r in rows ) println( r.id & " " & r.action & " " & r.name & " " & r.time );
+            if ( !rows.len() ) println( "No history." );
+           }
+           break;
+          }
+          if ( !structKeyExists( managed, cfgName ) ) {
+           println( "Unknown managed config: " & cfgName );
+           CLIExit( 2 );
+          }
+          entry = managed[cfgName];
+          if ( cfgVerb == "diff" ) {
+           st = config.configState( entry );
+           println( cfgName & ": " & st );
+           if ( st == "outdated" || st == "drifted" ) {
+            tmpSrc = getTempDirectory() & "/bxcachy-src-" & left( createUUID(), 8 );
+            fileWrite( tmpSrc, entry.content );
+            d = systemExecute( "diff", [ "-u", entry.target, tmpSrc ], 15, true );
+            println( d.output );
+            fileDelete( tmpSrc );
+           }
+           break;
+          }
+          if ( cfgVerb == "apply" ) {
+           CLIExit( config.configApply( entry, yes, dryRun, force ) );
+          }
+          if ( p.len() != 4 ) {
+           println( "Usage: bxcachy config restore NAME ID --yes" );
+           CLIExit( 2 );
+          }
+          CLIExit( config.configRestore( entry, p[4], yes, dryRun ) );
+          break;
+         case "help":
+          println( "BxCachy commands: version, doctor, prerequisites, desktop-list, tui-list, web-list, optional-list, optional-plan, profile-list, profile-plan, profile-install-plan, install-plan, package-status, package-source, profile-install, optional-install, install, plan, apps-doctor, dev-plan, config, catalog, help" );
+          break;
+         default:
+          println( "Unsupported command: " & cmd );
+          println( "Run bxcachy help" );
+        }
+    }
+
+}

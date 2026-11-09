@@ -1,0 +1,47 @@
+// The embedded app catalog (catalog/apps.json, schema 3): lookup and offline validation.
+class Catalog {
+    function load() {
+     return jsonDeserialize( new bxcachy.CatalogData().json() );
+    }
+    function find( cat, id ) {
+     for ( a in cat.apps ) if ( a.id == id ) return a;
+     return {};
+    }
+    // Offline validation: returns { errors: [], warnings: [] }.
+    function check( cat ) {
+     errors = []; warnings = []; unpinned = 0;
+     if ( cat.schema != 3 ) errors.append( "schema must be 3, found " & cat.schema );
+     groupIds = cat.groups.map( function( g ) { return g.id; } );
+     pairs = cat.categories.map( function( c ) { return c.group & "/" & c.title; } );
+     seen = {};
+     for ( a in cat.apps ) {
+      who = a.id;
+      if ( structKeyExists( seen, a.id ) ) errors.append( who & ": duplicate id" );
+      seen[a.id] = true;
+      if ( !reFind( "^[a-z0-9][a-z0-9-]*$", a.id ) ) errors.append( who & ": id must be lowercase letters, digits and dashes" );
+      if ( !arrayFind( [ "desktop", "tui", "web" ], a.kind ) ) errors.append( who & ": unknown kind " & a.kind );
+      if ( !arrayFind( [ "default", "optional" ], a.tier ) ) errors.append( who & ": unknown tier " & a.tier );
+      if ( !arrayFind( [ "pacman", "aur", "pkgbuild", "web", "script", "unresolved" ], a.source ) ) errors.append( who & ": unknown source " & a.source );
+      if ( !arrayFind( groupIds, a.group ) ) errors.append( who & ": unknown group " & a.group );
+      else if ( !arrayFind( pairs, a.group & "/" & a.category ) ) errors.append( who & ": category " & a.category & " is not in group " & a.group );
+      if ( !structKeyExists( a, "description" ) || !len( a.description ) ) errors.append( who & ": missing description" );
+      if ( arrayFind( [ "pacman", "aur", "pkgbuild", "unresolved" ], a.source ) ) {
+       if ( !structKeyExists( a, "targets" ) || !a.targets.len() ) errors.append( who & ": " & a.source & " needs targets" );
+       else for ( t in a.targets ) if ( !reFind( "^[a-zA-Z0-9@._+-]+$", t ) ) errors.append( who & ": unsafe package name " & t );
+      }
+      if ( a.source == "web" ) {
+       if ( !structKeyExists( a, "url" ) || !reFind( "^https://[^/@\s]+(/\S*)?$", a.url ) ) errors.append( who & ": web url must be https without credentials" );
+      }
+      if ( a.source == "pkgbuild" ) {
+       if ( !structKeyExists( a, "pkgbuild" ) || !structKeyExists( a.pkgbuild, "repo" ) || !structKeyExists( a.pkgbuild, "path" ) || !structKeyExists( a.pkgbuild, "ref" ) ) errors.append( who & ": pkgbuild needs repo, path and ref" );
+       else if ( a.pkgbuild.ref == "master" || a.pkgbuild.ref == "main" ) unpinned++;
+      }
+      if ( a.source == "unresolved" && a.tier == "default" ) warnings.append( who & ": default entry has no installable package yet" );
+     }
+     if ( unpinned ) warnings.append( unpinned & " pkgbuild entries use a branch ref; pin them to commits before an installer builds them" );
+     return { errors: errors, warnings: warnings };
+    }
+    function row( a ) {
+     return a.id & "  [" & a.tier & "]  " & a.group & "/" & a.category & "  " & a.name;
+    }
+}
