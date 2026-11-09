@@ -369,3 +369,7 @@ Canonical historical filename: `BxCachy-v0.10.0-integration-hardening.zip`. Expe
 ### Audit limitations
 
 This audit combines the actual recovered v0.10.0 archive inventory and its documented behavior with accessible BxCachy discussion history and the current repository. It is more complete than the initial plan, but it is **not yet a function-by-function diff of all 104 archived files**. Each row marked S/P needs a command-level behavioral test and a final owner/acceptance record. The historical ZIP must be preserved in the repository before deleting or replacing any external copy.
+
+## 18. Progress log
+
+- 2026-11-09: A1 legacy source tree committed (104 files, reference only). A2 to A4 real Arch container harness (`tests/arch/`) and CI stage 5; run 42539644723 green, 23/23 steps. Not yet verified on real CachyOS KDE. A5 draft command contract: [docs/architecture/COMMAND-CONTRACT.md](docs/architecture/COMMAND-CONTRACT.md), pending review.
