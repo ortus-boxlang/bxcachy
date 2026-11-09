@@ -34,6 +34,12 @@ step_grep() {
 # GitHub reachability decides whether toolchain/native steps can run. Some sandboxes
 # block api.github.com; there they are reported SKIP (never silently PASS). CI runs them.
 if curl -fsS -m 15 -o /dev/null https://api.github.com/; then NET=1; else NET=0; fi
+# Fingerprint of everything a bootstrap run could change for this user (and the pacman log length).
+# Used to prove that a second full run changes nothing.
+snap() {
+  { find "$HOME" -path "$WORK" -prune -o -path "$HOME/.cache/bxcachy" -prune -o \( -type f -o -type l \) -printf '%p %s %T@\n' 2>/dev/null | sort
+    wc -l < /var/log/pacman.log 2>/dev/null || echo 0; } | sha256sum | cut -d' ' -f1
+}
 skip() { printf 'SKIP\t%s\t%s\n' "$1" "$2" | tee -a "$OUT/results.tsv"; }
 
 export PATH="$HOME/.mvm/bin:$HOME/.cargo/bin:$PATH"
@@ -71,6 +77,12 @@ if [[ $NET == 1 ]]; then
   step_grep bootstrap-install-binary-rerun 0 'Nothing to do'   bash bootstrap/install.sh --install-binary --yes
   step_grep bootstrap-check-binary         0 'bxcachy: 0.'     bash bootstrap/install.sh --check
   step bootstrap-binary-rejects-impostor   1 bash -c 'printf "#!/bin/sh\necho nope\n" > /tmp/impostor; chmod 755 /tmp/impostor; bash bootstrap/install.sh --install-binary --yes --binary /tmp/impostor'
+  # B7: the whole path on this clean machine is finished, and running it all again changes nothing.
+  step_grep bootstrap-fullpath-ready 0 'summary: ready' env PATH="$HOME/.local/bin:$PATH" bash bootstrap/install.sh --check
+  before="$(snap)"
+  step bootstrap-fullpath-rerun 0 bash -c 'bash bootstrap/install.sh --install --yes </dev/null && bash bootstrap/install.sh --install-toolchains --yes --allow-external-scripts </dev/null && bash bootstrap/install.sh --install-binary --yes </dev/null'
+  after="$(snap)"
+  step bootstrap-fullpath-no-changes 0 bash -c "[[ '$before' == '$after' ]] || { echo 'system changed on the second run'; exit 1; }"
 else
   skip bootstrap-toolchains "GitHub unreachable"; skip bootstrap-toolchains-rerun "GitHub unreachable"
 fi
