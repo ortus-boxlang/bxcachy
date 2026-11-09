@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+"""Omarchy 4.5-inspired selectable dictation providers."""
+import argparse,pathlib,shutil,subprocess,sys
+CONFIG=pathlib.Path.home()/'.config/bxcachy/dictation-provider'
+PROVIDERS={'superwhisper':('superwhisper','superwhisper-bin'),'voxtype':('voxtype','voxtype')}
+def selected():
+ return CONFIG.read_text().strip() if CONFIG.exists() else 'superwhisper'
+def run(args):subprocess.run(args,check=True)
+def install(name):
+ exe,pkg=PROVIDERS[name]
+ if shutil.which(exe):return
+ if shutil.which('pacman') and subprocess.run(['pacman','-Si',pkg],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode==0:run(['sudo','pacman','-S','--needed',pkg]);return
+ if shutil.which('yay'):run(['yay','-S','--needed',pkg]);return
+ raise RuntimeError(f'{pkg} not available via pacman and yay not installed; install an AUR helper or package first')
+def main():
+ p=argparse.ArgumentParser();p.add_argument('action',choices=['doctor','providers','select','install','toggle','start','stop','settings','shortcut-help']);p.add_argument('provider',nargs='?',choices=PROVIDERS);p.add_argument('--yes',action='store_true');a=p.parse_args()
+ if a.action=='providers':print('superwhisper (default, cloud/local); voxtype (local)');return
+ if a.action=='doctor':
+  print('selected:',selected());[(print(n,shutil.which(v[0]) or 'not installed')) for n,v in PROVIDERS.items()];return
+ if a.action=='shortcut-help':print('Recommended Hyprland binding: bind = ALT, SPACE, exec, bxcachy dictation toggle. Install via bxcachy-integrations shortcuts after collision review.');return
+ if a.action in ('select','install'):
+  if not a.provider:p.error('provider required')
+  if not a.yes:p.error('use --yes to authorize package installation')
+  install(a.provider)
+  if a.action=='select':CONFIG.parent.mkdir(parents=True,exist_ok=True);CONFIG.write_text(a.provider+'\n')
+  print(a.provider,'ready');return
+ provider=selected()
+ if provider not in PROVIDERS:raise RuntimeError('Unknown selected provider')
+ exe=shutil.which(PROVIDERS[provider][0])
+ if not exe:raise RuntimeError(f'{provider} not installed: bxcachy dictation select {provider} --yes')
+ # Both backends expose CLI verbs, but versions may differ; don't suppress errors.
+ if a.action=='settings':run([exe,'settings'] if provider=='superwhisper' else [exe,'setup','model'])
+ else:run([exe,a.action])
+if __name__=='__main__':
+ try:main()
+ except (OSError,RuntimeError,subprocess.CalledProcessError) as e:print('ERROR:',e,file=sys.stderr);sys.exit(1)

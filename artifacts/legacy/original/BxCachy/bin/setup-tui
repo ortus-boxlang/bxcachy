@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+choose() {
+  if command -v gum >/dev/null 2>&1; then gum choose "$@"; else
+    local PS3='Select number: ' choice
+    select choice in "$@"; do [[ -n "$choice" ]] && { printf '%s\n' "$choice"; return; }; done
+  fi
+}
+confirm() {
+  if command -v gum >/dev/null 2>&1; then gum confirm "$1"; else
+    local answer; read -r -p "$1 [y/N] " answer; [[ "$answer" =~ ^[Yy]$ ]]
+  fi
+}
+while :; do
+  choice=$(choose 'Provisioning plan' 'Install Hyprland + Noctalia' 'Stage desktop configs' 'System checks' 'Install developer tools' 'Install desktop apps' 'Install media tools' 'Install Podman + supporting tools' 'JVM / BoxLang tools' 'Podman diagnostics' 'Install all package groups' 'Stage Hyprland shortcuts' 'Sync all official Omarchy themes' 'Browse and apply theme' 'List package groups' 'Exit') || exit 0
+  case "$choice" in
+    'Provisioning plan') "$ROOT/bin/provision" plan ;;
+    'Install Hyprland + Noctalia') confirm 'Install desktop packages (review pacman transaction)?' && "$ROOT/bin/provision" install || true ;;
+    'Stage desktop configs') confirm 'Stage non-overwriting shortcut configs?' && "$ROOT/bin/provision" stage || true ;;
+    'System checks')
+      for x in pacman hyprctl noctalia git python3 gum; do if command -v "$x" >/dev/null; then echo "OK $x"; else echo "MISSING $x"; fi; done ;;
+    'Install developer tools') confirm 'Install core group?' && "$ROOT/bin/install" --install core || true ;;
+    'Install desktop apps') confirm 'Install desktop group?' && "$ROOT/bin/install" --install desktop || true ;;
+    'Install media tools') confirm 'Install media group?' && "$ROOT/bin/install" --install media || true ;;
+    'Install Podman + supporting tools') confirm 'Install Podman supporting packages?' && "$ROOT/bin/bxcachy-podman" install || true ;;
+    'Podman diagnostics') "$ROOT/bin/bxcachy-podman" doctor ;;
+    'Install all package groups') confirm 'Install all package groups?' && "$ROOT/bin/install" --install-all || true ;; 
+    'JVM / BoxLang tools')
+      tool=$(choose 'SDKMAN!' 'Java 21' 'Maven' 'Gradle' 'BoxLang Quick Installer' 'BVM' 'MVM') || true
+      case "${tool:-}" in
+        'SDKMAN!') id=sdkman;; 'Java 21') id=java;; 'Maven') id=maven;; 'Gradle') id=gradle;;
+        'BoxLang Quick Installer') id=boxlang;; 'BVM') id=bvm;; 'MVM') id=mvm;; *) id='';;
+      esac
+      if [[ -n "$id" ]]; then
+        "$ROOT/bin/bxcachy-dev" plan "$id"
+        if confirm "Install $tool?"; then
+          if [[ "$id" == sdkman || "$id" == boxlang || "$id" == bvm || "$id" == mvm ]]; then
+            "$ROOT/bin/bxcachy-dev" install "$id" --yes
+          else "$ROOT/bin/bxcachy-dev" install "$id"; fi
+        fi
+      fi ;;
+    'Stage Hyprland shortcuts') "$ROOT/bin/install" --shortcuts-conf || true ;;
+    'Sync all official Omarchy themes') confirm 'Download official theme assets from GitHub?' && "$ROOT/bin/theme-manager" sync || true ;;
+    'Browse and apply theme')
+      mapfile -t themes < <("$ROOT/bin/theme-manager" list)
+      if ((${#themes[@]})); then
+        theme=$(choose "${themes[@]}") || true
+        if [[ -n "${theme:-}" ]]; then "$ROOT/bin/theme-manager" apply "$theme"; fi
+      else echo 'No themes downloaded yet. Use Sync first.'; fi ;;
+    'List package groups') "$ROOT/bin/install" --list ;;
+    'Exit') exit 0 ;;
+  esac
+  echo
+  read -r -p 'Press Enter to continue...' _ || true
+  echo
+ done

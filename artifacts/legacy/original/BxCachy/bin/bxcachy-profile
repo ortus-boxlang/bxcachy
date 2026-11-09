@@ -1,0 +1,31 @@
+#!/usr/bin/env python3
+"""Portable BxCachy configuration profiles; import never auto-activates."""
+import argparse,json,pathlib,shutil,sys,datetime
+HOME=pathlib.Path.home();CONF=HOME/'.config/bxcachy';ALLOWED=('ai.json','shortcuts.json','menu.json','runner.json','config.json','theme.json')
+def main():
+ p=argparse.ArgumentParser();s=p.add_subparsers(dest='action',required=True)
+ a=s.add_parser('export');a.add_argument('file',type=pathlib.Path)
+ a=s.add_parser('import');a.add_argument('file',type=pathlib.Path);a.add_argument('--apply',action='store_true')
+ s.add_parser('list');a=p.parse_args()
+ if a.action=='list':
+  for f in ALLOWED:print(f, 'present' if (CONF/f).is_file() else 'default');return
+ if a.action=='export':
+  data={'format':'bxcachy-profile-v1','files':{f:json.loads((CONF/f).read_text()) for f in ALLOWED if (CONF/f).is_file()}}
+  a.file.write_text(json.dumps(data,indent=2)+'\n');print('Exported',a.file);return
+ data=json.loads(a.file.read_text())
+ if data.get('format')!='bxcachy-profile-v1' or not isinstance(data.get('files'),dict):raise ValueError('Unsupported profile')
+ if any(k not in ALLOWED or not isinstance(v,dict) for k,v in data['files'].items()):raise ValueError('Invalid profile contents')
+ print('Import preview:',', '.join(data['files']))
+ if not a.apply:return
+ CONF.mkdir(parents=True,exist_ok=True)
+ stamp=datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ')
+ backup=HOME/'.local/state/bxcachy/profile-backups'/stamp;backup.mkdir(parents=True,exist_ok=True)
+ for name,obj in data['files'].items():
+  dest=CONF/name
+  if dest.is_symlink():raise ValueError('Refusing symlink: '+str(dest))
+  if dest.exists():shutil.copy2(dest,backup/name)
+  tmp=dest.with_suffix('.tmp');tmp.write_text(json.dumps(obj,indent=2)+'\n');tmp.replace(dest)
+ print('Imported; backup:',backup,'; no desktop bindings activated')
+if __name__=='__main__':
+ try:main()
+ except (ValueError,OSError) as e:print('ERROR:',e,file=sys.stderr);sys.exit(1)

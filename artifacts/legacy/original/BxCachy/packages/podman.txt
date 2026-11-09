@@ -1,0 +1,17 @@
+# Core Podman engine and container runtime
+podman
+conmon
+crun
+containers-common
+# Rootless networking, storage, and image tools
+passt
+slirp4netns
+fuse-overlayfs
+netavark
+aardvark-dns
+buildah
+skopeo
+# Compose provider and terminal management
+podman-compose
+# User namespace mapping
+shadow

@@ -1,0 +1,38 @@
+#!/usr/bin/env python3
+"""Manage cached official Phosphor SVG assets (no executable downloads)."""
+import argparse,json,pathlib,urllib.request,urllib.error,sys,re
+ROOT=pathlib.Path(__file__).resolve().parent.parent
+CACHE=pathlib.Path.home()/'.local/share/bxcachy/icons/phosphor/regular'
+BASE='https://raw.githubusercontent.com/phosphor-icons/core/main/assets/regular/'
+def names():
+ data=json.loads((ROOT/'menu/default.json').read_text());return sorted({x.get('icon') for s in data['sections'] for x in [s,*s['items']] if x.get('icon')})
+def path(name):return CACHE/(name+'.svg')
+def resolve(name):
+ if not isinstance(name,str) or not re.fullmatch('[a-z][a-z0-9-]*',name):return ''
+ f=path(name)
+ return str(f) if f.is_file() else name
+
+def main():
+ p=argparse.ArgumentParser();sub=p.add_subparsers(dest='action',required=True)
+ for name in ('list','doctor','sync'):sub.add_parser(name)
+ a=p.parse_args(); all_names=names()
+ if a.action=='list':print('\n'.join(all_names));return 0
+ if a.action=='doctor':
+  missing=[x for x in all_names if not path(x).is_file()]
+  print(f'Phosphor SVG cache: {len(all_names)-len(missing)}/{len(all_names)} present')
+  if missing:print('Missing:',', '.join(missing));return 1
+  return 0
+ CACHE.mkdir(parents=True,exist_ok=True);errors=[]
+ for name in all_names:
+  f=path(name)
+  if f.is_file():continue
+  try:
+   req=urllib.request.Request(BASE+name+'.svg',headers={'User-Agent':'BxCachy/0.5.4'})
+   with urllib.request.urlopen(req,timeout=12) as r:payload=r.read(128*1024+1)
+   if len(payload)>128*1024 or b'<svg' not in payload[:1000]:raise ValueError('invalid SVG response')
+   tmp=f.with_suffix('.tmp');tmp.write_bytes(payload);tmp.replace(f);print('Downloaded:',name)
+  except (OSError,ValueError,urllib.error.URLError) as e:errors.append((name,str(e)))
+ for name,error in errors:print(f'WARNING: {name}: {error}',file=sys.stderr)
+ print(f'Cached: {len(all_names)-len(errors)}/{len(all_names)}')
+ return 1 if errors else 0
+if __name__=='__main__':sys.exit(main())

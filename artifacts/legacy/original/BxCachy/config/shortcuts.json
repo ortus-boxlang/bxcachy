@@ -1,0 +1,36 @@
+{
+  "bindings": [
+    {
+      "id": "menu",
+      "label": "BxCachy Menu",
+      "mods": "SUPER ALT",
+      "key": "SPACE",
+      "dispatcher": "exec",
+      "argument": "{ROOT}/bin/bxcachy-menu"
+    },
+    {
+      "id": "toggle-window-layout",
+      "label": "Toggle focused window floating/tiled",
+      "mods": "SUPER",
+      "key": "V",
+      "dispatcher": "exec",
+      "argument": "{ROOT}/bin/bxcachy-layout window toggle"
+    },
+    {
+      "id": "toggle-workspace-layout",
+      "label": "Toggle current workspace floating/tiled",
+      "mods": "SUPER ALT",
+      "key": "V",
+      "dispatcher": "exec",
+      "argument": "{ROOT}/bin/bxcachy-layout workspace toggle"
+    },
+    {
+      "id": "ai-console",
+      "label": "Toggle drop-down AI agent console",
+      "mods": "SUPER ALT",
+      "key": "A",
+      "dispatcher": "exec",
+      "argument": "{ROOT}/bin/bxcachy-ai dropdown"
+    }
+  ]
+}

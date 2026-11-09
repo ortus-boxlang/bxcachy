@@ -1,0 +1,29 @@
+#!/usr/bin/env python3
+"""Graphical database control center backed by bxcachy-db and existing runner."""
+import pathlib,subprocess,sys,shutil
+ROOT=pathlib.Path(__file__).resolve().parent.parent
+DB=ROOT/'bin/bxcachy-db';RUNNER=ROOT/'bin/bxcachy-runner'
+ENGINES=['postgres','mariadb','mysql','redis']
+def choose(options,prompt):
+ proc=subprocess.run([str(RUNNER),'menu-select','--prompt',prompt],input='\n'.join(options)+'\n',text=True,capture_output=True)
+ if proc.returncode:return None
+ try:i=int(proc.stdout.strip());return options[i]
+ except (ValueError,IndexError):return None
+def terminal(args):
+ term=next((x for x in ('ghostty','konsole','kitty','foot','alacritty') if shutil.which(x)),None)
+ if not term:raise RuntimeError('Terminal required')
+ subprocess.Popen([term,'-e',str(DB),*args],start_new_session=True)
+def main():
+ while True:
+  engine=choose(ENGINES+['List all containers','Exit'],'Database Control Center')
+  if not engine or engine=='Exit':return
+  if engine=='List all containers':terminal(['list']);continue
+  action=choose(['Plan','Start','Status','Logs','Stop','Remove (preserves data)','Back'],engine)
+  if not action or action=='Back':continue
+  command={'Plan':['plan',engine],'Start':['start',engine,'--yes'],'Status':['status',engine],'Logs':['logs',engine],'Stop':['stop',engine],'Remove (preserves data)':['remove',engine,'--yes']}[action]
+  if action in ('Start','Remove (preserves data)'):
+   if choose(['Cancel','Confirm '+action],engine)!='Confirm '+action:continue
+  terminal(command)
+if __name__=='__main__':
+ try:main()
+ except (RuntimeError,OSError) as e:print('ERROR:',e,file=sys.stderr);sys.exit(1)

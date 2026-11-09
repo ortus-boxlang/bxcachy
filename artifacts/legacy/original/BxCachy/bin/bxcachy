@@ -1,0 +1,13 @@
+#!/usr/bin/env python3
+"""BxCachy command entrypoint."""
+import pathlib,subprocess,sys
+ROOT=pathlib.Path(__file__).resolve().parent.parent
+COMMANDS={'menu':'bxcachy-menu','runner':'bxcachy-runner','shortcuts':'shortcuts','provision':'provision','themes':'theme-manager','setup':'setup-tui','doctor':'provision','layout':'bxcachy-layout','podman':'bxcachy-podman','dev':'bxcachy-dev','icons':'bxcachy-icons','vm':'bxcachy-vm','config':'bxcachy-config','catalog':'bxcachy-catalog','ai':'bxcachy-ai','desktop':'bxcachy-desktop','profile':'bxcachy-profile','theme':'bxcachy-themes','extras':'bxcachy-extras','base':'bxcachy-base','omarchy-base':'bxcachy-omarchy-base','apps':'bxcachy-apps','app-manager':'bxcachy-app-manager','system':'bxcachy-system','first-run':'bxcachy-first-run','desktop-keys':'bxcachy-desktop-keys','vector':'bxcachy-vector','db':'bxcachy-db','db-center':'bxcachy-db-center','web':'bxcachy-web','mac-keys':'bxcachy-mac-keys','network':'bxcachy-network','cloud':'bxcachy-cloud','files':'bxcachy-files','dictation':'bxcachy-dictation','quicklook':'bxcachy-quicklook','cloud-center':'bxcachy-cloud-center','cloud-services':'bxcachy-cloud-services','integrations':'bxcachy-integrations'}
+def main():
+ args=sys.argv[1:]
+ if not args or args[0] not in COMMANDS:
+  print('Usage: bxcachy '+ '|'.join(COMMANDS)+' [args...]');return 2
+ cmd=ROOT/'bin'/COMMANDS[args[0]]
+ tail=args[1:] if args[0]!='doctor' else ['doctor']
+ return subprocess.call([str(cmd),*tail])
+if __name__=='__main__':sys.exit(main())

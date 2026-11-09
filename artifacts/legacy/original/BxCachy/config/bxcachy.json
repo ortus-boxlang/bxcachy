@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "desktop": "auto",
+  "runner": {
+    "provider": "system",
+    "menu_provider": "rofi",
+    "fallback": "rofi",
+    "custom_command": []
+  },
+  "shortcuts": {
+    "manage_launcher": false,
+    "manage_desktop_bindings": false
+  }
+}

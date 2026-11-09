@@ -1,0 +1,1396 @@
+{
+  "sections": [
+    {
+      "id": "apps",
+      "label": "Apps",
+      "items": [
+        {
+          "id": "launcher",
+          "label": "Open Noctalia launcher",
+          "command": [
+            "noctalia",
+            "msg",
+            "panel-toggle",
+            "launcher"
+          ],
+          "icon": "magnifying-glass"
+        },
+        {
+          "id": "terminal",
+          "label": "Ghostty terminal",
+          "command": [
+            "ghostty"
+          ],
+          "icon": "terminal-window"
+        },
+        {
+          "id": "files",
+          "label": "Dolphin files",
+          "command": [
+            "dolphin"
+          ],
+          "icon": "folder"
+        },
+        {
+          "id": "browser",
+          "label": "Chromium browser",
+          "command": [
+            "chromium"
+          ],
+          "icon": "globe"
+        }
+      ],
+      "icon": "squares-four"
+    },
+    {
+      "id": "install",
+      "label": "Install",
+      "items": [
+        {
+          "id": "install-core",
+          "label": "Developer packages",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/install",
+            "--install",
+            "core"
+          ],
+          "confirm": true,
+          "icon": "code"
+        },
+        {
+          "id": "install-desktop",
+          "label": "Desktop applications",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/install",
+            "--install",
+            "desktop"
+          ],
+          "confirm": true,
+          "icon": "app-window"
+        },
+        {
+          "id": "install-media",
+          "label": "Media utilities",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/install",
+            "--install",
+            "media"
+          ],
+          "confirm": true,
+          "icon": "film-strip"
+        },
+        {
+          "id": "install-podman",
+          "label": "Podman + supporting tools",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-podman",
+            "install"
+          ],
+          "confirm": true,
+          "icon": "cube"
+        },
+        {
+          "id": "podman-plan",
+          "label": "Preview Podman installation",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-podman",
+            "plan"
+          ],
+          "icon": "clipboard-text"
+        },
+        {
+          "id": "install-sdkman",
+          "label": "SDKMAN!",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-dev",
+            "install",
+            "sdkman",
+            "--yes"
+          ],
+          "confirm": true,
+          "icon": "coffee"
+        },
+        {
+          "id": "install-java21",
+          "label": "OpenJDK 21",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-dev",
+            "install",
+            "java"
+          ],
+          "confirm": true,
+          "icon": "coffee"
+        },
+        {
+          "id": "install-maven",
+          "label": "Apache Maven",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-dev",
+            "install",
+            "maven"
+          ],
+          "confirm": true,
+          "icon": "package"
+        },
+        {
+          "id": "install-gradle",
+          "label": "Gradle",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-dev",
+            "install",
+            "gradle"
+          ],
+          "confirm": true,
+          "icon": "package"
+        },
+        {
+          "id": "install-boxlang",
+          "label": "BoxLang Quick Installer",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-dev",
+            "install",
+            "boxlang",
+            "--yes"
+          ],
+          "confirm": true,
+          "icon": "cube"
+        },
+        {
+          "id": "install-bvm",
+          "label": "BoxLang Version Manager (BVM)",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-dev",
+            "install",
+            "bvm",
+            "--yes"
+          ],
+          "confirm": true,
+          "icon": "git-branch"
+        },
+        {
+          "id": "install-mvm",
+          "label": "MatchBox Version Manager (MVM)",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-dev",
+            "install",
+            "mvm",
+            "--yes"
+          ],
+          "confirm": true,
+          "icon": "git-branch"
+        },
+        {
+          "id": "dev-plan",
+          "label": "Preview JVM / BoxLang installations",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-dev",
+            "plan",
+            "all"
+          ],
+          "icon": "clipboard-text"
+        }
+      ],
+      "icon": "download-simple"
+    },
+    {
+      "id": "style",
+      "label": "Style",
+      "items": [
+        {
+          "id": "themes",
+          "label": "Browse and apply Omarchy themes",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/setup-tui"
+          ],
+          "icon": "palette"
+        },
+        {
+          "id": "noctalia-settings",
+          "label": "Noctalia settings",
+          "command": [
+            "noctalia",
+            "msg",
+            "settings-toggle"
+          ],
+          "icon": "sliders-horizontal"
+        }
+      ],
+      "icon": "palette"
+    },
+    {
+      "id": "setup",
+      "label": "Setup",
+      "items": [
+        {
+          "id": "setup-tui",
+          "label": "New machine setup TUI",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/setup-tui"
+          ],
+          "icon": "wrench"
+        },
+        {
+          "id": "system-checks",
+          "label": "System checks",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/install",
+            "--list"
+          ],
+          "icon": "check-circle"
+        }
+      ],
+      "icon": "wrench"
+    },
+    {
+      "id": "developer",
+      "label": "Developer",
+      "items": [
+        {
+          "id": "lazygit",
+          "label": "Lazygit",
+          "command": [
+            "ghostty",
+            "-e",
+            "lazygit"
+          ],
+          "icon": "git-branch"
+        },
+        {
+          "id": "btop",
+          "label": "Btop",
+          "command": [
+            "ghostty",
+            "-e",
+            "btop"
+          ],
+          "icon": "chart-bar"
+        },
+        {
+          "id": "nvim",
+          "label": "Neovim",
+          "command": [
+            "ghostty",
+            "-e",
+            "nvim"
+          ],
+          "icon": "code"
+        }
+      ],
+      "icon": "code"
+    },
+    {
+      "id": "system",
+      "label": "System",
+      "items": [
+        {
+          "id": "session",
+          "label": "Noctalia session menu",
+          "command": [
+            "noctalia",
+            "msg",
+            "panel-toggle",
+            "session"
+          ],
+          "icon": "power"
+        },
+        {
+          "id": "control-center",
+          "label": "Noctalia control center",
+          "command": [
+            "noctalia",
+            "msg",
+            "panel-toggle",
+            "control-center"
+          ],
+          "icon": "sliders-horizontal"
+        }
+      ],
+      "icon": "gear"
+    },
+    {
+      "id": "window-management",
+      "label": "Window Management",
+      "items": [
+        {
+          "id": "toggle-focused",
+          "label": "Toggle focused window tiled / floating",
+          "command": [
+            "{ROOT}/bin/bxcachy-layout",
+            "window",
+            "toggle"
+          ],
+          "icon": "arrows-out"
+        },
+        {
+          "id": "float-focused",
+          "label": "Float focused window",
+          "command": [
+            "{ROOT}/bin/bxcachy-layout",
+            "window",
+            "float"
+          ],
+          "icon": "app-window"
+        },
+        {
+          "id": "tile-focused",
+          "label": "Tile focused window",
+          "command": [
+            "{ROOT}/bin/bxcachy-layout",
+            "window",
+            "tile"
+          ],
+          "icon": "squares-four"
+        },
+        {
+          "id": "toggle-workspace",
+          "label": "Toggle workspace tiled / floating",
+          "command": [
+            "{ROOT}/bin/bxcachy-layout",
+            "workspace",
+            "toggle"
+          ],
+          "icon": "arrows-out"
+        },
+        {
+          "id": "float-workspace",
+          "label": "Float workspace windows",
+          "command": [
+            "{ROOT}/bin/bxcachy-layout",
+            "workspace",
+            "float"
+          ],
+          "icon": "app-window"
+        },
+        {
+          "id": "tile-workspace",
+          "label": "Tile workspace windows",
+          "command": [
+            "{ROOT}/bin/bxcachy-layout",
+            "workspace",
+            "tile"
+          ],
+          "icon": "squares-four"
+        }
+      ],
+      "icon": "app-window"
+    },
+    {
+      "id": "containers",
+      "label": "Containers",
+      "items": [
+        {
+          "id": "podman-doctor",
+          "label": "Podman diagnostics",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-podman",
+            "doctor"
+          ],
+          "icon": "stethoscope"
+        },
+        {
+          "id": "podman-socket",
+          "label": "Enable rootless Podman socket",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-podman",
+            "socket-enable"
+          ],
+          "confirm": true,
+          "icon": "plug"
+        },
+        {
+          "id": "podman-compose",
+          "label": "Check Compose provider",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-podman",
+            "compose-check"
+          ],
+          "icon": "cube"
+        }
+      ],
+      "icon": "cube"
+    },
+    {
+      "id": "jvm-toolchain",
+      "label": "JVM & BoxLang",
+      "items": [
+        {
+          "id": "dev-doctor",
+          "label": "Toolchain diagnostics",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-dev",
+            "doctor",
+            "all"
+          ],
+          "icon": "stethoscope"
+        },
+        {
+          "id": "bvm-versions",
+          "label": "Installed BoxLang versions",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-dev",
+            "version",
+            "bvm",
+            "list"
+          ],
+          "icon": "git-branch"
+        },
+        {
+          "id": "mvm-versions",
+          "label": "Installed MatchBox versions",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-dev",
+            "version",
+            "mvm",
+            "list"
+          ],
+          "icon": "git-branch"
+        }
+      ],
+      "icon": "coffee"
+    },
+    {
+      "id": "windows-vm",
+      "label": "Windows VM",
+      "icon": "monitor",
+      "items": [
+        {
+          "id": "vm-plan",
+          "label": "Windows VM: Plan",
+          "icon": "clipboard-text",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy",
+            "vm",
+            "plan"
+          ]
+        },
+        {
+          "id": "vm-doctor",
+          "label": "Windows VM: Doctor",
+          "icon": "stethoscope",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy",
+            "vm",
+            "doctor"
+          ]
+        },
+        {
+          "id": "vm-install",
+          "label": "Windows VM: Install",
+          "icon": "download",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy",
+            "vm",
+            "install"
+          ],
+          "confirm": true
+        },
+        {
+          "id": "vm-start",
+          "label": "Windows VM: Start",
+          "icon": "play",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy",
+            "vm",
+            "start"
+          ]
+        },
+        {
+          "id": "vm-stop",
+          "label": "Windows VM: Stop",
+          "icon": "stop",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy",
+            "vm",
+            "stop"
+          ]
+        },
+        {
+          "id": "vm-restart",
+          "label": "Windows VM: Restart",
+          "icon": "arrows-clockwise",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy",
+            "vm",
+            "restart"
+          ]
+        },
+        {
+          "id": "vm-status",
+          "label": "Windows VM: Status",
+          "icon": "info",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy",
+            "vm",
+            "status"
+          ]
+        },
+        {
+          "id": "vm-logs",
+          "label": "Windows VM: Logs",
+          "icon": "terminal",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy",
+            "vm",
+            "logs"
+          ]
+        },
+        {
+          "id": "vm-remove",
+          "label": "Windows VM: Remove",
+          "icon": "trash",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy",
+            "vm",
+            "remove"
+          ],
+          "confirm": true
+        }
+      ]
+    },
+    {
+      "id": "bxcachy-config",
+      "label": "BxCachy Configuration",
+      "icon": "gear",
+      "items": [
+        {
+          "id": "config-plan",
+          "label": "Config: Plan",
+          "icon": "clipboard-text",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy",
+            "config",
+            "plan"
+          ]
+        },
+        {
+          "id": "config-doctor",
+          "label": "Config: Doctor",
+          "icon": "stethoscope",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy",
+            "config",
+            "doctor"
+          ]
+        },
+        {
+          "id": "config-activate",
+          "label": "Config: Activate",
+          "icon": "keyboard",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy",
+            "config",
+            "activate"
+          ],
+          "confirm": true
+        }
+      ]
+    },
+    {
+      "id": "managed-installers",
+      "label": "Install Tools",
+      "icon": "download",
+      "items": [
+        {
+          "id": "managed-podman",
+          "label": "Podman and supporting tools",
+          "icon": "cube",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy",
+            "catalog",
+            "install",
+            "podman"
+          ],
+          "confirm": true
+        },
+        {
+          "id": "managed-sdkman",
+          "label": "SDKMAN!",
+          "icon": "coffee",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy",
+            "catalog",
+            "install",
+            "sdkman"
+          ],
+          "confirm": true
+        },
+        {
+          "id": "managed-java21",
+          "label": "OpenJDK 21",
+          "icon": "coffee",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy",
+            "catalog",
+            "install",
+            "java21"
+          ],
+          "confirm": true
+        },
+        {
+          "id": "managed-maven",
+          "label": "Maven",
+          "icon": "code",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy",
+            "catalog",
+            "install",
+            "maven"
+          ],
+          "confirm": true
+        },
+        {
+          "id": "managed-gradle",
+          "label": "Gradle",
+          "icon": "code",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy",
+            "catalog",
+            "install",
+            "gradle"
+          ],
+          "confirm": true
+        },
+        {
+          "id": "managed-boxlang",
+          "label": "BoxLang quick installer",
+          "icon": "terminal",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy",
+            "catalog",
+            "install",
+            "boxlang"
+          ],
+          "confirm": true
+        },
+        {
+          "id": "managed-bvm",
+          "label": "BoxLang version manager",
+          "icon": "git-branch",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy",
+            "catalog",
+            "install",
+            "bvm"
+          ],
+          "confirm": true
+        },
+        {
+          "id": "managed-mvm",
+          "label": "MatchBox version manager",
+          "icon": "git-branch",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy",
+            "catalog",
+            "install",
+            "mvm"
+          ],
+          "confirm": true
+        },
+        {
+          "id": "managed-windows-vm",
+          "label": "Windows VM (Dockur)",
+          "icon": "monitor",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy",
+            "catalog",
+            "install",
+            "windows-vm"
+          ],
+          "confirm": true
+        }
+      ]
+    },
+    {
+      "id": "ai",
+      "label": "AI Console",
+      "icon": "brain",
+      "items": [
+        {
+          "id": "ai-dropdown",
+          "label": "Toggle drop-down agent console",
+          "icon": "terminal-window",
+          "command": [
+            "{ROOT}/bin/bxcachy-ai",
+            "dropdown"
+          ]
+        },
+        {
+          "id": "ai-choose",
+          "label": "Choose AI agent",
+          "icon": "robot",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-ai",
+            "console"
+          ]
+        },
+        {
+          "id": "ai-doctor",
+          "label": "Installed AI tools",
+          "icon": "list-checks",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-ai",
+            "doctor"
+          ]
+        },
+        {
+          "id": "install-claude",
+          "label": "Install claude",
+          "icon": "download",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-ai",
+            "install",
+            "claude"
+          ],
+          "confirm": true
+        },
+        {
+          "id": "install-codex",
+          "label": "Install codex",
+          "icon": "download",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-ai",
+            "install",
+            "codex"
+          ],
+          "confirm": true
+        },
+        {
+          "id": "install-opencode",
+          "label": "Install opencode",
+          "icon": "download",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-ai",
+            "install",
+            "opencode"
+          ],
+          "confirm": true
+        },
+        {
+          "id": "install-gemini",
+          "label": "Install gemini",
+          "icon": "download",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-ai",
+            "install",
+            "gemini"
+          ],
+          "confirm": true
+        },
+        {
+          "id": "install-ollama",
+          "label": "Install ollama",
+          "icon": "download",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-ai",
+            "install",
+            "ollama"
+          ],
+          "confirm": true
+        },
+        {
+          "id": "install-lmstudio",
+          "label": "LM Studio (official download)",
+          "icon": "desktop",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-ai",
+            "install",
+            "lmstudio"
+          ]
+        },
+        {
+          "id": "lmstudio-models",
+          "label": "LM Studio models",
+          "icon": "database",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-ai",
+            "lmstudio",
+            "list"
+          ]
+        },
+        {
+          "id": "lmstudio-loaded",
+          "label": "LM Studio loaded models",
+          "icon": "cpu",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-ai",
+            "lmstudio",
+            "loaded"
+          ]
+        },
+        {
+          "id": "ollama-models",
+          "label": "Ollama models",
+          "icon": "database",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-ai",
+            "models",
+            "list"
+          ]
+        },
+        {
+          "id": "ollama-running",
+          "label": "Ollama running models",
+          "icon": "activity",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-ai",
+            "models",
+            "running"
+          ]
+        },
+        {
+          "id": "ai-sessions",
+          "label": "List persistent agent sessions",
+          "icon": "terminal-window",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-ai",
+            "sessions",
+            "list"
+          ]
+        },
+        {
+          "id": "ai-config",
+          "label": "AI console settings",
+          "icon": "gear",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-ai",
+            "config",
+            "show"
+          ]
+        },
+        {
+          "id": "ai-ollama-service",
+          "label": "Ollama service status",
+          "icon": "activity",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-ai",
+            "service",
+            "status"
+          ]
+        },
+        {
+          "id": "ai-lms-server",
+          "label": "Start LM Studio server",
+          "icon": "server",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-ai",
+            "lmstudio",
+            "server-start"
+          ]
+        },
+        {
+          "id": "ai-codex-launch",
+          "label": "Launch Codex",
+          "icon": "code",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-ai",
+            "launch",
+            "codex"
+          ]
+        },
+        {
+          "id": "ai-claude-launch",
+          "label": "Launch Claude",
+          "icon": "robot",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-ai",
+            "launch",
+            "claude"
+          ]
+        },
+        {
+          "id": "ai-opencode-launch",
+          "label": "Launch OpenCode",
+          "icon": "terminal",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-ai",
+            "launch",
+            "opencode"
+          ]
+        },
+        {
+          "id": "ai-gemini-launch",
+          "label": "Launch Gemini",
+          "icon": "sparkle",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-ai",
+            "launch",
+            "gemini"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "desktop-utilities",
+      "label": "Desktop Utilities",
+      "icon": "monitor",
+      "items": [
+        {
+          "id": "clipboard",
+          "label": "Clipboard",
+          "icon": "gear",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy",
+            "desktop",
+            "install",
+            "clipboard"
+          ]
+        },
+        {
+          "id": "screenshot",
+          "label": "Screenshot",
+          "icon": "gear",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy",
+            "desktop",
+            "install",
+            "screenshot"
+          ]
+        },
+        {
+          "id": "record",
+          "label": "Record",
+          "icon": "gear",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy",
+            "desktop",
+            "install",
+            "record"
+          ]
+        },
+        {
+          "id": "wallpaper",
+          "label": "Wallpaper",
+          "icon": "gear",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy",
+            "desktop",
+            "install",
+            "wallpaper"
+          ]
+        },
+        {
+          "id": "monitor",
+          "label": "Monitor",
+          "icon": "gear",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy",
+            "desktop",
+            "install",
+            "monitor"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "profiles",
+      "label": "Profiles and Themes",
+      "icon": "palette",
+      "items": [
+        {
+          "id": "theme-list",
+          "label": "Available Themes",
+          "icon": "palette",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy",
+            "theme",
+            "list"
+          ]
+        },
+        {
+          "id": "profile-help",
+          "label": "Profile Commands",
+          "icon": "gear",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy",
+            "profile",
+            "list"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "system-tools",
+      "label": "System and apps",
+      "icon": "toolbox",
+      "items": [
+        {
+          "id": "first-run",
+          "label": "Base first-run installer",
+          "icon": "terminal",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-first-run",
+            "plan"
+          ]
+        },
+        {
+          "id": "updates",
+          "label": "Update plan",
+          "icon": "arrows-clockwise",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-system",
+            "update-plan"
+          ]
+        },
+        {
+          "id": "snapshots",
+          "label": "Snapshot status",
+          "icon": "clock-counter-clockwise",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-system",
+            "snapshot-status"
+          ]
+        },
+        {
+          "id": "desktop",
+          "label": "Desktop applications",
+          "icon": "monitor",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-apps",
+            "desktop-list"
+          ]
+        },
+        {
+          "id": "tui",
+          "label": "TUI applications",
+          "icon": "terminal-window",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-apps",
+            "tui-list"
+          ]
+        },
+        {
+          "id": "web",
+          "label": "Web applications",
+          "icon": "globe",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-apps",
+            "web-list"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "app-manager",
+      "label": "Application Catalog",
+      "icon": "app-window",
+      "items": [
+        {
+          "id": "browse-apps",
+          "label": "Browse desktop, TUI and web apps",
+          "icon": "magnifying-glass",
+          "command": [
+            "{ROOT}/bin/bxcachy-app-manager",
+            "gui"
+          ]
+        },
+        {
+          "id": "app-catalog-terminal",
+          "label": "List full app catalog",
+          "icon": "terminal",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-app-manager",
+            "list"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mac-keyboard",
+      "label": "Mac keyboard",
+      "icon": "keyboard",
+      "items": [
+        {
+          "id": "mac-key-on",
+          "label": "Mac key positions ON (left Command)",
+          "icon": "keyboard",
+          "command": [
+            "{ROOT}/bin/bxcachy-mac-keys",
+            "on"
+          ]
+        },
+        {
+          "id": "mac-key-off",
+          "label": "Mac key positions OFF (restore)",
+          "icon": "keyboard",
+          "command": [
+            "{ROOT}/bin/bxcachy-mac-keys",
+            "off"
+          ]
+        },
+        {
+          "id": "mac-key-status",
+          "label": "Mac key status",
+          "icon": "info",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-mac-keys",
+            "status"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "network-access",
+      "label": "Network & Remote Access",
+      "icon": "network",
+      "items": [
+        {
+          "id": "nordvpn-gui",
+          "label": "NordVPN GUI",
+          "icon": "shield",
+          "command": [
+            "{ROOT}/bin/bxcachy-network",
+            "open",
+            "nordvpn"
+          ]
+        },
+        {
+          "id": "nordvpn-status",
+          "label": "NordVPN status",
+          "icon": "activity",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-network",
+            "status",
+            "nordvpn"
+          ]
+        },
+        {
+          "id": "nordlayer-status",
+          "label": "NordLayer status",
+          "icon": "activity",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-network",
+            "status",
+            "nordlayer"
+          ]
+        },
+        {
+          "id": "remote",
+          "label": "Remote Desktop",
+          "icon": "monitor",
+          "command": [
+            "{ROOT}/bin/bxcachy-network",
+            "open",
+            "remote"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "developer-control-centers",
+      "label": "Developer Control Centers",
+      "icon": "database",
+      "items": [
+        {
+          "id": "db-center",
+          "label": "Database Control Center",
+          "icon": "database",
+          "command": [
+            "{ROOT}/bin/bxcachy-db-center"
+          ]
+        },
+        {
+          "id": "web-add",
+          "label": "Add Web App",
+          "icon": "globe",
+          "command": [
+            "ghostty",
+            "-e",
+            "{ROOT}/bin/bxcachy-web"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "workflow-integrations",
+      "label": "Dictation, Preview & Cloud",
+      "icon": "cloud",
+      "items": [
+        {
+          "id": "cloud-center",
+          "label": "Cloud Storage Manager",
+          "icon": "cloud",
+          "command": [
+            "{ROOT}/bin/bxcachy-cloud-center"
+          ]
+        },
+        {
+          "id": "dictation-toggle",
+          "label": "Toggle Dictation",
+          "icon": "mic",
+          "command": [
+            "{ROOT}/bin/bxcachy-dictation",
+            "toggle"
+          ]
+        },
+        {
+          "id": "dolphin",
+          "label": "Open Dolphin",
+          "icon": "folder",
+          "command": [
+            "dolphin"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Service
+MimeType=all/allfiles;
+Actions=bxcachyQuickLook;
+X-KDE-ServiceTypes=KonqPopupMenu/Plugin
+
+[Desktop Action bxcachyQuickLook]
+Name=Quick Look (BxCachy)
+Icon=document-preview
+Exec=bxcachy-quicklook %f

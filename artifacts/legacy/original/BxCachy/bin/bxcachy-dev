@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+"""BxCachy JVM and BoxLang tooling installer. Remote scripts require explicit consent."""
+import argparse, os, pathlib, shutil, subprocess, sys, tempfile
+URLS={
+ 'sdkman':'https://get.sdkman.io',
+ 'boxlang':'https://install.boxlang.io',
+ 'bvm':'https://install-bvm.boxlang.io',
+ 'mvm':'https://raw.githubusercontent.com/ortus-boxlang/matchbox-quick-installer/main/install/install.sh',
+}
+TOOLS={'sdkman':'sdk','boxlang':'boxlang','bvm':'bvm','mvm':'mvm','maven':'mvn','gradle':'gradle'}
+
+def run(argv,dry=False):
+ print('+',shutil.join(argv)) if hasattr(shutil,'join') else print('+',' '.join(argv))
+ if not dry: subprocess.run(argv,check=True)
+
+def require_arch():
+ if not shutil.which('pacman'): raise SystemExit('CachyOS/Arch pacman is required for this operation')
+
+def pacman(packages,dry):
+ require_arch()
+ run(['sudo','pacman','-S','--needed',*packages],dry)
+
+def remote(name,dry,yes):
+ url=URLS[name]
+ print('Upstream installer:',url)
+ if dry: print('DRY RUN: would download installer and ask for review before executing');return
+ if not yes: raise SystemExit('Remote installer execution requires --yes; use --dry-run to preview')
+ if not shutil.which('curl'): raise SystemExit('curl is required; install with sudo pacman -S curl')
+ with tempfile.TemporaryDirectory(prefix='bxcachy-installer-') as td:
+  file=pathlib.Path(td)/'upstream.sh'
+  subprocess.run(['curl','--fail','--location','--silent','--show-error','--output',str(file),url],check=True)
+  print('Downloaded to',file,'(',file.stat().st_size,'bytes )')
+  print('Upstream installer is third-party code and may modify your shell configuration.')
+  answer=input('Execute downloaded installer? Type EXECUTE: ').strip()
+  if answer!='EXECUTE': raise SystemExit('Cancelled')
+  subprocess.run(['bash',str(file)],check=True)
+
+def main():
+ p=argparse.ArgumentParser(description=__doc__)
+ sub=p.add_subparsers(dest='action',required=True)
+ for action in ('plan','install','doctor'):
+  s=sub.add_parser(action)
+  s.add_argument('tool',nargs='?',default='all',choices=['all','sdkman','java','maven','gradle','boxlang','bvm','mvm'])
+  s.add_argument('--java-version',type=int,default=21,choices=[17,21,22,23,24,25,26])
+  s.add_argument('--yes',action='store_true',help='Allow remote installer download (still asks before execution)')
+  s.add_argument('--dry-run',action='store_true')
+ s=sub.add_parser('version');s.add_argument('manager',choices=['bvm','mvm']);s.add_argument('operation',choices=['list','current','install','use','local','doctor']);s.add_argument('version',nargs='?');s.add_argument('--dry-run',action='store_true')
+ a=p.parse_args()
+ if a.action=='version':
+  if a.operation in ('install','use','local') and not a.version: p.error('version required for install/use/local')
+  run([a.manager,a.operation,*([a.version] if a.version else [])],a.dry_run);return
+ if a.action=='doctor':
+  names=['sdkman','java','maven','gradle','boxlang','bvm','mvm'] if a.tool=='all' else [a.tool]
+  for name in names:
+   executable={'sdkman':'sdk','java':'java','maven':'mvn','gradle':'gradle'}.get(name,name)
+   path=shutil.which(executable)
+   if name=='sdkman' and not path and (pathlib.Path.home()/'.sdkman/bin/sdkman-init.sh').exists():path='installed (shell initialization required)'
+   print(f'{name:10} {path or "not found"}')
+  return
+ names=['sdkman','java','maven','gradle','boxlang','bvm','mvm'] if a.tool=='all' else [a.tool]
+ if a.action=='install' and a.tool=='all':
+  raise SystemExit('Install tools individually to review upstream scripts; use plan all to inspect')
+ for name in names:
+  if name=='java':
+   package=f'jdk{a.java_version}-openjdk'
+   if a.action=='plan':print('Java:',package,'via pacman; does not change archlinux-java default')
+   else:pacman([package],a.dry_run)
+  elif name in ('maven','gradle'):
+   if a.action=='plan':print(name,': via pacman (SDKMAN alternative available independently)')
+   else:pacman([name],a.dry_run)
+  else:
+   if a.action=='plan':remote(name,True,False)
+   else:remote(name,a.dry_run,a.yes)
+if __name__=='__main__':
+ try:main()
+ except subprocess.CalledProcessError as e:print('Command failed:',e,file=sys.stderr);sys.exit(e.returncode or 1)

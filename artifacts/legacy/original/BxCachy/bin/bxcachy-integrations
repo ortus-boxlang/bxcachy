@@ -1,0 +1,54 @@
+#!/usr/bin/env python3
+"""Idempotent BxCachy integration installer. Never overwrites unrelated configuration."""
+import argparse, pathlib, shutil, subprocess, sys
+ROOT=pathlib.Path(__file__).resolve().parent.parent
+HOME=pathlib.Path.home()
+SERVICE=ROOT/'integrations/dolphin/bxcachy-quicklook.desktop'
+DEST=HOME/'.local/share/kio/servicemenus/bxcachy-quicklook.desktop'
+BIN=HOME/'.local/bin'
+HYPR=HOME/'.config/hypr/hyprland.conf'
+INCLUDE=HOME/'.config/hypr/bxcachy-dictation.conf'
+MARK='source = ~/.config/hypr/bxcachy-dictation.conf'
+
+def packages(names):
+ if not shutil.which('pacman'):raise RuntimeError('Arch/CachyOS pacman required for automatic dependency installation')
+ missing=[x for x in names if subprocess.run(['pacman','-Q',x],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode]
+ if missing:subprocess.run(['sudo','pacman','-S','--needed','--noconfirm',*missing],check=True)
+
+def copy_owned(source,dest):
+ dest.parent.mkdir(parents=True,exist_ok=True)
+ if dest.exists() or dest.is_symlink():
+  if dest.is_file() and dest.read_bytes()==source.read_bytes():return
+  raise RuntimeError('Refusing to replace modified file: '+str(dest))
+ shutil.copy2(source,dest)
+
+def link_owned(source,dest):
+ dest.parent.mkdir(parents=True,exist_ok=True)
+ if dest.is_symlink() and dest.resolve()==source.resolve():return
+ if dest.exists() or dest.is_symlink():raise RuntimeError('Refusing to replace existing launcher: '+str(dest))
+ dest.symlink_to(source)
+
+def quicklook():
+ packages(['python-pyside6','kio-extras','qt6-imageformats','ffmpegthumbs','kdegraphics-thumbnailers'])
+ copy_owned(SERVICE,DEST)
+ link_owned(ROOT/'bin/bxcachy-quicklook',BIN/'bxcachy-quicklook')
+ print('Dolphin Quick Look context action installed; Space key is not globally hijacked.')
+
+def shortcuts():
+ # Hyprland's Alt+Space may already be used; do not override the user's bindings.
+ content='# BxCachy dictation: enable ONE binding after collision review\n# bind = ALT, SPACE, exec, bxcachy dictation toggle\n# bind = ALT, D, exec, bxcachy dictation toggle\n'
+ INCLUDE.parent.mkdir(parents=True,exist_ok=True)
+ if INCLUDE.exists():
+  if INCLUDE.read_text()!=content:raise RuntimeError('Existing dictation shortcut file was modified')
+ else:INCLUDE.write_text(content)
+ if HYPR.exists() and MARK not in HYPR.read_text():
+  with HYPR.open('a') as f:f.write('\n# BxCachy optional dictation shortcuts\n'+MARK+'\n')
+ print('Hyprland include installed; shortcut remains opt-in to avoid collisions.')
+
+def main():
+ p=argparse.ArgumentParser();p.add_argument('action',choices=['quicklook','shortcuts','all']);a=p.parse_args()
+ if a.action in ('quicklook','all'):quicklook()
+ if a.action in ('shortcuts','all'):shortcuts()
+if __name__=='__main__':
+ try:main()
+ except (OSError,RuntimeError,subprocess.CalledProcessError) as e:print('ERROR:',e,file=sys.stderr);sys.exit(1)

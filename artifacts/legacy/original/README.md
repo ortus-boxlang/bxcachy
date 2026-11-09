@@ -32,4 +32,4 @@ git commit -m "archive: preserve extracted original BxCachy v0.10.0 source"
 git push origin development
 ```
 
-**Import status:** pending; this README is a manifest, not evidence that the source tree was committed. Confirm the 104 extracted files appear in GitHub before marking archival complete.
+**Import status:** imported 2026-11-09 from the SHA-256-verified archive; 104 regular files under `BxCachy/`, byte-identical to the ZIP (44 `bin/` entrypoints, 20 tests). Reference only: nothing here is a runtime dependency.

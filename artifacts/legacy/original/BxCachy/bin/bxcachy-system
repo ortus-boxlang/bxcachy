@@ -1,0 +1,79 @@
+#!/usr/bin/env python3
+"""Non-destructive CachyOS snapshot checks and pacman-first update workflow."""
+import argparse
+import pathlib
+import shutil
+import subprocess
+import sys
+
+SNAPSHOT_TOOLS = ('snapper', 'timeshift')
+
+def run(command, execute=False):
+    print('+', ' '.join(command), flush=True)
+    if execute: subprocess.run(command, check=True)
+
+def snapshot_status():
+    for tool in SNAPSHOT_TOOLS:
+        print(f'{tool}: {"available" if shutil.which(tool) else "not installed"}')
+    if shutil.which('findmnt'):
+        subprocess.run(['findmnt', '-no', 'FSTYPE', '/'], check=False)
+    print('No snapshot configurations or existing snapshot schedules are changed.')
+
+def main(argv=None):
+    p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument('action', choices=['plan', 'doctor', 'install', 'snapshot-status', 'snapshot-create', 'update-plan', 'update', 'snapshot-configure'])
+    p.add_argument('--yes', action='store_true')
+    p.add_argument('--no-snapshot', action='store_true', help='Explicitly allow update without pre-update snapshot')
+    a = p.parse_args(argv)
+    if a.action in ('snapshot-status', 'doctor'): snapshot_status(); return 0
+    if a.action in ('plan', 'install'):
+        snapshot_status()
+        print('Snapshot integration uses existing snapper or timeshift; never creates a new Btrfs subvolume or replaces configuration.')
+        if a.action == 'install' and not any(shutil.which(x) for x in SNAPSHOT_TOOLS):
+            if shutil.which('pacman') and subprocess.run(['pacman','-Si','snapper'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+                run(['sudo','pacman','-S','--needed','snapper'], a.yes)
+            else: print('Snapper unavailable: skipping; configure snapshots manually.')
+        print('Update manager uses pacman -Syu; optional yay updates remain manual.')
+        return 0
+    if a.action == 'snapshot-configure':
+        print('Snapshot configuration is filesystem-specific. Existing Snapper/Timeshift configuration is preserved.')
+        if shutil.which('snapper'): run(['sudo','snapper','list-configs'])
+        elif shutil.which('timeshift'): run(['sudo','timeshift','--list'])
+        else: print('Install Snapper or Timeshift and configure the correct root filesystem first.')
+        return 0
+    if a.action == 'snapshot-create':
+        if shutil.which('snapper'):
+            command = ['sudo', 'snapper', 'create', '--description', 'BxCachy pre-update']
+        elif shutil.which('timeshift'):
+            command = ['sudo', 'timeshift', '--create', '--comments', 'BxCachy pre-update']
+        else:
+            print('No configured snapshot tool detected; install and configure Snapper or Timeshift before snapshots.', file=sys.stderr)
+            return 3
+        if a.yes:
+            if command[1]=='snapper':
+                probe=subprocess.run(['sudo','snapper','list-configs'],capture_output=True,text=True)
+                if probe.returncode or 'root' not in probe.stdout: raise RuntimeError('Snapper root config missing; refusing snapshot')
+            run(command, True)
+        else: run(command)
+        return 0
+    if a.action == 'update-plan':
+        run(['sudo', 'pacman', '-Syu']); return 0
+    if a.action == 'update':
+        if not a.yes: p.error('update requires --yes; review update-plan first')
+        if not shutil.which('pacman'): p.error('pacman required')
+        if not a.no_snapshot:
+            if shutil.which('snapper'):
+                probe=subprocess.run(['sudo','snapper','list-configs'],capture_output=True,text=True)
+                if probe.returncode or 'root' not in probe.stdout: raise RuntimeError('No Snapper root config; configure snapshots or pass --no-snapshot')
+                run(['sudo','snapper','-c','root','create','--description','BxCachy pre-update'],True)
+            elif shutil.which('timeshift'):
+                run(['sudo','timeshift','--create','--comments','BxCachy pre-update'],True)
+            else: raise RuntimeError('No snapshot tool; configure snapshots or explicitly pass --no-snapshot')
+        run(['sudo', 'pacman', '-Syu'], True)
+        return 0
+    return 2
+
+if __name__ == '__main__':
+    try: sys.exit(main())
+    except (OSError, subprocess.CalledProcessError, RuntimeError) as e:
+        print(f'ERROR: {e}', file=sys.stderr); sys.exit(1)

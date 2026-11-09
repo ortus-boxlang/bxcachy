@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+MANIFEST="$ROOT/packages/podman.txt"
+usage(){ echo 'Usage: bxcachy podman {plan|doctor|install|socket-enable|socket-disable|compose-check} [--yes]'; }
+packages(){ grep -vE '^([[:space:]]*#|[[:space:]]*$)' "$MANIFEST"; }
+check_arch(){ command -v pacman >/dev/null || { echo 'Requires Arch/CachyOS pacman.' >&2; exit 2; }; }
+plan(){
+ echo 'BxCachy Podman installation plan (no changes):'
+ while IFS= read -r pkg; do
+  if command -v pacman >/dev/null && pacman -Qq "$pkg" >/dev/null 2>&1; then state=installed
+  elif command -v pacman >/dev/null && pacman -Si "$pkg" >/dev/null 2>&1; then state=available
+  else state='unverified (check repository)'; fi
+  printf '  %-24s %s\n' "$pkg" "$state"
+ done < <(packages)
+ echo 'Docker CLI compatibility wrappers are configured by the base installer; rootless socket is optional.'
+}
+doctor(){
+ for bin in podman buildah skopeo conmon crun fuse-overlayfs slirp4netns pasta aardvark-dns netavark; do
+  if command -v "$bin" >/dev/null 2>&1; then printf 'OK      %s\n' "$bin"; else printf 'MISSING %s\n' "$bin"; fi
+ done
+ if command -v podman >/dev/null; then
+  podman info --format '{{.Host.Security.Rootless}}' 2>/dev/null | sed 's/^/Rootless: /' || echo 'Podman info unavailable; check storage, user namespaces, and runtime.'
+  podman compose version 2>/dev/null || echo 'Compose provider unavailable: install podman-compose or docker-compose.'
+ fi
+}
+install(){
+ check_arch
+ mapfile -t all < <(packages)
+ local -a available=() unknown=()
+ for pkg in "${all[@]}"; do
+  if pacman -Si "$pkg" >/dev/null 2>&1; then available+=("$pkg"); else unknown+=("$pkg"); fi
+ done
+ if ((${#unknown[@]})); then
+  printf 'Unavailable in configured pacman repos: %s\n' "${unknown[*]}" >&2
+  echo 'No automatic AUR fallback for infrastructure packages. Resolve package names explicitly.' >&2
+  exit 3
+ fi
+ echo 'Installing via pacman: '"${available[*]}"
+ if [[ "${1:-}" != --yes ]]; then
+  read -r -p 'Proceed with installation? [y/N] ' answer
+  [[ "$answer" =~ ^[Yy]$ ]] || { echo 'Cancelled.'; return 0; }
+ fi
+ sudo pacman -S --needed "${available[@]}"
+ echo 'Installed. Run: bxcachy podman doctor'
+ echo 'Optional rootless API: bxcachy podman socket-enable'
+}
+case "${1:-}" in
+ plan) plan;;
+ doctor) doctor;;
+ install) shift; install "${1:-}";;
+ socket-enable) command -v systemctl >/dev/null || exit 2; systemctl --user enable --now podman.socket; echo 'Rootless socket enabled. DOCKER_HOST=unix://$XDG_RUNTIME_DIR/podman/podman.sock for Docker-compatible clients.';;
+ socket-disable) systemctl --user disable --now podman.socket;;
+ compose-check) command -v podman >/dev/null || exit 2; podman compose version;;
+ *) usage; exit 2;;
+esac

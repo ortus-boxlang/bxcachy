@@ -1,0 +1,28 @@
+#!/usr/bin/env python3
+"""Opt-in, resumable BxCachy first-run orchestrator. Never installs desktop environment."""
+import argparse,json,pathlib,subprocess,sys,time
+ROOT=pathlib.Path(__file__).resolve().parent
+STEPS=[('Base packages',['bxcachy-base','install','--yes']),('Selected default applications',['bxcachy-app-manager','install-defaults','--yes']),('Clipboard service (optional activation)',['bxcachy-desktop','clipboard-service','status']),('Podman diagnostics',['bxcachy-podman','doctor']),('Snapshot status',['bxcachy-system','snapshot-status'])]
+def main(argv=None):
+ p=argparse.ArgumentParser(description=__doc__)
+ p.add_argument('action',choices=['plan','install','doctor'])
+ p.add_argument('--yes',action='store_true')
+ p.add_argument('--continue-on-error',action='store_true')
+ a=p.parse_args(argv)
+ if a.action=='install' and not a.yes: p.error('Install requires --yes; inspect plan first')
+ failures=[]
+ for i,(label,cmd) in enumerate(STEPS,1):
+  if a.action=='plan':
+   print(f'[{i}/{len(STEPS)}] {label}: {" ".join(cmd)}');continue
+  run=cmd.copy()
+  if a.action=='doctor' and i==1:run=['bxcachy-base','doctor']
+  print(f'[{i}/{len(STEPS)}] {label}',flush=True)
+  result=subprocess.run([str(ROOT/run[0]),*run[1:]],check=False)
+  if result.returncode:
+   failures.append({'step':label,'exit':result.returncode})
+   print(f'FAILED: {label} (exit {result.returncode})',file=sys.stderr)
+   if not a.continue_on_error:break
+  else: print('OK:',label,flush=True)
+ print('Summary:',json.dumps({'failed':failures,'total':len(STEPS)}))
+ return 1 if failures else 0
+if __name__=='__main__':sys.exit(main())

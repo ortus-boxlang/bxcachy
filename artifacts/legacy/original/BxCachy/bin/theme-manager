@@ -1,0 +1,101 @@
+#!/usr/bin/env python3
+"""Safe Omarchy palette adapter for Noctalia 5 and Hyprland (no code execution)."""
+import argparse, json, os, re, shutil, subprocess, sys, tomllib
+from pathlib import Path
+ROOT = Path.home()/'.local/share/cachyos-omarchy-pack'
+THEMES = ROOT/'themes'
+PALETTES = Path.home()/'.config/noctalia/palettes'
+HEX = re.compile(r'^#?[0-9a-fA-F]{6}$')
+
+def color(data, *names, default='#808080'):
+    for name in names:
+        value = data.get(name)
+        if isinstance(value, str) and HEX.fullmatch(value):
+            return '#'+value.lstrip('#').lower()
+    return default
+
+def list_themes():
+    return sorted(x for x in THEMES.iterdir() if x.is_dir() and (x/'colors.toml').is_file()) if THEMES.exists() else []
+
+def sync(ref):
+    if not re.fullmatch(r'[A-Za-z0-9._/-]+', ref) or ref.startswith('-'):
+        raise ValueError('Invalid git ref')
+    if not shutil.which('git'): raise RuntimeError('Install git first')
+    url='https://github.com/omacom/omarchy.git'
+    source=ROOT/'upstream'
+    ROOT.mkdir(parents=True,exist_ok=True)
+    if not (source/'.git').exists():
+        subprocess.run(['git','clone','--depth','1','--branch',ref,url,str(source)],check=True)
+    else:
+        subprocess.run(['git','-C',str(source),'fetch','--depth','1','origin',ref],check=True)
+        subprocess.run(['git','-C',str(source),'checkout','--detach','FETCH_HEAD'],check=True)
+    origin=source/'themes'
+    if not origin.is_dir(): raise RuntimeError('Upstream themes/ not found; verify ref')
+    THEMES.mkdir(parents=True,exist_ok=True)
+    count=0
+    for src in origin.iterdir():
+        if src.is_dir() and (src/'colors.toml').exists():
+            dest=THEMES/src.name
+            if dest.exists(): shutil.rmtree(dest)
+            # Copy only color metadata and image assets; never copy executable theme configs.
+            dest.mkdir()
+            shutil.copy2(src/'colors.toml',dest/'colors.toml')
+            for p in src.iterdir():
+                if p.name in ('preview.png','preview.webp','preview.jpg') and p.is_file(): shutil.copy2(p,dest/p.name)
+            if (src/'backgrounds').is_dir():
+                for p in (src/'backgrounds').rglob('*'):
+                    if p.is_file() and p.suffix.lower() in ('.png','.jpg','.jpeg','.webp','.avif') and not p.is_symlink():
+                        target=dest/'backgrounds'/p.relative_to(src/'backgrounds')
+                        target.parent.mkdir(parents=True,exist_ok=True)
+                        shutil.copy2(p,target)
+            count+=1
+    print(f'Synced {count} official themes from {ref}. Community themes are not included.')
+
+def apply(name, live=True):
+    theme=THEMES/name
+    if not theme.is_dir() or not (theme/'colors.toml').is_file(): raise ValueError('Unknown theme')
+    data=tomllib.loads((theme/'colors.toml').read_text())
+    # Omarchy color definitions are top-level TOML keys.
+    bg=color(data,'background','bg',default='#1c1c1c')
+    fg=color(data,'foreground','fg',default='#eeeeee')
+    accent=color(data,'accent','blue','cyan',default='#7aa2f7')
+    secondary=color(data,'cyan','magenta',default=accent)
+    red=color(data,'red',default='#f7768e')
+    green=color(data,'green',default='#9ece6a')
+    yellow=color(data,'yellow',default='#e0af68')
+    blue=color(data,'blue',default=accent)
+    magenta=color(data,'magenta',default='#bb9af7')
+    cyan=color(data,'cyan',default='#7dcfff')
+    muted=color(data,'comment','bright_black','color8',default='#666666')
+    surface=color(data,'surface','selection_background',default=bg)
+    mode='light' if data.get('mode')=='light' or (theme/'light.mode').exists() else 'dark'
+    normal=dict(black=bg,red=red,green=green,yellow=yellow,blue=blue,magenta=magenta,cyan=cyan,white=fg)
+    variant=dict(primary=accent,on_primary=bg,secondary=secondary,on_secondary=bg,tertiary=magenta,on_tertiary=bg,error=red,on_error=bg,surface=bg,on_surface=fg,surface_container=surface,on_surface_variant=muted,outline_variant=muted,shadow=bg,hover=surface,on_hover=fg,terminal=dict(background=bg,foreground=fg,cursor=fg,cursor_text=bg,selection_bg=surface,selection_fg=fg,normal=normal,bright={**normal,'black':muted}))
+    PALETTES.mkdir(parents=True,exist_ok=True)
+    slug='Omarchy-'+name
+    (PALETTES/(slug+'.json')).write_text(json.dumps({'version':2,mode:variant},indent=2)+'\n')
+    print('Generated',PALETTES/(slug+'.json'))
+    if live:
+        if shutil.which('noctalia'):
+            subprocess.run(['noctalia','msg','color-scheme-set','custom',slug],check=False)
+            subprocess.run(['noctalia','msg','theme-mode-set',mode],check=False)
+            backgrounds=sorted(p for p in (theme/'backgrounds').rglob('*') if p.suffix.lower() in ('.png','.jpg','.jpeg','.webp')) if (theme/'backgrounds').exists() else []
+            if backgrounds: subprocess.run(['noctalia','msg','wallpaper-set',str(backgrounds[0])],check=False)
+        else: print('Noctalia not running; select custom palette',slug,'in Noctalia settings.')
+    print('Theme adapted (palette + first wallpaper only). Existing KDE and Hyprland configs unchanged.')
+
+p=argparse.ArgumentParser()
+p.add_argument('action',choices=['sync','list','apply'])
+p.add_argument('name',nargs='?')
+p.add_argument('--ref',default='v4.5.0')
+p.add_argument('--no-live',action='store_true')
+a=p.parse_args()
+try:
+    if a.action=='sync': sync(a.ref)
+    elif a.action=='list':
+        for x in list_themes(): print(x.name)
+    elif a.action=='apply':
+        if not a.name: p.error('apply requires a theme name')
+        apply(a.name,not a.no_live)
+except (ValueError,RuntimeError,subprocess.CalledProcessError,OSError,tomllib.TOMLDecodeError) as e:
+    print('Error:',e,file=sys.stderr);sys.exit(1)

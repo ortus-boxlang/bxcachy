@@ -1,0 +1,10 @@
+{
+  "sections": [
+    {"id":"developer","label":"Developer","items":[
+      {"id":"my-project","label":"Open my project","command":["ghostty","--working-directory","/home/YOU/Projects"]}
+    ]},
+    {"id":"custom","label":"My Tools","items":[
+      {"id":"hello","label":"Print hello","command":["ghostty","-e","bash","-lc","echo Hello; read -r"]}
+    ]}
+  ]
+}

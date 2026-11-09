@@ -1,0 +1,64 @@
+#!/usr/bin/env python3
+"""BxCachy graphical menu with Phosphor SVGs and icon-theme fallbacks."""
+import json,pathlib,shutil,subprocess,sys
+ROOT=pathlib.Path(__file__).resolve().parent.parent
+sys.path.insert(0,str(ROOT/'bin'))
+import importlib.machinery
+icons=importlib.machinery.SourceFileLoader('icons',str(ROOT/'bin/bxcachy-icons')).load_module()
+USER=pathlib.Path.home()/'.config/bxcachy/menu.json'
+DEFAULT=ROOT/'menu/default.json'
+def load():
+ base=json.loads(DEFAULT.read_text())
+ if not USER.exists():return base['sections']
+ custom=json.loads(USER.read_text())
+ if not isinstance(custom.get('sections'),list):raise ValueError('sections must be a list')
+ # User sections override defaults by id; other defaults stay available.
+ sections={s['id']:s for s in base['sections']}
+ for section in custom['sections']:
+  if not isinstance(section,dict) or not isinstance(section.get('id'),str):raise ValueError('invalid custom section')
+  sid=section['id']
+  if sid in sections and isinstance(section.get('items'),list):
+   old=sections[sid];merged={i['id']:i for i in old['items']}
+   for i in section['items']:
+    if not isinstance(i,dict) or not isinstance(i.get('id'),str):raise ValueError('invalid custom item')
+    merged[i['id']]={**merged.get(i['id'],{}),**i}
+   sections[sid]={**old,**{k:v for k,v in section.items() if k!='items'},'items':list(merged.values())}
+  else:sections[sid]=section
+ return list(sections.values())
+def select(entries,prompt):
+ # Rofi's icon metadata is kept out of visible text. -format i returns index.
+ lines=[]
+ for e in entries:
+  label=e['label'].replace('\n',' ')
+  lines.append(label+'\0icon\x1f'+icons.resolve(e.get('icon','folder')))
+ result=subprocess.run([str(ROOT/'bin/bxcachy-runner'),'menu-select','--prompt',prompt],input='\n'.join(lines)+'\n',text=True,capture_output=True)
+ if result.returncode:return None
+ try:idx=int(result.stdout.strip())
+ except ValueError:return None
+ return entries[idx] if 0<=idx<len(entries) else None
+def main():
+ # Menu backend availability is checked by the runner adapter.
+ sections=load()
+ sections.append({'id':'settings','label':'Settings','icon':'gear','items':[
+  {'label':'Keyboard Shortcuts','icon':'keyboard','command':[str(ROOT/'bin/shortcuts'),'gui']},
+  {'label':'Runner diagnostics','icon':'magnifying-glass','command':['ghostty','-e',str(ROOT/'bin/bxcachy-runner'),'doctor']},
+  {'label':'Sync Phosphor icons','icon':'palette','command':['ghostty','-e',str(ROOT/'bin/bxcachy-icons'),'sync']},
+  {'label':'Provisioning plan','icon':'clipboard-text','command':['ghostty','-e',str(ROOT/'bin/provision'),'plan']}
+ ]})
+ while True:
+  section=select([s for s in sections if isinstance(s,dict) and isinstance(s.get('label'),str)],'BxCachy')
+  if section is None:return
+  entries=[i for i in section.get('items',[]) if isinstance(i,dict) and isinstance(i.get('label'),str) and isinstance(i.get('command'),list) and all(isinstance(x,str) for x in i['command'])]
+  item=select(entries+[{'label':'Back','icon':'arrow-left','command':[]}],section['label'])
+  if item is None or item['label']=='Back':continue
+  cmd=[x.replace('{ROOT}',str(ROOT)) for x in item['command']]
+  if not cmd:continue
+  if not shutil.which(cmd[0]) and not pathlib.Path(cmd[0]).is_file():
+   print('Command unavailable:',cmd[0],file=sys.stderr);continue
+  if item.get('confirm'):
+   approval=select([{'label':'Cancel','icon':'x'},{'label':'Run','icon':'check-circle'}],'Confirm action')
+   if not approval or approval['label']!='Run':continue
+  subprocess.Popen(cmd,start_new_session=True)
+if __name__=='__main__':
+ try:main()
+ except (RuntimeError,ValueError,OSError,KeyError,TypeError) as e:print('ERROR:',e,file=sys.stderr);sys.exit(1)

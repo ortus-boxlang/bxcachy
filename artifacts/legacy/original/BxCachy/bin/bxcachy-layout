@@ -1,0 +1,51 @@
+#!/usr/bin/env python3
+"""Hyprland tiling/floating controls; no KDE modifications."""
+import argparse, json, subprocess, sys
+
+def hypr(*args):
+    result=subprocess.run(['hyprctl',*args],capture_output=True,text=True)
+    if result.returncode:
+        raise RuntimeError(result.stderr.strip() or result.stdout.strip() or 'hyprctl failed')
+    return result.stdout
+
+def get_json(name):
+    return json.loads(hypr('-j',name))
+
+def dispatch(command,argument=None):
+    hypr('dispatch',command,*([argument] if argument is not None else []))
+
+def workspace_clients():
+    active=get_json('activeworkspace')
+    wid=active.get('id')
+    if wid is None: raise RuntimeError('No active Hyprland workspace')
+    return [c for c in get_json('clients') if c.get('workspace',{}).get('id')==wid and c.get('mapped',True) and not c.get('hidden',False)]
+
+def workspace_mode(mode):
+    clients=workspace_clients()
+    if mode=='toggle':
+        mode='tile' if clients and all(c.get('floating',False) for c in clients) else 'float'
+    dispatcher='setfloating' if mode=='float' else 'settiled'
+    # Hyprland dispatcher spelling is settiled (not settiling).
+    changed=0
+    for client in clients:
+        if bool(client.get('floating',False))==(mode=='float'): continue
+        addr=client.get('address','')
+        if not isinstance(addr,str) or not addr.startswith('0x'): continue
+        dispatch(dispatcher,'address:'+addr)
+        changed+=1
+    print(f'Workspace mode: {mode}; changed {changed} window(s)')
+
+def main():
+    parser=argparse.ArgumentParser(description='Manage Hyprland floating/tiled windows')
+    sub=parser.add_subparsers(dest='scope',required=True)
+    focus=sub.add_parser('window'); focus.add_argument('action',choices=['toggle','float','tile'])
+    workspace=sub.add_parser('workspace'); workspace.add_argument('action',choices=['toggle','float','tile'])
+    args=parser.parse_args()
+    if args.scope=='workspace': workspace_mode(args.action)
+    elif args.action=='toggle': dispatch('togglefloating')
+    else: dispatch('setfloating' if args.action=='float' else 'settiled')
+
+if __name__=='__main__':
+    try: main()
+    except (RuntimeError, OSError, ValueError, json.JSONDecodeError) as exc:
+        print('BxCachy layout error:',exc,file=sys.stderr);sys.exit(1)

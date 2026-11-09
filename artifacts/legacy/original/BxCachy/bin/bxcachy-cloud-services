@@ -1,0 +1,42 @@
+#!/usr/bin/env python3
+"""Per-user persistent rclone mounts. systemd owns the foreground rclone process."""
+import argparse,pathlib,re,shutil,subprocess,sys
+BASE=pathlib.Path.home()/'Cloud';UNITS=pathlib.Path.home()/'.config/systemd/user'
+def safe(s):
+ if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_-]{0,63}',s):raise ValueError('Invalid remote name')
+ return s
+def unit(name):return 'bxcachy-cloud-'+safe(name)+'.service'
+def render(name,rclone,fusermount):
+ name=safe(name)
+ # Percent escaping for systemd unit syntax; path names are deliberately restricted.
+ return f'''[Unit]\nDescription=BxCachy cloud mount {name}\nAfter=network-online.target\nWants=network-online.target\n\n[Service]\nType=simple\nExecStart={rclone} mount {name}: %h/Cloud/{name} --vfs-cache-mode=writes\nExecStop={fusermount} -u %h/Cloud/{name}\nRestart=on-failure\nRestartSec=10\n\n[Install]\nWantedBy=default.target\n'''
+def main():
+ p=argparse.ArgumentParser();p.add_argument('action',choices=['install','remove','status','list']);p.add_argument('remote',nargs='?');p.add_argument('--yes',action='store_true');a=p.parse_args()
+ if a.action=='list':
+  for f in sorted(UNITS.glob('bxcachy-cloud-*.service')):print(f.stem.removeprefix('bxcachy-cloud-'))
+  return
+ if not a.remote:p.error('remote required')
+ name=safe(a.remote);target=BASE/name;path=UNITS/unit(name)
+ if a.action=='status':subprocess.run(['systemctl','--user','status',unit(name),'--no-pager'],check=False);return
+ if not a.yes:p.error('use --yes to authorize changes')
+ if a.action=='remove':
+  subprocess.run(['systemctl','--user','disable','--now',unit(name)],check=False)
+  if path.exists():path.unlink()
+  subprocess.run(['systemctl','--user','daemon-reload'],check=True);return
+ rclone=shutil.which('rclone');fuse=shutil.which('fusermount3')
+ if not rclone or not fuse:raise RuntimeError('Install rclone and fuse3 first')
+ remotes=subprocess.run(['rclone','listremotes'],capture_output=True,text=True,check=True).stdout.splitlines()
+ if name+':' not in remotes:raise RuntimeError('Remote missing; run rclone config')
+ if target.is_symlink():raise RuntimeError('Symlink mount target refused')
+ target.mkdir(parents=True,exist_ok=True)
+ if any(target.iterdir()):raise RuntimeError('Mount folder must be empty')
+ UNITS.mkdir(parents=True,exist_ok=True)
+ expected=render(name,rclone,fuse)
+ if path.exists() and path.read_text()!=expected:raise RuntimeError('Existing unit differs; refusing overwrite')
+ path.write_text(expected)
+ subprocess.run(['systemctl','--user','daemon-reload'],check=True)
+ subprocess.run(['systemctl','--user','enable','--now',unit(name)],check=True)
+ print('Persistent mount enabled:',target)
+if __name__=='__main__':
+ try:main()
+ except (RuntimeError,ValueError,OSError,subprocess.CalledProcessError) as e:print('ERROR:',e,file=sys.stderr);sys.exit(1)

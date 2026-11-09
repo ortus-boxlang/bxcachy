@@ -1,0 +1,53 @@
+#!/usr/bin/env python3
+"""Simple local cloud connection manager. Credentials are managed by rclone, never here."""
+import pathlib,shutil,subprocess,sys,tkinter as tk
+from tkinter import messagebox,simpledialog,ttk
+ROOT=pathlib.Path(__file__).resolve().parent
+CLOUD=ROOT/'bxcachy-cloud'
+class App:
+ def __init__(self):
+  self.root=tk.Tk();self.root.title('BxCachy Cloud Storage');self.root.geometry('620x420')
+  ttk.Label(self.root,text='Cloud Storage',font=('Sans',19,'bold')).pack(anchor='w',padx=18,pady=(18,4))
+  ttk.Label(self.root,text='Google Drive · Dropbox · S3 · WebDAV · other rclone providers').pack(anchor='w',padx=18)
+  self.list=tk.Listbox(self.root,height=12);self.list.pack(fill='both',expand=True,padx=18,pady=14)
+  bar=ttk.Frame(self.root);bar.pack(fill='x',padx=18,pady=(0,18))
+  for label,fn in [('Refresh',self.refresh),('Add account',self.configure),('Mount',self.mount),('Unmount',self.unmount),('Open folder',self.open_folder),('Auto-mount',self.auto_mount),('Disable auto',self.disable_auto)]:ttk.Button(bar,text=label,command=fn).pack(side='left',padx=3)
+  self.refresh()
+ def run(self,args):
+  try:return subprocess.run(args,text=True,capture_output=True,check=True).stdout
+  except (OSError,subprocess.CalledProcessError) as e:messagebox.showerror('BxCachy Cloud',str(e));return None
+ def refresh(self):
+  self.list.delete(0,tk.END)
+  if not shutil.which('rclone'):
+   self.list.insert(tk.END,'rclone is not installed');return
+  result=self.run(['rclone','listremotes'])
+  if result is not None:
+   for line in result.splitlines():self.list.insert(tk.END,line.rstrip(':'))
+ def selected(self):
+  idx=self.list.curselection();return self.list.get(idx[0]) if idx else None
+ def configure(self):
+  if not shutil.which('ghostty'):messagebox.showinfo('Setup','Run bxcachy cloud configure in your terminal.');return
+  subprocess.Popen(['ghostty','-e',str(CLOUD),'configure'],start_new_session=True)
+ def mount(self):
+  name=self.selected()
+  if name and messagebox.askyesno('Mount',f'Mount {name} at ~/Cloud/{name}?'):
+   if self.run([str(CLOUD),'mount',name,'--yes']) is not None:messagebox.showinfo('Mounted',f'Check ~/Cloud/{name}')
+ def unmount(self):
+  name=self.selected()
+  if name and messagebox.askyesno('Unmount',f'Unmount ~/Cloud/{name}?'):self.run([str(CLOUD),'unmount',name,'--yes'])
+ def auto_mount(self):
+  name=self.selected()
+  if name and messagebox.askyesno('Auto-mount',f'Enable persistent login mount for {name}?'):
+   self.run([str(ROOT/'bxcachy-cloud-services'),'install',name,'--yes'])
+ def disable_auto(self):
+  name=self.selected()
+  if name and messagebox.askyesno('Disable',f'Disable automatic mount for {name}?'):
+   self.run([str(ROOT/'bxcachy-cloud-services'),'remove',name,'--yes'])
+ def open_folder(self):
+  name=self.selected()
+  if name:
+   folder=pathlib.Path.home()/'Cloud'/name
+   if folder.is_dir():subprocess.Popen(['xdg-open',str(folder)],start_new_session=True)
+   else:messagebox.showinfo('Not mounted',f'{folder} is not mounted')
+ def main(self):self.root.mainloop()
+if __name__=='__main__':App().main()

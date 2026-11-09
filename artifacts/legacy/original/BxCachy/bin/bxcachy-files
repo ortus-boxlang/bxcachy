@@ -1,0 +1,18 @@
+#!/usr/bin/env python3
+"""Dolphin and file manager integration: diagnostics and safe launchers."""
+import argparse,shutil,subprocess
+TOOLS=['dolphin','kio-extras','kio-gdrive','insync','dropbox','rclone','flea','strata','ffmpegthumbs','ark','filelight']
+def main():
+ p=argparse.ArgumentParser();p.add_argument('action',choices=['doctor','open','preview-help']);a=p.parse_args()
+ if a.action=='doctor':
+  for x in TOOLS:
+   executable=shutil.which(x)
+   if not executable and shutil.which('pacman'):
+    installed=subprocess.run(['pacman','-Qq',x],capture_output=True).returncode==0
+   else:installed=bool(executable)
+   print(f'{x}: {"available" if installed else "not detected"}')
+ elif a.action=='open':
+  if not shutil.which('dolphin'):raise RuntimeError('Dolphin unavailable')
+  subprocess.Popen(['dolphin'],start_new_session=True)
+ else:print('Dolphin: enable previews with Ctrl+I or via View > Show Previews; F11 opens information panel. Mac-style Space Quick Look is not installed; Flea/Strata are optional candidates and need live verification.')
+if __name__=='__main__':main()

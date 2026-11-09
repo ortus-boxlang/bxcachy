@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+DEST="${XDG_CONFIG_HOME:-$HOME/.config}/cachyos-omarchy-pack"
+mkdir -p "$DEST" "$HOME/.local/share/applications"
+if [[ ! -f "$DEST/menu.json" ]]; then cp "$ROOT/menu/custom.example.json" "$DEST/menu.json"; fi
+cat > "$HOME/.local/share/applications/cachyos-omarchy-menu.desktop" <<DESKTOP
+[Desktop Entry]
+Type=Application
+Name=CachyOS Omarchy Menu
+Comment=Extensible Omarchy-inspired control menu
+Exec=ghostty -e $ROOT/bin/omarchy-menu
+Icon=utilities-terminal
+Terminal=false
+Categories=System;Utility;
+DESKTOP
+printf 'Installed desktop launcher. Customize: %s/menu.json\n' "$DEST"
+printf 'To bind Super+Alt+Space, add this to your Hyprland config:\n'
+printf 'bind = SUPER ALT, SPACE, exec, ghostty -e %s/bin/omarchy-menu\n' "$ROOT"
+printf 'No Hyprland or KDE files were modified.\n'

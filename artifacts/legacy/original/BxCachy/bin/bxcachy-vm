@@ -1,0 +1,61 @@
+#!/usr/bin/env python3
+"""Rootless Podman Windows VM manager; no automatic data deletion."""
+import argparse,json,os,pathlib,shutil,subprocess,sys
+HOME=pathlib.Path.home(); BASE=pathlib.Path(os.environ.get('BXCACHY_VM_HOME',HOME/'.local/share/bxcachy/windows')).expanduser()
+DEFAULT={'name':'bxcachy-windows','image':'docker.io/dockurr/windows:latest','version':'11','ram':'8G','cpu':'4','disk_size':'64G','web_port':8006,'rdp_port':3389,'storage':str(BASE/'data')}
+def cfg():
+ p=BASE/'config.json';c=DEFAULT.copy()
+ if p.exists():c.update(json.loads(p.read_text()))
+ return c
+def validate(c):
+ import re
+ if not re.fullmatch('[a-zA-Z0-9][a-zA-Z0-9_.-]{0,62}',str(c['name'])):raise ValueError('Invalid VM name')
+ if not re.fullmatch('[1-9][0-9]*G',str(c['ram'])):raise ValueError('RAM must be in G')
+ if not str(c['cpu']).isdigit() or not 1<=int(c['cpu'])<=128:raise ValueError('Invalid CPU count')
+ if not re.fullmatch('[1-9][0-9]*G',str(c['disk_size'])):raise ValueError('Invalid disk size')
+ for port in ('web_port','rdp_port'):
+  if not 1024<=int(c[port])<=65535:raise ValueError('Invalid port '+port)
+ if int(c['web_port'])==int(c['rdp_port']):raise ValueError('Ports must differ')
+ if not str(c['image']).startswith(('docker.io/dockurr/windows:','ghcr.io/dockur/windows:')):raise ValueError('Unsupported image source')
+ return c
+def command(c):
+ return ['podman','run','-d','--name',c['name'],'--device','/dev/kvm','--device','/dev/net/tun','--cap-add','NET_ADMIN','--security-opt','label=disable','-p',f"127.0.0.1:{c['web_port']}:8006",'-p',f"127.0.0.1:{c['rdp_port']}:3389/tcp",'-v',f"{c['storage']}:/storage:Z",'-e',f"VERSION={c['version']}",'-e',f"RAM_SIZE={c['ram']}",'-e',f"CPU_CORES={c['cpu']}",'-e',f"DISK_SIZE={c['disk_size']}",c['image']]
+def run(args):subprocess.run(args,check=True)
+def doctor():
+ for x in ('podman','/dev/kvm','/dev/net/tun'):
+  print(x, 'OK' if (pathlib.Path(x).exists() if x.startswith('/') else shutil.which(x)) else 'MISSING')
+ print('KVM access:',os.access('/dev/kvm',os.R_OK|os.W_OK) if pathlib.Path('/dev/kvm').exists() else False)
+ print('Rootless:',os.geteuid()!=0)
+def main():
+ p=argparse.ArgumentParser();s=p.add_subparsers(dest='action',required=True)
+ for action in ('plan','doctor','install','start','stop','restart','status','logs','remove','config'):s.add_parser(action)
+ a=p.parse_args();c=validate(cfg())
+ if a.action=='doctor':doctor();return
+ if a.action in ('plan','config'):
+  print(json.dumps(c,indent=2));print('Run command:', ' '.join(command(c)));return
+ if os.geteuid()==0:raise RuntimeError('Run rootless as your regular user')
+ if not shutil.which('podman'):raise RuntimeError('Podman missing: bxcachy podman install')
+ if a.action=='install':
+  if not pathlib.Path('/dev/kvm').exists() or not os.access('/dev/kvm',os.R_OK|os.W_OK):raise RuntimeError('Accessible /dev/kvm required; check BIOS virtualization and group permissions')
+  if not pathlib.Path('/dev/net/tun').exists():raise RuntimeError('/dev/net/tun missing')
+  BASE.mkdir(parents=True,exist_ok=True)
+  path=BASE/'config.json'
+  if not path.exists():path.write_text(json.dumps(c,indent=2)+'\n')
+  pathlib.Path(c['storage']).mkdir(parents=True,exist_ok=True)
+  print('Windows image is third-party; licensing and resources are your responsibility.')
+  if input('Pull image and create Windows VM? Type INSTALL: ')!='INSTALL':return
+  inspect=subprocess.run(['podman','container','exists',c['name']])
+  if inspect.returncode==0:raise RuntimeError('Container already exists; use start/restart, not install')
+  run(['podman','pull',c['image']]);run(command(c))
+  print('Local browser: http://127.0.0.1:'+str(c['web_port']))
+ elif a.action=='start':run(['podman','start',c['name']])
+ elif a.action=='stop':run(['podman','stop',c['name']])
+ elif a.action=='restart':run(['podman','restart',c['name']])
+ elif a.action=='status':run(['podman','ps','-a','--filter','name=^'+c['name']+'$'])
+ elif a.action=='logs':run(['podman','logs','--tail','100',c['name']])
+ elif a.action=='remove':
+  print('Container removal only; VM data at',c['storage'],'is preserved.')
+  if input('Type REMOVE to remove container: ')=='REMOVE':run(['podman','rm','-f',c['name']])
+if __name__=='__main__':
+ try:main()
+ except (RuntimeError,subprocess.CalledProcessError,OSError,ValueError) as e:print('ERROR:',e,file=sys.stderr);sys.exit(1)

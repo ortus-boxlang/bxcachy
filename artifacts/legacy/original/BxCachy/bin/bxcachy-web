@@ -1,0 +1,29 @@
+#!/usr/bin/env python3
+"""Add user-defined HTTPS web apps without modifying curated catalog."""
+import argparse,pathlib,re,sys,urllib.parse,importlib.machinery
+ROOT=pathlib.Path(__file__).resolve().parent.parent
+manager=importlib.machinery.SourceFileLoader('app_manager',str(ROOT/'bin/bxcachy-app-manager')).load_module()
+DEST=pathlib.Path.home()/'.local/share/applications'
+def create(name,url,yes=False):
+ manager.safe_url(url)
+ if not name.strip() or any(x in name for x in '\r\n\x00'):raise ValueError('Invalid app name')
+ slug=re.sub('-+','-',re.sub('[^a-z0-9]+','-',name.lower())).strip('-')
+ if not slug:raise ValueError('Invalid app name')
+ app={'id':slug,'name':name,'kind':'web','target':url}
+ b=manager.browser()
+ if not b:raise RuntimeError('Chromium, Brave, Chrome or Firefox required')
+ path=DEST/('bxcachy-web-'+slug+'.desktop')
+ if path.exists():raise ValueError('Launcher exists: '+str(path))
+ print('Launcher:',path,'\nURL:',url,'\nBrowser:',b)
+ if yes:
+  DEST.mkdir(parents=True,exist_ok=True);path.write_text(manager.desktop_file(app,b));path.chmod(0o644)
+ return path
+def main():
+ p=argparse.ArgumentParser();p.add_argument('name',nargs='?');p.add_argument('url',nargs='?');p.add_argument('--yes',action='store_true');a=p.parse_args()
+ if not a.name or not a.url:
+  if not sys.stdin.isatty():p.error('Provide name and URL')
+  a.name=input('Web app name: ').strip();a.url=input('HTTPS URL: ').strip()
+ create(a.name,a.url,a.yes)
+if __name__=='__main__':
+ try:main()
+ except (RuntimeError,ValueError) as e:print('ERROR:',e,file=sys.stderr);sys.exit(1)

@@ -1,0 +1,54 @@
+#!/usr/bin/env python3
+"""Stage, activate, audit, and restore managed Hyprland include; never touch KDE."""
+import argparse,datetime,difflib,hashlib,json,os,pathlib,shutil,sys
+HOME=pathlib.Path.home();CONFIG=HOME/'.config';STATE=HOME/'.local/state/bxcachy';HYPR=CONFIG/'hypr/hyprland.conf';INCLUDE='source = ~/.config/hypr/bxcachy-keys.conf';GEN=CONFIG/'hypr/bxcachy-keys.conf'
+def hashof(p):return hashlib.sha256(p.read_bytes()).hexdigest()
+def snap(files):
+ d=STATE/'snapshots'/datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%S%fZ');d.mkdir(parents=True)
+ entries=[]
+ for p in files:
+  if not p.is_relative_to(CONFIG):raise RuntimeError('Refusing unmanaged path')
+  rel=p.relative_to(CONFIG);exists=p.is_file();entries.append({'path':str(rel),'exists':exists,'sha256':hashof(p) if exists else None})
+  if exists:
+   target=d/rel;target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(p,target)
+ (d/'manifest.json').write_text(json.dumps(entries,indent=2)+'\n');return d
+def activate():
+ if not GEN.is_file():raise RuntimeError('Generate shortcuts first: bxcachy shortcuts generate')
+ import subprocess
+ checker=pathlib.Path(__file__).resolve().parent/'shortcuts'
+ check=subprocess.run([str(checker),'conflicts'],capture_output=True,text=True)
+ if check.returncode:raise RuntimeError('Shortcut conflicts detected; resolve before activation:\n'+check.stdout)
+ if not HYPR.is_file():raise RuntimeError('No traditional hyprland.conf; Lua configurations require manual integration')
+ if HYPR.is_symlink():raise RuntimeError('Refusing to modify symlinked hyprland.conf')
+ old=HYPR.read_text();
+ if any(INCLUDE in line for line in old.splitlines()):print('Already activated');return
+ backup=snap([HYPR]);new=old.rstrip()+'\n\n# BxCachy managed include\n'+INCLUDE+'\n'
+ temp=HYPR.with_suffix('.bxcachy-tmp');temp.write_text(new);temp.replace(HYPR)
+ (backup/'post.json').write_text(json.dumps({'hypr/hyprland.conf':hashof(HYPR)}))
+ print('Activated. Backup:',backup,'\nReview Hyprland keybinding conflicts before reloading.')
+def rollback(path):
+ d=path.resolve()
+ root=(STATE/'snapshots').resolve()
+ if not d.is_relative_to(root) or d==root:raise RuntimeError('Snapshot outside trusted BxCachy directory')
+ manifest=json.loads((d/'manifest.json').read_text());post=json.loads((d/'post.json').read_text())
+ for entry in manifest:
+  p=CONFIG/entry['path']
+  if not p.is_relative_to(CONFIG):raise RuntimeError('Unsafe path')
+  if not p.is_file() or hashof(p)!=post.get(entry['path']):raise RuntimeError('Refusing to overwrite changed config: '+str(p))
+  if entry['exists']:shutil.copy2(d/entry['path'],p)
+  else:p.unlink()
+  print('Restored:',p)
+def main():
+ p=argparse.ArgumentParser();s=p.add_subparsers(dest='action',required=True)
+ for x in ('plan','activate','doctor'):s.add_parser(x)
+ r=s.add_parser('rollback');r.add_argument('snapshot',type=pathlib.Path)
+ a=p.parse_args()
+ if a.action=='plan':print('Would add to',HYPR,'\n'+INCLUDE+'\nGenerated bindings:',GEN);return
+ if a.action=='doctor':
+  print('Hyprland traditional config:',HYPR.is_file());print('Generated shortcuts:',GEN.is_file());print('Include active:',HYPR.is_file() and INCLUDE in HYPR.read_text());return
+ if a.action=='rollback':rollback(a.snapshot);return
+ if os.geteuid()==0:raise RuntimeError('Do not run as root')
+ activate()
+if __name__=='__main__':
+ try:main()
+ except (RuntimeError,OSError,ValueError,KeyError) as e:print('ERROR:',e,file=sys.stderr);sys.exit(1)

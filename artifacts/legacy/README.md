@@ -9,7 +9,7 @@ Original archive: `BxCachy-v0.10.0-integration-hardening.zip`
 - `BxCachy/bin/` executable entrypoints: 44
 - `BxCachy/tests/` Python test files: 20
 
-The historical ZIP was verified in the working container. **The ZIP itself is not yet committed to GitHub**: the available repository content connector supports UTF-8 text files, not binary ZIP uploads, and this runtime cannot reach the Git remote. This manifest intentionally does not pretend that the binary is stored here.
+The historical ZIP was verified in the working container. **The ZIP itself is not committed to GitHub (by decision; the extracted tree is committed instead under `original/`)**: the available repository content connector supports UTF-8 text files, not binary ZIP uploads, and this runtime cannot reach the Git remote. This manifest intentionally does not pretend that the binary is stored here.
 
 When Git transport or a binary-capable release-asset uploader is available, add the original unmodified ZIP at `artifacts/legacy/BxCachy-v0.10.0-integration-hardening.zip`, verify the SHA-256 and file counts, and retain it as historical source only. Do not add Python as a native runtime dependency.
 

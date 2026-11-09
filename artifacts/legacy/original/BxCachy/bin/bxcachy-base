@@ -1,0 +1,53 @@
+#!/usr/bin/env python3
+"""BxCachy base JVM layer: Java 21, BVM, MVM (explicit consent for upstream scripts)."""
+import argparse, pathlib, shutil, subprocess, sys
+ROOT=pathlib.Path(__file__).resolve().parent
+
+def command(args,execute=False):
+ print('+',' '.join(args),flush=True)
+ if execute: subprocess.run(args,check=True)
+
+def present(name):
+ if name=='java21':
+  if shutil.which('pacman'):
+   return subprocess.run(['pacman','-Q','jdk21-openjdk'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode==0
+  return False
+ return shutil.which(name) is not None
+
+def main():
+ p=argparse.ArgumentParser(description=__doc__)
+ p.add_argument('action',choices=['plan','doctor','install'])
+ p.add_argument('--yes',action='store_true',help='Allow installation; upstream scripts still require interactive EXECUTE confirmation')
+ p.add_argument('--skip-omarchy',action='store_true',help='Install only Java 21, BVM, and MVM')
+ p.add_argument('--set-java-default',action='store_true',help='Explicitly change system default Java to Java 21')
+ p.add_argument('--skip-podman',action='store_true',help='Skip Podman and Docker compatibility wrappers')
+ p.add_argument('--skip-extras',action='store_true',help='Skip LazyVim starter configuration')
+ a=p.parse_args()
+ if not a.skip_omarchy:
+  command([str(ROOT/'bxcachy-omarchy-base'),a.action]+(['--yes'] if a.action=='install' else []),a.action=='install')
+ command([str(ROOT/'bxcachy-apps'),a.action]+(['--yes'] if a.action=='install' else []),a.action=='install')
+ command([str(ROOT/'bxcachy-system'),a.action]+(['--yes'] if a.action=='install' else []),a.action=='install')
+ if not a.skip_podman:
+  command([str(ROOT/'bxcachy-podman'),a.action]+(['--yes'] if a.action=='install' else []),a.action=='install')
+ if not a.skip_extras:
+  command([str(ROOT/'bxcachy-extras'),a.action,'lazyvim']+(['--yes'] if a.action=='install' else []),a.action=='install')
+ if not a.skip_podman:
+  command([str(ROOT/'bxcachy-extras'),a.action,'docker-aliases']+(['--yes'] if a.action=='install' else []),a.action=='install')
+ for tool in ('java21','bvm','mvm'):
+  print(f'{tool}: {"installed" if present(tool) else "missing"}')
+ if a.action=='doctor':return 0
+ if a.action=='install' and not a.yes:
+  p.error('Installation requires --yes; use plan to preview first')
+ if not present('java21'):
+  if not shutil.which('pacman') and a.action=='install':p.error('pacman is required for Java 21 installation')
+  command(['sudo','pacman','-S','--needed','jdk21-openjdk'],a.action=='install')
+ if a.set_java_default:
+  command(['sudo','archlinux-java','set','java-21-openjdk'],a.action=='install')
+ for tool in ('bvm','mvm'):
+  if not present(tool):
+   command([str(ROOT/'bxcachy-dev'),'install',tool,'--yes'],a.action=='install')
+ print('Complete.' if a.action=='install' else 'Plan only; no changes made.')
+ return 0
+if __name__=='__main__':
+ try:sys.exit(main())
+ except subprocess.CalledProcessError as exc:sys.exit(exc.returncode or 1)

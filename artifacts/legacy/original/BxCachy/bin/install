@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+usage() { echo 'Usage: bin/install [--list|--dry-run|--install core,desktop,media|--install-all|--shortcuts-conf|--remove-shortcuts]'; }
+read_packages() {
+  local group line
+  for group in "$@"; do
+    [[ -f "$ROOT/packages/$group.txt" ]] || { echo "Unknown group: $group" >&2; exit 2; }
+    while IFS= read -r line; do
+      [[ -z "$line" || "$line" == \#* ]] || printf '%s\n' "$line"
+    done < "$ROOT/packages/$group.txt"
+  done | sort -u
+}
+install_groups() {
+  mapfile -t packages < <(read_packages "$@")
+  echo "Requested packages: ${packages[*]}"
+  available=(); missing=()
+  for p in "${packages[@]}"; do
+    if pacman -Si "$p" >/dev/null 2>&1; then available+=("$p"); else missing+=("$p"); fi
+  done
+  if ((${#missing[@]})); then printf 'Not found in configured repos (skipped): %s\n' "${missing[*]}"; fi
+  if ((${#available[@]})); then sudo pacman -S --needed "${available[@]}"; fi
+}
+case "${1:---list}" in
+  --list) for f in "$ROOT"/packages/*.txt; do echo "== $(basename "$f" .txt) =="; cat "$f"; done ;;
+  --dry-run) read_packages core desktop media; echo 'No changes made.' ;;
+  --install) [[ $# -ge 2 ]] || { usage; exit 2; }; IFS=, read -ra groups <<< "$2"; install_groups "${groups[@]}" ;;
+  --install-all) install_groups core desktop media ;;
+  --shortcuts-conf)
+    dest="$HOME/.config/hypr"; mkdir -p "$dest"
+    if [[ -e "$dest/omarchy-keys.conf" ]]; then echo 'Already installed. Remove first or manually merge.' >&2; exit 1; fi
+    cp "$ROOT/config/omarchy-keys.conf" "$dest/omarchy-keys.conf"
+    echo 'Installed shortcut file only. Manually add source = ~/.config/hypr/omarchy-keys.conf to hyprland.conf after reviewing conflicting binds.' ;;
+  --remove-shortcuts)
+    file="$HOME/.config/hypr/omarchy-keys.conf"
+    if [[ -f "$file" ]] && cmp -s "$file" "$ROOT/config/omarchy-keys.conf"; then rm "$file"; echo 'Removed unmodified shortcut file. Remove its source line manually.'
+    else echo 'No identical managed shortcut file found; nothing removed.'; fi ;;
+  *) usage; exit 2 ;;
+esac

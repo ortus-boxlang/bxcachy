@@ -1,0 +1,13 @@
+ghostty
+dolphin
+hyprpicker
+hyprsunset
+grim
+slurp
+wl-clipboard
+brightnessctl
+pamixer
+mpv
+imv
+pinta
+localsend

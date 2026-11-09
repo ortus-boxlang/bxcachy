@@ -1,0 +1,19 @@
+#!/usr/bin/env python3
+"""Non-destructive theme preview and optional Ghostty/Hyprland fragments."""
+import argparse,json,pathlib,sys
+ROOT=pathlib.Path(__file__).resolve().parent.parent;OUT=pathlib.Path.home()/'.config/bxcachy/generated'
+THEMES={'tokyo-night':{'bg':'1a1b26','fg':'c0caf5','accent':'7aa2f7'},'catppuccin-mocha':{'bg':'1e1e2e','fg':'cdd6f4','accent':'cba6f7'},'gruvbox-dark':{'bg':'282828','fg':'ebdbb2','accent':'fabd2f'}}
+def main():
+ p=argparse.ArgumentParser();s=p.add_subparsers(dest='action',required=True)
+ s.add_parser('list');a=s.add_parser('preview');a.add_argument('name',choices=THEMES)
+ a=s.add_parser('generate');a.add_argument('name',choices=THEMES)
+ a=p.parse_args()
+ if a.action=='list':print('\n'.join(THEMES));return
+ c=THEMES[a.name]
+ if a.action=='preview':print(json.dumps(c,indent=2));return
+ OUT.mkdir(parents=True,exist_ok=True)
+ (OUT/'ghostty-theme.conf').write_text('background = #'+c['bg']+'\nforeground = #'+c['fg']+'\n')
+ (OUT/'hypr-theme.conf').write_text('general {\n col.active_border = rgb('+c['accent']+')\n}\n')
+ (OUT/'noctalia-colors.json').write_text(json.dumps(c,indent=2)+'\n')
+ print('Generated optional fragments in',OUT,'; nothing activated or overwritten')
+if __name__=='__main__':main()

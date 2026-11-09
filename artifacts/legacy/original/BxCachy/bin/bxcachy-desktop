@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+"""Optional Omarchy-like utilities; never changes Noctalia or KDE."""
+import argparse, pathlib, shutil, subprocess, sys
+PACKAGES={'clipboard':['wl-clipboard','cliphist','rofi-wayland'],'screenshot':['grim','slurp','swappy'],'record':['wf-recorder','slurp'],'wallpaper':['swww'],'monitor':['wdisplays'],'audio':['pavucontrol'],'bluetooth':['blueman']}
+def main():
+ p=argparse.ArgumentParser();s=p.add_subparsers(dest='action',required=True)
+ a=s.add_parser('plan');a.add_argument('feature',choices=[*PACKAGES,'all'])
+ a=s.add_parser('install');a.add_argument('feature',choices=[*PACKAGES,'all']);a.add_argument('--yes',action='store_true')
+ s.add_parser('doctor');a=s.add_parser('clipboard');a.add_argument('operation',choices=['history','copy','clear']);a.add_argument('text',nargs='?')
+ a=s.add_parser('clipboard-service');a.add_argument('operation',choices=['enable','disable','status'])
+ a=s.add_parser('screenshot');a.add_argument('output',nargs='?',default='/tmp/bxcachy-screenshot.png')
+ a=s.add_parser('record');a.add_argument('output',nargs='?',default='/tmp/bxcachy-recording.mp4')
+ a=p.parse_args()
+ if a.action=='doctor':
+  for group,pkgs in PACKAGES.items():print(group,':',', '.join(x+(' ✓' if shutil.which(x) else ' missing') for x in pkgs))
+  return
+ if a.action in ('plan','install'):
+  pkgs=list(dict.fromkeys(x for k,v in PACKAGES.items() if a.feature in (k,'all') for x in v))
+  cmd=['sudo','pacman','-S','--needed',*pkgs]
+  print(' '.join(cmd))
+  if a.action=='plan':return
+  if not a.yes and input('Install? [y/N] ').lower() not in ('y','yes'):return
+  subprocess.run(cmd,check=True);return
+ if a.action=='clipboard-service':
+  unit=pathlib.Path.home()/'.config/systemd/user/bxcachy-cliphist.service'
+  if a.operation=='enable':
+   unit.parent.mkdir(parents=True,exist_ok=True)
+   if unit.exists() and 'BxCachy' not in unit.read_text(errors='replace'):
+    p.error('Existing service file preserved: '+str(unit))
+   unit.write_text('[Unit]\nDescription=BxCachy Wayland clipboard history\nAfter=graphical-session.target\n[Service]\nType=simple\nExecStart=/bin/sh -c \'wl-paste --type text --watch cliphist store\'\nRestart=on-failure\n[Install]\nWantedBy=default.target\n')
+   subprocess.run(['systemctl','--user','daemon-reload'],check=True)
+   subprocess.run(['systemctl','--user','enable','--now',unit.name],check=True)
+  elif a.operation=='disable':subprocess.run(['systemctl','--user','disable','--now',unit.name],check=True)
+  else:subprocess.run(['systemctl','--user','status',unit.name],check=False)
+  return
+ if a.action=='clipboard':
+  if a.operation=='history':cmd=['cliphist','list']
+  elif a.operation=='clear':cmd=['cliphist','wipe']
+  else:
+   if a.text is None:p.error('clipboard copy requires text')
+   subprocess.run(['wl-copy'],input=a.text,text=True,check=True);return
+  subprocess.run(cmd,check=True);return
+ if a.action=='screenshot':
+  selection=subprocess.check_output(['slurp'],text=True).strip()
+  with open(a.output,'wb') as f:subprocess.run(['grim','-g',selection,'-'],stdout=f,check=True)
+  print(a.output);return
+ if a.action=='record':
+  selection=subprocess.check_output(['slurp'],text=True).strip()
+  subprocess.run(['wf-recorder','-g',selection,'-f',a.output],check=True)
+if __name__=='__main__':
+ try:main()
+ except (OSError,subprocess.CalledProcessError) as e:print('ERROR:',e,file=sys.stderr);sys.exit(1)

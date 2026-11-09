@@ -1,0 +1,332 @@
+{
+  "installers": [
+    {
+      "id": "podman",
+      "label": "Podman and supporting tools",
+      "icon": "cube",
+      "command": [
+        "podman",
+        "install"
+      ],
+      "preview": [
+        "podman",
+        "plan"
+      ]
+    },
+    {
+      "id": "sdkman",
+      "label": "SDKMAN!",
+      "icon": "coffee",
+      "command": [
+        "dev",
+        "install",
+        "sdkman",
+        "--yes"
+      ],
+      "preview": [
+        "dev",
+        "plan",
+        "sdkman"
+      ]
+    },
+    {
+      "id": "java21",
+      "label": "OpenJDK 21",
+      "icon": "coffee",
+      "command": [
+        "dev",
+        "install",
+        "java",
+        "--java-version",
+        "21"
+      ],
+      "preview": [
+        "dev",
+        "plan",
+        "java"
+      ]
+    },
+    {
+      "id": "maven",
+      "label": "Maven",
+      "icon": "code",
+      "command": [
+        "dev",
+        "install",
+        "maven"
+      ],
+      "preview": [
+        "dev",
+        "plan",
+        "maven"
+      ]
+    },
+    {
+      "id": "gradle",
+      "label": "Gradle",
+      "icon": "code",
+      "command": [
+        "dev",
+        "install",
+        "gradle"
+      ],
+      "preview": [
+        "dev",
+        "plan",
+        "gradle"
+      ]
+    },
+    {
+      "id": "boxlang",
+      "label": "BoxLang quick installer",
+      "icon": "terminal",
+      "command": [
+        "dev",
+        "install",
+        "boxlang",
+        "--yes"
+      ],
+      "preview": [
+        "dev",
+        "plan",
+        "boxlang"
+      ]
+    },
+    {
+      "id": "bvm",
+      "label": "BoxLang version manager",
+      "icon": "git-branch",
+      "command": [
+        "dev",
+        "install",
+        "bvm",
+        "--yes"
+      ],
+      "preview": [
+        "dev",
+        "plan",
+        "bvm"
+      ]
+    },
+    {
+      "id": "mvm",
+      "label": "MatchBox version manager",
+      "icon": "git-branch",
+      "command": [
+        "dev",
+        "install",
+        "mvm",
+        "--yes"
+      ],
+      "preview": [
+        "dev",
+        "plan",
+        "mvm"
+      ]
+    },
+    {
+      "id": "windows-vm",
+      "label": "Windows VM (Dockur)",
+      "icon": "monitor",
+      "command": [
+        "vm",
+        "install"
+      ],
+      "preview": [
+        "vm",
+        "plan"
+      ]
+    },
+    {
+      "id": "ai-claude",
+      "label": "AI: claude",
+      "icon": "robot",
+      "command": [
+        "ai",
+        "install",
+        "claude"
+      ],
+      "preview": [
+        "ai",
+        "doctor"
+      ]
+    },
+    {
+      "id": "ai-codex",
+      "label": "AI: codex",
+      "icon": "robot",
+      "command": [
+        "ai",
+        "install",
+        "codex"
+      ],
+      "preview": [
+        "ai",
+        "doctor"
+      ]
+    },
+    {
+      "id": "ai-opencode",
+      "label": "AI: opencode",
+      "icon": "robot",
+      "command": [
+        "ai",
+        "install",
+        "opencode"
+      ],
+      "preview": [
+        "ai",
+        "doctor"
+      ]
+    },
+    {
+      "id": "ai-gemini",
+      "label": "AI: gemini",
+      "icon": "robot",
+      "command": [
+        "ai",
+        "install",
+        "gemini"
+      ],
+      "preview": [
+        "ai",
+        "doctor"
+      ]
+    },
+    {
+      "id": "ai-ollama",
+      "label": "AI: ollama",
+      "icon": "robot",
+      "command": [
+        "ai",
+        "install",
+        "ollama"
+      ],
+      "preview": [
+        "ai",
+        "doctor"
+      ]
+    },
+    {
+      "id": "desktop-clipboard",
+      "label": "Desktop: clipboard",
+      "icon": "gear",
+      "command": [
+        "desktop",
+        "install",
+        "clipboard"
+      ],
+      "preview": [
+        "desktop",
+        "plan",
+        "clipboard"
+      ]
+    },
+    {
+      "id": "desktop-screenshot",
+      "label": "Desktop: screenshot",
+      "icon": "gear",
+      "command": [
+        "desktop",
+        "install",
+        "screenshot"
+      ],
+      "preview": [
+        "desktop",
+        "plan",
+        "screenshot"
+      ]
+    },
+    {
+      "id": "desktop-record",
+      "label": "Desktop: record",
+      "icon": "gear",
+      "command": [
+        "desktop",
+        "install",
+        "record"
+      ],
+      "preview": [
+        "desktop",
+        "plan",
+        "record"
+      ]
+    },
+    {
+      "id": "desktop-wallpaper",
+      "label": "Desktop: wallpaper",
+      "icon": "gear",
+      "command": [
+        "desktop",
+        "install",
+        "wallpaper"
+      ],
+      "preview": [
+        "desktop",
+        "plan",
+        "wallpaper"
+      ]
+    },
+    {
+      "id": "desktop-monitor",
+      "label": "Desktop: monitor",
+      "icon": "gear",
+      "command": [
+        "desktop",
+        "install",
+        "monitor"
+      ],
+      "preview": [
+        "desktop",
+        "plan",
+        "monitor"
+      ]
+    },
+    {
+      "id": "desktop-audio",
+      "label": "Desktop: audio",
+      "icon": "gear",
+      "command": [
+        "desktop",
+        "install",
+        "audio"
+      ],
+      "preview": [
+        "desktop",
+        "plan",
+        "audio"
+      ]
+    },
+    {
+      "id": "desktop-bluetooth",
+      "label": "Desktop: bluetooth",
+      "icon": "gear",
+      "command": [
+        "desktop",
+        "install",
+        "bluetooth"
+      ],
+      "preview": [
+        "desktop",
+        "plan",
+        "bluetooth"
+      ]
+    },
+    {
+      "id": "ai-lmstudio",
+      "label": "AI: lmstudio",
+      "icon": "robot",
+      "command": [
+        "ai",
+        "install",
+        "lmstudio"
+      ],
+      "preview": [
+        "ai",
+        "install",
+        "lmstudio",
+        "--dry-run"
+      ]
+    }
+  ]
+}

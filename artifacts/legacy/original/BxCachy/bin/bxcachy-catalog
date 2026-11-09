@@ -1,0 +1,29 @@
+#!/usr/bin/env python3
+"""Manifest-driven installer dispatcher, no shell interpolation."""
+import argparse,json,pathlib,subprocess,sys
+ROOT=pathlib.Path(__file__).resolve().parent.parent
+DEFAULT=ROOT/'catalog/installers.json';USER=pathlib.Path.home()/'.config/bxcachy/installers.json'
+def entries():
+ d=json.loads(DEFAULT.read_text())['installers'];extra=json.loads(USER.read_text()).get('installers',[]) if USER.exists() else []
+ out={x['id']:x for x in d}
+ for x in extra:
+  if not isinstance(x.get('id'),str):raise ValueError('Installer id required')
+  out[x['id']]=x
+ for x in out.values():
+  if not isinstance(x.get('label'),str):raise ValueError('label required')
+  for field in ('command','preview'):
+   if not isinstance(x.get(field),list) or not x[field] or not all(isinstance(v,str) and v and '\n' not in v for v in x[field]):raise ValueError('Invalid '+field+' for '+x['id'])
+ return out
+def main():
+ p=argparse.ArgumentParser();p.add_argument('action',choices=['list','validate','plan','install']);p.add_argument('id',nargs='?');a=p.parse_args();d=entries()
+ if a.action in ('list','validate'):
+  if a.action=='list':
+   for x in d.values():print(x['id'],':',x['label'])
+  else:print('Validated',len(d),'installers')
+  return
+ if not a.id or a.id not in d:p.error('Known installer id required')
+ cmd=d[a.id]['preview' if a.action=='plan' else 'command'];argv=[str(ROOT/'bin/bxcachy'),*cmd]
+ print('Executing:', ' '.join(argv),flush=True);subprocess.run(argv,check=True)
+if __name__=='__main__':
+ try:main()
+ except (ValueError,OSError,subprocess.CalledProcessError) as e:print('ERROR:',e,file=sys.stderr);sys.exit(1)

@@ -1,0 +1,41 @@
+#!/usr/bin/env python3
+"""Read-only Quick Look preview for an explicitly selected local file, using Qt when available."""
+import argparse,mimetypes,pathlib,subprocess,sys
+MAX_TEXT=256*1024
+
+def preview(path):
+ from PySide6.QtCore import Qt
+ from PySide6.QtGui import QPixmap,QShortcut,QKeySequence
+ from PySide6.QtWidgets import QApplication,QDialog,QVBoxLayout,QLabel,QPlainTextEdit,QScrollArea
+ app=QApplication.instance() or QApplication([])
+ dlg=QDialog();dlg.setWindowTitle('Quick Look — '+path.name);dlg.resize(880,640)
+ layout=QVBoxLayout(dlg);kind=mimetypes.guess_type(path.name)[0] or ''
+ if kind.startswith('image/'):
+  img=QPixmap(str(path))
+  if img.isNull():raise RuntimeError('Image format not supported by Qt')
+  label=QLabel();label.setAlignment(Qt.AlignCenter);label.setPixmap(img.scaled(840,590,Qt.KeepAspectRatio,Qt.SmoothTransformation));layout.addWidget(label)
+ elif kind.startswith('text/') or path.suffix.lower() in {'.md','.json','.yaml','.yml','.toml','.py','.js','.ts','.java','.bx','.cfc','.sql','.log','.sh','.xml'}:
+  text=QPlainTextEdit();text.setReadOnly(True);text.setPlainText(path.read_bytes()[:MAX_TEXT].decode('utf-8','replace'));layout.addWidget(text)
+ elif kind=='application/pdf':
+  try:
+   from PySide6.QtPdf import QPdfDocument
+   from PySide6.QtPdfWidgets import QPdfView
+   pdf=QPdfDocument(dlg);pdf.load(str(path));view=QPdfView();view.setDocument(pdf);layout.addWidget(view)
+  except ImportError:layout.addWidget(QLabel('PDF preview requires QtPdf (PySide6.QtPdf).'))
+ else:layout.addWidget(QLabel('No built-in preview for this format. Use the file manager Open action.'))
+ QShortcut(QKeySequence('Escape'),dlg,activated=dlg.close)
+ QShortcut(QKeySequence('Space'),dlg,activated=dlg.close)
+ dlg.exec()
+def main():
+ p=argparse.ArgumentParser();p.add_argument('file',nargs='?');p.add_argument('--doctor',action='store_true');a=p.parse_args()
+ if a.doctor:
+  try:import PySide6;print('PySide6 available')
+  except ImportError:print('PySide6 missing: install python-pyside6')
+  print('Dolphin: select a file and use a configured custom action; Dolphin does not expose a standard Space preview plugin API.');return
+ if not a.file:p.error('file path required')
+ path=pathlib.Path(a.file).expanduser().resolve(strict=True)
+ if not path.is_file():p.error('regular local file required')
+ preview(path)
+if __name__=='__main__':
+ try:main()
+ except (OSError,RuntimeError,ImportError) as e:print('ERROR:',e,file=sys.stderr);sys.exit(1)

@@ -1,0 +1,191 @@
+#!/usr/bin/env python3
+"""BxCachy AI CLI: opt-in installers, local models, persistent terminal sessions."""
+import argparse,json,os,pathlib,re,shutil,subprocess,sys
+ROOT=pathlib.Path(__file__).resolve().parent.parent
+USER=pathlib.Path.home()/'.config/bxcachy/ai.json'
+DEFAULT={'agent':'opencode','terminal':'ghostty','workspace':'bxcachy-ai','class':'bxcachy-ai','width_percent':80,'height_percent':75,'persistent':True,'position':'top','autohide':False}
+TOOLS={'claude':('claude',None),'codex':('codex','@openai/codex'),'opencode':('opencode','opencode-ai'),'gemini':('gemini','@google/gemini-cli'),'ollama':('ollama',None),'lmstudio':('lms',None)}
+AGENTS=('claude','codex','opencode','gemini','ollama')
+def cfg():
+ data=dict(DEFAULT)
+ if USER.exists():data.update(json.loads(USER.read_text()))
+ if data['agent'] not in AGENTS:raise ValueError('Unsupported agent')
+ for field in ('workspace','class'):
+  if not isinstance(data[field],str) or not re.fullmatch('[a-zA-Z0-9-]+',data[field]):raise ValueError('Invalid '+field)
+ if not isinstance(data['width_percent'],int) or not 30<=data['width_percent']<=100:raise ValueError('Invalid width_percent')
+ if not isinstance(data['height_percent'],int) or not 30<=data['height_percent']<=100:raise ValueError('Invalid height_percent')
+ if not isinstance(data['persistent'],bool):raise ValueError('Invalid persistent')
+ if data.get('position') not in ('top','center'):raise ValueError('Invalid position')
+ return data
+def save(data):
+ USER.parent.mkdir(parents=True,exist_ok=True)
+ tmp=USER.with_suffix('.tmp');tmp.write_text(json.dumps(data,indent=2)+'\n');tmp.replace(USER)
+def run(cmd):return subprocess.call(cmd)
+def available():return [x for x in AGENTS if shutil.which(TOOLS[x][0])]
+def choose():
+ found=available()
+ if not found:print('No AI agents installed. Run bxcachy ai install codex',file=sys.stderr);return 2
+ if shutil.which('rofi') and os.environ.get('WAYLAND_DISPLAY'):
+  p=subprocess.run(['rofi','-dmenu','-i','-p','BxCachy AI Agent'],input='\n'.join(found)+'\n',text=True,capture_output=True)
+  if p.returncode:return 0
+  agent=p.stdout.strip()
+ else:
+  print('Installed agents: '+', '.join(found));agent=input('Agent: ').strip()
+ if agent not in found:return 2
+ return launch(agent)
+def launch(agent=None):
+ agent=agent or cfg()['agent']
+ if agent=='choose':return choose()
+ if agent not in AGENTS:raise ValueError('Unsupported agent')
+ exe=TOOLS[agent][0]
+ if not shutil.which(exe):print('Missing '+exe+'; run bxcachy ai install '+agent,file=sys.stderr);return 2
+ if cfg()['persistent'] and shutil.which('tmux') and os.environ.get('BXCACHY_AI_CONSOLE')=='1':
+  return run(['tmux','new-session','-A','-s','bxcachy-'+agent,exe])
+ return run([exe])
+def dropdown():
+ if not shutil.which('hyprctl') or not os.environ.get('HYPRLAND_INSTANCE_SIGNATURE'):
+  print('Requires an active Hyprland session',file=sys.stderr);return 2
+ data=cfg();ws=data['workspace'];klass=data['class']
+ p=subprocess.run(['hyprctl','clients','-j'],capture_output=True,text=True)
+ if p.returncode:print(p.stderr,file=sys.stderr);return p.returncode
+ clients=json.loads(p.stdout)
+ if any(c.get('class')==klass for c in clients):return run(['hyprctl','dispatch','togglespecialworkspace',ws])
+ terminal=shutil.which(data['terminal'])
+ if not terminal:print('Missing terminal: '+data['terminal'],file=sys.stderr);return 2
+ # Launch first, then toggle the special workspace to reveal the console.
+ # The workspace rule places the terminal on the special workspace without shell interpolation.
+ import shlex
+ command=' '.join(shlex.quote(x) for x in [terminal,'--class='+klass,'-e',str(ROOT/'bin/bxcachy-ai'),'console'])
+ result=run(['hyprctl','dispatch','exec',f'[workspace special:{ws} silent] {command}'])
+ if result:return result
+ return run(['hyprctl','dispatch','togglespecialworkspace',ws])
+def install(tool,yes=False,dry_run=False):
+ if tool not in TOOLS:raise ValueError('Unknown tool')
+ binary,package=TOOLS[tool]
+ if shutil.which(binary):print(tool+' already available at '+shutil.which(binary));return 0
+ if package:
+  if not shutil.which('npm'):print('npm required: sudo pacman -S nodejs npm',file=sys.stderr);return 2
+  cmd=['npm','install','-g',package]
+ elif tool=='ollama':
+  if not shutil.which('pacman'):print('Requires pacman on CachyOS',file=sys.stderr);return 2
+  cmd=['sudo','pacman','-S','--needed','ollama']
+ elif tool=='claude':
+  # Official native installer; downloaded first, then reviewed and explicitly executed.
+  import tempfile,urllib.request
+  url='https://claude.ai/install.sh'
+  print('Official Claude Code installer:',url)
+  if dry_run:return 0
+  if not yes and input('Download official installer and review before execution? [y/N] ').strip().lower() not in ('y','yes'):return 1
+  with tempfile.TemporaryDirectory(prefix='bxcachy-claude-') as td:
+   script=pathlib.Path(td)/'install.sh'
+   urllib.request.urlretrieve(url,script)
+   print('Downloaded to',script,'SHA256:',__import__('hashlib').sha256(script.read_bytes()).hexdigest())
+   print('First 30 lines:')
+   print('\n'.join(script.read_text(errors='replace').splitlines()[:30]))
+   if input('Execute downloaded script? Type EXECUTE: ')!='EXECUTE':return 1
+   return run(['bash',str(script)])
+ elif tool=='lmstudio':
+  print('LM Studio official Linux AppImage: https://lmstudio.ai/download')
+  print('Install the official AppImage, then run `lms bootstrap` if necessary.')
+  print('Automated AppImage retrieval requires a verified versioned vendor URL; refusing unverified downloads.')
+  return 0 if dry_run else 2
+ else:raise ValueError('Unsupported installer')
+ print('Install command: '+' '.join(cmd))
+ if dry_run:return 0
+ if not yes and input('Proceed? [y/N] ').strip().lower() not in ('y','yes'):return 1
+ return run(cmd)
+def model(action,model=None):
+ if not shutil.which('ollama'):print('Ollama is not installed',file=sys.stderr);return 2
+ if action=='list':return run(['ollama','list'])
+ if action=='running':return run(['ollama','ps'])
+ if action=='pull':return run(['ollama','pull',model])
+ if action=='remove':
+  if input('Delete Ollama model '+model+'? [y/N] ').lower() not in ('y','yes'):return 1
+  return run(['ollama','rm',model])
+ raise ValueError('Unknown model action')
+def lm(action,model=None):
+ if not shutil.which('lms'):print('LM Studio CLI (lms) not found. Install LM Studio from https://lmstudio.ai/download',file=sys.stderr);return 2
+ cmd={'list':['lms','ls'],'loaded':['lms','ps'],'server-start':['lms','server','start'],'server-stop':['lms','server','stop']}
+ if action=='load':return run(['lms','load',model])
+ if action=='unload':return run(['lms','unload',model])
+ if action=='get':return run(['lms','get',model])
+ return run(cmd[action])
+def sessions(action,agent=None):
+ if not shutil.which('tmux'):
+  print('tmux required; install with sudo pacman -S --needed tmux',file=sys.stderr);return 2
+ if action=='list':return run(['tmux','list-sessions','-F','#{session_name}'])
+ if agent not in AGENTS:raise ValueError('Select a supported agent')
+ name='bxcachy-'+agent
+ if action=='attach':return run(['tmux','new-session','-A','-s',name,TOOLS[agent][0]])
+ if action=='stop':
+  if input('Stop session '+name+'? [y/N] ').strip().lower() not in ('y','yes'):return 1
+  return run(['tmux','kill-session','-t',name])
+ raise ValueError('Unsupported session action')
+def config_command(action):
+ if action=='show':print(json.dumps(cfg(),indent=2));return 0
+ if action=='path':print(USER);return 0
+ if action=='reset':
+  if input('Reset BxCachy AI settings? [y/N] ').strip().lower() not in ('y','yes'):return 1
+  save(dict(DEFAULT));return 0
+ raise ValueError('Unknown config action')
+def service(action):
+ if not shutil.which('systemctl'):print('systemctl not found',file=sys.stderr);return 2
+ if action=='status':return run(['systemctl','status','ollama.service','--no-pager'])
+ if action=='start':return run(['sudo','systemctl','start','ollama.service'])
+ if action=='enable':
+  if input('Enable Ollama service on boot? [y/N] ').strip().lower() not in ('y','yes'):return 1
+  return run(['sudo','systemctl','enable','--now','ollama.service'])
+ if action=='stop':return run(['sudo','systemctl','stop','ollama.service'])
+ raise ValueError('Unknown service action')
+def main():
+ p=argparse.ArgumentParser();s=p.add_subparsers(dest='action',required=True)
+ for name in ('list','doctor','dropdown','console'):s.add_parser(name)
+ a=s.add_parser('launch');a.add_argument('agent',nargs='?')
+ a=s.add_parser('set');a.add_argument('agent',choices=AGENTS)
+ a=s.add_parser('install');a.add_argument('tool',choices=list(TOOLS));a.add_argument('--yes',action='store_true');a.add_argument('--dry-run',action='store_true')
+ a=s.add_parser('update');a.add_argument('tool',choices=['codex','opencode','gemini'])
+ a=s.add_parser('size');a.add_argument('width',type=int);a.add_argument('height',type=int)
+ s.add_parser('rules')
+ a=s.add_parser('persistent');a.add_argument('enabled',choices=['on','off'])
+ a=s.add_parser('sessions');a.add_argument('operation',choices=['list','attach','stop']);a.add_argument('agent',nargs='?')
+ a=s.add_parser('config');a.add_argument('operation',choices=['show','path','reset'])
+ a=s.add_parser('service');a.add_argument('operation',choices=['status','start','stop','enable'])
+ a=s.add_parser('models');a.add_argument('operation',choices=['list','running','pull','remove']);a.add_argument('model',nargs='?')
+ a=s.add_parser('lmstudio');a.add_argument('operation',choices=['list','loaded','get','load','unload','server-start','server-stop']);a.add_argument('model',nargs='?')
+ args=p.parse_args()
+ if args.action in ('list','doctor'):
+  for name,(binary,package) in TOOLS.items():print(f'{name:10} '+(shutil.which(binary) or 'not installed')+((' (npm: '+package+')') if package else ''))
+  if args.action=='doctor':print('Hyprland:',bool(shutil.which('hyprctl')),'Ghostty:',bool(shutil.which('ghostty')),'tmux:',bool(shutil.which('tmux')),'Runner preserved: yes')
+  return 0
+ if args.action=='set':
+  data=cfg();data['agent']=args.agent;save(data);print('Default agent:',args.agent);return 0
+ if args.action=='size':
+  if not 30<=args.width<=100 or not 30<=args.height<=100:raise ValueError('Size percentages must be between 30 and 100')
+  data=cfg();data.update(width_percent=args.width,height_percent=args.height);save(data);print('Size saved. Run: bxcachy ai rules');return 0
+ if args.action=='rules':
+  data=cfg();target=pathlib.Path.home()/'.config/bxcachy/generated/ai-window-rules.conf'
+  target.parent.mkdir(parents=True,exist_ok=True)
+  target.write_text('# BxCachy AI console. Verify syntax against your installed Hyprland version.\n'+f'windowrulev2 = float,class:^({data["class"]})$\n'+f'windowrulev2 = size {data["width_percent"]}% {data["height_percent"]}%,class:^({data["class"]})$\n'+f'windowrulev2 = center,class:^({data["class"]})$\n')
+  print('Generated:',target);print('To enable: source = '+str(target));return 0
+ if args.action=='persistent':
+  data=cfg();data['persistent']=args.enabled=='on';save(data);return 0
+ if args.action=='install':return install(args.tool,args.yes,args.dry_run)
+ if args.action=='update':
+  if not shutil.which('npm'):raise ValueError('npm required')
+  return run(['npm','install','-g',TOOLS[args.tool][1]+'@latest'])
+ if args.action=='dropdown':return dropdown()
+ if args.action=='console':
+  os.environ['BXCACHY_AI_CONSOLE']='1';return choose()
+ if args.action=='sessions':return sessions(args.operation,args.agent)
+ if args.action=='config':return config_command(args.operation)
+ if args.action=='service':return service(args.operation)
+ if args.action=='models':
+  if args.operation in ('pull','remove') and not args.model:p.error('model name required')
+  return model(args.operation,args.model)
+ if args.action=='lmstudio':
+  if args.operation in ('get','load','unload') and not args.model:p.error('model name required')
+  return lm(args.operation,args.model)
+ return launch(args.agent)
+if __name__=='__main__':
+ try:sys.exit(main())
+ except (ValueError,OSError,json.JSONDecodeError) as exc:print('ERROR:',exc,file=sys.stderr);sys.exit(1)

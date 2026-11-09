@@ -1,0 +1,37 @@
+#!/usr/bin/env python3
+"""Optional VPN installation and remote desktop entrypoints; no automatic VPN connections."""
+import argparse,shutil,subprocess,sys
+PKGS={'nordvpn':['nordvpn-bin','nordvpn-gui'],'nordlayer':['nordlayer'],'remote':['remmina','krdc','freerdp','rustdesk']}
+def run(cmd,execute=False):
+ print(' '.join(cmd),flush=True)
+ if execute:return subprocess.call(cmd)
+ return 0
+def main():
+ p=argparse.ArgumentParser();p.add_argument('action',choices=['plan','install','status','connect','disconnect','open']);p.add_argument('target',nargs='?',choices=['nordvpn','nordlayer','remote']);p.add_argument('--yes',action='store_true');a=p.parse_args()
+ if a.action in ('plan','install'):
+  if not a.target:p.error('target required')
+  packages=PKGS[a.target]
+  for pkg in packages:
+   cmd=['yay','-S','--needed',pkg] if pkg in ('nordvpn-bin','nordvpn-gui','nordlayer','rustdesk') else ['sudo','pacman','-S','--needed',pkg]
+   if a.action=='install' and not a.yes:p.error('installation requires --yes')
+   if a.action=='install' and not shutil.which(cmd[0]):print('Missing installer: '+cmd[0],file=sys.stderr);return 2
+   code=run(cmd,a.action=='install')
+   if code:return code
+  if a.action=='install' and a.target=='nordvpn':print('Next: sudo systemctl enable --now nordvpnd; sudo usermod -aG nordvpn "$USER"; log out/in; nordvpn login')
+  if a.action=='install' and a.target=='nordlayer':print('Review AUR package provenance and your organization policy before login.')
+  return 0
+ if not a.target:p.error('target required')
+ if a.target=='remote':
+  if a.action=='open':
+   for app in ('remmina','krdc','rustdesk'):
+    if shutil.which(app):return subprocess.Popen([app],start_new_session=True).poll() or 0
+   print('No remote desktop client installed',file=sys.stderr);return 2
+  p.error('remote supports plan/install/open')
+ binary='nordvpn' if a.target=='nordvpn' else 'nordlayer'
+ if a.action=='open':
+  if a.target=='nordvpn' and shutil.which('nordvpn-gui'):return subprocess.Popen(['nordvpn-gui'],start_new_session=True).poll() or 0
+  print('No supported GUI found; use status/connect CLI',file=sys.stderr);return 2
+ if not shutil.which(binary):print(binary+' not installed',file=sys.stderr);return 2
+ commands={'status':[binary,'status'],'connect':[binary,'connect'],'disconnect':[binary,'disconnect']}
+ return subprocess.call(commands[a.action])
+if __name__=='__main__':sys.exit(main())

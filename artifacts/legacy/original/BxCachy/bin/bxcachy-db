@@ -1,0 +1,42 @@
+#!/usr/bin/env python3
+"""Local database containers via rootless Podman. Never touches existing services."""
+import argparse,json,os,pathlib,secrets,shutil,subprocess,sys
+CONFIG={'postgres':('docker.io/library/postgres:17','POSTGRES_PASSWORD',5432),'mariadb':('docker.io/library/mariadb:11','MARIADB_ROOT_PASSWORD',3306),'mysql':('docker.io/library/mysql:8','MYSQL_ROOT_PASSWORD',3306),'redis':('docker.io/library/redis:7',None,6379)}
+STATE=pathlib.Path.home()/'.local/share/bxcachy/databases'
+def name_for(kind,name):
+ if not name or not all(c.isalnum() or c=='-' for c in name):raise ValueError('Name must contain only letters, digits, hyphens')
+ return 'bxcachy-db-'+kind+'-'+name
+def run(cmd,execute=True):
+ print(' '.join(cmd))
+ if execute:subprocess.run(cmd,check=True)
+def main():
+ p=argparse.ArgumentParser();p.add_argument('action',choices=['list','start','stop','remove','logs','status','plan']);p.add_argument('kind',nargs='?',choices=sorted(CONFIG));p.add_argument('--name',default='default');p.add_argument('--port',type=int);p.add_argument('--yes',action='store_true');p.add_argument('--delete-data',action='store_true');a=p.parse_args()
+ if not shutil.which('podman'):raise RuntimeError('Podman is required')
+ if a.action=='list':run(['podman','ps','-a','--filter','label=io.bxcachy.database=true']);return
+ if not a.kind:p.error('Database engine required')
+ image,env,port=CONFIG[a.kind];port=a.port or port
+ if not 1024<=port<=65535:raise ValueError('Port must be 1024..65535')
+ name=name_for(a.kind,a.name);folder=STATE/name;volume=folder/'data';secret=folder/'password'
+ if a.action in ('status','logs','stop'):
+  run(['podman',{'status':'inspect','logs':'logs','stop':'stop'}[a.action],name]);return
+ if a.action=='remove':
+  if not a.yes:raise ValueError('Use --yes to remove container')
+  run(['podman','rm','-f',name]);
+  if a.delete_data:raise ValueError('Data is preserved; remove directory manually after backup: '+str(folder))
+  return
+ cmd=['podman','run','-d','--name',name,'--label','io.bxcachy.database=true','--restart','unless-stopped','-p',f'127.0.0.1:{port}:{CONFIG[a.kind][2]}','-v',f'{volume}:/var/lib/{"postgresql/data" if a.kind=="postgres" else "mysql" if a.kind in ("mysql","mariadb") else "redis"}:Z']
+ if a.kind=='redis':cmd+=['--entrypoint','redis-server',image,'--appendonly','yes']
+ else:cmd+=['--env-file',str(folder/'database.env'),image]
+ if a.action=='plan' or not a.yes:
+  print('Plan for',name,'on localhost port',port,'image',image,'data',volume)
+  print('Use start --yes to create container and data. Existing containers are never replaced.');return
+ if subprocess.run(['podman','container','exists',name]).returncode==0:raise ValueError('Container already exists: '+name)
+ folder.mkdir(parents=True,exist_ok=True);volume.mkdir(exist_ok=True)
+ if env:
+  pw=secrets.token_urlsafe(28);secret.write_text(pw+'\n');secret.chmod(0o600)
+  f=folder/'database.env';f.write_text(env+'='+pw+'\n');f.chmod(0o600)
+ run(cmd)
+ print('Local credentials (if applicable):',secret,'(mode 0600)')
+if __name__=='__main__':
+ try:main()
+ except (RuntimeError,ValueError,subprocess.CalledProcessError) as e:print('ERROR:',e,file=sys.stderr);sys.exit(1)

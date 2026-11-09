@@ -1,0 +1,98 @@
+#!/usr/bin/env python3
+"""Selectable launcher and menu backends; never changes desktop keybindings."""
+import argparse, json, os, pathlib, shutil, subprocess, sys
+ROOT=pathlib.Path(__file__).resolve().parent.parent
+USER=pathlib.Path.home()/'.config/bxcachy/config.json'
+DEFAULT=ROOT/'config/bxcachy.json'
+PROVIDERS={'system','noctalia','rofi','walker','krunner','vicinae','hyprrunner','custom'}
+MENU_PROVIDERS={'rofi','walker','vicinae','hyprrunner'}
+# Explicit argv templates make backend behavior configurable without shell evaluation.
+DEFAULT_MENU_COMMANDS={'rofi':['rofi','-dmenu','-i','-show-icons','-format','i','-p','{prompt}'],
+                       'walker':['walker','--dmenu'],
+                       'vicinae':['vicinae','dmenu','--prompt','{prompt}'],
+                       'hyprrunner':['hyprrunner','--dmenu']}
+DEFAULT_LAUNCH_COMMANDS={'noctalia':['noctalia','msg','panel-toggle','launcher'],
+                         'rofi':['rofi','-show','drun'], 'walker':['walker'],
+                         'vicinae':['vicinae','toggle'], 'hyprrunner':['hyprrunner'],
+                         'krunner':['krunner']}
+def load():
+ data=json.loads((USER if USER.exists() else DEFAULT).read_text())
+ if not isinstance(data.get('runner'),dict):raise ValueError('runner configuration must be an object')
+ if data['runner'].get('provider','system') not in PROVIDERS:raise ValueError('Unsupported runner provider')
+ return data
+def save(data):
+ USER.parent.mkdir(parents=True,exist_ok=True)
+ temp=USER.with_suffix('.tmp');temp.write_text(json.dumps(data,indent=2)+'\n');temp.replace(USER)
+def valid_argv(value):
+ return isinstance(value,list) and bool(value) and all(isinstance(x,str) and x and '\x00' not in x for x in value)
+def resolve(provider,data):
+ if provider=='system':return None
+ runner=data['runner']
+ if provider=='custom':cmd=runner.get('custom_command',[])
+ else:cmd=runner.get('launcher_commands',{}).get(provider,DEFAULT_LAUNCH_COMMANDS.get(provider))
+ if not valid_argv(cmd):raise ValueError('Invalid launcher command for '+provider)
+ return cmd
+def menu_command(provider,data,prompt):
+ cmd=data['runner'].get('menu_commands',{}).get(provider,DEFAULT_MENU_COMMANDS.get(provider))
+ if not valid_argv(cmd):raise ValueError('Invalid menu command for '+provider)
+ return [part.replace('{prompt}',prompt) for part in cmd]
+def menu_select(data,prompt,entries):
+ backend=data['runner'].get('menu_provider','rofi')
+ if backend not in MENU_PROVIDERS:raise ValueError('Unsupported menu provider: '+backend)
+ cmd=menu_command(backend,data,prompt)
+ if not shutil.which(cmd[0]):raise ValueError('Menu provider unavailable: '+cmd[0])
+ # Keep icon metadata for rofi; other providers receive clean display labels.
+ labels=[line.split('\0')[0] for line in entries.splitlines()]
+ payload=entries if backend=='rofi' else '\n'.join(labels)+'\n'
+ result=subprocess.run(cmd,input=payload,text=True,capture_output=True)
+ if result.returncode:return None
+ selected=result.stdout.strip()
+ if backend=='rofi':
+  try:return int(selected)
+  except ValueError:return None
+ try:return labels.index(selected)
+ except ValueError:
+  try:
+   idx=int(selected)
+   return idx if 0<=idx<len(labels) else None
+  except ValueError:return None
+def main():
+ p=argparse.ArgumentParser();sub=p.add_subparsers(dest='action',required=True)
+ for name in ('list','show','launch','doctor'):sub.add_parser(name)
+ m=sub.add_parser('menu-select');m.add_argument('--prompt',default='BxCachy')
+ s=sub.add_parser('set');s.add_argument('provider',choices=sorted(PROVIDERS))
+ ms=sub.add_parser('menu-set');ms.add_argument('provider',choices=sorted(MENU_PROVIDERS))
+ mc=sub.add_parser('menu-command');mc.add_argument('provider',choices=sorted(MENU_PROVIDERS));mc.add_argument('command',nargs='+',help='argv with optional {prompt} placeholder')
+ lc=sub.add_parser('launcher-command');lc.add_argument('provider',choices=sorted(PROVIDERS-{'system','custom'}));lc.add_argument('command',nargs='+')
+ a=p.parse_args();data=load();runner=data['runner'];provider=runner.get('provider','system')
+ if a.action=='list':print('\n'.join(sorted(PROVIDERS)))
+ elif a.action=='show':print(json.dumps(runner,indent=2))
+ elif a.action=='set':runner['provider']=a.provider;save(data);print('Runner provider:',a.provider)
+ elif a.action=='menu-set':runner['menu_provider']=a.provider;save(data);print('Menu provider:',a.provider)
+ elif a.action in ('menu-command','launcher-command'):
+  if not valid_argv(a.command):raise ValueError('Invalid command')
+  key='menu_commands' if a.action=='menu-command' else 'launcher_commands'
+  runner.setdefault(key,{})[a.provider]=a.command;save(data);print('Configured',a.provider)
+ elif a.action=='menu-select':
+  index=menu_select(data,a.prompt,sys.stdin.read())
+  if index is None:return 1
+  print(index)
+ elif a.action=='doctor':
+  menu=runner.get('menu_provider','rofi');cmd=resolve(provider,data)
+  menu_cmd=menu_command(menu,data,'BxCachy')
+  print('Desktop:',os.environ.get('XDG_CURRENT_DESKTOP','unknown'))
+  print('Launcher:',provider,'| command:',cmd or '(desktop-owned)')
+  print('Menu:',menu,'| command:',menu_cmd)
+  for label,argv in (('launcher',cmd),('menu',menu_cmd)):
+   if argv:print(label,'executable:',shutil.which(argv[0]) or 'NOT FOUND')
+  print('Shortcut ownership: unchanged')
+ elif a.action=='launch':
+  cmd=resolve(provider,data)
+  if cmd is None:
+   print('System runner is desktop-owned; existing shortcut preserved.',file=sys.stderr);return 2
+  if not shutil.which(cmd[0]):raise ValueError('Runner command not found: '+cmd[0])
+  subprocess.Popen(cmd,start_new_session=True)
+ return 0
+if __name__=='__main__':
+ try:sys.exit(main())
+ except (ValueError,OSError) as e:print('ERROR:',e,file=sys.stderr);sys.exit(1)
