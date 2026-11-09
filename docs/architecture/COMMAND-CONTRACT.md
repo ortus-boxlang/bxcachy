@@ -1,6 +1,6 @@
-# BxCachy command contract (A5 draft, v2)
+# BxCachy command contract (A5 draft, v3)
 
-Status: **proposal, no code written.** Decision 2026-11-09: BxCachy has never been deployed, so there is no installed base to protect. No backups, restore, journals, drift handling or upgrade-from-v0.10.0 paths. Decisions here are inputs to M0 hardening (tasks 1.2 to 1.5) and M1 catalog work. Legacy v0.10.0 is a feature reference only (`artifacts/legacy/original/`).
+Status: **proposal, no code written.** Note 2026-11-09: the legacy tree in `artifacts/legacy/original/` is the real v0.10.0 source. It is kept as is and never copied, backed up or modified. Decisions here are inputs to M0 hardening (tasks 1.2 to 1.5) and M1 catalog work. Legacy v0.10.0 is a feature reference only (`artifacts/legacy/original/`).
 
 ## 1. Grammar
 
@@ -10,7 +10,7 @@ bxcachy <group> <verb> [args...] [--yes] [--dry-run] [--json] [--quiet]
 
 - Groups mirror the legacy dispatcher so users keep their muscle memory: `apps app-manager catalog profile base extras dev web podman ai vector db db-center vm network cloud cloud-center cloud-services files quicklook dictation integrations desktop desktop-keys mac-keys omarchy-base layout themes icons runner menu shortcuts system config first-run doctor setup`.
 - Global verbs on every group: `plan` (read-only), `status` (read-only), `doctor` (read-only checks), `help`.
-- Mutating verbs: `install`, `apply`, `remove`, `enable`, `disable`. All require `--yes`.
+- Mutating verbs: `install`, `apply`, `remove`, `restore`, `enable`, `disable`. All require `--yes`.
 - Existing flat commands (`install`, `optional-install`, `profile-install`, `package-status`, `package-source`, ...) stay as aliases until the grouped form ships, then print a deprecation note.
 - Unknown flags, duplicate flags, empty arguments and extra positionals are usage errors (exit 2). Nothing runs.
 - Note from M0 history: BoxLang `CLIGetArgs()` puts flags in `args.options`, not `args.positionals`. The parser is one shared function, tested once.
@@ -22,7 +22,7 @@ bxcachy <group> <verb> [args...] [--yes] [--dry-run] [--json] [--quiet]
 3. Preflight everything before the first mutation. A preflight failure means zero changes.
 4. Never escalate privilege silently. `sudo` is only called for pacman steps shown in the plan.
 5. Never run AUR builds as root (exit 4).
-6. Config files are written atomically (temp file + rename) and idempotently (no-op when unchanged). No backups, no restore.
+6. Every config file touched goes through the config service (backup, atomic replace, journal). No direct writes.
 7. Output lists succeeded and failed items separately. No rollback is promised across pacman and yay.
 8. External scripts are downloaded to a temp file, checked against a pinned SHA-256, and (legacy behavior, kept) need an extra typed `EXECUTE` confirmation. No curl-to-shell.
 9. Subprocesses are launched with argument arrays, never through a shell string.
@@ -39,7 +39,7 @@ bxcachy <group> <verb> [args...] [--yes] [--dry-run] [--json] [--quiet]
 | 5 | Official (pacman) phase failed | |
 | 6 | AUR (yay) phase failed | |
 | 7 | Partial success | some items done, some failed; `--json` lists both |
-| 8 | Config write refused | symlink or special file at target, unwritable path |
+| 8 | Config conflict | drift detected, symlink or special file at target, concurrent run lock |
 | 9 | Internal error | bug, unexpected exception |
 
 Codes 0 to 6 match what the native CLI returns today (2, 3, 4, 5, 6 are already used). 1 is already used for check-negative. 7 to 9 are new. Codes are frozen once published and covered by a contract snapshot test.
@@ -94,9 +94,20 @@ Named profiles keep the existing four (`core jvm containers terminal`) and are e
 
 Ship vs embed (pending confirmation): the default catalog is embedded in the binary at build time, so there is one file to ship and it always matches the code. An optional `~/.config/bxcachy/catalog.json` adds entries or sets `default`/`profiles` on existing ids. It is validated against the same schema and can never delete or replace an embedded entry's `target`, so a bad override cannot redirect an install.
 
-## 6. Config layout
+## 6. State and config layout
 
-Same root as legacy: `~/.config/bxcachy/` with `bxcachy.json` (global), optional `catalog.json` (user additions), and one file per feature (`ai.json`, `menu.json`, `shortcuts.json`). No state, backup or journal directories.
+```
+~/.config/bxcachy/            same root as legacy
+  bxcachy.json                global settings
+  catalog.json                optional user additions (merge-only)
+  ai.json menu.json shortcuts.json ...   one file per feature, as legacy
+~/.local/state/bxcachy/
+  journal/                    one record per apply: files, hashes, backup paths
+  backups/                    backups, indexed by the journal
+  lock                        single-writer lock
+```
+
+`config list|diff|apply|restore` work from the journal, so restore needs only an id. Retention default: keep the last 20 per file. Open: this applies to the user's config files that BxCachy writes, not to the legacy source tree.
 
 ## 7. Test contract
 
