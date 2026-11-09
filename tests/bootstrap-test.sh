@@ -33,7 +33,7 @@ echo 'bootstrap check tests passed'
 # ---- B1/B2: read-only --check and --plan, with a fully isolated PATH and HOME ----
 sys="$tmp/sys"; bin="$tmp/bin"; home="$tmp/home"
 mkdir -p "$sys" "$bin" "$home/.local/bin"
-for t in bash env grep awk df id uname head tr cat sort dirname mktemp sed cut mkdir chmod rm wc sha256sum basename ls; do
+for t in bash env grep awk df id uname head tr cat sort dirname mktemp sed cut mkdir chmod rm wc sha256sum basename ls cp mv find cmp tail stat; do
   p="$(command -v "$t")" && ln -sf "$p" "$sys/$t"
 done
 mock() { printf '#!/usr/bin/env bash\n%s\n' "$2" > "$bin/$1"; chmod +x "$bin/$1"; }
@@ -53,7 +53,7 @@ reset_mocks; MOCK_INSTALLED=""
 out="$(run bash "$root/bootstrap/install.sh" --check)"
 for s in 'os: cachyos (supported)' 'user: normal' 'sudo: available' 'network: skipped' 'missing: jdk21-openjdk' 'missing: base-devel' 'missing: yay' 'java: missing (want 21)' 'matchbox: missing (want 0.12.0)' 'boxlang: missing (want 1.19.0)' 'bxcachy: missing' 'step(s) needed'; do need "$out" "$s"; done
 plan="$(run bash "$root/bootstrap/install.sh" --plan)"
-for s in 'Nothing below has been run' '1. packages' 'sudo pacman -Syu --needed jdk21-openjdk git curl unzip rustup base-devel' 'upgrades the system' 'sudo pacman -S --needed yay' 'download and run https://install-bvm.boxlang.io' 'mvm install 0.12.0' 'bvm install 1.19.0' 'rustup default stable' 'matchbox --target native src/bxcachy.bxs' 'typed EXECUTE or --allow-external-scripts'; do need "$plan" "$s"; done
+for s in 'Nothing below has been run' '1. packages' 'sudo pacman -Syu --needed jdk21-openjdk git curl unzip rustup base-devel' 'upgrades the system' 'sudo pacman -S --needed yay' 'download and run https://install-bvm.boxlang.io' 'mvm install 0.12.0' 'bvm install 1.19.0' 'rustup default stable' 'install.sh --install-binary --yes' 'typed EXECUTE or --allow-external-scripts'; do need "$plan" "$s"; done
 
 # 2. Everything present at the pinned versions: nothing to do.
 reset_mocks; MOCK_INSTALLED="jdk21-openjdk git curl unzip rustup base-devel"
@@ -212,3 +212,54 @@ install_mocks; fresh_home
 if out="$(MOCK_UID=0 irun bash "$root/bootstrap/install.sh" --install --yes 2>&1)"; then echo 'FAIL: --install ran as root' >&2; exit 1; fi; need "$out" 'regular user'
 [[ ! -s "$tmp/pacman.log" ]] || { echo 'FAIL: root run touched the system' >&2; exit 1; }
 echo 'bootstrap install tests passed'
+
+# ---- B5: --install-binary builds (or accepts) bxcachy, verifies it first, installs atomically ----
+SRCVER="$(grep -m1 -oE 'BxCachy [0-9][0-9A-Za-z.+-]*' "$root/src/bxcachy.bxs")"
+fake_bin() { printf '#!/usr/bin/env bash\n[[ "$1" == version ]] && echo "%s" || echo "other"\n' "$1"; }
+b_mocks() {
+  reset_mocks; fresh_home
+  mock java 'echo "openjdk version \"21.0.13\" 2026-04-21" >&2'
+  mock matchbox 'if [[ "$1" == --version ]]; then echo "MatchBox ${MOCK_MB:-0.12.0}"; exit 0; fi
+[[ "${MOCK_BUILD_FAIL:-0}" == 1 ]] && { echo "boom: compile error" >&2; exit 1; }
+echo "$*" >> "$BLOG"
+cp "$FAKE" bxcachy; chmod 755 bxcachy'
+  : > "$tmp/build.log"; fake_bin "$SRCVER" > "$tmp/fake_built"
+}
+brun() { env -i HOME="$home" PATH="$bin:$sys" BXCACHY_SKIP_NETWORK=1 BLOG="$tmp/build.log" FAKE="$tmp/fake_built" MOCK_UID="${MOCK_UID:-1000}" MOCK_MB="${MOCK_MB:-0.12.0}" MOCK_BUILD_FAIL="${MOCK_BUILD_FAIL:-0}" "$@"; }
+dest="$home/.local/bin/bxcachy"
+
+# 1. Build from source and install.
+b_mocks
+out="$(brun bash "$root/bootstrap/install.sh" --install-binary --yes 2>&1)"
+need "$out" 'Building bxcachy with MatchBox 0.12.0'; need "$out" "Installed $dest ($SRCVER)"
+[[ -x "$dest" ]] && [[ "$("$dest" version)" == "$SRCVER" ]] || { echo 'FAIL: binary not installed or not working' >&2; exit 1; }
+need "$(cat "$tmp/build.log")" '--target native bxcachy.bxs'
+# 2. Same version again: nothing built, nothing replaced. --force rebuilds.
+: > "$tmp/build.log"; stamp="$(stat -c %Y-%i "$dest")"
+out="$(brun bash "$root/bootstrap/install.sh" --install-binary --yes 2>&1)"; need "$out" 'Nothing to do'
+[[ ! -s "$tmp/build.log" && "$(stat -c %Y-%i "$dest")" == "$stamp" ]] || { echo 'FAIL: rerun rebuilt or replaced the binary' >&2; exit 1; }
+brun bash "$root/bootstrap/install.sh" --install-binary --yes --force >/dev/null 2>&1; [[ -s "$tmp/build.log" ]] || { echo 'FAIL: --force did not rebuild' >&2; exit 1; }
+# 3. A failed build or a bad result never touches the installed copy.
+fake_bin "BxCachy 0.0.1-old" > "$dest"; chmod 755 "$dest"; old="$(cat "$dest")"
+if out="$(MOCK_BUILD_FAIL=1 brun bash "$root/bootstrap/install.sh" --install-binary --yes --force 2>&1)"; then echo 'FAIL: build failure ignored' >&2; exit 1; fi
+need "$out" 'installed copy was not touched'; need "$out" 'compile error'; [[ "$(cat "$dest")" == "$old" ]] || { echo 'FAIL: failed build changed the install' >&2; exit 1; }
+fake_bin "oops not it" > "$tmp/fake_built"
+if out="$(brun bash "$root/bootstrap/install.sh" --install-binary --yes --force 2>&1)"; then echo 'FAIL: bad binary accepted' >&2; exit 1; fi
+need "$out" 'self-check'; [[ "$(cat "$dest")" == "$old" ]] || { echo 'FAIL: bad binary replaced the install' >&2; exit 1; }
+# 4. Prerequisites: wrong or missing MatchBox, root.
+if out="$(MOCK_MB=0.11.0 brun bash "$root/bootstrap/install.sh" --install-binary --yes --force 2>&1)"; then echo 'FAIL: wrong MatchBox accepted' >&2; exit 1; fi; need "$out" 'MatchBox 0.12.0 is required'
+if out="$(MOCK_UID=0 brun bash "$root/bootstrap/install.sh" --install-binary --yes 2>&1)"; then echo 'FAIL: root accepted' >&2; exit 1; fi; need "$out" 'regular user'
+# 5. --binary: installs a given file after verifying it; rejects symlinks, non-executables and impostors.
+b_mocks; good="$tmp/good"; fake_bin "BxCachy 9.9.9" > "$good"; chmod 755 "$good"
+out="$(brun bash "$root/bootstrap/install.sh" --install-binary --yes --binary "$good" 2>&1)"; need "$out" 'Installed'; [[ "$("$dest" version)" == "BxCachy 9.9.9" ]] || { echo 'FAIL: --binary not installed' >&2; exit 1; }
+need "$(brun bash "$root/bootstrap/install.sh" --install-binary --yes --binary "$good" 2>&1)" 'identical'
+ln -sf "$good" "$tmp/link"; printf 'x' > "$tmp/plain"; fake_bin "BxCachy" | sed 's/BxCachy/Other/' > "$tmp/imp"; chmod 755 "$tmp/imp"
+for bad in "$tmp/link" "$tmp/plain" "$tmp/imp" "$tmp/missing"; do
+  if brun bash "$root/bootstrap/install.sh" --install-binary --yes --binary "$bad" >/dev/null 2>&1; then echo "FAIL: --binary accepted $bad" >&2; exit 1; fi
+done
+[[ "$("$dest" version)" == "BxCachy 9.9.9" ]] || { echo 'FAIL: rejected --binary changed the install' >&2; exit 1; }
+# 6. Arguments.
+if brun bash "$root/bootstrap/install.sh" --install-binary >/dev/null 2>&1; then echo 'FAIL: --install-binary without --yes' >&2; exit 1; fi
+if brun bash "$root/bootstrap/install.sh" --install-binary --yes --bogus >/dev/null 2>&1; then echo 'FAIL: unknown flag' >&2; exit 1; fi
+if brun bash "$root/bootstrap/install.sh" --install-binary --yes --binary >/dev/null 2>&1; then echo 'FAIL: --binary without a path' >&2; exit 1; fi
+echo 'bootstrap binary tests passed'

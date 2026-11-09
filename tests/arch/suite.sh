@@ -65,6 +65,12 @@ if [[ $NET == 1 ]]; then
   step_grep bootstrap-toolchains-rerun 0 'Nothing to do' bash -c 'bash bootstrap/install.sh --install-toolchains --yes --allow-external-scripts </dev/null'
   step_grep bootstrap-pins-boxlang   0 'boxlang: 1.19.0' bash bootstrap/install.sh --check
   step_grep bootstrap-pins-matchbox  0 'matchbox: 0.12.0' bash bootstrap/install.sh --check
+  # B5: build the real binary with MatchBox and install it for the user.
+  step_grep bootstrap-install-binary       0 'Installed '      bash bootstrap/install.sh --install-binary --yes
+  step_grep bootstrap-binary-runs          0 'BxCachy 0.'      "$HOME/.local/bin/bxcachy" version
+  step_grep bootstrap-install-binary-rerun 0 'Nothing to do'   bash bootstrap/install.sh --install-binary --yes
+  step_grep bootstrap-check-binary         0 'bxcachy: 0.'     bash bootstrap/install.sh --check
+  step bootstrap-binary-rejects-impostor   1 bash -c 'printf "#!/bin/sh\necho nope\n" > /tmp/impostor; chmod 755 /tmp/impostor; bash bootstrap/install.sh --install-binary --yes --binary /tmp/impostor'
 else
   skip bootstrap-toolchains "GitHub unreachable"; skip bootstrap-toolchains-rerun "GitHub unreachable"
 fi

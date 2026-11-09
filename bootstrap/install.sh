@@ -10,7 +10,7 @@ BVM_URL="https://install-bvm.boxlang.io"
 MVM_URL="https://raw.githubusercontent.com/ortus-boxlang/matchbox-quick-installer/main/install/install.sh"
 
 usage() {
-  echo "Usage: install.sh --check | --plan | --install --yes | --install-toolchains --yes [--allow-external-scripts]" >&2
+  echo "Usage: install.sh --check | --plan | --install --yes | --install-toolchains --yes [--allow-external-scripts] | --install-binary --yes [--binary PATH] [--force]" >&2
   exit 2
 }
 [[ $# -gt 0 ]] || usage
@@ -24,6 +24,17 @@ case "$mode" in
       case "$arg" in --yes) yes=1 ;; --allow-external-scripts) allow_external=1 ;; *) usage ;; esac
     done
     [[ $yes -eq 1 ]] || usage ;;
+  --install-binary)
+    yes=0; force=0; binary_arg=""
+    while [[ $# -gt 0 ]]; do
+      case "$1" in
+        --yes) yes=1; shift ;;
+        --force) force=1; shift ;;
+        --binary) [[ $# -ge 2 ]] || usage; binary_arg="$2"; shift 2 ;;
+        *) usage ;;
+      esac
+    done
+    [[ $yes -eq 1 ]] || usage ;;
   *) usage ;;
 esac
 allow_external="${allow_external:-0}"
@@ -33,6 +44,7 @@ command -v pacman >/dev/null 2>&1 || {
   exit 1
 }
 packages=(jdk21-openjdk git curl unzip rustup base-devel)
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." 2>/dev/null && pwd || true)"
 
 # ---- Read-only inspection (used by --check and --plan; never changes the system) ----
 BIN_DIR="${BXCACHY_BIN_DIR:-$HOME/.local/bin}"
@@ -97,7 +109,7 @@ build_steps() {
     steps+=("rust|rustup default stable|activates Rust and Cargo for your user (part of --install)")
   fi
   if (( ! have_bxcachy )); then
-    steps+=("binary|matchbox --target native src/bxcachy.bxs, then install to $BIN_DIR/bxcachy|built from source, no sudo")
+    steps+=("binary|install.sh --install-binary --yes|builds src/bxcachy.bxs with MatchBox (or use --binary PATH), verifies it, installs to $BIN_DIR/bxcachy, no sudo")
   fi
   if (( have_bxcachy && ! bin_on_path )); then
     steps+=("path|add $BIN_DIR to PATH yourself|BxCachy does not edit shell startup files; the commands are printed by --install")
@@ -203,6 +215,47 @@ if [[ "$mode" == --install-toolchains ]]; then
   fi
   if (( ! done_any )); then echo "Nothing to do: MVM, MatchBox $MATCHBOX_VERSION, BVM and BoxLang $BOXLANG_VERSION are already installed."; fi
   echo "Rust and the bxcachy binary are handled by later steps."
+  exit 0
+fi
+
+if [[ "$mode" == --install-binary ]]; then
+  # Build (or accept) the bxcachy binary, verify it BEFORE touching the installed copy, then replace atomically.
+  [[ "$(id -u)" != 0 ]] || { echo "Run as a regular user; no sudo is needed" >&2; exit 1; }
+  work="$(mktemp -d)"; trap 'rm -rf "$work"' EXIT
+  installed="$BIN_DIR/bxcachy"
+  check_binary() {  # PATH -> prints its version line; fails unless it identifies itself as BxCachy
+    local out; out="$("$1" version 2>&1 | head -n 1)" || true
+    [[ "$out" == BxCachy\ * ]] || { echo "Not a working bxcachy binary: $1 (version printed: ${out:-nothing})" >&2; return 1; }
+    printf '%s\n' "$out"
+  }
+  if [[ -n "$binary_arg" ]]; then
+    [[ -f "$binary_arg" && -x "$binary_arg" && ! -L "$binary_arg" ]] || { echo "--binary must be an executable regular file (not a symlink): $binary_arg" >&2; exit 1; }
+    candidate="$binary_arg"
+    new_version="$(check_binary "$candidate")" || exit 1
+    if [[ -f "$installed" ]] && cmp -s "$candidate" "$installed" && (( ! force )); then echo "Nothing to do: $installed is identical ($new_version)."; exit 0; fi
+  else
+    src="$root/src/bxcachy.bxs"
+    [[ -n "$root" && -f "$src" ]] || { echo "Source not found ($src). Run this script from a BxCachy checkout, or pass --binary PATH." >&2; exit 1; }
+    want="$(grep -m1 -oE 'BxCachy [0-9][0-9A-Za-z.+-]*' "$src" || true)"
+    if (( ! force )) && [[ -x "$installed" && -n "$want" ]] && [[ "$(check_binary "$installed" 2>/dev/null || true)" == "$want" ]]; then
+      echo "Nothing to do: $installed is already $want (use --force to rebuild)."; exit 0
+    fi
+    [[ "$(tool_version matchbox)" == "$MATCHBOX_VERSION" ]] || { echo "MatchBox $MATCHBOX_VERSION is required (found: $(tool_version matchbox || true)). Run install.sh --install-toolchains --yes first." >&2; exit 1; }
+    cp "$src" "$work/bxcachy.bxs"; chmod 644 "$work/bxcachy.bxs"
+    echo "Building bxcachy with MatchBox $MATCHBOX_VERSION"
+    if ! ( cd "$work" && PATH="$probe_path" matchbox --target native bxcachy.bxs ) > "$work/build.log" 2>&1; then
+      echo "Build failed; the installed copy was not touched. Last lines of the build log:" >&2; tail -n 20 "$work/build.log" >&2; exit 1
+    fi
+    candidate="$(find "$work" -maxdepth 5 -type f -executable \( -name bxcachy -o -name bxcachy.bxs \) -print -quit)"
+    [[ -n "$candidate" ]] || { echo "Build produced no executable; the installed copy was not touched" >&2; tail -n 20 "$work/build.log" >&2; exit 1; }
+    new_version="$(check_binary "$candidate")" || { echo "The built binary failed its self-check; the installed copy was not touched" >&2; exit 1; }
+  fi
+  mkdir -p "$BIN_DIR"
+  tmpdest="$(mktemp "$BIN_DIR/.bxcachy.XXXXXX")"
+  cp "$candidate" "$tmpdest"; chmod 755 "$tmpdest"; mv -f "$tmpdest" "$installed"
+  final="$(check_binary "$installed")" || exit 1
+  echo "Installed $installed ($final)"
+  case ":$PATH:" in *":$BIN_DIR:"*) ;; *) echo "Note: $BIN_DIR is not on your PATH (see --install for the line to add)." ;; esac
   exit 0
 fi
 
