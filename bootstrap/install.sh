@@ -194,8 +194,8 @@ inspect() {
   have_nvm=0; nvm_ver=""; node_ver=""
   if [[ -s "$NVM_DIR/nvm.sh" ]]; then
     have_nvm=1
-    nvm_ver="$(bash -c '. "$NVM_DIR/nvm.sh" >/dev/null 2>&1; nvm --version' 2>/dev/null | first_version)"
-    node_ver="$(bash -c '. "$NVM_DIR/nvm.sh" >/dev/null 2>&1; node --version' 2>/dev/null | first_version)"
+    nvm_ver="$(bash -c '. "$NVM_DIR/nvm.sh" >/dev/null 2>&1; nvm --version' 2>/dev/null | first_version || true)"
+    node_ver="$(bash -c '. "$NVM_DIR/nvm.sh" >/dev/null 2>&1; node --version' 2>/dev/null | first_version || true)"
   fi
   have_bxcachy=0; tool_path bxcachy >/dev/null && have_bxcachy=1; bx_ver="$(tool_version bxcachy version)"
   case ":$PATH:" in *":$BIN_DIR:"*) bin_on_path=1 ;; *) bin_on_path=0 ;; esac
@@ -374,9 +374,9 @@ if [[ "$mode" == --install-toolchains ]]; then
     [[ -s "$NVM_DIR/nvm.sh" ]] || { echo "nvm installation failed: $NVM_DIR/nvm.sh not found afterwards" >&2; exit 1; }
     echo "Note: the nvm installer adds nvm to your shell startup files; open a new shell to pick that up."
   fi
-  if [[ -z "$(bash -c '. "$NVM_DIR/nvm.sh" >/dev/null 2>&1; node --version' 2>/dev/null | first_version)" ]]; then
+  if [[ -z "$(bash -c '. "$NVM_DIR/nvm.sh" >/dev/null 2>&1; node --version' 2>/dev/null | first_version || true)" ]]; then
     step_retry "nvm install $NODE_CHANNEL" bash -c '. "$NVM_DIR/nvm.sh" && nvm install "$1" && nvm alias default "$1"' _ "$NODE_CHANNEL"; done_any=1
-    node_real="$(bash -c '. "$NVM_DIR/nvm.sh" >/dev/null 2>&1; node --version' 2>/dev/null | first_version)"
+    node_real="$(bash -c '. "$NVM_DIR/nvm.sh" >/dev/null 2>&1; node --version' 2>/dev/null | first_version || true)"
     [[ -n "$node_real" ]] || { echo "Node.js does not run after nvm install" >&2; exit 1; }
     echo "Node.js $node_real installed with nvm and verified."
   fi

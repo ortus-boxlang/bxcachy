@@ -507,7 +507,6 @@ if env PATH="$tmp/all/bin:$PATH" ALL_FAIL=--install-toolchains ALL_LOG="$tmp/all
 [[ "$(wc -l < "$tmp/all/log")" == 2 ]] || { echo 'FAIL: --all went on after a failing stage' >&2; exit 1; }
 if bash "$root/bootstrap/install.sh" --all >/dev/null 2>&1; then echo 'FAIL: --all without --yes accepted' >&2; exit 1; fi
 echo 'bootstrap --all tests passed'
-if env PATH="$tmp/all/bin:$PATH" ALL_LOG="$tmp/all/log" BXCACHY_ALL_SCRIPT="$tmp/all/stage.sh" bash -c 'id() { echo 0; }; export -f id; exec bash "$0" "$@"' "$root/bootstrap/install.sh" --all --yes >/dev/null 2>&1; then :; fi
 
 # ---- nvm and Node.js are toolchain steps: nvm missing, then Node missing ----
 reset_mocks; MOCK_INSTALLED="jdk21-openjdk git curl unzip rustup base-devel jq"
