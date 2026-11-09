@@ -17,5 +17,5 @@ for c in version desktop-list tui-list web-list optional-list profile-list; do
   [[ "$(printf '%s\n' "$out" | wc -l)" == 1 ]] || fail "$c: more than one line on stdout"
 done
 [[ "$("$bin" version --json | jq -r .data.version)" == "$(jq -r .version "$(dirname "$0")/../box.json")" ]] || fail 'json version differs from box.json'
-"$bin" desktop-list | grep -F 'Visual Studio Code' >/dev/null || fail 'plain list rows'
+"$bin" desktop-list | grep -Fq 'Visual Studio Code' || fail 'plain list rows'
 echo 'cli contract tests passed'

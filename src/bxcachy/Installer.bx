@@ -16,10 +16,7 @@ class Installer {
 
     // Runs one command through the injected runner, or for real (argument array, timeout in seconds).
     function exec( argv, timeout ) {
-        if ( !isSimpleValue( variables.custom ) ) {
-            var runner = variables.custom;
-            return runner( argv, timeout );
-        }
+        if ( !isSimpleValue( variables.custom ) ) return variables.custom( argv, timeout );
         var rest = [];
         for ( var i = 2; i <= argv.len(); i++ ) rest.append( argv[i] );
         return systemExecute( argv[1], rest, timeout, true );
@@ -119,14 +116,13 @@ class Installer {
         var done = []; var failed = [];
         for ( var step in steps ) {
             var problem = "";
-            // No `break` inside the nested for-in: MatchBox leaves the outer iterator in a bad state (see notes).
             if ( structKeyExists( step, "files" ) ) {
                 for ( var f in step.files ) {
                     try { writeFile( f ); } catch ( any e ) { problem = "web launcher failed: " & e.message; }
                 }
             }
             for ( var cmd in step.commands ) {
-                if ( len( problem ) ) continue;
+                if ( len( problem ) ) break;
                 var r = exec( cmd, 1800 );
                 if ( r.timeout ) problem = step.kind & " timed out";
                 else if ( r.exitCode != 0 ) problem = step.kind & " failed (exit " & r.exitCode & ")";

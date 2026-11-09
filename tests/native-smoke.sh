@@ -4,7 +4,7 @@ binary="${1:-./bxcachy}"
 test -x "$binary"
 "$binary" version | grep -F 'BxCachy 0.11.0-dev'
 "$binary" doctor | grep -F 'Java 21'
-has() { grep -F -- "$1" >/dev/null; }
+has() { grep -Fq -- "$1"; }
 usage_exit2() { local out rc=0; out="$("$@" 2>&1)" || rc=$?; [[ "$rc" -eq 2 ]] || { echo "FAIL: $* exited $rc, wanted 2" >&2; exit 1; }; grep -Fq 'Usage:' <<<"$out" || { echo "FAIL: $*: no usage text" >&2; exit 1; }; }
 expect_error() { local needle="$1"; shift; local out rc=0; out="$("$@" 2>&1)" || rc=$?; [[ "$rc" -eq 2 ]] || { echo "FAIL: $* exited $rc, wanted 2" >&2; exit 1; }; grep -Fq -- "$needle" <<<"$out" || { echo "FAIL: $*: missing '$needle'" >&2; exit 1; }; }
 "$binary" plan | has 'Plan (default tier'
