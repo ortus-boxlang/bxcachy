@@ -26,7 +26,7 @@ bxcachy <group> <verb> [args...] [--yes] [--dry-run] [--json] [--quiet]
 5. Never run AUR builds as root (exit 4).
 6. Every config file touched goes through the config service (backup, atomic replace, journal). No direct writes.
 7. Output lists succeeded and failed items separately. No rollback is promised across pacman and yay.
-8. External scripts are downloaded to a temp file, checked against a pinned SHA-256, and (legacy behavior, kept) need an extra typed `EXECUTE` confirmation. No curl-to-shell.
+8. External scripts (catalog `source: script`) are downloaded to a temp file, shown to the user, and run as the normal user (never root) only after a typed `EXECUTE` confirmation. No curl-to-shell. Decision 2026-11-09: no checksum pinning for these scripts.
 9. Subprocesses are launched with argument arrays, never through a shell string.
 
 ## 3. Exit codes
@@ -77,7 +77,8 @@ Entry schema (legacy fields kept, new fields marked):
 | Field | Notes |
 |---|---|
 | `id`, `name`, `kind` (`desktop` `tui` `web`), `category`, `description` | as legacy |
-| `source` (`pacman` `aur` `manual` `web`), `target` | package name, or URL for web |
+| `source` (`pacman` `aur` `script` `manual` `web`), `target` | package name, or URL for web and script |
+| `check` (for `script`) | argv array that exits 0 when installed, for example `["command","-v","pi"]` |
 | `default` | base tier flag |
 | `source_status`, `source_confirmed` | legacy provenance flags, kept |
 | `profiles` (new) | list of profile ids |
