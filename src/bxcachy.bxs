@@ -3,12 +3,33 @@
 args = CLIGetArgs();
 p = args.positionals;
 cmd = p.len() ? p[1] : "help";
+appVersion = "0.11.0-dev";
+asJson = structKeyExists( args.options, "json" );
+// One shared flag check for every command: unknown flags are usage errors and nothing runs.
+for ( flag in args.options ) {
+ if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet" ], flag ) ) {
+  println( "Unknown option: --" & flag );
+  CLIExit( 2 );
+ }
+}
 base = [ "localsend", "mpv", "pacseek" ];
 desktop = { localsend: "localsend", mpv: "mpv", obs: "obs-studio", kdenlive: "kdenlive", pinta: "pinta", chromium: "chromium", obsidian: "obsidian", libreoffice: "libreoffice-fresh" };
 tui = { lazygit: "lazygit", btop: "btop", neovim: "neovim", pacseek: "pacseek", yazi: "yazi" };
 optional = { obs: "obs-studio", kdenlive: "kdenlive", pinta: "pinta", chromium: "chromium", obsidian: "obsidian", libreoffice: "libreoffice-fresh" };
 web = { github: "https://github.com", "boxlang-docs": "https://boxlang.ortusbooks.com", youtube: "https://youtube.com" };
 
+// --json: one JSON object on stdout, nothing else (docs/architecture/COMMAND-CONTRACT.md section 4).
+function envelope( command, exitCode, data ) {
+ return jsonSerialize( { schema: 1, command: command, version: "0.11.0-dev", ok: exitCode == 0, exit: exitCode, dry_run: false, data: data, warnings: [] } );
+}
+// Prints a key/value listing as lines, or as the JSON envelope with --json.
+function emitMap( command, asJson, map, suffix ) {
+ if ( asJson ) {
+  println( envelope( command, 0, map ) );
+  return;
+ }
+ for ( key in map ) println( key & ": " & map[key] & suffix );
+}
 // ---- config service (plain BoxLang + a little OS: mkdir lock, stat) ----
 function cfgHome() {
  return getSystemSetting( "BXCACHY_CONFIG_HOME", getSystemSetting( "HOME", "" ) & "/.config" );
@@ -181,7 +202,8 @@ function configRestore( entry, id, yes, dryRun ) {
 
 switch ( cmd ) {
  case "version":
-  println( "BxCachy 0.11.0-dev" );
+  if ( asJson ) println( envelope( "version", 0, { name: "BxCachy", version: appVersion } ) );
+  else println( "BxCachy 0.11.0-dev" );
   break;
  case "doctor":
  case "prerequisites":
@@ -189,16 +211,16 @@ switch ( cmd ) {
   println( "Native build prerequisites: Rust and Cargo" );
   break;
  case "desktop-list":
-  for ( key in desktop ) println( key & ": " & desktop[key] );
+  emitMap( "desktop-list", asJson, desktop, "" );
   break;
  case "tui-list":
-  for ( key in tui ) println( key & ": " & tui[key] );
+  emitMap( "tui-list", asJson, tui, "" );
   break;
  case "web-list":
-  for ( key in web ) println( key & ": " & web[key] );
+  emitMap( "web-list", asJson, web, "" );
   break;
  case "optional-list":
-  for ( key in optional ) println( key & ": " & optional[key] & " (optional)" );
+  emitMap( "optional-list", asJson, optional, " (optional)" );
   break;
  case "plan":
  case "apps-doctor":
@@ -293,11 +315,13 @@ switch ( cmd ) {
   println( "Read-only plan; no packages installed." );
   break;
  case "profile-list":
-  println( "Available workstation profiles:" );
-  println( "core: git curl jq unzip" );
-  println( "jvm: jdk21-openjdk maven gradle" );
-  println( "containers: podman buildah skopeo" );
-  println( "terminal: btop neovim lazygit yazi" );
+  profileMap = { core: "git curl jq unzip", jvm: "jdk21-openjdk maven gradle", containers: "podman buildah skopeo", terminal: "btop neovim lazygit yazi" };
+  if ( asJson ) {
+   println( envelope( "profile-list", 0, profileMap ) );
+  } else {
+   println( "Available workstation profiles:" );
+   emitMap( "profile-list", false, profileMap, "" );
+  }
   break;
  case "profile-plan":
   if ( p.len() != 2 ) {
@@ -416,9 +440,7 @@ switch ( cmd ) {
  case "config":
   cfgVerb = p.len() >= 2 ? p[2] : "";
   cfgName = p.len() >= 3 ? p[3] : "";
-  allowed = [ "yes", "dry-run", "force", "json" ];
   cfgBad = !len( getSystemSetting( "HOME", "" ) ) || p.len() > 4 || ( p.len() == 4 && cfgVerb != "restore" ) || !arrayFind( [ "list", "diff", "apply", "restore", "history" ], cfgVerb );
-  for ( o in args.options ) if ( !arrayFind( allowed, o ) ) cfgBad = true;
   if ( cfgBad ) {
    println( "Usage: bxcachy config list|diff NAME|apply NAME|restore NAME ID|history [NAME] [--yes] [--dry-run] [--force] [--json]" );
    CLIExit( 2 );
@@ -426,7 +448,6 @@ switch ( cmd ) {
   yes = structKeyExists( args.options, "yes" );
   dryRun = structKeyExists( args.options, "dry-run" );
   force = structKeyExists( args.options, "force" );
-  asJson = structKeyExists( args.options, "json" );
   nl = chr( 10 );
   managed = { bxcachy: { name: "bxcachy", target: cfgHome() & "/bxcachy/bxcachy.json", mode: "600", content: '{' & nl & '  "schema_version": 1,' & nl & '  "desktop": "auto"' & nl & '}' & nl } };
   if ( cfgVerb == "list" || cfgVerb == "history" ) {
