@@ -1,6 +1,6 @@
 {
   "schema": 3,
-  "catalog_version": "0.4.0-draft",
+  "catalog_version": "0.4.1-draft",
   "generated": "2026-11-09",
   "notes": [
     "Tier default = installed by a plain install; optional = offered in the picker; apps not listed are not part of the catalog.",
@@ -982,6 +982,26 @@
       "profiles": {
         "terminal": "default"
       }
+    },
+    {
+      "id": "sublime-merge",
+      "name": "Sublime Merge",
+      "description": "Meet a new Git Client, from the makers of Sublime Text",
+      "description_source": "aur",
+      "kind": "desktop",
+      "group": "development",
+      "category": "Version control",
+      "tier": "optional",
+      "source": "aur",
+      "targets": [
+        "sublime-merge"
+      ],
+      "homepage": "https://www.sublimemerge.com",
+      "macos": "Sublime Merge (same)",
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-09"
     },
     {
       "id": "virt-manager",
@@ -3400,6 +3420,26 @@
       ]
     },
     {
+      "id": "mailspring",
+      "name": "Mailspring",
+      "description": "A beautiful and fast mail client",
+      "description_source": "aur",
+      "kind": "desktop",
+      "group": "everyday",
+      "category": "Email",
+      "tier": "optional",
+      "source": "aur",
+      "targets": [
+        "mailspring"
+      ],
+      "homepage": "https://github.com/Foundry376/Mailspring",
+      "macos": "Mailspring (same)",
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-09"
+    },
+    {
       "id": "omawrite",
       "name": "Omawrite",
       "description": "Dead-simple Markdown writing app built with Qt Quick",
@@ -3662,6 +3702,26 @@
       "profiles": {
         "productivity": "default"
       }
+    },
+    {
+      "id": "ticktick",
+      "name": "TickTick",
+      "description": "Official desktop application for Linux",
+      "description_source": "aur",
+      "kind": "desktop",
+      "group": "everyday",
+      "category": "Productivity",
+      "tier": "optional",
+      "source": "aur",
+      "targets": [
+        "ticktick"
+      ],
+      "homepage": "https://ticktick.com/download",
+      "macos": "TickTick (same)",
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-09"
     },
     {
       "id": "wordcraft",
@@ -4371,30 +4431,6 @@
       }
     },
     {
-      "id": "spotify",
-      "name": "Spotify",
-      "description": "A proprietary music streaming service",
-      "description_source": "aur",
-      "kind": "desktop",
-      "group": "media",
-      "category": "Media",
-      "tier": "default",
-      "source": "aur",
-      "targets": [
-        "spotify"
-      ],
-      "homepage": "https://www.spotify.com",
-      "macos": "Music / Spotify",
-      "origin": [
-        "owner-pick",
-        "omarchy-desktop"
-      ],
-      "verified_on": "2026-11-09",
-      "profiles": {
-        "media": "optional"
-      }
-    },
-    {
       "id": "ffmpeg",
       "name": "FFmpeg",
       "description": "Complete solution to record, convert and stream audio and video",
@@ -4584,6 +4620,30 @@
       ],
       "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
       "verified_on": "2026-11-09"
+    },
+    {
+      "id": "spotify",
+      "name": "Spotify",
+      "description": "A proprietary music streaming service",
+      "description_source": "aur",
+      "kind": "desktop",
+      "group": "media",
+      "category": "Media",
+      "tier": "optional",
+      "source": "aur",
+      "targets": [
+        "spotify"
+      ],
+      "homepage": "https://www.spotify.com",
+      "macos": "Music / Spotify",
+      "origin": [
+        "owner-pick",
+        "omarchy-desktop"
+      ],
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "media": "optional"
+      }
     },
     {
       "id": "yt-dlp",
