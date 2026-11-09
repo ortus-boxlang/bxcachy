@@ -20,8 +20,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          bash -n bootstrap/install.sh scripts/package-manager.sh tests/package-manager-test.sh tests/bootstrap-test.sh tests/native-smoke.sh tests/native-package-integration.sh scripts/config.sh tests/config-test.sh tests/config-native-test.sh tests/cli-contract-test.sh
+          bash -n bootstrap/install.sh scripts/package-manager.sh tests/package-manager-test.sh tests/bootstrap-test.sh tests/native-smoke.sh tests/native-package-integration.sh scripts/config.sh tests/config-test.sh tests/config-native-test.sh tests/cli-contract-test.sh tests/catalog-test.sh bootstrap/gen-catalog.sh
           test -s src/bxcachy.bxs
+          jq -e . catalog/apps.json >/dev/null
+          bash bootstrap/gen-catalog.sh --check   # src/bxcachy.bxs embeds the current catalog
           jq -e . box.json >/dev/null   # the manifest must be valid JSON
           for command in version doctor prerequisites desktop-list tui-list web-list optional-list optional-plan profile-list profile-plan plan apps-doctor dev-plan help; do
             grep -Fq "\"$command\"" src/bxcachy.bxs
@@ -91,6 +93,7 @@ jobs:
           bash -x tests/native-package-integration.sh "$candidate"
           bash tests/config-native-test.sh "$candidate"
           bash tests/cli-contract-test.sh "$candidate"
+          bash tests/catalog-test.sh "$candidate"
           mkdir -p dist
           cp "$candidate" dist/bxcachy
           chmod +x dist/bxcachy

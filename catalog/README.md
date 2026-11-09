@@ -1,6 +1,6 @@
 # BxCachy catalog
 
-`apps.json` is the app catalog (schema 2, draft 0.1.0). It replaces the legacy v0.10.0 `catalog/apps.json` (kept unmodified under `artifacts/legacy/original/`).
+`apps.json` is the app catalog (schema 3, draft 0.2.0). It replaces the legacy v0.10.0 `catalog/apps.json` (kept unmodified under `artifacts/legacy/original/`).
 
 - `tier`: `default` (installed by a plain install) or `optional` (offered in the picker). Apps that are not listed are not part of the catalog.
 - `source`: `pacman` (official or CachyOS repo), `aur`, `pkgbuild` (build from a public PKGBUILD with `makepkg` as the normal user), `web` (frameless web app, `url`), `unresolved` (no installable package found yet).
@@ -10,3 +10,11 @@
 - `verified_on`: date the package target was resolved against the CachyOS repos (cachyos, v3, v4), Arch (core, extra, multilib) and the AUR.
 
 Status: draft for testing. `pkgbuild.ref` is `master` and must be pinned to a commit before an installer uses it. The Omarchy app inventory comes from the unofficial store omarchyapps.com and the Omarchy 4.5 notes. Curation continues after testing.
+
+## Schema 3 (presentation metadata)
+
+- `groups`: ordered top-level sections (`id`, `title`, `blurb`, `order`). `categories`: ordered sub-sections (`group`, `title`, `order`). Every app's `group` is a group `id` and its `category` is a category `title` of that group. Apps are stored sorted by group, category, default tier first, then name.
+- `description`: one line for a picker. `description_source` says where it came from: `arch` (official package description), `aur` (AUR description), `pkgbuild` (the `pkgdesc` of the Omarchy PKGBUILD) or `curated` (written by hand: web apps, multi-package entries, unresolved entries).
+- `homepage`: upstream URL from the same package metadata, or the web app URL.
+- `macos`: macOS equivalent or "(same)" when the app exists on macOS, `null` when there is no useful mapping.
+- Found while enriching: the AUR package `hype` is a Twitch tool, not the Omarchy presentation app, so `hype` is now `unresolved`.

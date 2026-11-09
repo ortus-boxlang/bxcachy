@@ -42,11 +42,11 @@ rm "$target"; ln -s "$tmp/elsewhere" "$target"
 [[ ! -e "$tmp/elsewhere" ]] || fail 'wrote through symlink'
 rm "$target"
 # lock
-mkdir "$state/lock"
+touch "$state/lock"
 [[ "$(code "$bin" config apply bxcachy --yes)" == 8 ]] || fail 'held lock must exit 8'
-rmdir "$state/lock"
+rm "$state/lock"
 [[ "$(code "$bin" config apply bxcachy --yes)" == 0 ]]
-[[ ! -d "$state/lock" ]] || fail 'lock not released'
+[[ ! -e "$state/lock" ]] || fail 'lock not released'
 # usage errors
 [[ "$(code "$bin" config)" == 2 ]]; [[ "$(code "$bin" config bogus)" == 2 ]]
 [[ "$(code "$bin" config apply nope --yes)" == 2 ]]; [[ "$(code "$bin" config list --bogus)" == 2 ]]
