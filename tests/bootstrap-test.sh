@@ -47,7 +47,8 @@ cat > "$repo/box.json" <<'JSON'
     "bvm": { "version": "latest", "installer": "https://install-bvm.boxlang.io" },
     "mvm": { "version": "latest", "installer": "https://raw.githubusercontent.com/ortus-boxlang/matchbox-quick-installer/main/install/install.sh" },
     "matchbox": { "version": "0.12.0" },
-    "rust": { "channel": "stable" } } }
+    "rust": { "channel": "stable" },
+    "nvm": { "version": "v0.41.0", "installer": "https://raw.githubusercontent.com/nvm-sh/nvm/v0.41.0/install.sh", "node": "lts/*" } } }
 JSON
 REALJQ="$(command -v jq)"
 mock() { printf '#!/usr/bin/env bash\n%s\n' "$2" > "$bin/$1"; chmod +x "$bin/$1"; }
@@ -82,8 +83,12 @@ mock rustup 'exit 0'
 mock yay 'exit 0'
 mock bxcachy '[[ "$1" == version ]] && echo "BxCachy 0.11.0-dev"'
 cp "$bin/bxcachy" "$home/.local/bin/bxcachy"; rm "$bin/bxcachy"
+# nvm and Node.js present (a fake nvm.sh and node)
+mkdir -p "$home/.nvm/bin"
+printf '%s\n' 'nvm() { case "$1" in --version) echo 0.41.0 ;; esac; }' '[ -x "$NVM_DIR/bin/node" ] && export PATH="$NVM_DIR/bin:$PATH"' 'true' > "$home/.nvm/nvm.sh"
+printf '#!/usr/bin/env bash\necho v22.11.0\n' > "$home/.nvm/bin/node"; chmod +x "$home/.nvm/bin/node"
 out="$(run bash "$repo/bootstrap/install.sh" --check)"
-for s in 'installed: yay' 'java: 21.0.13' 'matchbox: 0.12.0' 'boxlang: 1.19.0' 'rust: 1.90.0' 'bxcachy: 0.11.0' 'bin-dir: '; do need "$out" "$s"; done
+for s in 'installed: yay' 'java: 21.0.13' 'matchbox: 0.12.0' 'boxlang: 1.19.0' 'nvm: 0.41.0' 'node: 22.11.0' 'rust: 1.90.0' 'bxcachy: 0.11.0' 'bin-dir: '; do need "$out" "$s"; done
 need "$out" 'not-on-PATH'; need "$out" '1 step(s) needed'   # only the PATH step remains
 plan="$(run bash "$repo/bootstrap/install.sh" --plan)"; need "$plan" 'add '; need "$plan" '/.local/bin to PATH'
 out="$(env -i HOME="$home" PATH="$home/.local/bin:$bin:$sys" BXCACHY_SKIP_NETWORK=1 BXCACHY_OS_RELEASE="$tmp/os-arch" MOCK_INSTALLED="$MOCK_INSTALLED" bash "$repo/bootstrap/install.sh" --check)"
@@ -127,7 +132,21 @@ esac
 M
 chmod +x "$HOME/.bvm/bin/bvm"
 echo "MARK-BVM-RAN" >> "$HOME/ran.log"'
-export MVM_FAKE BVM_FAKE
+NVM_FAKE='mkdir -p "$HOME/.nvm"
+cat > "$HOME/.nvm/nvm.sh" <<"M"
+# fake nvm: a shell function plus node on the PATH once "nvm install" ran
+nvm() {
+  case "$1" in
+    --version) echo "0.41.0" ;;
+    install) mkdir -p "$NVM_DIR/bin"; printf "#!/usr/bin/env bash\necho v22.11.0\n" > "$NVM_DIR/bin/node"; chmod +x "$NVM_DIR/bin/node" ;;
+    alias) : ;;
+  esac
+}
+[ -x "$NVM_DIR/bin/node" ] && export PATH="$NVM_DIR/bin:$PATH"
+true
+M
+echo "MARK-NVM-RAN" >> "$HOME/ran.log"'
+export MVM_FAKE BVM_FAKE NVM_FAKE
 fresh_home() { rm -rf "$home"; mkdir -p "$home/.local/bin"; : > "$tmp/curl.log"; }
 reset_mocks; MOCK_INSTALLED="jdk21-openjdk git curl unzip rustup base-devel jq"
 mock sudo 'exit 9'
@@ -137,11 +156,11 @@ mock curl 'url=""; out=""; while [[ $# -gt 0 ]]; do case "$1" in -o) out="$2"; s
 [[ "${MOCK_CURL_FAIL:-0}" == 1 ]] && exit 22
 case "$url" in
   *matchbox-quick-installer*) printf "%s\n" "$MVM_FAKE" > "$out" ;;
-  *install-bvm*) printf "%s\n" "$BVM_FAKE" > "$out" ;;
+  *install-bvm*) printf "%s\n" "$BVM_FAKE" > "$out" ;; *nvm-sh/nvm*) printf "%s\n" "$NVM_FAKE" > "$out" ;;
   *version-latest.properties*) printf "version=%s+1\nbuildDate=x\n" "${MOCK_LATEST:-1.19.0}" ;;
   *) exit 22 ;;
 esac'
-trun() { env -i HOME="$home" MOCK_LATEST="${MOCK_LATEST:-1.19.0}" PATH="$bin:$sys" BXCACHY_SKIP_NETWORK=1 BXCACHY_OS_RELEASE="$tmp/os-arch" MOCK_INSTALLED="$MOCK_INSTALLED" CURL_LOG="$tmp/curl.log" MVM_FAKE="$MVM_FAKE" BVM_FAKE="$BVM_FAKE" "$@"; }
+trun() { env -i HOME="$home" MOCK_LATEST="${MOCK_LATEST:-1.19.0}" PATH="$bin:$sys" BXCACHY_SKIP_NETWORK=1 BXCACHY_OS_RELEASE="$tmp/os-arch" MOCK_INSTALLED="$MOCK_INSTALLED" CURL_LOG="$tmp/curl.log" MVM_FAKE="$MVM_FAKE" BVM_FAKE="$BVM_FAKE" NVM_FAKE="$NVM_FAKE" "$@"; }
 
 # 1. Unattended without the flag: refuses, runs nothing.
 fresh_home
@@ -153,13 +172,13 @@ need "$out" 'Re-run with --allow-external-scripts'
 fresh_home
 if out="$(echo no | trun env BXCACHY_INTERACTIVE=1 bash "$repo/bootstrap/install.sh" --install-toolchains --yes 2>&1)"; then echo 'FAIL: cancelled run succeeded' >&2; exit 1; fi
 need "$out" 'Cancelled. Nothing was run.'; [[ ! -e "$home/ran.log" ]] || { echo 'FAIL: script ran after cancel' >&2; exit 1; }
-printf 'EXECUTE\nEXECUTE\n' | trun env BXCACHY_INTERACTIVE=1 bash "$repo/bootstrap/install.sh" --install-toolchains --yes >/dev/null 2>&1 || { echo 'FAIL: typed EXECUTE did not proceed' >&2; exit 1; }
-grep -q MARK-MVM-RAN "$home/ran.log" && grep -q MARK-BVM-RAN "$home/ran.log" || { echo 'FAIL: installers did not run after EXECUTE' >&2; exit 1; }
+out="$(printf 'EXECUTE\nEXECUTE\nEXECUTE\n' | trun env BXCACHY_INTERACTIVE=1 bash "$repo/bootstrap/install.sh" --install-toolchains --yes 2>&1)" || { echo "FAIL: typed EXECUTE did not proceed: $(printf '%s' "$out" | tail -n 6)" >&2; exit 1; }
+grep -q MARK-MVM-RAN "$home/ran.log" && grep -q MARK-BVM-RAN "$home/ran.log" && grep -q MARK-NVM-RAN "$home/ran.log" || { echo 'FAIL: installers did not run after EXECUTE' >&2; exit 1; }
 
 # 3. Flag approves; end state is at the pins; the script shows url, sha256 and its first lines.
 fresh_home
 out="$(trun bash "$repo/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null 2>&1)"
-for x in 'External script: mvm' 'External script: bvm' 'sha256: ' 'first lines:' 'approved by --allow-external-scripts' 'MatchBox 0.12.0 installed and verified.' 'BoxLang 1.19.0 installed and verified.'; do need "$out" "$x"; done
+for x in 'External script: mvm' 'External script: bvm' 'External script: nvm' 'Node.js 22.11.0 installed with nvm and verified.' 'sha256: ' 'first lines:' 'approved by --allow-external-scripts' 'MatchBox 0.12.0 installed and verified.' 'BoxLang 1.19.0 installed and verified.'; do need "$out" "$x"; done
 chk="$(trun env PATH="$home/.local/bin:$bin:$sys" bash "$repo/bootstrap/install.sh" --check)"; need "$chk" 'matchbox: 0.12.0'; need "$chk" 'boxlang: 1.19.0'
 [[ "$(stat -c %a "$home/.cache/bxcachy/external")" == 700 ]] || { echo 'FAIL: cache dir not private' >&2; exit 1; }
 
@@ -314,7 +333,7 @@ reset_mocks; MOCK_INSTALLED="jdk21-openjdk git curl unzip rustup base-devel jq"
 mock sudo 'exit 9'; mock java 'echo "openjdk version \"21.0.13\" 2026-04-21" >&2'
 mock curl 'url=""; out=""; while [[ $# -gt 0 ]]; do case "$1" in -o) out="$2"; shift 2 ;; http*) url="$1"; shift ;; *) shift ;; esac; done
 [[ -n "$out" ]] && echo "$url" >> "$CURL_LOG"
-case "$url" in *matchbox-quick-installer*) printf "%s\n" "$MVM_FAKE" > "$out" ;; *install-bvm*) printf "%s\n" "$BVM_FAKE" > "$out" ;; *version-latest.properties*) printf "version=%s+1\nbuildDate=x\n" "${MOCK_LATEST:-1.19.0}" ;; *) exit 22 ;; esac'
+case "$url" in *matchbox-quick-installer*) printf "%s\n" "$MVM_FAKE" > "$out" ;; *install-bvm*) printf "%s\n" "$BVM_FAKE" > "$out" ;; *nvm-sh/nvm*) printf "%s\n" "$NVM_FAKE" > "$out" ;; *version-latest.properties*) printf "version=%s+1\nbuildDate=x\n" "${MOCK_LATEST:-1.19.0}" ;; *) exit 22 ;; esac'
 fresh_home
 GOOD_MVM="$MVM_FAKE"
 if out="$(MVM_FAKE='echo half-done; exit 1' trun bash "$repo/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null 2>&1)"; then echo 'FAIL: dying installer treated as success' >&2; exit 1; fi
@@ -346,7 +365,7 @@ reset_mocks; MOCK_INSTALLED="jdk21-openjdk git curl unzip rustup base-devel jq"
 mock sudo 'exit 9'; mock java 'echo "openjdk version \"21.0.13\" 2026-04-21" >&2'
 mock curl 'url=""; out=""; while [[ $# -gt 0 ]]; do case "$1" in -o) out="$2"; shift 2 ;; http*) url="$1"; shift ;; *) shift ;; esac; done
 [[ -n "$out" ]] && echo "$url" >> "$CURL_LOG"
-case "$url" in *matchbox-quick-installer*) printf "%s\n" "$MVM_FAKE" > "$out" ;; *install-bvm*) printf "%s\n" "$BVM_FAKE" > "$out" ;; *version-latest.properties*) printf "version=%s+1\nbuildDate=x\n" "${MOCK_LATEST:-1.19.0}" ;; *) exit 22 ;; esac'
+case "$url" in *matchbox-quick-installer*) printf "%s\n" "$MVM_FAKE" > "$out" ;; *install-bvm*) printf "%s\n" "$BVM_FAKE" > "$out" ;; *nvm-sh/nvm*) printf "%s\n" "$NVM_FAKE" > "$out" ;; *version-latest.properties*) printf "version=%s+1\nbuildDate=x\n" "${MOCK_LATEST:-1.19.0}" ;; *) exit 22 ;; esac'
 fresh_home
 out="$(trun bash "$repo/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null 2>&1)"; need "$out" 'BoxLang 1.19.0 installed and verified.'
 chk="$(trun env PATH="$home/.local/bin:$bin:$sys" bash "$repo/bootstrap/install.sh" --check)"; need "$chk" 'boxlang: 1.19.0 (want latest = 1.19.0)'
@@ -400,7 +419,7 @@ echo 'bootstrap manifest tests passed'
 reset_mocks; MOCK_INSTALLED="jdk21-openjdk git curl unzip rustup base-devel jq"
 mock sudo 'exit 9'; mock java 'echo "openjdk version \"21.0.13\" 2026-04-21" >&2'
 mock curl 'url=""; out=""; while [[ $# -gt 0 ]]; do case "$1" in -o) out="$2"; shift 2 ;; http*) url="$1"; shift ;; *) shift ;; esac; done
-case "$url" in *matchbox-quick-installer*) printf "%s\n" "$MVM_FAKE" > "$out" ;; *install-bvm*) printf "%s\n" "$BVM_FAKE" > "$out" ;; *version-latest.properties*) printf "version=1.19.0+1\n" ;; *) exit 22 ;; esac'
+case "$url" in *matchbox-quick-installer*) printf "%s\n" "$MVM_FAKE" > "$out" ;; *install-bvm*) printf "%s\n" "$BVM_FAKE" > "$out" ;; *nvm-sh/nvm*) printf "%s\n" "$NVM_FAKE" > "$out" ;; *version-latest.properties*) printf "version=1.19.0+1\n" ;; *) exit 22 ;; esac'
 # mvm whose "install" fails the first N times, counted in a file; "use" and "--version" behave.
 FLAKY_MVM='mkdir -p "$HOME/.mvm/bin"
 cat > "$HOME/.mvm/bin/mvm" <<"M"
@@ -435,11 +454,11 @@ case "$url" in
   *bxcachy/matchbox/matchbox-linux-x86_64.sha256) echo "${MB_SUM:-$GOOD_SUM}  matchbox-linux-x86_64" > "$out" ;;
   *bxcachy/matchbox/matchbox-linux-x86_64) cat "$MB_FILE" > "$out" ;;
   *matchbox-quick-installer*) printf "%s\n" "$MVM_FAKE" > "$out" ;;
-  *install-bvm*) printf "%s\n" "$BVM_FAKE" > "$out" ;;
+  *install-bvm*) printf "%s\n" "$BVM_FAKE" > "$out" ;; *nvm-sh/nvm*) printf "%s\n" "$NVM_FAKE" > "$out" ;;
   *version-latest.properties*) printf "version=1.19.0+1\n" ;;
   *) exit 22 ;;
 esac'
-drun() { env -i MVM_FAKE="$MVM_FAKE" HOME="$home" PATH="$bin:$sys" BXCACHY_SKIP_NETWORK=1 BXCACHY_OS_RELEASE="$tmp/os-arch" MOCK_INSTALLED="$MOCK_INSTALLED" CURL_LOG="$tmp/curl.log" BVM_FAKE="$BVM_FAKE" MB_FILE="$tmp/mb-good" GOOD_SUM="$GOOD_SUM" MB_SUM="${MB_SUM:-$GOOD_SUM}" MOCK_UID="${MOCK_UID:-1000}" BXCACHY_MANIFEST="$tmp/box-dl.json" "$@"; }
+drun() { env -i MVM_FAKE="$MVM_FAKE" NVM_FAKE="$NVM_FAKE" HOME="$home" PATH="$bin:$sys" BXCACHY_SKIP_NETWORK=1 BXCACHY_OS_RELEASE="$tmp/os-arch" MOCK_INSTALLED="$MOCK_INSTALLED" CURL_LOG="$tmp/curl.log" BVM_FAKE="$BVM_FAKE" MB_FILE="$tmp/mb-good" GOOD_SUM="$GOOD_SUM" MB_SUM="${MB_SUM:-$GOOD_SUM}" MOCK_UID="${MOCK_UID:-1000}" BXCACHY_MANIFEST="$tmp/box-dl.json" "$@"; }
 fresh_home
 plan="$(drun bash "$repo/bootstrap/install.sh" --plan)"
 need "$plan" 'download https://downloads.example.test/bxcachy/matchbox/matchbox-linux-x86_64 and check its sha256'; refuse "$plan" 'mvm install'
@@ -489,3 +508,18 @@ if env PATH="$tmp/all/bin:$PATH" ALL_FAIL=--install-toolchains ALL_LOG="$tmp/all
 if bash "$root/bootstrap/install.sh" --all >/dev/null 2>&1; then echo 'FAIL: --all without --yes accepted' >&2; exit 1; fi
 echo 'bootstrap --all tests passed'
 if env PATH="$tmp/all/bin:$PATH" ALL_LOG="$tmp/all/log" BXCACHY_ALL_SCRIPT="$tmp/all/stage.sh" bash -c 'id() { echo 0; }; export -f id; exec bash "$0" "$@"' "$root/bootstrap/install.sh" --all --yes >/dev/null 2>&1; then :; fi
+
+# ---- nvm and Node.js are toolchain steps: nvm missing, then Node missing ----
+reset_mocks; MOCK_INSTALLED="jdk21-openjdk git curl unzip rustup base-devel jq"
+mock java 'echo "openjdk version \"21.0.13\" 2026-04-21" >&2'; mock mvm 'echo "MVM version: 2.0.1"'; mock matchbox 'echo "MatchBox 0.12.0"'
+mock bvm 'echo "bvm 1.40.0"'; mock boxlang 'echo "Ortus BoxLang v1.19.0+67"'; mock rustc 'echo "rustc 1.90.0"'; mock rustup 'exit 0'; mock yay 'exit 0'
+mock bxcachy '[[ "$1" == version ]] && echo "BxCachy 0.11.0-dev"'
+rm -rf "$home"; mkdir -p "$home/.local/bin"; cp "$bin/bxcachy" "$home/.local/bin/bxcachy"; rm "$bin/bxcachy"
+nplan() { env -i HOME="$home" PATH="$home/.local/bin:$bin:$sys" BXCACHY_SKIP_NETWORK=1 BXCACHY_OS_RELEASE="$tmp/os-arch" MOCK_INSTALLED="$MOCK_INSTALLED" bash "$repo/bootstrap/install.sh" "$@"; }
+plan="$(nplan --plan)"
+need "$plan" 'download and run https://raw.githubusercontent.com/nvm-sh/nvm/v0.41.0/install.sh'; need "$plan" 'nvm install lts/*'
+need "$(nplan --check)" 'nvm: missing'
+mkdir -p "$home/.nvm"; printf '%s\n' 'nvm() { case "$1" in --version) echo 0.41.0 ;; esac; }' 'true' > "$home/.nvm/nvm.sh"
+plan="$(nplan --plan)"; refuse "$plan" 'nvm-sh/nvm'; need "$plan" 'nvm install lts/*'
+need "$(nplan --check)" 'node: missing'
+echo 'bootstrap nvm tests passed'

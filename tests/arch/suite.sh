@@ -77,6 +77,8 @@ if [[ $NET == 1 ]]; then
   # BoxLang follows the latest stable release: the installed version must equal what Ortus publishes as latest.
   step bootstrap-boxlang-is-latest   0 bash -c 'want=$(curl -fsS -m 10 https://downloads.ortussolutions.com/ortussolutions/boxlang/version-latest.properties | sed -n "s/^version=\([0-9][0-9.]*\).*/\1/p" | head -1); [ -n "$want" ] && bash bootstrap/install.sh --check | grep -F "boxlang: $want (want latest = $want)"'
   step_grep bootstrap-pins-matchbox  0 "matchbox: $(jq -r .toolchain.matchbox.version box.json)" bash bootstrap/install.sh --check
+  step_grep bootstrap-nvm-installed  0 "nvm: 0.41" bash bootstrap/install.sh --check
+  step_grep bootstrap-node-installed 0 "node: [0-9]" bash bootstrap/install.sh --check
   # B5: build the real binary with MatchBox and install it for the user.
   step_grep bootstrap-install-binary       0 'Installed '      bash bootstrap/install.sh --install-binary --yes
   step_grep bootstrap-binary-runs          0 'BxCachy 0.'      "$HOME/.local/bin/bxcachy" version

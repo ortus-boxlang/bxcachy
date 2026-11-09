@@ -68,7 +68,8 @@ load_manifest() {
   jq -e . "$MANIFEST" >/dev/null 2>&1 || { manifest_error="box.json is not valid JSON: $MANIFEST"; return 1; }
   local key
   for key in .toolchain.java.version .toolchain.java.package .toolchain.boxlang.version .toolchain.bvm.installer \
-             .toolchain.mvm.installer .toolchain.matchbox.version .toolchain.rust.channel; do
+             .toolchain.mvm.installer .toolchain.matchbox.version .toolchain.rust.channel \
+             .toolchain.nvm.version .toolchain.nvm.installer; do
     jq -e "$key" "$MANIFEST" >/dev/null 2>&1 || { manifest_error="box.json is missing ${key#.}"; return 1; }
   done
   JAVA_MAJOR="$(jq -r .toolchain.java.version "$MANIFEST")"
@@ -82,6 +83,9 @@ load_manifest() {
   BVM_URL="$(jq -r .toolchain.bvm.installer "$MANIFEST")"
   MVM_URL="$(jq -r .toolchain.mvm.installer "$MANIFEST")"
   RUST_CHANNEL="$(jq -r .toolchain.rust.channel "$MANIFEST")"
+  NVM_VERSION="$(jq -r .toolchain.nvm.version "$MANIFEST")"
+  NVM_URL="$(jq -r .toolchain.nvm.installer "$MANIFEST")"
+  NODE_CHANNEL="$(jq -r '.toolchain.nvm.node // "lts/*"' "$MANIFEST")"
   BOXLANG_VERSION="${BXCACHY_BOXLANG_VERSION:-$(jq -r .toolchain.boxlang.version "$MANIFEST")}"
   packages=("$JAVA_PKG" git curl unzip rustup base-devel jq)
 }
@@ -97,6 +101,8 @@ need_manifest() {  # for modes that cannot work without it
 BIN_DIR="${BXCACHY_BIN_DIR:-$HOME/.local/bin}"
 BVM_HOME="${BVM_HOME:-$HOME/.bvm}"
 MVM_HOME="${MVM_HOME:-$HOME/.mvm}"
+NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+export NVM_DIR
 probe_path="$BVM_HOME/bin:$BVM_HOME/current/bin:$MVM_HOME/bin:$HOME/.cargo/bin:$BIN_DIR:$PATH"
 [[ -z "${MATCHBOX_DOWNLOADS:-}" ]] || probe_path="${MATCHBOX_HOME}/bin:$probe_path"
 
@@ -184,6 +190,13 @@ inspect() {
   have_bvm=0; tool_path bvm >/dev/null && have_bvm=1; bvm_ver="$(tool_version bvm)"
   bl_ver="$(bl_version)"; bl_want="$(boxlang_want)"
   rust_ver="$(tool_version rustc)"; have_rustup=0; tool_path rustup >/dev/null && have_rustup=1
+  # nvm is a shell function, so it is probed by sourcing nvm.sh in a subshell
+  have_nvm=0; nvm_ver=""; node_ver=""
+  if [[ -s "$NVM_DIR/nvm.sh" ]]; then
+    have_nvm=1
+    nvm_ver="$(bash -c '. "$NVM_DIR/nvm.sh" >/dev/null 2>&1; nvm --version' 2>/dev/null | first_version)"
+    node_ver="$(bash -c '. "$NVM_DIR/nvm.sh" >/dev/null 2>&1; node --version' 2>/dev/null | first_version)"
+  fi
   have_bxcachy=0; tool_path bxcachy >/dev/null && have_bxcachy=1; bx_ver="$(tool_version bxcachy version)"
   case ":$PATH:" in *":$BIN_DIR:"*) bin_on_path=1 ;; *) bin_on_path=0 ;; esac
 }
@@ -214,6 +227,12 @@ build_steps() {
     steps+=("boxlang|bvm install $BOXLANG_VERSION && bvm use $BOXLANG_VERSION|BoxLang runtime ($([[ $BOXLANG_VERSION == latest ]] && echo "latest stable${bl_want:+, $bl_want}" || echo "pinned"))")
   elif [[ -n "$bl_want" && "$bl_ver" != "$bl_want" ]]; then
     steps+=("boxlang|bvm install $BOXLANG_VERSION && bvm use $BOXLANG_VERSION|update BoxLang $bl_ver to $bl_want")
+  fi
+  if (( ! have_nvm )); then
+    steps+=("nvm|download and run $NVM_URL|external script, shown first; typed EXECUTE or --allow-external-scripts; it adds nvm to your shell startup files")
+  fi
+  if [[ -z "$node_ver" ]]; then
+    steps+=("node|nvm install $NODE_CHANNEL && nvm alias default $NODE_CHANNEL|Node.js ($NODE_CHANNEL) managed by nvm")
   fi
   if (( ! have_rustup )) || [[ -z "$rust_ver" ]]; then
     steps+=("rust|rustup default $RUST_CHANNEL|activates Rust and Cargo for your user (part of --install)")
@@ -248,6 +267,8 @@ report_check() {
   elif [[ -n "$bl_want" ]]; then bl_desc="latest = $bl_want"
   else bl_desc="latest, version lookup unavailable"; fi
   printf 'boxlang: %s (want %s)\n' "${bl_ver:-missing}" "$bl_desc"
+  printf 'nvm: %s\n' "$([[ $have_nvm == 1 ]] && echo "${nvm_ver:-installed}" || echo missing)"
+  printf 'node: %s (via nvm, want %s)\n' "${node_ver:-missing}" "$NODE_CHANNEL"
   printf 'rust: %s\n' "${rust_ver:-no default toolchain}"
   printf 'bxcachy: %s\n' "$([[ $have_bxcachy == 1 ]] && echo "${bx_ver:-installed}" || echo missing)"
   echo "== path =="
@@ -348,7 +369,18 @@ if [[ "$mode" == --install-toolchains ]]; then
   elif [[ -z "$bl_target" ]]; then
     echo "BoxLang $bl_now is installed; could not look up the latest version, so it was left as is."
   fi
-  if (( ! done_any )); then echo "Nothing to do: MVM, MatchBox $MATCHBOX_VERSION, BVM and BoxLang ${bl_now:-?} are already installed."; fi
+  if (( ! have_nvm )); then
+    run_external nvm "$NVM_URL"; done_any=1
+    [[ -s "$NVM_DIR/nvm.sh" ]] || { echo "nvm installation failed: $NVM_DIR/nvm.sh not found afterwards" >&2; exit 1; }
+    echo "Note: the nvm installer adds nvm to your shell startup files; open a new shell to pick that up."
+  fi
+  if [[ -z "$(bash -c '. "$NVM_DIR/nvm.sh" >/dev/null 2>&1; node --version' 2>/dev/null | first_version)" ]]; then
+    step_retry "nvm install $NODE_CHANNEL" bash -c '. "$NVM_DIR/nvm.sh" && nvm install "$1" && nvm alias default "$1"' _ "$NODE_CHANNEL"; done_any=1
+    node_real="$(bash -c '. "$NVM_DIR/nvm.sh" >/dev/null 2>&1; node --version' 2>/dev/null | first_version)"
+    [[ -n "$node_real" ]] || { echo "Node.js does not run after nvm install" >&2; exit 1; }
+    echo "Node.js $node_real installed with nvm and verified."
+  fi
+  if (( ! done_any )); then echo "Nothing to do: MVM, MatchBox $MATCHBOX_VERSION, BVM, BoxLang ${bl_now:-?}, nvm and Node.js are already installed."; fi
   echo "Rust and the bxcachy binary are handled by later steps."
   exit 0
 fi
