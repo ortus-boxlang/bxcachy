@@ -64,6 +64,18 @@ r = resolverClass.resolve( fixture, { ids: [ "git" ], profile: "dev" } );
 check( "ids with a profile is an error", r.errors.len() == 1 );
 r = resolverClass.resolve( fixture, { shell: "gnome" } );
 check( "unknown shell is an error", r.errors.len() == 1 );
+// web apps pull in the browser
+webCat = { profiles: [], apps: [ { id: "brave", tier: "default", source: "pacman", targets: [ "brave-bin" ] }, { id: "gmail", tier: "default", source: "web", url: "https://x.test" }, { id: "git", tier: "default", source: "pacman" } ] };
+r = resolverClass.resolve( webCat, { ids: [ "gmail" ] } );
+check( "named web app: brave is added first", idsOf( r ) == "brave,gmail" );
+r = resolverClass.resolve( webCat, {} );
+check( "default set with a web app: brave appears once, first", idsOf( r ) == "brave,gmail,git" || idsOf( r ) == "brave,git,gmail" );
+r = resolverClass.resolve( webCat, { ids: [ "gmail" ], installed: function( a ) { return a.id == "brave"; } } );
+check( "brave already installed: not added", idsOf( r ) == "gmail" );
+r = resolverClass.resolve( webCat, { ids: [ "brave", "gmail" ] } );
+check( "brave named too: not duplicated", idsOf( r ) == "brave,gmail" );
+r = resolverClass.resolve( webCat, { ids: [ "git" ] } );
+check( "no web app: no browser", idsOf( r ) == "git" );
 // shell detection
 check( "detect Hyprland", resolverClass.detectShell( "Hyprland" ) == "hyprland" );
 check( "detect KDE", resolverClass.detectShell( "KDE" ) == "plasma" );

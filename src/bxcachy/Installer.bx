@@ -1,7 +1,7 @@
 // Turns the apps a request selected into install steps and runs them. Rules (COMMAND-CONTRACT sections 2 and 11):
 // one pacman call for all pacman apps (sudo unless already root), AUR and PKGBUILD builds as the normal user, one
 // app at a time, commands are argument arrays (never a shell string). Apps that cannot be installed yet
-// (unpinned PKGBUILD ref, web launchers, no source) come back in `blocked`, not as steps.
+// (unpinned PKGBUILD ref, no source) come back in `blocked`, not as steps.
 //
 //   steps( selected, asRoot )  -> { steps: [ { kind, ids, commands: [ argv... ] } ], blocked: [ { id, source, error } ] }
 //   run( steps )               -> { done: [ { id, source } ], failed: [ { id, source, error } ] }
@@ -45,6 +45,24 @@ class Installer {
         return "https://github.com/" & repo & ".git";
     }
 
+    // The launcher file for a web app: a .desktop entry that opens the URL in a frameless brave window.
+    function launcherFile( app, home ) {
+        var url = replace( app.url, "%", "%%", "all" );
+        var content = "[Desktop Entry]" & chr( 10 ) & "Type=Application" & chr( 10 ) & "Name=" & app.name & chr( 10 )
+            & "Comment=" & ( app.description ?: app.name ) & chr( 10 ) & "Exec=brave --app=" & url & chr( 10 )
+            & "Icon=brave-browser" & chr( 10 ) & "Categories=Network;" & chr( 10 );
+        return { path: home & "/.local/share/applications/bxcachy-" & app.id & ".desktop", content: content };
+    }
+
+    // Writes one launcher: creates the folder, writes a temporary file beside it and moves it into place.
+    function writeFile( file ) {
+        var dir = getDirectoryFromPath( file.path );
+        if ( !directoryExists( dir ) ) directoryCreate( dir, true );
+        var tmp = file.path & ".tmp" & left( createUUID(), 8 );
+        fileWrite( tmp, file.content );
+        fileMove( tmp, file.path );
+    }
+
     // The build step for a pinned PKGBUILD entry, or a { blocked } struct when it cannot be built yet.
     function pkgbuildStep( app ) {
         var ref = app.pkgbuild.ref;
@@ -60,9 +78,10 @@ class Installer {
     }
 
     // Builds the steps for the selected apps, in catalog order within each kind: pacman, aur, pkgbuild.
-    function steps( selected, asRoot ) {
+    function steps( selected, asRoot, home = "" ) {
+        var homeDir = len( home ) ? home : getSystemSetting( "HOME", "" );
         var pacmanIds = []; var pacmanTargets = [];
-        var aur = []; var builds = []; var blocked = [];
+        var aur = []; var builds = []; var webs = []; var blocked = [];
         for ( var app in selected ) {
             var targets = structKeyExists( app, "targets" ) ? app.targets : [];
             if ( app.source == "pacman" ) {
@@ -77,7 +96,7 @@ class Installer {
                 if ( structKeyExists( built, "blocked" ) ) blocked.append( built.blocked );
                 else builds.append( built.step );
             } else if ( app.source == "web" ) {
-                blocked.append( { id: app.id, source: "web", error: "web app launchers are not implemented yet" } );
+                webs.append( { kind: "web", ids: [ app.id ], commands: [], files: [ launcherFile( app, homeDir ) ] } );
             } else {
                 blocked.append( { id: app.id, source: app.source, error: "no installable source in the catalog yet" } );
             }
@@ -91,6 +110,7 @@ class Installer {
         }
         for ( var s in aur ) out.append( s );
         for ( var s in builds ) out.append( s );
+        for ( var s in webs ) out.append( s );
         return { steps: out, blocked: blocked };
     }
 
@@ -100,6 +120,11 @@ class Installer {
         for ( var step in steps ) {
             var problem = "";
             // No `break` inside the nested for-in: MatchBox leaves the outer iterator in a bad state (see notes).
+            if ( structKeyExists( step, "files" ) ) {
+                for ( var f in step.files ) {
+                    try { writeFile( f ); } catch ( any e ) { problem = "web launcher failed: " & e.message; }
+                }
+            }
             for ( var cmd in step.commands ) {
                 if ( len( problem ) ) continue;
                 var r = exec( cmd, 1800 );

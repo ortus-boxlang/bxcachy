@@ -5,7 +5,7 @@
 //     -> { mode, errors: [ text ], selected: [ app ], failed: [ { id, error } ], skipped: [ { id, reason } ] }
 //
 // mode: "ids" (named apps), "profile" (members of a profile) or "default" (the default tier).
-// Skip reasons: optional, wrong_shell, unresolved, installed. Named apps ignore tier and shell rules;
+// Web apps pull in `brave` (see withBrowser). Skip reasons: optional, wrong_shell, unresolved, installed. Named apps ignore tier and shell rules;
 // a named app that is `unresolved` is reported in `failed`. `errors` is non-empty on a usage problem
 // (unknown id or profile, ids together with a profile); nothing is selected then.
 class Resolver {
@@ -20,6 +20,21 @@ class Resolver {
      if ( find( "hyprland", d ) ) return "hyprland";
      if ( find( "kde", d ) || find( "plasma", d ) ) return "plasma";
      return "";
+    }
+
+    // Web apps run in the catalog app `brave`. When a selected app is a web app and brave is neither selected nor
+    // installed, brave is put first in the selection, so a plan and an install always include it.
+    function withBrowser( out, byId, isInstalled ) {
+     var needsBrowser = false; var hasBrowser = false;
+     for ( var a in out.selected ) {
+      if ( a.source == "web" ) needsBrowser = true;
+      if ( a.id == "brave" ) hasBrowser = true;
+     }
+     if ( !needsBrowser || hasBrowser || !structKeyExists( byId, "brave" ) || isInstalled( byId["brave"] ) ) return out;
+     var withIt = [ byId["brave"] ];
+     for ( var a in out.selected ) withIt.append( a );
+     out.selected = withIt;
+     return out;
     }
 
     function resolve( cat, req ) {
@@ -53,7 +68,7 @@ class Resolver {
        else if ( isInstalled( app ) ) out.skipped.append( { id: id, reason: "installed" } );
        else out.selected.append( app );
       }
-      return out;
+      return withBrowser( out, byId, isInstalled );
      }
 
      for ( var app in cat.apps ) {
@@ -70,6 +85,6 @@ class Resolver {
       if ( isInstalled( app ) ) { out.skipped.append( { id: app.id, reason: "installed" } ); continue; }
       out.selected.append( app );
      }
-     return out;
+     return withBrowser( out, byId, isInstalled );
     }
 }

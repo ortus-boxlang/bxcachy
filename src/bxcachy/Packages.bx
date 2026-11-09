@@ -114,7 +114,10 @@ class Packages {
                 return code;
             }
             println( ( dryRun ? "Dry run" : "Plan" ) & ": " & wouldInstall.len() & " apps, " & built.steps.len() & " steps" );
-            for ( var step in built.steps ) for ( var c in step.commands ) println( "  " & step.kind & ": " & c.toList( " " ) );
+            for ( var step in built.steps ) {
+                for ( var c in step.commands ) println( "  " & step.kind & ": " & c.toList( " " ) );
+                if ( structKeyExists( step, "files" ) ) for ( var f in step.files ) println( "  " & step.kind & ": write " & f.path );
+            }
             for ( var b in built.blocked ) println( "  cannot install " & b.id & ": " & b.error );
             println( dryRun ? "Nothing was changed." : "Nothing was changed. Add --yes to apply." );
             return code;

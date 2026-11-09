@@ -62,6 +62,10 @@ out="$(j plan hyprsunset --shell=plasma)"
 [[ "$(rc run "$bin" plan neovim --profile=core)" == 2 ]] || fail 'ids with --profile exit 2'
 [[ "$(rc run "$bin" plan --profile)" == 2 ]] || fail '--profile needs a value'
 
+# web apps pull in brave
+out="$(j plan gmail)"
+[[ "$(jq -r '[.data.would_install[].id]|join(",")' <<<"$out")" == brave,gmail ]] || fail 'plan gmail includes brave first'
+
 # lists
 [[ "$(j profile-list | jq '.data|length')" -ge 12 ]] || fail 'profile-list'
 [[ "$(j profile-list | jq -r '.data[]|select(.id=="core")|.default')" == 4 ]] || fail 'core has 4 default apps'

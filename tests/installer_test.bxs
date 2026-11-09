@@ -24,12 +24,25 @@ check( "aur apps are one step each, after pacman", b.steps.len() == 3 && b.steps
 b = inst.steps( [ app( "git", "pacman", [ "git" ] ) ], true );
 check( "root: no sudo", b.steps[1].commands[1][1] == "pacman" );
 b = inst.steps( [ app( "omazed", "pkgbuild", [ "omazed" ], { pkgbuild: { repo: "omacom/omarchy-pkgs", path: "pkgbuilds/omazed", ref: "master" } } ),
-                  app( "boxlang-docs", "web", [] ), app( "intellij", "unresolved", [ "x" ] ) ], false );
-check( "unpinned pkgbuild, web and unresolved are blocked, no steps", b.steps.len() == 0 && b.blocked.len() == 3 );
-check( "blocked reasons are explicit", find( "not pinned", b.blocked[1].error ) && find( "web app launchers", b.blocked[2].error ) && find( "no installable source", b.blocked[3].error ) );
+                  app( "intellij", "unresolved", [ "x" ] ) ], false );
+check( "unpinned pkgbuild and unresolved are blocked, no steps", b.steps.len() == 0 && b.blocked.len() == 2 );
+check( "blocked reasons are explicit", find( "not pinned", b.blocked[1].error ) && find( "no installable source", b.blocked[2].error ) );
 b = inst.steps( [ app( "omazed", "pkgbuild", [ "omazed" ], { pkgbuild: { repo: "omacom/omarchy-pkgs", path: "pkgbuilds/omazed", ref: "abc1234" } } ) ], false );
 cmds = b.steps[1].commands;
 check( "pinned pkgbuild: clone, checkout the ref, makepkg in the path", b.steps.len() == 1 && find( "https://github.com/omacom/omarchy-pkgs.git", cmds[1].toList( " " ) ) && cmds[2][6] == "abc1234" && cmds[3][3] == b.steps[1].dir & "/pkgbuilds/omazed" && cmds[3][4] == "makepkg" );
+// web apps: a launcher file, written for real into a temporary home
+home = getTempDirectory() & "/bxcachy-installer-" & left( createUUID(), 8 );
+web = { id: "gmail", name: "Gmail", description: "Google mail", source: "web", url: "https://mail.google.com/mail/u/0/#inbox?a=100%25" };
+b = inst.steps( [ web ], false, home );
+check( "web app: one step with a launcher file and no commands", b.steps.len() == 1 && b.steps[1].kind == "web" && b.steps[1].commands.len() == 0 && b.steps[1].files[1].path == home & "/.local/share/applications/bxcachy-gmail.desktop" );
+content = b.steps[1].files[1].content;
+check( "launcher runs brave in app mode, % is escaped", find( "Exec=brave --app=https://mail.google.com/mail/u/0/#inbox?a=100%%25", content ) && find( "Name=Gmail", content ) && find( "[Desktop Entry]", content ) );
+r = inst.run( b.steps );
+check( "run: web launcher is written, nothing executed", r.done.len() == 1 && r.failed.len() == 0 && fileExists( b.steps[1].files[1].path ) && fileRead( b.steps[1].files[1].path ) == content );
+check( "run: no stray temp file left", directoryList( getDirectoryFromPath( b.steps[1].files[1].path ) ).len() == 1 );
+r = inst.run( b.steps );
+check( "run: writing the launcher again is fine", r.done.len() == 1 && r.failed.len() == 0 );
+directoryDelete( home, true );
 // running
 calls = [];
 b = inst.steps( sel, false );

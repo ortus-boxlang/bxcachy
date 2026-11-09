@@ -80,8 +80,17 @@ reset
 [[ "$(code "$binary" optional-install --yes)" == 2 ]] || fail 'optional-install needs ids'
 [[ ! -s "$INSTALL_TEST_LOG" ]] || fail 'bad request changed something'
 
-# the default tier: web apps and unpinned PKGBUILDs cannot be installed yet, so the run is partial (7)
+# a web app installs its browser and writes a launcher
 reset
-[[ "$(code "$binary" install --yes)" == 7 ]] || fail 'default install is partial until web apps and pinned PKGBUILDs exist'
+"$binary" install gmail --yes >/dev/null 2>&1 || fail 'install gmail'
+grep -Fq 'brave-bin' "$INSTALL_TEST_LOG" || fail 'gmail pulls in brave'
+launcher="$HOME/.local/share/applications/bxcachy-gmail.desktop"
+[[ -f "$launcher" ]] || fail 'launcher file written'
+grep -Fq 'Exec=brave --app=https://mail.google.com' "$launcher" || fail 'launcher runs brave in app mode'
+[[ "$(env PATH="$PATH" HOME="$HOME" "$binary" package-status gmail)" == 'gmail: installed' ]] || fail 'package-status sees the launcher'
+
+# the default tier: unpinned PKGBUILD apps (notion-desktop) cannot be installed yet, so the run is partial (7)
+reset
+[[ "$(code "$binary" install --yes)" == 7 ]] || fail 'default install is partial until PKGBUILD refs are pinned'
 grep -Fq neovim "$INSTALL_TEST_LOG" || fail 'default install ran pacman'
 echo 'native package integration tests passed'

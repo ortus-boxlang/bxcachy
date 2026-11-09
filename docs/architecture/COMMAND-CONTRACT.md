@@ -179,7 +179,7 @@ bxcachy install --optional            # default tier plus optional tier
 | `pacman` | one `pacman -S --needed` call for all pacman apps (sudo shown in the plan) |
 | `aur` | AUR helper (yay) as the normal user, apps one at a time |
 | `pkgbuild` | PKGBUILD shown, `makepkg` as the normal user, result installed with pacman |
-| `web` | frameless web app launcher from `url` (no package) |
+| `web` | a `.desktop` launcher in `~/.local/share/applications/bxcachy-<id>.desktop` running `brave --app=URL` (written atomically, no package). The resolver adds `brave` to the plan when a web app is selected and brave is not installed. |
 
 ### Result shape (`--json`, inside the section 4 envelope)
 
@@ -211,5 +211,5 @@ Human output is the same lists, one app per line with its source.
 - Catalog 0.3.0: `profiles`, per-profile tier, `shells` (section 11, `catalog/README.md`).
 - `Resolver` class (selection) and `Packages` class (read-only commands). `plan`, `install-plan`, `optional-plan`, `profile-plan`, `profile-install-plan`, `package-status`, `package-source`, `profile-list`, `desktop-list`, `tui-list`, `web-list`, `optional-list` run on the catalog. Installed state comes from one `pacman -Qq` call (web apps: launcher file).
 - `install`, `optional-install`, `profile-install` run on the catalog through `Installer` (one `pacman -S` call, `yay` per AUR app, pinned PKGBUILDs via `git clone` + `makepkg -si`). Rules as in sections 2 and 11: no `--yes` prints the plan (exit 2), `--dry-run` exits 0, root with AUR or PKGBUILD builds exits 4 before any change, a named app without a source exits 3, partial results exit 7 (5 or 6 when nothing succeeded).
-- Not installable yet, reported as `failed`: `web` apps (launcher format and browser undecided), all 31 `pkgbuild` apps (refs still `master`, must be pinned to commits). Until then a plain `bxcachy install` ends with exit 7.
+- Web apps install as launchers (see section 11 table). Not installable yet, reported as `failed`: all 31 `pkgbuild` apps (refs still `master`, must be pinned to commits). `notion-desktop` is one of them and is in the default tier, so a plain `bxcachy install` ends with exit 7 until they are pinned.
 - Not on the catalog: `apps-doctor`, `dev-plan`.
