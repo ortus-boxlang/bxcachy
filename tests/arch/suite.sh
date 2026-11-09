@@ -70,7 +70,8 @@ step_grep bootstrap-toolchains-refuses-unattended 2 'allow-external-scripts' bas
 if [[ $NET == 1 ]]; then
   step bootstrap-toolchains       0 bash -c 'bash bootstrap/install.sh --install-toolchains --yes --allow-external-scripts </dev/null'
   step_grep bootstrap-toolchains-rerun 0 'Nothing to do' bash -c 'bash bootstrap/install.sh --install-toolchains --yes --allow-external-scripts </dev/null'
-  step_grep bootstrap-pins-boxlang   0 'boxlang: 1.19.0' bash bootstrap/install.sh --check
+  # BoxLang follows the latest stable release: the installed version must equal what Ortus publishes as latest.
+  step bootstrap-boxlang-is-latest   0 bash -c 'want=$(curl -fsS -m 10 https://downloads.ortussolutions.com/ortussolutions/boxlang/version-latest.properties | sed -n "s/^version=\([0-9][0-9.]*\).*/\1/p" | head -1); [ -n "$want" ] && bash bootstrap/install.sh --check | grep -F "boxlang: $want (want latest = $want)"'
   step_grep bootstrap-pins-matchbox  0 'matchbox: 0.12.0' bash bootstrap/install.sh --check
   # B5: build the real binary with MatchBox and install it for the user.
   step_grep bootstrap-install-binary       0 'Installed '      bash bootstrap/install.sh --install-binary --yes

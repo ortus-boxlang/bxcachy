@@ -3,7 +3,11 @@ set -euo pipefail
 
 # Pinned versions (owner decision 2026-11-09). BoxLang is pinned to an exact release.
 MATCHBOX_VERSION="0.12.0"
-BOXLANG_VERSION="1.19.0"
+# BoxLang follows the latest stable release (owner decision 2026-11-09). BXCACHY_BOXLANG_VERSION=x.y.z pins it.
+# MatchBox stays pinned: it compiles bxcachy itself, so the tested version matters. BVM and MVM installers
+# fetch their own newest release; BXCACHY_MVM_VERSION=x.y.z asks the MVM installer for a specific one.
+BOXLANG_VERSION="${BXCACHY_BOXLANG_VERSION:-latest}"
+BOXLANG_LATEST_URL="https://downloads.ortussolutions.com/ortussolutions/boxlang/version-latest.properties"
 JAVA_MAJOR=21
 MIN_FREE_GB=5
 BVM_URL="https://install-bvm.boxlang.io"
@@ -77,6 +81,12 @@ bl_version() {
     tool_version boxlang
   fi
 }
+# What "want" means for BoxLang: the pinned version, or the newest stable (empty when it cannot be looked up).
+boxlang_want() {
+  if [[ "$BOXLANG_VERSION" != latest ]]; then printf '%s\n' "$BOXLANG_VERSION"; return 0; fi
+  command -v curl >/dev/null 2>&1 || return 0
+  curl -fsS -m 8 "$BOXLANG_LATEST_URL" 2>/dev/null | sed -n 's/^version=\([0-9][0-9.]*\).*/\1/p' | head -n 1 || true
+}
 os_id() { ( . "${BXCACHY_OS_RELEASE:-/etc/os-release}" 2>/dev/null; echo "${ID:-unknown}|${ID_LIKE:-}" ) || echo "unknown|"; }
 
 inspect() {
@@ -96,7 +106,7 @@ inspect() {
   mvm_ver="$(tool_version mvm)"; have_mvm=0; tool_path mvm >/dev/null && have_mvm=1
   mb_ver="$(tool_version matchbox)"
   have_bvm=0; tool_path bvm >/dev/null && have_bvm=1; bvm_ver="$(tool_version bvm)"
-  bl_ver="$(bl_version)"
+  bl_ver="$(bl_version)"; bl_want="$(boxlang_want)"
   rust_ver="$(tool_version rustc)"; have_rustup=0; tool_path rustup >/dev/null && have_rustup=1
   have_bxcachy=0; tool_path bxcachy >/dev/null && have_bxcachy=1; bx_ver="$(tool_version bxcachy version)"
   case ":$PATH:" in *":$BIN_DIR:"*) bin_on_path=1 ;; *) bin_on_path=0 ;; esac
@@ -120,8 +130,10 @@ build_steps() {
   if (( ! have_bvm )); then
     steps+=("bvm|download and run $BVM_URL|external script, shown first; typed EXECUTE or --allow-external-scripts; it may add BVM to your shell startup files")
   fi
-  if [[ "$bl_ver" != "$BOXLANG_VERSION" ]]; then
-    steps+=("boxlang|bvm install $BOXLANG_VERSION && bvm use $BOXLANG_VERSION|pinned BoxLang runtime")
+  if [[ -z "$bl_ver" ]]; then
+    steps+=("boxlang|bvm install $BOXLANG_VERSION && bvm use $BOXLANG_VERSION|BoxLang runtime ($([[ $BOXLANG_VERSION == latest ]] && echo "latest stable${bl_want:+, $bl_want}" || echo "pinned"))")
+  elif [[ -n "$bl_want" && "$bl_ver" != "$bl_want" ]]; then
+    steps+=("boxlang|bvm install $BOXLANG_VERSION && bvm use $BOXLANG_VERSION|update BoxLang $bl_ver to $bl_want")
   fi
   if (( ! have_rustup )) || [[ -z "$rust_ver" ]]; then
     steps+=("rust|rustup default stable|activates Rust and Cargo for your user (part of --install)")
@@ -152,7 +164,10 @@ report_check() {
   printf 'mvm: %s\n' "$([[ $have_mvm == 1 ]] && echo "${mvm_ver:-installed}" || echo missing)"
   printf 'matchbox: %s (want %s)\n' "${mb_ver:-missing}" "$MATCHBOX_VERSION"
   printf 'bvm: %s\n' "$([[ $have_bvm == 1 ]] && echo "${bvm_ver:-installed}" || echo missing)"
-  printf 'boxlang: %s (want %s)\n' "${bl_ver:-missing}" "$BOXLANG_VERSION"
+  if [[ "$BOXLANG_VERSION" != latest ]]; then bl_desc="$BOXLANG_VERSION (pinned)"
+  elif [[ -n "$bl_want" ]]; then bl_desc="latest = $bl_want"
+  else bl_desc="latest, version lookup unavailable"; fi
+  printf 'boxlang: %s (want %s)\n' "${bl_ver:-missing}" "$bl_desc"
   printf 'rust: %s\n' "${rust_ver:-no default toolchain}"
   printf 'bxcachy: %s\n' "$([[ $have_bxcachy == 1 ]] && echo "${bx_ver:-installed}" || echo missing)"
   echo "== path =="
@@ -189,8 +204,8 @@ if [[ "$mode" == --install-toolchains ]]; then
 
   # Download an external installer, show what it is, and run it only after approval:
   # typed EXECUTE when interactive, or --allow-external-scripts when unattended.
-  run_external() {  # NAME URL
-    local name="$1" url="$2" file hash lines answer
+  run_external() {  # NAME URL [VAR=VALUE ...]  (extra assignments are passed to the script)
+    local name="$1" url="$2" file hash lines answer; shift 2
     mkdir -p "$cache_dir"; chmod 700 "$cache_dir"
     file="$(mktemp "$cache_dir/$name.XXXXXX.sh")"
     if ! curl -fsSL --retry 3 --retry-delay 2 "$url" -o "$file"; then echo "Download failed: $url" >&2; rm -f "$file"; exit 1; fi
@@ -209,12 +224,12 @@ if [[ "$mode" == --install-toolchains ]]; then
       echo "Not running $name unattended. Re-run with --allow-external-scripts to approve external scripts." >&2
       exit 2
     fi
-    if ! bash "$file"; then echo "$name installer failed (script kept at $file)" >&2; exit 1; fi
+    if ! env "$@" bash "$file"; then echo "$name installer failed (script kept at $file)" >&2; exit 1; fi
   }
 
   done_any=0
   if (( ! have_mvm )); then
-    run_external mvm "$MVM_URL"; done_any=1
+    run_external mvm "$MVM_URL" ${BXCACHY_MVM_VERSION:+MVM_VERSION="$BXCACHY_MVM_VERSION"}; done_any=1
     tool_path mvm >/dev/null || { echo "MVM installation failed: mvm not found afterwards" >&2; exit 1; }
   fi
   if [[ "$(tool_version matchbox)" != "$MATCHBOX_VERSION" ]]; then
@@ -227,12 +242,17 @@ if [[ "$mode" == --install-toolchains ]]; then
     tool_path bvm >/dev/null || { echo "BVM installation failed: bvm not found afterwards" >&2; exit 1; }
     echo "Note: the BVM installer may add BVM to your shell startup files; open a new shell to pick that up."
   fi
-  if [[ "$(bl_version)" != "$BOXLANG_VERSION" ]]; then
+  bl_now="$(bl_version)"; bl_target="$(boxlang_want)"
+  if [[ -z "$bl_now" || ( -n "$bl_target" && "$bl_now" != "$bl_target" ) ]]; then
     step_run "bvm install $BOXLANG_VERSION" bvm install "$BOXLANG_VERSION"; step_run "bvm use $BOXLANG_VERSION" bvm use "$BOXLANG_VERSION"; done_any=1
-    [[ "$(tool_version boxlang)" == "$BOXLANG_VERSION" ]] || { echo "BoxLang $BOXLANG_VERSION not active after install (found: $(tool_version boxlang))" >&2; exit 1; }
-    echo "BoxLang $BOXLANG_VERSION installed and verified."
+    bl_real="$(tool_version boxlang)"   # the one place the runtime is started: proof that it works
+    [[ -n "$bl_real" ]] || { echo "BoxLang does not run after install" >&2; exit 1; }
+    [[ -z "$bl_target" || "$bl_real" == "$bl_target" ]] || { echo "BoxLang $bl_target not active after install (found: $bl_real)" >&2; exit 1; }
+    echo "BoxLang $bl_real installed and verified."
+  elif [[ -z "$bl_target" ]]; then
+    echo "BoxLang $bl_now is installed; could not look up the latest version, so it was left as is."
   fi
-  if (( ! done_any )); then echo "Nothing to do: MVM, MatchBox $MATCHBOX_VERSION, BVM and BoxLang $BOXLANG_VERSION are already installed."; fi
+  if (( ! done_any )); then echo "Nothing to do: MVM, MatchBox $MATCHBOX_VERSION, BVM and BoxLang ${bl_now:-?} are already installed."; fi
   echo "Rust and the bxcachy binary are handled by later steps."
   exit 0
 fi

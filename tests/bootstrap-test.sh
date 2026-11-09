@@ -51,9 +51,9 @@ refuse() { if grep -Fq -- "$2" <<<"$1"; then echo "FAIL: unexpected '$2' in outp
 # 1. Everything missing.
 reset_mocks; MOCK_INSTALLED=""
 out="$(run bash "$root/bootstrap/install.sh" --check)"
-for s in 'os: cachyos (supported)' 'user: normal' 'sudo: available' 'network: skipped' 'missing: jdk21-openjdk' 'missing: base-devel' 'missing: yay' 'java: missing (want 21)' 'matchbox: missing (want 0.12.0)' 'boxlang: missing (want 1.19.0)' 'bxcachy: missing' 'step(s) needed'; do need "$out" "$s"; done
+for s in 'os: cachyos (supported)' 'user: normal' 'sudo: available' 'network: skipped' 'missing: jdk21-openjdk' 'missing: base-devel' 'missing: yay' 'java: missing (want 21)' 'matchbox: missing (want 0.12.0)' 'boxlang: missing (want latest, version lookup unavailable)' 'bxcachy: missing' 'step(s) needed'; do need "$out" "$s"; done
 plan="$(run bash "$root/bootstrap/install.sh" --plan)"
-for s in 'Nothing below has been run' '1. packages' 'sudo pacman -Syu --needed jdk21-openjdk git curl unzip rustup base-devel' 'upgrades the system' 'sudo pacman -S --needed yay' 'download and run https://install-bvm.boxlang.io' 'mvm install 0.12.0' 'bvm install 1.19.0' 'rustup default stable' 'install.sh --install-binary --yes' 'typed EXECUTE or --allow-external-scripts'; do need "$plan" "$s"; done
+for s in 'Nothing below has been run' '1. packages' 'sudo pacman -Syu --needed jdk21-openjdk git curl unzip rustup base-devel' 'upgrades the system' 'sudo pacman -S --needed yay' 'download and run https://install-bvm.boxlang.io' 'mvm install 0.12.0' 'bvm install latest' 'rustup default stable' 'install.sh --install-binary --yes' 'typed EXECUTE or --allow-external-scripts'; do need "$plan" "$s"; done
 
 # 2. Everything present at the pinned versions: nothing to do.
 reset_mocks; MOCK_INSTALLED="jdk21-openjdk git curl unzip rustup base-devel"
@@ -79,8 +79,9 @@ need "$plan" 'Nothing to do'
 
 # 3. Wrong versions are planned for replacement, right ones are left alone.
 mock boxlang 'echo "Ortus BoxLang v1.18.0+10"'; mock matchbox 'echo "MatchBox 0.11.0"'
+mock curl 'printf "version=1.19.0+67\nbuildDate=x\n"'
 plan="$(env -i HOME="$home" PATH="$home/.local/bin:$bin:$sys" BXCACHY_SKIP_NETWORK=1 BXCACHY_OS_RELEASE="$tmp/os-arch" MOCK_INSTALLED="$MOCK_INSTALLED" bash "$root/bootstrap/install.sh" --plan)"
-need "$plan" 'bvm install 1.19.0'; need "$plan" 'mvm install 0.12.0'; refuse "$plan" 'download and run'; refuse "$plan" 'sudo pacman'
+need "$plan" 'update BoxLang 1.18.0 to 1.19.0'; need "$plan" 'bvm install latest'; need "$plan" 'mvm install 0.12.0'; refuse "$plan" 'download and run'; refuse "$plan" 'sudo pacman'
 
 # 4. Root, unsupported OS, wrong arguments.
 out="$(MOCK_UID=0 run bash "$root/bootstrap/install.sh" --check)"; need "$out" 'user: root (run as a normal user)'
@@ -106,7 +107,7 @@ cat > "$HOME/.bvm/bin/bvm" <<"M"
 #!/usr/bin/env bash
 case "$1" in
   install) : ;;
-  use) printf "#!/usr/bin/env bash\necho \"Ortus BoxLang v%s+1\"\n" "$2" > "$HOME/.bvm/bin/boxlang"; chmod +x "$HOME/.bvm/bin/boxlang" ;;
+  use) v="$2"; [[ "$v" == latest ]] && v="${MOCK_LATEST:-1.19.0}"; printf "#!/usr/bin/env bash\necho \"Ortus BoxLang v%s+1\"\n" "$v" > "$HOME/.bvm/bin/boxlang"; chmod +x "$HOME/.bvm/bin/boxlang" ;;
   --version) echo "bvm 1.40.0" ;;
 esac
 M
@@ -118,14 +119,15 @@ reset_mocks; MOCK_INSTALLED="jdk21-openjdk git curl unzip rustup base-devel"
 mock sudo 'exit 9'
 mock java 'echo "openjdk version \"21.0.13\" 2026-04-21" >&2'
 mock curl 'url=""; out=""; while [[ $# -gt 0 ]]; do case "$1" in -o) out="$2"; shift 2 ;; http*) url="$1"; shift ;; *) shift ;; esac; done
-echo "$url" >> "$CURL_LOG"
+[[ -n "$out" ]] && echo "$url" >> "$CURL_LOG"
 [[ "${MOCK_CURL_FAIL:-0}" == 1 ]] && exit 22
 case "$url" in
   *matchbox-quick-installer*) printf "%s\n" "$MVM_FAKE" > "$out" ;;
   *install-bvm*) printf "%s\n" "$BVM_FAKE" > "$out" ;;
+  *version-latest.properties*) printf "version=%s+1\nbuildDate=x\n" "${MOCK_LATEST:-1.19.0}" ;;
   *) exit 22 ;;
 esac'
-trun() { env -i HOME="$home" PATH="$bin:$sys" BXCACHY_SKIP_NETWORK=1 BXCACHY_OS_RELEASE="$tmp/os-arch" MOCK_INSTALLED="$MOCK_INSTALLED" CURL_LOG="$tmp/curl.log" MVM_FAKE="$MVM_FAKE" BVM_FAKE="$BVM_FAKE" "$@"; }
+trun() { env -i HOME="$home" MOCK_LATEST="${MOCK_LATEST:-1.19.0}" PATH="$bin:$sys" BXCACHY_SKIP_NETWORK=1 BXCACHY_OS_RELEASE="$tmp/os-arch" MOCK_INSTALLED="$MOCK_INSTALLED" CURL_LOG="$tmp/curl.log" MVM_FAKE="$MVM_FAKE" BVM_FAKE="$BVM_FAKE" "$@"; }
 
 # 1. Unattended without the flag: refuses, runs nothing.
 fresh_home
@@ -294,8 +296,8 @@ if out="$(MOCK_RUSTUP_FAIL=1 irun bash "$root/bootstrap/install.sh" --install --
 reset_mocks; MOCK_INSTALLED="jdk21-openjdk git curl unzip rustup base-devel"
 mock sudo 'exit 9'; mock java 'echo "openjdk version \"21.0.13\" 2026-04-21" >&2'
 mock curl 'url=""; out=""; while [[ $# -gt 0 ]]; do case "$1" in -o) out="$2"; shift 2 ;; http*) url="$1"; shift ;; *) shift ;; esac; done
-echo "$url" >> "$CURL_LOG"
-case "$url" in *matchbox-quick-installer*) printf "%s\n" "$MVM_FAKE" > "$out" ;; *install-bvm*) printf "%s\n" "$BVM_FAKE" > "$out" ;; *) exit 22 ;; esac'
+[[ -n "$out" ]] && echo "$url" >> "$CURL_LOG"
+case "$url" in *matchbox-quick-installer*) printf "%s\n" "$MVM_FAKE" > "$out" ;; *install-bvm*) printf "%s\n" "$BVM_FAKE" > "$out" ;; *version-latest.properties*) printf "version=%s+1\nbuildDate=x\n" "${MOCK_LATEST:-1.19.0}" ;; *) exit 22 ;; esac'
 fresh_home
 GOOD_MVM="$MVM_FAKE"
 if out="$(MVM_FAKE='echo half-done; exit 1' trun bash "$root/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null 2>&1)"; then echo 'FAIL: dying installer treated as success' >&2; exit 1; fi
@@ -307,7 +309,7 @@ need "$out" 'BoxLang 1.19.0 installed and verified.'
 fresh_home; rm -rf "$home/.bvm"; : > "$tmp/curl.log"
 BAD_BVM="${BVM_FAKE/install) : ;;/install) exit 1 ;;}"
 if out="$(BVM_FAKE="$BAD_BVM" trun bash "$root/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null 2>&1)"; then echo 'FAIL: bvm install failure ignored' >&2; exit 1; fi
-need "$out" 'Failed: bvm install 1.19.0'
+need "$out" 'Failed: bvm install latest'
 echo 'bootstrap failure-path tests passed'
 
 # ---- Routine probes must not start the BoxLang runtime (it rewrites its own logs on every start) ----
@@ -315,9 +317,31 @@ reset_mocks; fresh_home; MOCK_INSTALLED="jdk21-openjdk git curl unzip rustup bas
 mock java 'echo "openjdk version \"21.0.13\" 2026-04-21" >&2'
 mock boxlang 'echo ran >> "$HOME/boxlang-ran"; echo "Ortus BoxLang v9.9.9+1"'
 mkdir -p "$home/.bvm/versions/1.19.0"; ln -s "$home/.bvm/versions/1.19.0" "$home/.bvm/current"; ln -sf "$bin/boxlang" "$home/.bvm/bin-boxlang" 2>/dev/null || true
-out="$(run bash "$root/bootstrap/install.sh" --check)"; need "$out" 'boxlang: 1.19.0 (want 1.19.0)'
+out="$(run bash "$root/bootstrap/install.sh" --check)"; need "$out" 'boxlang: 1.19.0 (want latest, version lookup unavailable)'
 run bash "$root/bootstrap/install.sh" --plan >/dev/null
 [[ ! -e "$home/boxlang-ran" ]] || { echo 'FAIL: a read-only probe started the BoxLang runtime' >&2; exit 1; }
 # Without BVM's symlink, it falls back to asking boxlang itself.
 rm "$home/.bvm/current"; out="$(run bash "$root/bootstrap/install.sh" --check)"; need "$out" 'boxlang: 9.9.9'
 echo 'bootstrap probe tests passed'
+
+# ---- BoxLang follows the latest stable release; MatchBox stays pinned ----
+reset_mocks; MOCK_INSTALLED="jdk21-openjdk git curl unzip rustup base-devel"
+mock sudo 'exit 9'; mock java 'echo "openjdk version \"21.0.13\" 2026-04-21" >&2'
+mock curl 'url=""; out=""; while [[ $# -gt 0 ]]; do case "$1" in -o) out="$2"; shift 2 ;; http*) url="$1"; shift ;; *) shift ;; esac; done
+[[ -n "$out" ]] && echo "$url" >> "$CURL_LOG"
+case "$url" in *matchbox-quick-installer*) printf "%s\n" "$MVM_FAKE" > "$out" ;; *install-bvm*) printf "%s\n" "$BVM_FAKE" > "$out" ;; *version-latest.properties*) printf "version=%s+1\nbuildDate=x\n" "${MOCK_LATEST:-1.19.0}" ;; *) exit 22 ;; esac'
+fresh_home
+out="$(trun bash "$root/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null 2>&1)"; need "$out" 'BoxLang 1.19.0 installed and verified.'
+chk="$(trun env PATH="$home/.local/bin:$bin:$sys" bash "$root/bootstrap/install.sh" --check)"; need "$chk" 'boxlang: 1.19.0 (want latest = 1.19.0)'
+# Upstream ships a newer BoxLang: the next run updates it with `bvm`, downloads no installer script.
+: > "$tmp/curl.log"
+chk="$(MOCK_LATEST=1.20.0 trun env PATH="$home/.local/bin:$bin:$sys" bash "$root/bootstrap/install.sh" --plan)"; need "$chk" 'update BoxLang 1.19.0 to 1.20.0'
+out="$(MOCK_LATEST=1.20.0 trun bash "$root/bootstrap/install.sh" --install-toolchains --yes </dev/null 2>&1)"; need "$out" 'BoxLang 1.20.0 installed and verified.'
+[[ ! -s "$tmp/curl.log" ]] || { echo 'FAIL: updating BoxLang downloaded an installer script' >&2; cat "$tmp/curl.log" >&2; exit 1; }
+# Already latest: nothing to do. Lookup unavailable: the installed version is left alone, and says so.
+out="$(MOCK_LATEST=1.20.0 trun bash "$root/bootstrap/install.sh" --install-toolchains --yes </dev/null 2>&1)"; need "$out" 'Nothing to do'
+mock curl 'exit 22'   # curl exists but the lookup fails (offline)
+out="$(trun bash "$root/bootstrap/install.sh" --install-toolchains --yes </dev/null 2>&1)"; need "$out" 'could not look up the latest version'
+# A pinned BoxLang is honored.
+chk="$(trun env BXCACHY_BOXLANG_VERSION=1.19.0 bash "$root/bootstrap/install.sh" --check)"; need "$chk" '(want 1.19.0 (pinned))'
+echo 'bootstrap latest-BoxLang tests passed'
