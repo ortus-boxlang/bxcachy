@@ -51,7 +51,7 @@ class {
          case "plan":
          case "apps-doctor":
           println( "Base packages (pacman first):" );
-          for ( pkg in base ) println( pkg );
+          for ( var pkg in base ) println( pkg );
           break;
          case "optional-plan":
           if ( p.len() < 2 ) {
@@ -123,7 +123,7 @@ class {
           break;
          case "install-plan":
           println( "Base installation plan (pacman first, yay fallback):" );
-          for ( pkg in base ) println( pkg );
+          for ( var pkg in base ) println( pkg );
           println( "No packages installed. Run the tested package adapter to apply this plan." );
           break;
          case "profile-install-plan":
@@ -211,7 +211,7 @@ class {
           officialPackages = [];
           aurPackages = [];
           unavailablePackages = [];
-          for ( packageName in installPackages ) {
+          for ( var packageName in installPackages ) {
            installed = systemExecute( name = "pacman", arguments = "-Qq " & packageName, timeout = 15, terminateOnTimeout = true );
            if ( installed.timeout ) {
             println( "Package status timed out: " & packageName );
@@ -268,7 +268,7 @@ class {
           catArg = p.len() >= 3 ? p[3] : "";
           catBad = p.len() > 3 || !arrayFind( [ "list", "show", "groups", "check", "version" ], catVerb ) || ( catVerb == "show" && p.len() != 3 ) || ( catVerb != "show" && p.len() > 2 );
           catOpts = [ "json", "group", "category", "tier", "kind", "source" ];
-          for ( o in args.options ) if ( !arrayFind( catOpts, o ) && !arrayFind( [ "yes", "dry-run", "force", "quiet" ], o ) ) catBad = true;
+          for ( var o in args.options ) if ( !arrayFind( catOpts, o ) && !arrayFind( [ "yes", "dry-run", "force", "quiet" ], o ) ) catBad = true;
           if ( catBad ) {
            println( "Usage: bxcachy catalog list [--group=G] [--category=C] [--tier=default|optional] [--kind=K] [--source=S] [--json] | show ID | groups | check | version" );
            CLIExit( 2 );
@@ -281,13 +281,13 @@ class {
           }
           if ( catVerb == "groups" ) {
            rows = [];
-           for ( g in cat.groups ) {
+           for ( var g in cat.groups ) {
             cs = cat.categories.filter( function( c ) { return c.group == g.id; } ).map( function( c ) { return c.title; } );
             n = cat.apps.filter( function( a ) { return a.group == g.id; } ).len();
             rows.append( { id: g.id, title: g.title, blurb: g.blurb, order: g.order, apps: n, categories: cs } );
            }
            if ( asJson ) println( cli.envelope( "catalog groups", 0, rows ) );
-           else for ( r in rows ) println( r.id & ": " & r.title & " (" & r.apps & " apps) - " & r.categories.toList( ", " ) );
+           else for ( var r in rows ) println( r.id & ": " & r.title & " (" & r.apps & " apps) - " & r.categories.toList( ", " ) );
            break;
           }
           if ( catVerb == "show" ) {
@@ -315,8 +315,8 @@ class {
            if ( asJson ) {
             println( cli.envelope( "catalog check", code, res ) );
            } else {
-            for ( e in res.errors ) println( "error: " & e );
-            for ( w in res.warnings ) println( "warning: " & w );
+            for ( var e in res.errors ) println( "error: " & e );
+            for ( var w in res.warnings ) println( "warning: " & w );
             println( "catalog check: " & res.errors.len() & " errors, " & res.warnings.len() & " warnings, " & cat.apps.len() & " apps" );
            }
            CLIExit( code );
@@ -331,7 +331,7 @@ class {
            return true;
           } );
           if ( asJson ) println( cli.envelope( "catalog list", 0, sel ) );
-          else for ( a in sel ) println( catalog.row( a ) );
+          else for ( var a in sel ) println( catalog.row( a ) );
           break;
          case "config":
           cfgVerb = p.len() >= 2 ? p[2] : "";
@@ -345,20 +345,20 @@ class {
           dryRun = structKeyExists( args.options, "dry-run" );
           force = structKeyExists( args.options, "force" );
           nl = chr( 10 );
-          managed = { bxcachy: { name: "bxcachy", target: config.cfgHome() & "/bxcachy/bxcachy.json", mode: "600", content: '{' & nl & '  "schema_version": 1,' & nl & '  "desktop": "auto"' & nl & '}' & nl } };
+          var managed = { "bxcachy": { name: "bxcachy", target: config.cfgHome() & "/bxcachy/bxcachy.json", mode: "600", content: '{' & nl & '  "schema_version": 1,' & nl & '  "desktop": "auto"' & nl & '}' & nl } };
           if ( cfgVerb == "list" || cfgVerb == "history" ) {
            rows = [];
            if ( cfgVerb == "list" ) {
-            for ( key in managed ) rows.append( { name: key, target: managed[key].target, state: config.configState( managed[key] ) } );
+            for ( var key in managed ) rows.append( { name: key, target: managed[key].target, state: config.configState( managed[key] ) } );
            } else {
             rows = config.journalEntries( cfgName );
            }
            if ( asJson ) {
             println( jsonSerialize( rows ) );
            } else if ( cfgVerb == "list" ) {
-            for ( r in rows ) println( r.name & ": " & r.state & " (" & r.target & ")" );
+            for ( var r in rows ) println( r.name & ": " & r.state & " (" & r.target & ")" );
            } else {
-            for ( r in rows ) println( r.id & " " & r.action & " " & r.name & " " & r.time );
+            for ( var r in rows ) println( r.id & " " & r.action & " " & r.name & " " & r.time );
             if ( !rows.len() ) println( "No history." );
            }
            break;
