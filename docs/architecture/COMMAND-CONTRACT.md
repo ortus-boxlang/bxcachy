@@ -77,7 +77,8 @@ Entry schema (legacy fields kept, new fields marked):
 | Field | Notes |
 |---|---|
 | `id`, `name`, `kind` (`desktop` `tui` `web`), `category`, `description` | as legacy |
-| `source` (`pacman` `aur` `script` `manual` `web`), `target` | package name, or URL for web and script |
+| `source` (`pacman` `aur` `pkgbuild` `script` `manual` `web`), `target` | package name, or URL for web and script |
+| `pkgbuild` source: `repo`, `path`, `ref` | Build with `makepkg` as the normal user from a PKGBUILD in a public git repo, pinned to a commit or tag, then install the result with pacman. Used for Omarchy 4.5 apps (`omacom/omarchy-pkgs`). The PKGBUILD is shown before it is built. |
 | `check` (for `script`) | argv array that exits 0 when installed, for example `["command","-v","pi"]` |
 | `default` | base tier flag |
 | `source_status`, `source_confirmed` | legacy provenance flags, kept |
