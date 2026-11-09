@@ -1,0 +1,3555 @@
+{
+ "schema": 2,
+ "catalog_version": "0.1.0-draft",
+ "generated": "2026-11-09",
+ "notes": [
+  "Tier default = installed by a plain install; optional = offered in the picker; apps not listed are not part of the catalog.",
+  "pkgbuild.ref is \"master\" and MUST be pinned to a commit before any installer uses it.",
+  "Sources checked 2026-11-09 against CachyOS (cachyos, v3, v4), Arch (core, extra, multilib) and the AUR. Entries with source \"unresolved\" have no installable package yet.",
+  "Omarchy app inventory comes from the unofficial store omarchyapps.com plus the Omarchy 4.5 notes; verify before release."
+ ],
+ "apps": [
+  {
+   "id": "brave",
+   "name": "Brave Browser",
+   "kind": "desktop",
+   "group": "Everyday",
+   "category": "Browsers",
+   "tier": "default",
+   "source": "pacman",
+   "targets": [
+    "brave-bin"
+   ],
+   "repo": "cachyos",
+   "macos": "Safari / Chrome",
+   "origin": [
+    "owner-pick",
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "chromium",
+   "name": "Chromium",
+   "kind": "desktop",
+   "group": "Everyday",
+   "category": "Browsers",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "chromium"
+   ],
+   "repo": "extra",
+   "macos": "Chrome",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "firefox",
+   "name": "Firefox",
+   "kind": "desktop",
+   "group": "Everyday",
+   "category": "Browsers",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "firefox"
+   ],
+   "repo": "extra",
+   "macos": "Safari",
+   "origin": [
+    "owner-request"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "google-chrome",
+   "name": "Google Chrome",
+   "kind": "desktop",
+   "group": "Everyday",
+   "category": "Browsers",
+   "tier": "optional",
+   "source": "aur",
+   "targets": [
+    "google-chrome"
+   ],
+   "macos": "Chrome",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "helium",
+   "name": "Helium",
+   "kind": "desktop",
+   "group": "Everyday",
+   "category": "Browsers",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "helium-browser-bin"
+   ],
+   "repo": "cachyos",
+   "macos": "Safari / Chrome",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "edge",
+   "name": "Microsoft Edge",
+   "kind": "desktop",
+   "group": "Everyday",
+   "category": "Browsers",
+   "tier": "optional",
+   "source": "aur",
+   "targets": [
+    "microsoft-edge-stable-bin"
+   ],
+   "macos": "Edge",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "tor-browser",
+   "name": "Tor Browser",
+   "kind": "desktop",
+   "group": "Everyday",
+   "category": "Browsers",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "torbrowser-launcher"
+   ],
+   "repo": "extra",
+   "macos": "Safari private browsing",
+   "origin": [
+    "owner-request"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "zen",
+   "name": "Zen Browser",
+   "kind": "desktop",
+   "group": "Everyday",
+   "category": "Browsers",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "zen-browser-bin"
+   ],
+   "repo": "cachyos",
+   "macos": "Arc",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09",
+   "decided_by_owner": true
+  },
+  {
+   "id": "localsend",
+   "name": "LocalSend",
+   "kind": "desktop",
+   "group": "Everyday",
+   "category": "Communication",
+   "tier": "default",
+   "source": "pacman",
+   "targets": [
+    "localsend"
+   ],
+   "repo": "cachyos",
+   "macos": "AirDrop",
+   "origin": [
+    "owner-pick",
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "omairc",
+   "name": "Omairc",
+   "kind": "desktop",
+   "group": "Everyday",
+   "category": "Communication",
+   "tier": "optional",
+   "source": "pkgbuild",
+   "targets": [
+    "omairc"
+   ],
+   "pkgbuild": {
+    "repo": "omacom/omarchy-pkgs",
+    "path": "pkgbuilds/omairc",
+    "ref": "master"
+   },
+   "macos": "Colloquy",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "signal",
+   "name": "Signal",
+   "kind": "desktop",
+   "group": "Everyday",
+   "category": "Communication",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "signal-desktop"
+   ],
+   "repo": "extra",
+   "macos": "Signal (same)",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "slack",
+   "name": "Slack",
+   "kind": "desktop",
+   "group": "Everyday",
+   "category": "Communication",
+   "tier": "default",
+   "source": "aur",
+   "targets": [
+    "slack-desktop"
+   ],
+   "macos": "Slack (same)",
+   "origin": [
+    "owner-pick",
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09",
+   "decided_by_owner": true
+  },
+  {
+   "id": "telegram",
+   "name": "Telegram",
+   "kind": "desktop",
+   "group": "Everyday",
+   "category": "Communication",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "telegram-desktop"
+   ],
+   "repo": "extra",
+   "macos": "Telegram (same)",
+   "origin": [
+    "owner-pick"
+   ],
+   "verified_on": "2026-11-09",
+   "decided_by_owner": true
+  },
+  {
+   "id": "zap-whatsapp",
+   "name": "Zap (WhatsApp)",
+   "kind": "desktop",
+   "group": "Everyday",
+   "category": "Communication",
+   "tier": "default",
+   "source": "unresolved",
+   "targets": [
+    "zap-whatsapp"
+   ],
+   "origin": [
+    "owner-pick"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "zoom",
+   "name": "Zoom",
+   "kind": "desktop",
+   "group": "Everyday",
+   "category": "Communication",
+   "tier": "default",
+   "source": "aur",
+   "targets": [
+    "zoom"
+   ],
+   "macos": "Zoom (same)",
+   "origin": [
+    "owner-pick"
+   ],
+   "verified_on": "2026-11-09",
+   "decided_by_owner": true
+  },
+  {
+   "id": "signed",
+   "name": "Signed",
+   "kind": "desktop",
+   "group": "Everyday",
+   "category": "Documents",
+   "tier": "default",
+   "source": "aur",
+   "targets": [
+    "signed"
+   ],
+   "macos": "Preview (sign PDF)",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09",
+   "decided_by_owner": true
+  },
+  {
+   "id": "hey",
+   "name": "HEY",
+   "kind": "web",
+   "group": "Everyday",
+   "category": "Email",
+   "tier": "optional",
+   "source": "web",
+   "url": "https://app.hey.com",
+   "origin": [
+    "omarchy-web"
+   ]
+  },
+  {
+   "id": "slap-notes",
+   "name": "Slap Notes",
+   "kind": "desktop",
+   "group": "Everyday",
+   "category": "Notes",
+   "tier": "optional",
+   "source": "pkgbuild",
+   "targets": [
+    "slap-notes-bin"
+   ],
+   "pkgbuild": {
+    "repo": "omacom/omarchy-pkgs",
+    "path": "pkgbuilds/slap-notes-bin",
+    "ref": "master"
+   },
+   "macos": "Notes",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "typora",
+   "name": "Typora",
+   "kind": "desktop",
+   "group": "Everyday",
+   "category": "Notes",
+   "tier": "optional",
+   "source": "aur",
+   "targets": [
+    "typora"
+   ],
+   "macos": "Typora (same)",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "hype",
+   "name": "Hype",
+   "kind": "desktop",
+   "group": "Everyday",
+   "category": "Presentations",
+   "tier": "optional",
+   "source": "aur",
+   "targets": [
+    "hype"
+   ],
+   "macos": "Keynote",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "omapresent",
+   "name": "Omapresent",
+   "kind": "desktop",
+   "group": "Everyday",
+   "category": "Presentations",
+   "tier": "optional",
+   "source": "pkgbuild",
+   "targets": [
+    "omapresent"
+   ],
+   "pkgbuild": {
+    "repo": "omacom/omarchy-pkgs",
+    "path": "pkgbuilds/omapresent",
+    "ref": "master"
+   },
+   "macos": "Keynote",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "gridcraft",
+   "name": "Gridcraft",
+   "kind": "desktop",
+   "group": "Everyday",
+   "category": "Productivity",
+   "tier": "optional",
+   "source": "aur",
+   "targets": [
+    "gridcraft-bin"
+   ],
+   "macos": "Numbers",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "libreoffice",
+   "name": "LibreOffice",
+   "kind": "desktop",
+   "group": "Everyday",
+   "category": "Productivity",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "libreoffice-fresh"
+   ],
+   "repo": "extra",
+   "macos": "Pages / Numbers / Keynote",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "meeting-recorder",
+   "name": "Meeting Recorder",
+   "kind": "desktop",
+   "group": "Everyday",
+   "category": "Productivity",
+   "tier": "optional",
+   "source": "pkgbuild",
+   "targets": [
+    "omarchy-meeting-recorder-bin"
+   ],
+   "pkgbuild": {
+    "repo": "omacom/omarchy-pkgs",
+    "path": "pkgbuilds/omarchy-meeting-recorder-bin",
+    "ref": "master"
+   },
+   "macos": "Otter / Granola",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "notion-desktop",
+   "name": "Notion Desktop",
+   "kind": "desktop",
+   "group": "Everyday",
+   "category": "Productivity",
+   "tier": "default",
+   "source": "pkgbuild",
+   "targets": [
+    "notion-desktop"
+   ],
+   "pkgbuild": {
+    "repo": "omacom/omarchy-pkgs",
+    "path": "pkgbuilds/notion-desktop",
+    "ref": "master"
+   },
+   "macos": "Notion (same)",
+   "origin": [
+    "owner-pick",
+    "omarchy-desktop"
+   ],
+   "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "obsidian",
+   "name": "Obsidian",
+   "kind": "desktop",
+   "group": "Everyday",
+   "category": "Productivity",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "obsidian"
+   ],
+   "repo": "extra",
+   "macos": "Notes / Obsidian",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "onlyoffice",
+   "name": "ONLYOFFICE",
+   "kind": "desktop",
+   "group": "Everyday",
+   "category": "Productivity",
+   "tier": "default",
+   "source": "pacman",
+   "targets": [
+    "onlyoffice-bin"
+   ],
+   "repo": "cachyos",
+   "macos": "Pages / Numbers / Keynote",
+   "origin": [
+    "owner-pick"
+   ],
+   "verified_on": "2026-11-09",
+   "decided_by_owner": true
+  },
+  {
+   "id": "wordcraft",
+   "name": "Wordcraft",
+   "kind": "desktop",
+   "group": "Everyday",
+   "category": "Productivity",
+   "tier": "optional",
+   "source": "aur",
+   "targets": [
+    "wordcraft-bin"
+   ],
+   "macos": "Pages",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "papers",
+   "name": "Papers",
+   "kind": "desktop",
+   "group": "Everyday",
+   "category": "Reading",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "papers"
+   ],
+   "repo": "extra",
+   "macos": "Preview",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "1password",
+   "name": "1Password",
+   "kind": "desktop",
+   "group": "Everyday",
+   "category": "Security",
+   "tier": "optional",
+   "source": "aur",
+   "targets": [
+    "1password"
+   ],
+   "macos": "Passwords",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "maps",
+   "name": "Google Maps",
+   "kind": "web",
+   "group": "Everyday",
+   "category": "Social & media",
+   "tier": "default",
+   "source": "web",
+   "url": "https://maps.google.com",
+   "macos": "Maps",
+   "origin": [
+    "owner-pick"
+   ]
+  },
+  {
+   "id": "photos",
+   "name": "Google Photos",
+   "kind": "web",
+   "group": "Everyday",
+   "category": "Social & media",
+   "tier": "default",
+   "source": "web",
+   "url": "https://photos.google.com",
+   "macos": "Photos",
+   "origin": [
+    "owner-pick",
+    "omarchy-web"
+   ]
+  },
+  {
+   "id": "whatsapp",
+   "name": "WhatsApp",
+   "kind": "web",
+   "group": "Everyday",
+   "category": "Social & media",
+   "tier": "optional",
+   "source": "web",
+   "url": "https://web.whatsapp.com",
+   "origin": [
+    "omarchy-web"
+   ]
+  },
+  {
+   "id": "youtube",
+   "name": "YouTube",
+   "kind": "web",
+   "group": "Everyday",
+   "category": "Social & media",
+   "tier": "default",
+   "source": "web",
+   "url": "https://www.youtube.com",
+   "macos": "Safari",
+   "origin": [
+    "owner-pick",
+    "omarchy-web"
+   ]
+  },
+  {
+   "id": "youtube-music",
+   "name": "YouTube Music",
+   "kind": "web",
+   "group": "Everyday",
+   "category": "Social & media",
+   "tier": "default",
+   "source": "web",
+   "url": "https://music.youtube.com",
+   "macos": "Music",
+   "origin": [
+    "owner-pick"
+   ]
+  },
+  {
+   "id": "omawrite",
+   "name": "Omawrite",
+   "kind": "desktop",
+   "group": "Everyday",
+   "category": "Writing",
+   "tier": "optional",
+   "source": "aur",
+   "targets": [
+    "omawrite"
+   ],
+   "macos": "TextEdit",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "grok",
+   "name": "Grok",
+   "kind": "web",
+   "group": "Web apps (Google, Microsoft, work)",
+   "category": "AI",
+   "tier": "optional",
+   "source": "web",
+   "url": "https://grok.com",
+   "macos": "Grok",
+   "origin": [
+    "omarchy-web"
+   ]
+  },
+  {
+   "id": "hey-calendar",
+   "name": "HEY Calendar",
+   "kind": "web",
+   "group": "Web apps (Google, Microsoft, work)",
+   "category": "Calendar",
+   "tier": "optional",
+   "source": "web",
+   "url": "https://app.hey.com/calendar",
+   "macos": "Calendar",
+   "origin": [
+    "omarchy-web"
+   ]
+  },
+  {
+   "id": "google-messages",
+   "name": "Google Messages",
+   "kind": "web",
+   "group": "Web apps (Google, Microsoft, work)",
+   "category": "Communication",
+   "tier": "optional",
+   "source": "web",
+   "url": "https://messages.google.com/web",
+   "macos": "Messages",
+   "origin": [
+    "omarchy-web"
+   ]
+  },
+  {
+   "id": "google-docs",
+   "name": "Google Docs",
+   "kind": "web",
+   "group": "Web apps (Google, Microsoft, work)",
+   "category": "Google Workspace",
+   "tier": "default",
+   "source": "web",
+   "url": "https://docs.google.com",
+   "origin": [
+    "owner-pick"
+   ]
+  },
+  {
+   "id": "google-drive",
+   "name": "Google Drive",
+   "kind": "web",
+   "group": "Web apps (Google, Microsoft, work)",
+   "category": "Google Workspace",
+   "tier": "default",
+   "source": "web",
+   "url": "https://drive.google.com",
+   "macos": "iCloud Drive",
+   "origin": [
+    "owner-pick"
+   ]
+  },
+  {
+   "id": "google-sheets",
+   "name": "Google Sheets",
+   "kind": "web",
+   "group": "Web apps (Google, Microsoft, work)",
+   "category": "Google Workspace",
+   "tier": "default",
+   "source": "web",
+   "url": "https://sheets.google.com",
+   "origin": [
+    "owner-pick"
+   ]
+  },
+  {
+   "id": "google-slides",
+   "name": "Google Slides",
+   "kind": "web",
+   "group": "Web apps (Google, Microsoft, work)",
+   "category": "Google Workspace",
+   "tier": "default",
+   "source": "web",
+   "url": "https://slides.google.com",
+   "origin": [
+    "owner-pick"
+   ]
+  },
+  {
+   "id": "excel",
+   "name": "Excel",
+   "kind": "web",
+   "group": "Web apps (Google, Microsoft, work)",
+   "category": "Microsoft 365",
+   "tier": "optional",
+   "source": "web",
+   "url": "https://www.microsoft365.com/launch/excel",
+   "origin": [
+    "omarchy-web"
+   ]
+  },
+  {
+   "id": "microsoft-teams-web",
+   "name": "Microsoft Teams Web",
+   "kind": "web",
+   "group": "Web apps (Google, Microsoft, work)",
+   "category": "Microsoft 365",
+   "tier": "optional",
+   "source": "web",
+   "url": "https://teams.microsoft.com",
+   "origin": [
+    "omarchy-web"
+   ]
+  },
+  {
+   "id": "onedrive",
+   "name": "OneDrive",
+   "kind": "web",
+   "group": "Web apps (Google, Microsoft, work)",
+   "category": "Microsoft 365",
+   "tier": "optional",
+   "source": "web",
+   "url": "https://onedrive.live.com",
+   "origin": [
+    "omarchy-web"
+   ]
+  },
+  {
+   "id": "outlook",
+   "name": "Outlook",
+   "kind": "web",
+   "group": "Web apps (Google, Microsoft, work)",
+   "category": "Microsoft 365",
+   "tier": "optional",
+   "source": "web",
+   "url": "https://outlook.office.com",
+   "origin": [
+    "omarchy-web"
+   ]
+  },
+  {
+   "id": "powerpoint",
+   "name": "PowerPoint",
+   "kind": "web",
+   "group": "Web apps (Google, Microsoft, work)",
+   "category": "Microsoft 365",
+   "tier": "optional",
+   "source": "web",
+   "url": "https://www.microsoft365.com/launch/powerpoint",
+   "origin": [
+    "omarchy-web"
+   ]
+  },
+  {
+   "id": "word",
+   "name": "Word",
+   "kind": "web",
+   "group": "Web apps (Google, Microsoft, work)",
+   "category": "Microsoft 365",
+   "tier": "optional",
+   "source": "web",
+   "url": "https://www.microsoft365.com/launch/word",
+   "origin": [
+    "omarchy-web"
+   ]
+  },
+  {
+   "id": "x",
+   "name": "X",
+   "kind": "web",
+   "group": "Web apps (Google, Microsoft, work)",
+   "category": "Social & media",
+   "tier": "optional",
+   "source": "web",
+   "url": "https://x.com",
+   "macos": "X",
+   "origin": [
+    "omarchy-web"
+   ]
+  },
+  {
+   "id": "basecamp",
+   "name": "Basecamp",
+   "kind": "web",
+   "group": "Web apps (Google, Microsoft, work)",
+   "category": "Work",
+   "tier": "optional",
+   "source": "web",
+   "url": "https://basecamp.com",
+   "origin": [
+    "omarchy-web"
+   ]
+  },
+  {
+   "id": "gmail",
+   "name": "Gmail",
+   "kind": "web",
+   "group": "Web apps (Google, Microsoft, work)",
+   "category": "Work",
+   "tier": "default",
+   "source": "web",
+   "url": "https://mail.google.com",
+   "macos": "Mail",
+   "origin": [
+    "owner-pick"
+   ]
+  },
+  {
+   "id": "google-calendar",
+   "name": "Google Calendar",
+   "kind": "web",
+   "group": "Web apps (Google, Microsoft, work)",
+   "category": "Work",
+   "tier": "default",
+   "source": "web",
+   "url": "https://calendar.google.com",
+   "macos": "Calendar",
+   "origin": [
+    "owner-pick"
+   ]
+  },
+  {
+   "id": "zoom-web",
+   "name": "Zoom",
+   "kind": "web",
+   "group": "Web apps (Google, Microsoft, work)",
+   "category": "Work",
+   "tier": "optional",
+   "source": "web",
+   "url": "https://zoom.us",
+   "origin": [
+    "omarchy-web"
+   ]
+  },
+  {
+   "id": "cliamp",
+   "name": "Cliamp",
+   "kind": "tui",
+   "group": "Media and creative",
+   "category": "Audio",
+   "tier": "optional",
+   "source": "aur",
+   "targets": [
+    "cliamp"
+   ],
+   "macos": "Music (retro player)",
+   "origin": [
+    "omarchy-shell-tool"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "omaspeak",
+   "name": "Omaspeak",
+   "kind": "desktop",
+   "group": "Media and creative",
+   "category": "Audio",
+   "tier": "optional",
+   "source": "pkgbuild",
+   "targets": [
+    "omaspeak-bin"
+   ],
+   "pkgbuild": {
+    "repo": "omacom/omarchy-pkgs",
+    "path": "pkgbuilds/omaspeak-bin",
+    "ref": "master"
+   },
+   "macos": "Spoken Content",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "bambustudio",
+   "name": "Bambu Studio",
+   "kind": "desktop",
+   "group": "Media and creative",
+   "category": "CAD",
+   "tier": "optional",
+   "source": "aur",
+   "targets": [
+    "bambustudio-bin"
+   ],
+   "macos": "Bambu Studio (same)",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "canva",
+   "name": "Canva",
+   "kind": "web",
+   "group": "Media and creative",
+   "category": "Design",
+   "tier": "default",
+   "source": "web",
+   "url": "https://www.canva.com/",
+   "origin": [
+    "owner-pick"
+   ]
+  },
+  {
+   "id": "gamma",
+   "name": "Gamma",
+   "kind": "web",
+   "group": "Media and creative",
+   "category": "Design",
+   "tier": "default",
+   "source": "web",
+   "url": "https://gamma.app/",
+   "origin": [
+    "owner-pick"
+   ]
+  },
+  {
+   "id": "omacharts",
+   "name": "Omacharts",
+   "kind": "desktop",
+   "group": "Media and creative",
+   "category": "Design",
+   "tier": "optional",
+   "source": "pkgbuild",
+   "targets": [
+    "omacharts"
+   ],
+   "pkgbuild": {
+    "repo": "omacom/omarchy-pkgs",
+    "path": "pkgbuilds/omacharts",
+    "ref": "master"
+   },
+   "macos": "Numbers charts",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "omadesign",
+   "name": "Omadesign",
+   "kind": "desktop",
+   "group": "Media and creative",
+   "category": "Design",
+   "tier": "optional",
+   "source": "pkgbuild",
+   "targets": [
+    "omadesign-bin"
+   ],
+   "pkgbuild": {
+    "repo": "omacom/omarchy-pkgs",
+    "path": "pkgbuilds/omadesign-bin",
+    "ref": "master"
+   },
+   "macos": "Pixelmator / Affinity",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "squoosh",
+   "name": "Squoosh",
+   "kind": "web",
+   "group": "Media and creative",
+   "category": "Design",
+   "tier": "default",
+   "source": "web",
+   "url": "https://squoosh.app/",
+   "origin": [
+    "owner-pick"
+   ]
+  },
+  {
+   "id": "flameshot",
+   "name": "Flameshot",
+   "kind": "desktop",
+   "group": "Media and creative",
+   "category": "Graphics",
+   "tier": "default",
+   "source": "pacman",
+   "targets": [
+    "flameshot"
+   ],
+   "repo": "extra",
+   "macos": "Screenshot (Shift+Cmd+4) / Shottr",
+   "origin": [
+    "owner-pick"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "pinta",
+   "name": "Pinta",
+   "kind": "desktop",
+   "group": "Media and creative",
+   "category": "Graphics",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "pinta"
+   ],
+   "repo": "extra",
+   "macos": "Preview / Pixelmator",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "schist",
+   "name": "Schist",
+   "kind": "desktop",
+   "group": "Media and creative",
+   "category": "Graphics",
+   "tier": "optional",
+   "source": "aur",
+   "targets": [
+    "schist-bin"
+   ],
+   "macos": "Pixelmator (PSD)",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "ffmpeg",
+   "name": "FFmpeg",
+   "kind": "tui",
+   "group": "Media and creative",
+   "category": "Media",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "ffmpeg"
+   ],
+   "repo": "extra",
+   "origin": [
+    "omarchy-shell-tool"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "imv",
+   "name": "imv",
+   "kind": "desktop",
+   "group": "Media and creative",
+   "category": "Media",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "imv"
+   ],
+   "repo": "extra",
+   "macos": "Preview",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "kdenlive",
+   "name": "Kdenlive",
+   "kind": "desktop",
+   "group": "Media and creative",
+   "category": "Media",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "kdenlive"
+   ],
+   "repo": "extra",
+   "macos": "iMovie / Final Cut",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "link-studio",
+   "name": "Link Studio (Insta360 Link)",
+   "kind": "desktop",
+   "group": "Media and creative",
+   "category": "Media",
+   "tier": "optional",
+   "source": "pkgbuild",
+   "targets": [
+    "link-studio"
+   ],
+   "pkgbuild": {
+    "repo": "omacom/omarchy-pkgs",
+    "path": "pkgbuilds/link-studio",
+    "ref": "master"
+   },
+   "macos": "Insta360 Link Controller",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "monologue",
+   "name": "Monologue",
+   "kind": "desktop",
+   "group": "Media and creative",
+   "category": "Media",
+   "tier": "optional",
+   "source": "pkgbuild",
+   "targets": [
+    "monologue"
+   ],
+   "pkgbuild": {
+    "repo": "omacom/omarchy-pkgs",
+    "path": "pkgbuilds/monologue",
+    "ref": "master"
+   },
+   "macos": "Photo Booth",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "mpv",
+   "name": "MPV",
+   "kind": "desktop",
+   "group": "Media and creative",
+   "category": "Media",
+   "tier": "default",
+   "source": "pacman",
+   "targets": [
+    "mpv"
+   ],
+   "repo": "extra",
+   "macos": "QuickTime / IINA",
+   "origin": [
+    "owner-pick",
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "obs",
+   "name": "OBS Studio",
+   "kind": "desktop",
+   "group": "Media and creative",
+   "category": "Media",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "obs-studio"
+   ],
+   "repo": "extra",
+   "macos": "ScreenFlow / QuickTime",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "omacut",
+   "name": "Omacut",
+   "kind": "desktop",
+   "group": "Media and creative",
+   "category": "Media",
+   "tier": "optional",
+   "source": "pkgbuild",
+   "targets": [
+    "omacut"
+   ],
+   "pkgbuild": {
+    "repo": "omacom/omarchy-pkgs",
+    "path": "pkgbuilds/omacut",
+    "ref": "master"
+   },
+   "macos": "QuickTime trim",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "omareel",
+   "name": "Omareel",
+   "kind": "desktop",
+   "group": "Media and creative",
+   "category": "Media",
+   "tier": "optional",
+   "source": "pkgbuild",
+   "targets": [
+    "omareel"
+   ],
+   "pkgbuild": {
+    "repo": "omacom/omarchy-pkgs",
+    "path": "pkgbuilds/omareel",
+    "ref": "master"
+   },
+   "macos": "ScreenFlow",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "spotify",
+   "name": "Spotify",
+   "kind": "desktop",
+   "group": "Media and creative",
+   "category": "Media",
+   "tier": "default",
+   "source": "aur",
+   "targets": [
+    "spotify"
+   ],
+   "macos": "Music / Spotify",
+   "origin": [
+    "owner-pick",
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "yt-dlp",
+   "name": "yt-dlp",
+   "kind": "tui",
+   "group": "Media and creative",
+   "category": "Media",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "yt-dlp"
+   ],
+   "repo": "extra",
+   "origin": [
+    "omarchy-shell-tool"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "rawmakase",
+   "name": "Rawmakase",
+   "kind": "desktop",
+   "group": "Media and creative",
+   "category": "Photos",
+   "tier": "optional",
+   "source": "pkgbuild",
+   "targets": [
+    "rawmakase-bin"
+   ],
+   "pkgbuild": {
+    "repo": "omacom/omarchy-pkgs",
+    "path": "pkgbuilds/rawmakase-bin",
+    "ref": "master"
+   },
+   "macos": "Lightroom",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "gpu-screen-recorder",
+   "name": "GPU Screen Recorder",
+   "kind": "desktop",
+   "group": "Media and creative",
+   "category": "Screenshots",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "gpu-screen-recorder"
+   ],
+   "repo": "extra",
+   "macos": "Screen recording (Shift+Cmd+5)",
+   "origin": [
+    "omarchy-shell-tool"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "omasnap",
+   "name": "Omasnap",
+   "kind": "desktop",
+   "group": "Media and creative",
+   "category": "Screenshots",
+   "tier": "optional",
+   "source": "pkgbuild",
+   "targets": [
+    "omasnap"
+   ],
+   "pkgbuild": {
+    "repo": "omacom/omarchy-pkgs",
+    "path": "pkgbuilds/omasnap",
+    "ref": "master"
+   },
+   "macos": "Screenshot (Shift+Cmd+4)",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "tensaku",
+   "name": "Tensaku",
+   "kind": "desktop",
+   "group": "Media and creative",
+   "category": "Screenshots",
+   "tier": "optional",
+   "source": "aur",
+   "targets": [
+    "tensaku"
+   ],
+   "macos": "Screenshot markup",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "jq",
+   "name": "jq",
+   "kind": "tui",
+   "group": "Development",
+   "category": "Data",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "jq"
+   ],
+   "repo": "extra",
+   "origin": [
+    "omarchy-shell-tool"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "boxlang-docs",
+   "name": "BoxLang Documentation",
+   "kind": "web",
+   "group": "Development",
+   "category": "Developer",
+   "tier": "default",
+   "source": "web",
+   "url": "https://boxlang.ortusbooks.com",
+   "origin": [
+    "owner-pick"
+   ]
+  },
+  {
+   "id": "cursor",
+   "name": "Cursor",
+   "kind": "desktop",
+   "group": "Development",
+   "category": "Development",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "cursor-bin"
+   ],
+   "repo": "cachyos",
+   "macos": "Cursor (same)",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "helix",
+   "name": "Helix",
+   "kind": "tui",
+   "group": "Development",
+   "category": "Development",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "helix"
+   ],
+   "repo": "extra",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "herdr",
+   "name": "Herdr",
+   "kind": "desktop",
+   "group": "Development",
+   "category": "Development",
+   "tier": "default",
+   "source": "aur",
+   "targets": [
+    "herdr"
+   ],
+   "origin": [
+    "owner-pick"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "intellij",
+   "name": "IntelliJ IDEA Community",
+   "kind": "desktop",
+   "group": "Development",
+   "category": "Development",
+   "tier": "default",
+   "source": "unresolved",
+   "targets": [
+    "intellij-idea-community-edition"
+   ],
+   "macos": "IntelliJ IDEA (same)",
+   "origin": [
+    "owner-pick"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "lazygit",
+   "name": "Lazygit",
+   "kind": "tui",
+   "group": "Development",
+   "category": "Development",
+   "tier": "default",
+   "source": "pacman",
+   "targets": [
+    "lazygit"
+   ],
+   "repo": "extra",
+   "macos": "Tower / Fork",
+   "origin": [
+    "owner-pick"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "micro",
+   "name": "Micro",
+   "kind": "tui",
+   "group": "Development",
+   "category": "Development",
+   "tier": "default",
+   "source": "pacman",
+   "targets": [
+    "micro"
+   ],
+   "repo": "extra",
+   "origin": [
+    "owner-pick"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "neovim",
+   "name": "Neovim / LazyVim",
+   "kind": "tui",
+   "group": "Development",
+   "category": "Development",
+   "tier": "default",
+   "source": "pacman",
+   "targets": [
+    "neovim"
+   ],
+   "repo": "extra",
+   "macos": "Neovim (same)",
+   "origin": [
+    "owner-pick"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "omazed",
+   "name": "Omazed (Zed theme sync)",
+   "kind": "desktop",
+   "group": "Development",
+   "category": "Development",
+   "tier": "optional",
+   "source": "pkgbuild",
+   "targets": [
+    "omazed"
+   ],
+   "pkgbuild": {
+    "repo": "omacom/omarchy-pkgs",
+    "path": "pkgbuilds/omazed",
+    "ref": "master"
+   },
+   "macos": "Zed theme",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "sublime-text",
+   "name": "Sublime Text",
+   "kind": "desktop",
+   "group": "Development",
+   "category": "Development",
+   "tier": "optional",
+   "source": "aur",
+   "targets": [
+    "sublime-text-4"
+   ],
+   "macos": "Sublime Text (same)",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "t3-code",
+   "name": "T3 Code",
+   "kind": "desktop",
+   "group": "Development",
+   "category": "Development",
+   "tier": "optional",
+   "source": "aur",
+   "targets": [
+    "t3code-bin"
+   ],
+   "macos": "Agent control plane",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "virt-manager",
+   "name": "Virtual Machine Manager",
+   "kind": "desktop",
+   "group": "Development",
+   "category": "Development",
+   "tier": "default",
+   "source": "pacman",
+   "targets": [
+    "virt-manager"
+   ],
+   "repo": "extra",
+   "macos": "UTM / Parallels",
+   "origin": [
+    "owner-pick"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "vscode",
+   "name": "Visual Studio Code",
+   "kind": "desktop",
+   "group": "Development",
+   "category": "Development",
+   "tier": "default",
+   "source": "aur",
+   "targets": [
+    "visual-studio-code-bin"
+   ],
+   "macos": "VS Code (same)",
+   "origin": [
+    "owner-pick",
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "zed",
+   "name": "Zed",
+   "kind": "desktop",
+   "group": "Development",
+   "category": "Development",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "zed"
+   ],
+   "repo": "extra",
+   "macos": "Zed (same)",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "bat",
+   "name": "bat",
+   "kind": "tui",
+   "group": "Development",
+   "category": "Shell",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "bat"
+   ],
+   "repo": "extra",
+   "macos": "cat with syntax colors",
+   "origin": [
+    "omarchy-shell-tool"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "eza",
+   "name": "eza",
+   "kind": "tui",
+   "group": "Development",
+   "category": "Shell",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "eza"
+   ],
+   "repo": "extra",
+   "macos": "ls",
+   "origin": [
+    "omarchy-shell-tool"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "fd",
+   "name": "fd",
+   "kind": "tui",
+   "group": "Development",
+   "category": "Shell",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "fd"
+   ],
+   "repo": "extra",
+   "macos": "Spotlight (file search)",
+   "origin": [
+    "omarchy-shell-tool"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "ripgrep",
+   "name": "ripgrep",
+   "kind": "tui",
+   "group": "Development",
+   "category": "Shell",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "ripgrep"
+   ],
+   "repo": "extra",
+   "macos": "Spotlight (text search)",
+   "origin": [
+    "omarchy-shell-tool"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "starship",
+   "name": "Starship",
+   "kind": "tui",
+   "group": "Development",
+   "category": "Shell",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "starship"
+   ],
+   "repo": "extra",
+   "origin": [
+    "omarchy-shell-tool"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "tldr",
+   "name": "tldr",
+   "kind": "tui",
+   "group": "Development",
+   "category": "Shell",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "tldr"
+   ],
+   "repo": "extra",
+   "macos": "man pages, short",
+   "origin": [
+    "omarchy-shell-tool"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "mise",
+   "name": "mise",
+   "kind": "tui",
+   "group": "Development",
+   "category": "Version managers",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "mise"
+   ],
+   "repo": "extra",
+   "origin": [
+    "omarchy-shell-tool"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "fzf",
+   "name": "Fzf",
+   "kind": "tui",
+   "group": "Terminal and CLI",
+   "category": "Files & productivity",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "fzf"
+   ],
+   "repo": "extra",
+   "origin": [
+    "omarchy-shell-tool"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "zoxide",
+   "name": "Zoxide",
+   "kind": "tui",
+   "group": "Terminal and CLI",
+   "category": "Files & productivity",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "zoxide"
+   ],
+   "repo": "extra",
+   "origin": [
+    "omarchy-shell-tool"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "tmux",
+   "name": "tmux",
+   "kind": "tui",
+   "group": "Terminal and CLI",
+   "category": "Multiplexers",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "tmux"
+   ],
+   "repo": "extra",
+   "macos": "iTerm2 panes",
+   "origin": [
+    "omarchy-shell-tool"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "alacritty",
+   "name": "Alacritty",
+   "kind": "desktop",
+   "group": "Terminal and CLI",
+   "category": "Terminal",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "alacritty"
+   ],
+   "repo": "extra",
+   "macos": "Terminal",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "foot",
+   "name": "Foot",
+   "kind": "desktop",
+   "group": "Terminal and CLI",
+   "category": "Terminal",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "foot"
+   ],
+   "repo": "extra",
+   "macos": "Terminal",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "ghostty",
+   "name": "Ghostty",
+   "kind": "desktop",
+   "group": "Terminal and CLI",
+   "category": "Terminal",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "ghostty"
+   ],
+   "repo": "extra",
+   "macos": "Terminal / iTerm2",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "kitty",
+   "name": "Kitty",
+   "kind": "desktop",
+   "group": "Terminal and CLI",
+   "category": "Terminal",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "kitty"
+   ],
+   "repo": "extra",
+   "macos": "iTerm2",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "tmog",
+   "name": "Tmog",
+   "kind": "tui",
+   "group": "Terminal and CLI",
+   "category": "Terminal",
+   "tier": "default",
+   "source": "aur",
+   "targets": [
+    "tmog-bin"
+   ],
+   "macos": "Activity Monitor",
+   "origin": [
+    "owner-pick",
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "amp-desktop",
+   "name": "Amp Desktop",
+   "kind": "desktop",
+   "group": "AI",
+   "category": "AI",
+   "tier": "optional",
+   "source": "unresolved",
+   "targets": [
+    "amp-desktop"
+   ],
+   "note": "No package found; not yet investigated",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "buzz",
+   "name": "Buzz",
+   "kind": "desktop",
+   "group": "AI",
+   "category": "AI",
+   "tier": "optional",
+   "source": "pkgbuild",
+   "targets": [
+    "buzz"
+   ],
+   "pkgbuild": {
+    "repo": "omacom/omarchy-pkgs",
+    "path": "pkgbuilds/buzz",
+    "ref": "master"
+   },
+   "macos": "Agent workspace",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "chatgpt",
+   "name": "ChatGPT",
+   "kind": "web",
+   "group": "AI",
+   "category": "AI",
+   "tier": "optional",
+   "source": "web",
+   "url": "https://chatgpt.com",
+   "origin": [
+    "omarchy-web"
+   ]
+  },
+  {
+   "id": "chatgpt-desktop",
+   "name": "ChatGPT Desktop",
+   "kind": "desktop",
+   "group": "AI",
+   "category": "AI",
+   "tier": "optional",
+   "source": "aur",
+   "targets": [
+    "chatgpt-desktop"
+   ],
+   "macos": "ChatGPT (same)",
+   "origin": [
+    "owner-pick"
+   ],
+   "verified_on": "2026-11-09",
+   "decided_by_owner": true
+  },
+  {
+   "id": "claude-code",
+   "name": "Claude Code",
+   "kind": "tui",
+   "group": "AI",
+   "category": "AI",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "claude-code"
+   ],
+   "repo": "cachyos",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "claude-desktop",
+   "name": "Claude Desktop",
+   "kind": "desktop",
+   "group": "AI",
+   "category": "AI",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "claude-desktop"
+   ],
+   "repo": "cachyos",
+   "macos": "Claude (same)",
+   "origin": [
+    "owner-pick",
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09",
+   "decided_by_owner": true
+  },
+  {
+   "id": "codex-cli",
+   "name": "Codex CLI",
+   "kind": "tui",
+   "group": "AI",
+   "category": "AI",
+   "tier": "optional",
+   "source": "unresolved",
+   "targets": [
+    "codex-cli"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "codex-desktop",
+   "name": "Codex Desktop",
+   "kind": "desktop",
+   "group": "AI",
+   "category": "AI",
+   "tier": "optional",
+   "source": "pkgbuild",
+   "targets": [
+    "openai-codex-desktop"
+   ],
+   "pkgbuild": {
+    "repo": "omacom/omarchy-pkgs",
+    "path": "pkgbuilds/openai-codex-desktop",
+    "ref": "master"
+   },
+   "macos": "ChatGPT (same)",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "collie",
+   "name": "Collie",
+   "kind": "desktop",
+   "group": "AI",
+   "category": "AI",
+   "tier": "optional",
+   "source": "pkgbuild",
+   "targets": [
+    "collie-bin"
+   ],
+   "pkgbuild": {
+    "repo": "omacom/omarchy-pkgs",
+    "path": "pkgbuilds/collie-bin",
+    "ref": "master"
+   },
+   "macos": "Agent remote UI",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "github-copilot",
+   "name": "GitHub Copilot",
+   "kind": "web",
+   "group": "AI",
+   "category": "AI",
+   "tier": "optional",
+   "source": "web",
+   "url": "https://github.com/features/copilot"
+  },
+  {
+   "id": "antigravity",
+   "name": "Google Antigravity",
+   "kind": "desktop",
+   "group": "AI",
+   "category": "AI",
+   "tier": "optional",
+   "source": "aur",
+   "targets": [
+    "antigravity"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "grokbot",
+   "name": "GrokBot",
+   "kind": "desktop",
+   "group": "AI",
+   "category": "AI",
+   "tier": "optional",
+   "source": "pkgbuild",
+   "targets": [
+    "grok-bot"
+   ],
+   "pkgbuild": {
+    "repo": "omacom/omarchy-pkgs",
+    "path": "pkgbuilds/grok-bot",
+    "ref": "master"
+   },
+   "macos": "Grok",
+   "origin": [
+    "owner-pick",
+    "omarchy-desktop"
+   ],
+   "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
+   "verified_on": "2026-11-09",
+   "decided_by_owner": true
+  },
+  {
+   "id": "hermes-desktop",
+   "name": "Hermes Desktop",
+   "kind": "desktop",
+   "group": "AI",
+   "category": "AI",
+   "tier": "optional",
+   "source": "pkgbuild",
+   "targets": [
+    "hermes-desktop"
+   ],
+   "pkgbuild": {
+    "repo": "omacom/omarchy-pkgs",
+    "path": "pkgbuilds/hermes-desktop",
+    "ref": "master"
+   },
+   "macos": "Agent desktop",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "lm-studio",
+   "name": "LM Studio",
+   "kind": "desktop",
+   "group": "AI",
+   "category": "AI",
+   "tier": "optional",
+   "source": "unresolved",
+   "targets": [
+    "lmstudio"
+   ],
+   "macos": "LM Studio (same)",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "note": "In Omarchy catalog; no public PKGBUILD found",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "ollama",
+   "name": "Ollama",
+   "kind": "web",
+   "group": "AI",
+   "category": "AI",
+   "tier": "optional",
+   "source": "web",
+   "url": "https://ollama.com"
+  },
+  {
+   "id": "openclaw",
+   "name": "OpenClaw",
+   "kind": "desktop",
+   "group": "AI",
+   "category": "AI",
+   "tier": "optional",
+   "source": "aur",
+   "targets": [
+    "openclaw"
+   ],
+   "macos": "AI gateway",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "opencode-cli",
+   "name": "OpenCode",
+   "kind": "tui",
+   "group": "AI",
+   "category": "AI",
+   "tier": "default",
+   "source": "pacman",
+   "targets": [
+    "opencode"
+   ],
+   "repo": "extra",
+   "origin": [
+    "owner-pick"
+   ],
+   "verified_on": "2026-11-09",
+   "decided_by_owner": true
+  },
+  {
+   "id": "perplexity",
+   "name": "Perplexity",
+   "kind": "web",
+   "group": "AI",
+   "category": "AI",
+   "tier": "optional",
+   "source": "aur",
+   "targets": [
+    "perplexity"
+   ],
+   "macos": "Perplexity (same)",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "pi-agent",
+   "name": "Pi coding agent",
+   "kind": "tui",
+   "group": "AI",
+   "category": "AI",
+   "tier": "default",
+   "source": "unresolved",
+   "targets": [
+    "pi-agent"
+   ],
+   "origin": [
+    "owner-pick"
+   ],
+   "verified_on": "2026-11-09",
+   "decided_by_owner": true
+  },
+  {
+   "id": "dropbox",
+   "name": "Dropbox official",
+   "kind": "desktop",
+   "group": "Containers, cloud, databases",
+   "category": "Cloud Storage",
+   "tier": "optional",
+   "source": "aur",
+   "targets": [
+    "dropbox"
+   ],
+   "macos": "Dropbox (same)",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "fuse3",
+   "name": "FUSE3",
+   "kind": "tui",
+   "group": "Containers, cloud, databases",
+   "category": "Cloud Storage",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "fuse3"
+   ],
+   "repo": "extra",
+   "origin": [
+    "owner-pick"
+   ],
+   "verified_on": "2026-11-09",
+   "decided_by_owner": true
+  },
+  {
+   "id": "rclone",
+   "name": "Rclone",
+   "kind": "tui",
+   "group": "Containers, cloud, databases",
+   "category": "Cloud Storage",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "rclone"
+   ],
+   "repo": "extra",
+   "origin": [
+    "owner-pick"
+   ],
+   "verified_on": "2026-11-09",
+   "decided_by_owner": true
+  },
+  {
+   "id": "docker",
+   "name": "Docker + Compose",
+   "kind": "tui",
+   "group": "Containers, cloud, databases",
+   "category": "Containers",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "docker",
+    "docker-compose",
+    "docker-buildx"
+   ],
+   "repo": "extra",
+   "macos": "Docker Desktop",
+   "origin": [
+    "omarchy-shell-tool"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "lazydocker",
+   "name": "Lazydocker",
+   "kind": "tui",
+   "group": "Containers, cloud, databases",
+   "category": "Containers",
+   "tier": "default",
+   "source": "pacman",
+   "targets": [
+    "lazydocker"
+   ],
+   "repo": "extra",
+   "macos": "Docker Desktop",
+   "origin": [
+    "owner-pick"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "podman",
+   "name": "Podman + Buildah, Skopeo, Compose",
+   "kind": "tui",
+   "group": "Containers, cloud, databases",
+   "category": "Containers",
+   "tier": "default",
+   "source": "pacman",
+   "targets": [
+    "podman",
+    "podman-compose",
+    "buildah",
+    "skopeo"
+   ],
+   "repo": "extra",
+   "macos": "Docker Desktop",
+   "origin": [
+    "owner-pick"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "podman-desktop",
+   "name": "Podman Desktop",
+   "kind": "desktop",
+   "group": "Containers, cloud, databases",
+   "category": "Containers",
+   "tier": "default",
+   "source": "pacman",
+   "targets": [
+    "podman-desktop"
+   ],
+   "repo": "extra",
+   "macos": "Docker Desktop",
+   "origin": [
+    "owner-pick"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "podman-tui",
+   "name": "Podman TUI",
+   "kind": "tui",
+   "group": "Containers, cloud, databases",
+   "category": "Containers",
+   "tier": "default",
+   "source": "aur",
+   "targets": [
+    "podman-tui"
+   ],
+   "origin": [
+    "owner-pick"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "beekeeper-studio",
+   "name": "Beekeeper Studio",
+   "kind": "desktop",
+   "group": "Containers, cloud, databases",
+   "category": "Databases",
+   "tier": "default",
+   "source": "aur",
+   "targets": [
+    "beekeeper-studio"
+   ],
+   "origin": [
+    "owner-pick"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "filezilla",
+   "name": "FileZilla",
+   "kind": "desktop",
+   "group": "Network and remote",
+   "category": "File Transfer",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "filezilla"
+   ],
+   "repo": "extra",
+   "macos": "Transmit / Cyberduck",
+   "origin": [
+    "owner-pick"
+   ],
+   "verified_on": "2026-11-09",
+   "decided_by_owner": true
+  },
+  {
+   "id": "nfs-utils",
+   "name": "NFS tools",
+   "kind": "tui",
+   "group": "Network and remote",
+   "category": "Networking",
+   "tier": "default",
+   "source": "pacman",
+   "targets": [
+    "nfs-utils"
+   ],
+   "repo": "core",
+   "origin": [
+    "owner-pick"
+   ],
+   "verified_on": "2026-11-09",
+   "decided_by_owner": true
+  },
+  {
+   "id": "nordvpn",
+   "name": "NordVPN",
+   "kind": "desktop",
+   "group": "Network and remote",
+   "category": "Networking",
+   "tier": "optional",
+   "source": "aur",
+   "targets": [
+    "nordvpn-bin"
+   ],
+   "macos": "VPN settings",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "cifs-utils",
+   "name": "SMB mount tools",
+   "kind": "tui",
+   "group": "Network and remote",
+   "category": "Networking",
+   "tier": "default",
+   "source": "pacman",
+   "targets": [
+    "cifs-utils"
+   ],
+   "repo": "extra",
+   "origin": [
+    "owner-pick"
+   ],
+   "verified_on": "2026-11-09",
+   "decided_by_owner": true
+  },
+  {
+   "id": "speedtest",
+   "name": "Speedtest",
+   "kind": "desktop",
+   "group": "Network and remote",
+   "category": "Networking",
+   "tier": "optional",
+   "source": "pkgbuild",
+   "targets": [
+    "omarchy-speedtest"
+   ],
+   "pkgbuild": {
+    "repo": "omacom/omarchy-pkgs",
+    "path": "pkgbuilds/omarchy-speedtest",
+    "ref": "master"
+   },
+   "macos": "Network Utility",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "sshfs",
+   "name": "SSHFS",
+   "kind": "tui",
+   "group": "Network and remote",
+   "category": "Networking",
+   "tier": "default",
+   "source": "pacman",
+   "targets": [
+    "sshfs"
+   ],
+   "repo": "extra",
+   "origin": [
+    "owner-pick"
+   ],
+   "verified_on": "2026-11-09",
+   "decided_by_owner": true
+  },
+  {
+   "id": "tailscale",
+   "name": "Tailscale",
+   "kind": "desktop",
+   "group": "Network and remote",
+   "category": "Networking",
+   "tier": "default",
+   "source": "pacman",
+   "targets": [
+    "tailscale"
+   ],
+   "repo": "extra",
+   "macos": "Tailscale (same)",
+   "origin": [
+    "owner-pick"
+   ],
+   "verified_on": "2026-11-09",
+   "decided_by_owner": true
+  },
+  {
+   "id": "gliff",
+   "name": "Gliff",
+   "kind": "desktop",
+   "group": "Network and remote",
+   "category": "Remote access",
+   "tier": "optional",
+   "source": "pkgbuild",
+   "targets": [
+    "gliff"
+   ],
+   "pkgbuild": {
+    "repo": "omacom/omarchy-pkgs",
+    "path": "pkgbuilds/gliff",
+    "ref": "master"
+   },
+   "macos": "Screen Sharing",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "moonlight",
+   "name": "Moonlight",
+   "kind": "desktop",
+   "group": "Network and remote",
+   "category": "Remote access",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "moonlight-qt"
+   ],
+   "repo": "extra",
+   "macos": "Screen Sharing",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "sunshine",
+   "name": "Sunshine",
+   "kind": "desktop",
+   "group": "Network and remote",
+   "category": "Remote access",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "sunshine"
+   ],
+   "repo": "cachyos",
+   "macos": "Screen Sharing",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "tabby",
+   "name": "Tabby",
+   "kind": "desktop",
+   "group": "Network and remote",
+   "category": "Remote Access",
+   "tier": "optional",
+   "source": "aur",
+   "targets": [
+    "tabby"
+   ],
+   "macos": "Termius",
+   "origin": [
+    "owner-pick"
+   ],
+   "verified_on": "2026-11-09",
+   "decided_by_owner": true
+  },
+  {
+   "id": "freerdp",
+   "name": "FreeRDP",
+   "kind": "tui",
+   "group": "Network and remote",
+   "category": "Remote Desktop",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "freerdp"
+   ],
+   "repo": "extra",
+   "origin": [
+    "owner-pick"
+   ],
+   "verified_on": "2026-11-09",
+   "decided_by_owner": true
+  },
+  {
+   "id": "remmina",
+   "name": "Remmina",
+   "kind": "desktop",
+   "group": "Network and remote",
+   "category": "Remote Desktop",
+   "tier": "default",
+   "source": "pacman",
+   "targets": [
+    "remmina"
+   ],
+   "repo": "extra",
+   "macos": "Screen Sharing / Microsoft Remote Desktop",
+   "origin": [
+    "owner-pick"
+   ],
+   "verified_on": "2026-11-09",
+   "decided_by_owner": true
+  },
+  {
+   "id": "rustdesk",
+   "name": "RustDesk",
+   "kind": "desktop",
+   "group": "Network and remote",
+   "category": "Remote Desktop",
+   "tier": "optional",
+   "source": "aur",
+   "targets": [
+    "rustdesk"
+   ],
+   "macos": "AnyDesk / Screen Sharing",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "hex",
+   "name": "Hex (voice dictation)",
+   "kind": "desktop",
+   "group": "System",
+   "category": "Accessibility",
+   "tier": "optional",
+   "source": "aur",
+   "targets": [
+    "hex-bin"
+   ],
+   "macos": "Dictation",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "superwhisper",
+   "name": "Superwhisper",
+   "kind": "desktop",
+   "group": "System",
+   "category": "Accessibility",
+   "tier": "optional",
+   "source": "pkgbuild",
+   "targets": [
+    "superwhisper-bin"
+   ],
+   "pkgbuild": {
+    "repo": "omacom/omarchy-pkgs",
+    "path": "pkgbuilds/superwhisper-bin",
+    "ref": "master"
+   },
+   "macos": "Dictation / Superwhisper",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "voxtype",
+   "name": "Voxtype",
+   "kind": "desktop",
+   "group": "System",
+   "category": "Accessibility",
+   "tier": "optional",
+   "source": "aur",
+   "targets": [
+    "voxtype-bin"
+   ],
+   "macos": "Dictation",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "gnome-disk-utility",
+   "name": "Disks",
+   "kind": "desktop",
+   "group": "System",
+   "category": "Disk",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "gnome-disk-utility"
+   ],
+   "repo": "extra",
+   "macos": "Disk Utility",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "btop",
+   "name": "Btop",
+   "kind": "tui",
+   "group": "System",
+   "category": "System",
+   "tier": "default",
+   "source": "pacman",
+   "targets": [
+    "btop"
+   ],
+   "repo": "extra",
+   "macos": "Activity Monitor",
+   "origin": [
+    "owner-pick"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "disktree",
+   "name": "Disktree",
+   "kind": "desktop",
+   "group": "System",
+   "category": "System",
+   "tier": "optional",
+   "source": "aur",
+   "targets": [
+    "disktree-bin"
+   ],
+   "macos": "DaisyDisk",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "fastfetch",
+   "name": "Fastfetch",
+   "kind": "tui",
+   "group": "System",
+   "category": "System",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "fastfetch"
+   ],
+   "repo": "extra",
+   "macos": "About This Mac",
+   "origin": [
+    "omarchy-shell-tool"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "pacseek",
+   "name": "Pacseek",
+   "kind": "tui",
+   "group": "System",
+   "category": "System",
+   "tier": "default",
+   "source": "aur",
+   "targets": [
+    "pacseek"
+   ],
+   "macos": "App Store",
+   "origin": [
+    "owner-pick"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "rumb",
+   "name": "Rumb (updates dashboard)",
+   "kind": "desktop",
+   "group": "System",
+   "category": "System",
+   "tier": "optional",
+   "source": "pkgbuild",
+   "targets": [
+    "rumb"
+   ],
+   "pkgbuild": {
+    "repo": "omacom/omarchy-pkgs",
+    "path": "pkgbuilds/rumb",
+    "ref": "master"
+   },
+   "macos": "Software Update",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "task-manager",
+   "name": "Task Manager",
+   "kind": "desktop",
+   "group": "System",
+   "category": "System",
+   "tier": "optional",
+   "source": "pkgbuild",
+   "targets": [
+    "omarchy-task-manager"
+   ],
+   "pkgbuild": {
+    "repo": "omacom/omarchy-pkgs",
+    "path": "pkgbuilds/omarchy-task-manager",
+    "ref": "master"
+   },
+   "macos": "Activity Monitor",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "elsewhen",
+   "name": "Elsewhen",
+   "kind": "desktop",
+   "group": "System",
+   "category": "Utilities",
+   "tier": "optional",
+   "source": "unresolved",
+   "targets": [
+    "elsewhen"
+   ],
+   "macos": "World Clock",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "note": "Now a plugin of the Omarchy shell; no standalone package",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "makima",
+   "name": "Makima (input remapper)",
+   "kind": "desktop",
+   "group": "System",
+   "category": "Utilities",
+   "tier": "optional",
+   "source": "aur",
+   "targets": [
+    "makima-bin"
+   ],
+   "macos": "Karabiner-Elements",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "omacalc",
+   "name": "Omacalc",
+   "kind": "desktop",
+   "group": "System",
+   "category": "Utilities",
+   "tier": "optional",
+   "source": "pkgbuild",
+   "targets": [
+    "omacalc"
+   ],
+   "pkgbuild": {
+    "repo": "omacom/omarchy-pkgs",
+    "path": "pkgbuilds/omacalc",
+    "ref": "master"
+   },
+   "macos": "Calculator",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "omakeyboard",
+   "name": "Omakeyboard",
+   "kind": "desktop",
+   "group": "System",
+   "category": "Utilities",
+   "tier": "optional",
+   "source": "pkgbuild",
+   "targets": [
+    "omakeyboard"
+   ],
+   "pkgbuild": {
+    "repo": "omacom/omarchy-pkgs",
+    "path": "pkgbuilds/omakeyboard",
+    "ref": "master"
+   },
+   "macos": "Karabiner-Elements",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "omawake",
+   "name": "Omawake",
+   "kind": "desktop",
+   "group": "System",
+   "category": "Utilities",
+   "tier": "optional",
+   "source": "pkgbuild",
+   "targets": [
+    "omawake-bin"
+   ],
+   "pkgbuild": {
+    "repo": "omacom/omarchy-pkgs",
+    "path": "pkgbuilds/omawake-bin",
+    "ref": "master"
+   },
+   "macos": "Siri wake word",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "system-config-printer",
+   "name": "Printer settings",
+   "kind": "desktop",
+   "group": "System",
+   "category": "Utilities",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "system-config-printer"
+   ],
+   "repo": "extra",
+   "macos": "Printers & Scanners",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "hyprpicker",
+   "name": "Hyprpicker",
+   "kind": "desktop",
+   "group": "Desktop (Hyprland)",
+   "category": "Desktop polish",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "hyprpicker"
+   ],
+   "repo": "extra",
+   "macos": "Digital Color Meter",
+   "origin": [
+    "omarchy-shell-tool"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "hyprsunset",
+   "name": "Hyprsunset",
+   "kind": "desktop",
+   "group": "Desktop (Hyprland)",
+   "category": "Desktop polish",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "hyprsunset"
+   ],
+   "repo": "extra",
+   "macos": "Night Shift",
+   "origin": [
+    "omarchy-shell-tool"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "owe",
+   "name": "Owe (wallpaper engine)",
+   "kind": "desktop",
+   "group": "Desktop (Hyprland)",
+   "category": "Desktop polish",
+   "tier": "optional",
+   "source": "aur",
+   "targets": [
+    "owe"
+   ],
+   "macos": "Dynamic Wallpaper",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "wayfreeze",
+   "name": "Wayfreeze",
+   "kind": "desktop",
+   "group": "Desktop (Hyprland)",
+   "category": "Desktop polish",
+   "tier": "optional",
+   "source": "aur",
+   "targets": [
+    "wayfreeze"
+   ],
+   "macos": "Screenshot freeze",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "learn-omarchy",
+   "name": "Learn Omarchy",
+   "kind": "desktop",
+   "group": "Desktop (Hyprland)",
+   "category": "Education",
+   "tier": "optional",
+   "source": "pkgbuild",
+   "targets": [
+    "learn-omarchy"
+   ],
+   "pkgbuild": {
+    "repo": "omacom/omarchy-pkgs",
+    "path": "pkgbuilds/learn-omarchy",
+    "ref": "master"
+   },
+   "macos": "Tips",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "ark",
+   "name": "Ark",
+   "kind": "desktop",
+   "group": "Desktop (Hyprland)",
+   "category": "File Management",
+   "tier": "default",
+   "source": "pacman",
+   "targets": [
+    "ark"
+   ],
+   "repo": "extra",
+   "macos": "Archive Utility",
+   "origin": [
+    "owner-pick"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "kdegraphics-thumbnailers",
+   "name": "Document thumbnails",
+   "kind": "desktop",
+   "group": "Desktop (Hyprland)",
+   "category": "File Management",
+   "tier": "default",
+   "source": "pacman",
+   "targets": [
+    "kdegraphics-thumbnailers"
+   ],
+   "repo": "extra",
+   "origin": [
+    "owner-pick"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "dolphin",
+   "name": "Dolphin",
+   "kind": "desktop",
+   "group": "Desktop (Hyprland)",
+   "category": "File Management",
+   "tier": "default",
+   "source": "pacman",
+   "targets": [
+    "dolphin"
+   ],
+   "repo": "extra",
+   "macos": "Finder",
+   "origin": [
+    "owner-pick"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "dolphin-plugins",
+   "name": "Dolphin Plugins",
+   "kind": "desktop",
+   "group": "Desktop (Hyprland)",
+   "category": "File Management",
+   "tier": "default",
+   "source": "pacman",
+   "targets": [
+    "dolphin-plugins"
+   ],
+   "repo": "extra",
+   "origin": [
+    "owner-pick"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "filelight",
+   "name": "Filelight",
+   "kind": "desktop",
+   "group": "Desktop (Hyprland)",
+   "category": "File Management",
+   "tier": "default",
+   "source": "pacman",
+   "targets": [
+    "filelight"
+   ],
+   "repo": "extra",
+   "macos": "DaisyDisk",
+   "origin": [
+    "owner-pick"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "flea",
+   "name": "Flea File Manager",
+   "kind": "desktop",
+   "group": "Desktop (Hyprland)",
+   "category": "File Management",
+   "tier": "optional",
+   "source": "pkgbuild",
+   "targets": [
+    "flea"
+   ],
+   "pkgbuild": {
+    "repo": "omacom/omarchy-pkgs",
+    "path": "pkgbuilds/flea",
+    "ref": "master"
+   },
+   "macos": "Finder",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "kimageformats",
+   "name": "Image format plugins",
+   "kind": "desktop",
+   "group": "Desktop (Hyprland)",
+   "category": "File Management",
+   "tier": "default",
+   "source": "pacman",
+   "targets": [
+    "kimageformats"
+   ],
+   "repo": "extra",
+   "origin": [
+    "owner-pick"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "kio-extras",
+   "name": "KIO Extras",
+   "kind": "desktop",
+   "group": "Desktop (Hyprland)",
+   "category": "File Management",
+   "tier": "default",
+   "source": "pacman",
+   "targets": [
+    "kio-extras"
+   ],
+   "repo": "extra",
+   "origin": [
+    "owner-pick"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "kompare",
+   "name": "Kompare",
+   "kind": "desktop",
+   "group": "Desktop (Hyprland)",
+   "category": "File Management",
+   "tier": "default",
+   "source": "pacman",
+   "targets": [
+    "kompare"
+   ],
+   "repo": "extra",
+   "origin": [
+    "owner-pick"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "nautilus",
+   "name": "Nautilus (Files)",
+   "kind": "desktop",
+   "group": "Desktop (Hyprland)",
+   "category": "File Management",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "nautilus"
+   ],
+   "repo": "extra",
+   "macos": "Finder",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "strata",
+   "name": "Strata File Manager",
+   "kind": "desktop",
+   "group": "Desktop (Hyprland)",
+   "category": "File Management",
+   "tier": "optional",
+   "source": "pkgbuild",
+   "targets": [
+    "strata"
+   ],
+   "pkgbuild": {
+    "repo": "omacom/omarchy-pkgs",
+    "path": "pkgbuilds/strata",
+    "ref": "master"
+   },
+   "macos": "Finder",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "ffmpegthumbs",
+   "name": "Video thumbnails",
+   "kind": "desktop",
+   "group": "Desktop (Hyprland)",
+   "category": "File Management",
+   "tier": "default",
+   "source": "pacman",
+   "targets": [
+    "ffmpegthumbs"
+   ],
+   "repo": "extra",
+   "origin": [
+    "owner-pick"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "walker",
+   "name": "Walker (launcher)",
+   "kind": "desktop",
+   "group": "Desktop (Hyprland)",
+   "category": "Launchers",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "walker"
+   ],
+   "repo": "cachyos",
+   "macos": "Spotlight",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "aether",
+   "name": "Aether",
+   "kind": "desktop",
+   "group": "Desktop (Hyprland)",
+   "category": "Themes",
+   "tier": "optional",
+   "source": "aur",
+   "targets": [
+    "aether"
+   ],
+   "macos": "Theme creator",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "cachyos-gaming",
+   "name": "CachyOS Gaming bundle",
+   "kind": "desktop",
+   "group": "Gaming",
+   "category": "Gaming",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "cachyos-gaming-meta",
+    "cachyos-gaming-applications"
+   ],
+   "repo": "cachyos",
+   "macos": "Game Mode / Steam setup",
+   "origin": [
+    "gaming"
+   ],
+   "note": "CachyOS meta-packages: Steam, Lutris, Heroic, Faugus, gamescope, MangoHud, GOverlay, Proton/Wine runtimes",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "discord",
+   "name": "Discord",
+   "kind": "desktop",
+   "group": "Gaming",
+   "category": "Gaming",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "discord"
+   ],
+   "repo": "extra",
+   "macos": "Discord (same)",
+   "origin": [
+    "gaming"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "greenlight",
+   "name": "Greenlight (Xbox Remote Play)",
+   "kind": "desktop",
+   "group": "Gaming",
+   "category": "Gaming",
+   "tier": "optional",
+   "source": "aur",
+   "targets": [
+    "greenlight-bin"
+   ],
+   "macos": "Xbox app",
+   "origin": [
+    "gaming"
+   ],
+   "note": "Unofficial open-source client for Xbox Remote Play",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "heroic",
+   "name": "Heroic Games Launcher",
+   "kind": "desktop",
+   "group": "Gaming",
+   "category": "Gaming",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "heroic-games-launcher-bin"
+   ],
+   "repo": "cachyos",
+   "macos": "Epic Games Launcher",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "lutris",
+   "name": "Lutris",
+   "kind": "desktop",
+   "group": "Gaming",
+   "category": "Gaming",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "lutris"
+   ],
+   "repo": "extra",
+   "origin": [
+    "gaming"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "minecraft-launcher",
+   "name": "Minecraft Launcher (official)",
+   "kind": "desktop",
+   "group": "Gaming",
+   "category": "Gaming",
+   "tier": "optional",
+   "source": "aur",
+   "targets": [
+    "minecraft-launcher"
+   ],
+   "macos": "Minecraft Launcher",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "geforce-now",
+   "name": "NVIDIA GeForce NOW",
+   "kind": "desktop",
+   "group": "Gaming",
+   "category": "Gaming",
+   "tier": "optional",
+   "source": "aur",
+   "targets": [
+    "geforcenow-electron"
+   ],
+   "macos": "GeForce NOW (same)",
+   "origin": [
+    "gaming"
+   ],
+   "note": "Unofficial Electron wrapper in the AUR; NVIDIA has no official Linux app",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "omakade",
+   "name": "Omakade",
+   "kind": "desktop",
+   "group": "Gaming",
+   "category": "Gaming",
+   "tier": "optional",
+   "source": "pkgbuild",
+   "targets": [
+    "omakade"
+   ],
+   "pkgbuild": {
+    "repo": "omacom/omarchy-pkgs",
+    "path": "pkgbuilds/omakade",
+    "ref": "master"
+   },
+   "macos": "Game Center",
+   "origin": [
+    "omarchy-desktop"
+   ],
+   "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "prismlauncher",
+   "name": "Prism Launcher (Minecraft)",
+   "kind": "desktop",
+   "group": "Gaming",
+   "category": "Gaming",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "prismlauncher"
+   ],
+   "repo": "extra",
+   "macos": "Minecraft Launcher",
+   "origin": [
+    "gaming"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "protonup-qt",
+   "name": "ProtonUp-Qt",
+   "kind": "desktop",
+   "group": "Gaming",
+   "category": "Gaming",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "protonup-qt"
+   ],
+   "repo": "cachyos",
+   "origin": [
+    "gaming"
+   ],
+   "note": "Installs Proton-GE and Wine-GE compatibility tools",
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "retroarch",
+   "name": "RetroArch",
+   "kind": "desktop",
+   "group": "Gaming",
+   "category": "Gaming",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "retroarch"
+   ],
+   "repo": "extra",
+   "origin": [
+    "gaming"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "steam",
+   "name": "Steam",
+   "kind": "desktop",
+   "group": "Gaming",
+   "category": "Gaming",
+   "tier": "optional",
+   "source": "pacman",
+   "targets": [
+    "steam"
+   ],
+   "repo": "multilib",
+   "macos": "Steam (same)",
+   "origin": [
+    "gaming"
+   ],
+   "verified_on": "2026-11-09"
+  },
+  {
+   "id": "xbox-cloud",
+   "name": "Xbox Cloud Gaming",
+   "kind": "web",
+   "group": "Gaming",
+   "category": "Gaming",
+   "tier": "optional",
+   "source": "web",
+   "url": "https://www.xbox.com/play",
+   "macos": "Xbox app / browser",
+   "origin": [
+    "gaming"
+   ]
+  }
+ ]
+}
