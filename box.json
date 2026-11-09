@@ -27,7 +27,7 @@
       "repo": "https://github.com/ortus-boxlang/matchbox",
       "ref": "bxcachy",
       "downloads": "https://downloads.ortussolutions.com/ortussolutions/bxcachy/matchbox",
-      "note": "MatchBox built by CI from the `bxcachy` branch (develop plus the open BxCachy pull requests) and published to S3; switch back to a released version through mvm once those pull requests ship."
+      "note": "MatchBox built by CI from the `bxcachy` branch (develop plus the open BxCachy pull requests #149-#155 and the VM fixes #156-#160: break in nested loops, closed stdout, variables.fn(), switch var slots and default jump, panic messages) and published to S3; switch back to a released version through mvm once those pull requests ship."
     },
     "rust": {
       "channel": "stable"
