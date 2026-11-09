@@ -132,15 +132,24 @@ step_retry() {
 }
 # MatchBox from the published bxcachy-branch build: download, verify the sha256, replace atomically.
 # BXCACHY_MATCHBOX_FILE=PATH installs a local build instead (CI builds it from source before it is published).
+# The evergreen file can be served stale by the CDN, so the build is taken from its immutable folder
+# (<version>-<commit>/) named in version-latest.properties; without that file the evergreen folder is used.
+matchbox_download_base() {
+  local props v c
+  props="$(curl -fsSL -m 30 "$MATCHBOX_DOWNLOADS/version-latest.properties" 2>/dev/null)" || { echo "$MATCHBOX_DOWNLOADS"; return; }
+  v="$(sed -n 's/^version=//p' <<<"$props" | head -n1)"; c="$(sed -n 's/^commit=//p' <<<"$props" | head -n1)"
+  if [[ -n "$v" && -n "$c" ]]; then echo "$MATCHBOX_DOWNLOADS/$v-$c"; else echo "$MATCHBOX_DOWNLOADS"; fi
+}
 install_matchbox_download() {
-  local arch=linux-x86_64 tmp expected actual
+  local arch=linux-x86_64 tmp expected actual dl
   tmp="$(mktemp -d)"
   if [[ -n "${BXCACHY_MATCHBOX_FILE:-}" ]]; then
     [[ -f "$BXCACHY_MATCHBOX_FILE" && -x "$BXCACHY_MATCHBOX_FILE" && ! -L "$BXCACHY_MATCHBOX_FILE" ]] || { echo "BXCACHY_MATCHBOX_FILE must be an executable regular file: $BXCACHY_MATCHBOX_FILE" >&2; rm -rf "$tmp"; exit 1; }
     cp "$BXCACHY_MATCHBOX_FILE" "$tmp/matchbox"
   else
-    step_retry "download MatchBox" curl -fsSL -m 300 -o "$tmp/matchbox" "$MATCHBOX_DOWNLOADS/matchbox-$arch"
-    step_retry "download the MatchBox checksum" curl -fsSL -m 30 -o "$tmp/matchbox.sha256" "$MATCHBOX_DOWNLOADS/matchbox-$arch.sha256"
+    dl="$(matchbox_download_base)"
+    step_retry "download MatchBox" curl -fsSL -m 300 -o "$tmp/matchbox" "$dl/matchbox-$arch"
+    step_retry "download the MatchBox checksum" curl -fsSL -m 30 -o "$tmp/matchbox.sha256" "$dl/matchbox-$arch.sha256"
     expected="$(awk '{print $1; exit}' "$tmp/matchbox.sha256")"
     actual="$(sha256sum "$tmp/matchbox" | awk '{print $1}')"
     [[ -n "$expected" && "$expected" == "$actual" ]] || { echo "MatchBox checksum mismatch (expected ${expected:-none}, got $actual); nothing was installed" >&2; rm -rf "$tmp"; exit 1; }

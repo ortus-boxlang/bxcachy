@@ -473,6 +473,34 @@ need "$(cat "$tmp/curl.log")" 'bxcachy/matchbox/matchbox-linux-x86_64.sha256'; n
 : > "$tmp/curl.log"; drun bash "$repo/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null >/dev/null 2>&1
 refuse "$(cat "$tmp/curl.log")" 'matchbox-linux-x86_64'
 chk="$(drun bash "$repo/bootstrap/install.sh" --check)"; need "$chk" 'matchbox: 0.13.0'
+# the immutable per-build folder named in version-latest.properties is preferred over the (CDN-cached) evergreen file
+mock curl 'url=""; out=""; while [[ $# -gt 0 ]]; do case "$1" in -o) out="$2"; shift 2 ;; http*) url="$1"; shift ;; *) shift ;; esac; done
+[[ -n "$out" ]] && echo "$url" >> "$CURL_LOG"
+case "$url" in
+  *bxcachy/matchbox/version-latest.properties) printf "version=0.13.0\ncommit=abc1234\n" ;;
+  *bxcachy/matchbox/0.13.0-abc1234/matchbox-linux-x86_64.sha256) echo "$GOOD_SUM  matchbox-linux-x86_64" > "$out" ;;
+  *bxcachy/matchbox/0.13.0-abc1234/matchbox-linux-x86_64) cat "$MB_FILE" > "$out" ;;
+  *bxcachy/matchbox/matchbox-linux-x86_64*) echo "stale evergreen file must not be used" >&2; exit 22 ;;
+  *matchbox-quick-installer*) printf "%s\n" "$MVM_FAKE" > "$out" ;;
+  *install-bvm*) printf "%s\n" "$BVM_FAKE" > "$out" ;; *nvm-sh/nvm*) printf "%s\n" "$NVM_FAKE" > "$out" ;;
+  *version-latest.properties*) printf "version=1.19.0+1\n" ;;
+  *) exit 22 ;;
+esac'
+fresh_home; : > "$tmp/curl.log"
+out="$(drun bash "$repo/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null 2>&1)" || { echo "FAIL: versioned folder download: $out" >&2; exit 1; }
+need "$out" 'MatchBox 0.13.0 installed and verified.'; need "$(cat "$tmp/curl.log")" '0.13.0-abc1234/matchbox-linux-x86_64'; refuse "$(cat "$tmp/curl.log")" 'bxcachy/matchbox/matchbox-linux-x86_64'
+# restore the evergreen-only mock for the tests below
+mock curl 'url=""; out=""; while [[ $# -gt 0 ]]; do case "$1" in -o) out="$2"; shift 2 ;; http*) url="$1"; shift ;; *) shift ;; esac; done
+[[ -n "$out" ]] && echo "$url" >> "$CURL_LOG"
+[[ "${MOCK_CURL_FAIL:-0}" == 1 ]] && exit 22
+case "$url" in
+  *bxcachy/matchbox/matchbox-linux-x86_64.sha256) echo "${MB_SUM:-$GOOD_SUM}  matchbox-linux-x86_64" > "$out" ;;
+  *bxcachy/matchbox/matchbox-linux-x86_64) cat "$MB_FILE" > "$out" ;;
+  *matchbox-quick-installer*) printf "%s\n" "$MVM_FAKE" > "$out" ;;
+  *install-bvm*) printf "%s\n" "$BVM_FAKE" > "$out" ;; *nvm-sh/nvm*) printf "%s\n" "$NVM_FAKE" > "$out" ;;
+  *version-latest.properties*) printf "version=1.19.0+1\n" ;;
+  *) exit 22 ;;
+esac'
 # a checksum mismatch installs nothing
 fresh_home; : > "$tmp/curl.log"
 if out="$(MB_SUM=deadbeef drun bash "$repo/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null 2>&1)"; then echo 'FAIL: checksum mismatch accepted' >&2; exit 1; fi
