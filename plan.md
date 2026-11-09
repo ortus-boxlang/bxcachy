@@ -373,3 +373,4 @@ This audit combines the actual recovered v0.10.0 archive inventory and its docum
 ## 18. Progress log
 
 - 2026-11-09: A1 legacy source tree committed (104 files, reference only). A2 to A4 real Arch container harness (`tests/arch/`) and CI stage 5; run 42539644723 green, 23/23 steps. Not yet verified on real CachyOS KDE. A5 draft command contract: [docs/architecture/COMMAND-CONTRACT.md](docs/architecture/COMMAND-CONTRACT.md), pending review.
+- 2026-11-09 decisions: never deployed, so no backups, restore, journal, drift handling or v0.10.0 upgrade path (supersedes backup/restore/rollback items in M0-C and M6, to be pruned when those sections are next edited). yay is installed by bootstrap only if absent. Exit codes 7 to 9 accepted. Catalog check design and first measurement in the command contract, section 8.
