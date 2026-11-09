@@ -1,0 +1,28 @@
+// Spike: Native Fusion. Rust BIFs from native/probe.rs used from BoxLang, compiled together by MatchBox.
+// Usage: app WORKDIR   (WORKDIR must exist and contain a symlink named link.txt; CI prepares it)
+args = CLIGetArgs();
+base = args.positionals.len() ? args.positionals[1] : "/tmp/bxspike-native";
+cfg = base & "/cfg.txt";
+link = base & "/link.txt";
+
+function check( name, ok ) {
+  println( ( ok ? "PASS " : "FAIL " ) & name );
+}
+
+println( "spike: native fusion start" );
+check( "bxWriteAtomic creates a file", bxWriteAtomic( cfg, "hello", "600" ) == "ok" );
+check( "bxReadText reads it back", bxReadText( cfg ) == "hello" );
+check( "mode is 600", bxFileMode( cfg ) == "600" );
+check( "bxWriteAtomic replaces an existing file", bxWriteAtomic( cfg, "world", "644" ) == "ok" && bxReadText( cfg ) == "world" );
+check( "mode follows the new request (644)", bxFileMode( cfg ) == "644" );
+check( "no temp file left behind (cfg + link only)", bxCountFiles( base ) == 2 );
+check( "bxIsSymlink sees the link", bxIsSymlink( link ) == 1 );
+check( "bxIsSymlink is 0 for a regular file", bxIsSymlink( cfg ) == 0 );
+check( "bxIsSymlink is -1 for a missing path", bxIsSymlink( base & "/nope" ) == -1 );
+refused = false;
+try { bxWriteAtomic( link, "x", "600" ); } catch ( any e ) { refused = true; }
+check( "writing through a symlink is refused", refused );
+check( "the file behind it is untouched", bxReadText( cfg ) == "world" );
+check( "bxSha256 (sha2 crate) matches the known digest", bxSha256( cfg ) == "486ea46224d1bb4fb680f34f7c9ad96a8f24ec88be73ea8e5a6c65260e9cb8a7" );
+try { check( "built-in fileRead still works next to the Rust BIFs", fileRead( cfg ) == "world" ); } catch ( any e ) { println( "FAIL built-in fileRead: " & e.message ); }
+println( "spike: native fusion done" );

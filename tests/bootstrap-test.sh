@@ -394,3 +394,27 @@ log="$(cat "$tmp/pacman.log")"; need "$log" 'S --noconfirm --needed jq'; need "$
 [[ "$(grep -n 'S --noconfirm --needed jq' "$tmp/pacman.log" | head -1 | cut -d: -f1)" -lt "$(grep -n '^Syu' "$tmp/pacman.log" | head -1 | cut -d: -f1)" ]] || { echo 'FAIL: jq was not installed before the other packages' >&2; exit 1; }
 ln -sf "$REALJQ" "$sys/jq"
 echo 'bootstrap manifest tests passed'
+
+# ---- A rate-limited "mvm install" (GitHub 403) is retried; persistent failure is reported ----
+reset_mocks; MOCK_INSTALLED="jdk21-openjdk git curl unzip rustup base-devel jq"
+mock sudo 'exit 9'; mock java 'echo "openjdk version \"21.0.13\" 2026-04-21" >&2'
+mock curl 'url=""; out=""; while [[ $# -gt 0 ]]; do case "$1" in -o) out="$2"; shift 2 ;; http*) url="$1"; shift ;; *) shift ;; esac; done
+case "$url" in *matchbox-quick-installer*) printf "%s\n" "$MVM_FAKE" > "$out" ;; *install-bvm*) printf "%s\n" "$BVM_FAKE" > "$out" ;; *version-latest.properties*) printf "version=1.19.0+1\n" ;; *) exit 22 ;; esac'
+# mvm whose "install" fails the first N times, counted in a file; "use" and "--version" behave.
+FLAKY_MVM='mkdir -p "$HOME/.mvm/bin"
+cat > "$HOME/.mvm/bin/mvm" <<"M"
+#!/usr/bin/env bash
+case "$1" in
+  install) n=$(cat "$HOME/mvm-tries" 2>/dev/null || echo 0); echo $((n+1)) > "$HOME/mvm-tries"; [[ $n -ge ${MVM_FAIL_TIMES:-2} ]] || { echo "GitHub request failed with HTTP 403" >&2; exit 1; } ;;
+  use) printf "#!/usr/bin/env bash\necho \"MatchBox %s\"\n" "$2" > "$HOME/.mvm/bin/matchbox"; chmod +x "$HOME/.mvm/bin/matchbox" ;;
+  --version) echo "MVM version: 2.0.1" ;;
+esac
+M
+chmod +x "$HOME/.mvm/bin/mvm"'
+fresh_home
+out="$(MVM_FAKE="$FLAKY_MVM" trun env BXCACHY_RETRY_WAITS="0 0 0" MVM_FAIL_TIMES=2 bash "$repo/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null 2>&1)"
+need "$out" 'MatchBox 0.12.0 installed and verified.'; [[ "$(cat "$home/mvm-tries")" == 3 ]] || { echo 'FAIL: expected exactly 3 install attempts' >&2; exit 1; }
+fresh_home
+if out="$(MVM_FAKE="$FLAKY_MVM" trun env BXCACHY_RETRY_WAITS="0 0 0" MVM_FAIL_TIMES=9 bash "$repo/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null 2>&1)"; then echo 'FAIL: persistent failure treated as success' >&2; exit 1; fi
+need "$out" 'Failed after 3 attempts'; need "$out" 'HTTP 403'
+echo 'bootstrap retry tests passed'

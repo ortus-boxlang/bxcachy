@@ -95,6 +95,16 @@ preflight_common() {
   (( free_gb >= MIN_FREE_GB )) || { echo "Not enough free disk space: ${free_gb} GB free in $HOME, need at least $MIN_FREE_GB GB" >&2; exit 1; }
 }
 step_run() { local what="$1"; shift; "$@" || { echo "Failed: $what" >&2; exit 1; }; }
+# Like step_run, but tries up to three times (0s, 10s, 30s apart): GitHub answers 403 to anonymous API calls
+# when a shared address is rate limited, and that is usually brief.
+step_retry() {
+  local what="$1" wait; shift
+  for wait in ${BXCACHY_RETRY_WAITS:-0 10 30}; do
+    (( wait )) && { echo "Retrying in ${wait}s: $what" >&2; sleep "$wait"; }
+    "$@" && return 0
+  done
+  echo "Failed after 3 attempts: $what (if GitHub reports HTTP 403, wait a while and rerun; this is a rate limit)" >&2; exit 1
+}
 # BoxLang's active version, read from BVM's `current` symlink. Running `boxlang --version` starts the whole
 # runtime, which rewrites its logs under ~/.boxlang on every call, so routine probes avoid it. Falls back to
 # running boxlang only when BVM is not managing it. Install steps still run the real binary to verify.
@@ -270,7 +280,7 @@ if [[ "$mode" == --install-toolchains ]]; then
     tool_path mvm >/dev/null || { echo "MVM installation failed: mvm not found afterwards" >&2; exit 1; }
   fi
   if [[ "$(tool_version matchbox)" != "$MATCHBOX_VERSION" ]]; then
-    step_run "mvm install $MATCHBOX_VERSION" mvm install "$MATCHBOX_VERSION"; step_run "mvm use $MATCHBOX_VERSION" mvm use "$MATCHBOX_VERSION"; done_any=1
+    step_retry "mvm install $MATCHBOX_VERSION" mvm install "$MATCHBOX_VERSION"; step_run "mvm use $MATCHBOX_VERSION" mvm use "$MATCHBOX_VERSION"; done_any=1
     [[ "$(tool_version matchbox)" == "$MATCHBOX_VERSION" ]] || { echo "MatchBox $MATCHBOX_VERSION not active after install" >&2; exit 1; }
     echo "MatchBox $MATCHBOX_VERSION installed and verified."
   fi

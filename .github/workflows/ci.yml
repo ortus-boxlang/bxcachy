@@ -74,7 +74,8 @@ jobs:
           set -euo pipefail
           export PATH="$HOME/.mvm/bin:$PATH"
           MB="$(jq -r .toolchain.matchbox.version box.json)"   # the pin lives in box.json
-          mvm install "$MB"
+          # GitHub's anonymous API limit on shared runner addresses answers 403 now and then: retry with backoff.
+          for wait in 0 10 30; do sleep "$wait"; mvm install "$MB" && break; [ "$wait" = 30 ] && exit 1; done
           mvm use "$MB"
           matchbox --version
           matchbox --version | grep -F "$MB"
@@ -102,6 +103,20 @@ jobs:
           test -n "$exe" || { echo "::warning::probe did not compile with MatchBox"; exit 1; }
           "$exe" 2>&1 | tee /tmp/spike/result.txt
           { echo '### MatchBox file-operation probe'; echo '```'; cat /tmp/spike/result.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Probe Native Fusion (Rust BIFs) under MatchBox (informational)
+        continue-on-error: true
+        shell: bash
+        run: |
+          export PATH="$HOME/.mvm/bin:$PATH"
+          rm -rf /tmp/spike2 /tmp/bxspike-native
+          cp -r tests/spikes/native /tmp/spike2 && cd /tmp/spike2
+          matchbox --target native app.bxs 2>&1 | tail -n 30
+          exe="$(find . -maxdepth 3 -type f -executable \( -name app -o -name app.bxs \) -print -quit)"
+          test -n "$exe" || { echo "::warning::Native Fusion probe did not compile"; exit 1; }
+          mkdir -p /tmp/bxspike-native && ln -s cfg.txt /tmp/bxspike-native/link.txt
+          "$exe" /tmp/bxspike-native 2>&1 | tee /tmp/spike2/result.txt
+          { echo '### MatchBox Native Fusion probe'; echo '```'; cat /tmp/spike2/result.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          ! grep -q '^FAIL' /tmp/spike2/result.txt
       - name: Publish verified native artifact
         uses: actions/upload-artifact@v4
         with:
