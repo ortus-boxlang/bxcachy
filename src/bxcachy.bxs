@@ -8,6 +8,177 @@ desktop = { localsend: "localsend", mpv: "mpv", obs: "obs-studio", kdenlive: "kd
 tui = { lazygit: "lazygit", btop: "btop", neovim: "neovim", pacseek: "pacseek", yazi: "yazi" };
 optional = { obs: "obs-studio", kdenlive: "kdenlive", pinta: "pinta", chromium: "chromium", obsidian: "obsidian", libreoffice: "libreoffice-fresh" };
 web = { github: "https://github.com", "boxlang-docs": "https://boxlang.ortusbooks.com", youtube: "https://youtube.com" };
+
+// ---- config service (plain BoxLang + a little OS: mkdir lock, stat) ----
+function cfgHome() {
+ return getSystemSetting( "BXCACHY_CONFIG_HOME", getSystemSetting( "HOME", "" ) & "/.config" );
+}
+function stateDir() {
+ return getSystemSetting( "BXCACHY_STATE_HOME", getSystemSetting( "HOME", "" ) & "/.local/state" ) & "/bxcachy";
+}
+function pathKind( path ) {
+ if ( fileExists( path ) || directoryExists( path ) ) {
+  info = getFileInfo( path );
+  if ( info.is_symlink ) return "link";
+  if ( info.is_file ) return "file";
+  return "other";
+ }
+ try {
+  info = getFileInfo( path );
+  if ( info.is_symlink ) return "link";
+ } catch ( any e ) {
+ }
+ return "none";
+}
+function hashOf( text ) {
+ return lCase( hash( text, "SHA-256" ) );
+}
+function fileHashOf( path ) {
+ return hashOf( fileRead( path ) );
+}
+function nowText() {
+ return dateTimeFormat( now(), "yyyy-MM-dd'T'HH:mm:ss" );
+}
+function modeOf( path ) {
+ r = systemExecute( name = "stat", arguments = "-c %a " & path, timeout = 10, terminateOnTimeout = true );
+ return r.exitCode == 0 ? trim( r.output ) : "";
+}
+function journalEntries( name ) {
+ dir = stateDir() & "/journal";
+ out = [];
+ if ( !directoryExists( dir ) ) return out;
+ names = directoryList( dir, false, "name" );
+ arraySort( names, "text", "desc" );
+ for ( n in names ) {
+  if ( !reFind( "\.json$", n ) ) continue;
+  e = jsonDeserialize( fileRead( dir & "/" & n ) );
+  if ( !len( name ) || e.name == name ) out.append( e );
+ }
+ return out;
+}
+function configState( entry ) {
+ kind = pathKind( entry.target );
+ if ( kind == "none" ) return "missing";
+ if ( kind != "file" ) return "blocked";
+ current = fileHashOf( entry.target );
+ if ( current == hashOf( entry.content ) ) return "clean";
+ last = journalEntries( entry.name );
+ if ( last.len() && last[1].after == current ) return "outdated";
+ return "drifted";
+}
+function writeAtomic( target, content, mode ) {
+ directoryCreate( getDirectoryFromPath( target ), true, true );
+ tmp = target & ".bxcachy-" & left( createUUID(), 8 ) & ".tmp";
+ fileWrite( tmp, content );
+ fileSetAccessMode( tmp, mode );
+ fileMove( tmp, target );
+}
+function lockTake() {
+ directoryCreate( stateDir(), true, true );
+ r = systemExecute( name = "mkdir", arguments = stateDir() & "/lock", timeout = 10, terminateOnTimeout = true );
+ return r.exitCode == 0;
+}
+function lockDrop() {
+ if ( directoryExists( stateDir() & "/lock" ) ) directoryDelete( stateDir() & "/lock", false );
+}
+function recordJournal( entry, action, before, backup, after ) {
+ id = dateTimeFormat( now(), "yyyyMMdd'T'HHmmssSSS" ) & "-" & left( createUUID(), 8 );
+ directoryCreate( stateDir() & "/journal", true, true );
+ rec = { id: id, action: action, name: entry.name, target: entry.target, time: nowText(), before: before, after: after, backup: backup };
+ fileWrite( stateDir() & "/journal/" & id & ".json", jsonSerialize( rec ) );
+ fileSetAccessMode( stateDir() & "/journal/" & id & ".json", "600" );
+ return id;
+}
+function pruneHistory( name ) {
+ all = journalEntries( name );
+ for ( i = 21; i <= all.len(); i++ ) {
+  if ( len( all[i].backup ) && fileExists( all[i].backup ) ) fileDelete( all[i].backup );
+  fileDelete( stateDir() & "/journal/" & all[i].id & ".json" );
+ }
+}
+function takeBackup( entry ) {
+ if ( pathKind( entry.target ) == "none" ) return "";
+ dir = stateDir() & "/backups/" & entry.name;
+ directoryCreate( dir, true, true );
+ dest = dir & "/" & dateTimeFormat( now(), "yyyyMMdd'T'HHmmssSSS" ) & "-" & left( createUUID(), 8 ) & ".bak";
+ fileCopy( entry.target, dest );
+ fileSetAccessMode( dest, "600" );
+ return dest;
+}
+// Shared by apply and restore. Returns an exit code, never exits itself.
+function configWrite( entry, content, action, yes, dryRun ) {
+ kind = pathKind( entry.target );
+ if ( kind == "link" || kind == "other" ) {
+  println( entry.name & ": refusing to write, target is a symlink or special file: " & entry.target );
+  return 8;
+ }
+ println( action & " " & entry.name & " -> " & entry.target );
+ if ( !yes ) {
+  println( "Nothing changed. Pass --yes to proceed." );
+  return 2;
+ }
+ if ( dryRun ) {
+  println( "Dry run, nothing changed." );
+  return 0;
+ }
+ if ( !lockTake() ) {
+  println( "Another BxCachy run holds the lock: " & stateDir() & "/lock (remove it if no run is active)" );
+  return 8;
+ }
+ code = 0;
+ try {
+  before = kind == "file" ? fileHashOf( entry.target ) : "";
+  backup = takeBackup( entry );
+  writeAtomic( entry.target, content, entry.mode );
+  after = fileHashOf( entry.target );
+  if ( after != hashOf( content ) ) {
+   println( entry.name & ": verification failed after write" );
+   code = 9;
+  } else {
+   if ( modeOf( entry.target ) != entry.mode ) println( "warning: mode is " & modeOf( entry.target ) & ", expected " & entry.mode );
+   id = recordJournal( entry, action, before, backup, after );
+   pruneHistory( entry.name );
+   println( entry.name & ": " & action & " done (journal " & id & ")" );
+  }
+ } catch ( any e ) {
+  println( entry.name & ": failed: " & e.message );
+  code = 9;
+ }
+ lockDrop();
+ return code;
+}
+function configApply( entry, yes, dryRun, force ) {
+ st = configState( entry );
+ if ( st == "blocked" ) return configWrite( entry, entry.content, "apply", yes, dryRun );
+ if ( st == "clean" ) {
+  println( entry.name & ": unchanged" );
+  return 0;
+ }
+ if ( st == "drifted" && !force ) {
+  println( entry.name & ": target was changed outside BxCachy. Run 'config diff " & entry.name & "', then --force to overwrite (a backup is kept)." );
+  return 8;
+ }
+ return configWrite( entry, entry.content, "apply", yes, dryRun );
+}
+function configRestore( entry, id, yes, dryRun ) {
+ found = journalEntries( entry.name ).filter( function( e ) { return e.id == id; } );
+ if ( !found.len() ) {
+  println( "Unknown journal id for " & entry.name & ": " & id );
+  return 3;
+ }
+ rec = found[1];
+ if ( !len( rec.backup ) || !fileExists( rec.backup ) ) {
+  println( id & ": no backup to restore (the file did not exist before, or the backup was pruned)" );
+  return 3;
+ }
+ old = fileRead( rec.backup );
+ if ( hashOf( old ) != rec.before ) {
+  println( id & ": backup does not match its recorded hash, refusing" );
+  return 8;
+ }
+ return configWrite( entry, old, "restore", yes, dryRun );
+}
+
 switch ( cmd ) {
  case "version":
   println( "BxCachy 0.11.0-dev" );
@@ -242,8 +413,67 @@ switch ( cmd ) {
   }
   println( "Installation completed." );
   break;
+ case "config":
+  cfgVerb = p.len() >= 2 ? p[2] : "";
+  cfgName = p.len() >= 3 ? p[3] : "";
+  allowed = [ "yes", "dry-run", "force", "json" ];
+  cfgBad = !len( getSystemSetting( "HOME", "" ) ) || p.len() > 4 || ( p.len() == 4 && cfgVerb != "restore" ) || !arrayFind( [ "list", "diff", "apply", "restore", "history" ], cfgVerb );
+  for ( o in args.options ) if ( !arrayFind( allowed, o ) ) cfgBad = true;
+  if ( cfgBad ) {
+   println( "Usage: bxcachy config list|diff NAME|apply NAME|restore NAME ID|history [NAME] [--yes] [--dry-run] [--force] [--json]" );
+   CLIExit( 2 );
+  }
+  yes = structKeyExists( args.options, "yes" );
+  dryRun = structKeyExists( args.options, "dry-run" );
+  force = structKeyExists( args.options, "force" );
+  asJson = structKeyExists( args.options, "json" );
+  nl = chr( 10 );
+  managed = { bxcachy: { name: "bxcachy", target: cfgHome() & "/bxcachy/bxcachy.json", mode: "600", content: '{' & nl & '  "schema_version": 1,' & nl & '  "desktop": "auto"' & nl & '}' & nl } };
+  if ( cfgVerb == "list" || cfgVerb == "history" ) {
+   rows = [];
+   if ( cfgVerb == "list" ) {
+    for ( key in managed ) rows.append( { name: key, target: managed[key].target, state: configState( managed[key] ) } );
+   } else {
+    rows = journalEntries( cfgName );
+   }
+   if ( asJson ) {
+    println( jsonSerialize( rows ) );
+   } else if ( cfgVerb == "list" ) {
+    for ( r in rows ) println( r.name & ": " & r.state & " (" & r.target & ")" );
+   } else {
+    for ( r in rows ) println( r.id & " " & r.action & " " & r.name & " " & r.time );
+    if ( !rows.len() ) println( "No history." );
+   }
+   break;
+  }
+  if ( !structKeyExists( managed, cfgName ) ) {
+   println( "Unknown managed config: " & cfgName );
+   CLIExit( 2 );
+  }
+  entry = managed[cfgName];
+  if ( cfgVerb == "diff" ) {
+   st = configState( entry );
+   println( cfgName & ": " & st );
+   if ( st == "outdated" || st == "drifted" ) {
+    tmpSrc = getTempDirectory() & "/bxcachy-src-" & left( createUUID(), 8 );
+    fileWrite( tmpSrc, entry.content );
+    d = systemExecute( name = "diff", arguments = "-u " & entry.target & " " & tmpSrc, timeout = 15, terminateOnTimeout = true );
+    println( d.output );
+    fileDelete( tmpSrc );
+   }
+   break;
+  }
+  if ( cfgVerb == "apply" ) {
+   CLIExit( configApply( entry, yes, dryRun, force ) );
+  }
+  if ( p.len() != 4 ) {
+   println( "Usage: bxcachy config restore NAME ID --yes" );
+   CLIExit( 2 );
+  }
+  CLIExit( configRestore( entry, p[4], yes, dryRun ) );
+  break;
  case "help":
-  println( "BxCachy commands: version, doctor, prerequisites, desktop-list, tui-list, web-list, optional-list, optional-plan, profile-list, profile-plan, profile-install-plan, install-plan, package-status, package-source, profile-install, optional-install, install, plan, apps-doctor, dev-plan, help" );
+  println( "BxCachy commands: version, doctor, prerequisites, desktop-list, tui-list, web-list, optional-list, optional-plan, profile-list, profile-plan, profile-install-plan, install-plan, package-status, package-source, profile-install, optional-install, install, plan, apps-doctor, dev-plan, config, help" );
   break;
  default:
   println( "Unsupported command: " & cmd );
