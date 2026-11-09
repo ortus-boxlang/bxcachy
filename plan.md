@@ -1,16 +1,17 @@
 # BxCachy — Complete Engineering Plan and Migration Ledger
 
-> Canonical project plan, maintained on `development`. Last updated 2026-11-08.
+> Canonical project plan, maintained on `development`. Last updated 2026-11-09.
+> **Target changed 2026-11-09 (see section 19): BxCachy builds an opinionated Hyprland + Noctalia desktop on CachyOS, in the spirit of Omarchy. KDE Plasma stays installed side by side and is never removed. Where sections 1 to 18 say "KDE-first" or describe KDE desktop work (M2, M5), section 19 supersedes them.**
 > Status labels: **Implemented** means code exists in the repository; **CI-reported passing** means the user reported a passing run; **Verified on CachyOS** requires a recorded real-machine acceptance test; **Planned** means not implemented. Do not confuse these levels.
 > The repository's existing docs use “Milestone 1 — native foundation,” while our working conversation has called the same foundational release “Milestone 0.” This plan normalizes it as **M0 — Foundation**, followed by M1+ workstreams. No legacy feature-parity claim is implied.
 
 ## 1. Mission and non-negotiable requirements
 
-Build **BxCachy**, a reliable, repeatable, CachyOS-first developer-workstation setup and management system inspired by Omarchy's cohesive tooling, without replacing or damaging KDE Plasma. The end state is a standalone **Linux native executable compiled from BoxLang `.bxs` with MatchBox**, supplemented by Rust/Cargo where Linux integration requires it. Bash is permitted for the initial bootstrap before the native executable exists. Production features must not depend on Python. Favor Arch/CachyOS native tooling and **pacman first, yay for AUR only**.
+Build **BxCachy**, a reliable, repeatable, CachyOS-first developer-workstation setup and management system inspired by Omarchy's cohesive tooling, without removing or damaging an existing KDE Plasma install (superseded in part by section 19). The end state is a standalone **Linux native executable compiled from BoxLang `.bxs` with MatchBox**, supplemented by Rust/Cargo where Linux integration requires it. Bash is permitted for the initial bootstrap before the native executable exists. Production features must not depend on Python. Favor Arch/CachyOS native tooling and **pacman first, yay for AUR only**.
 
 Core design principles:
 
-1. Preserve KDE Plasma, its taskbar, native title bars, window controls, desktop sessions and user customizations; never silently install Hyprland/Niri or change sessions.
+1. Never remove or damage an existing KDE Plasma install. `bxcachy setup` installs Hyprland + Noctalia only after an explicit plan and `--yes`, adds a Hyprland session alongside KDE, and never changes the default session without asking (section 19).
 2. Explicit opt-in and `--yes` for mutations; support inspect/plan/doctor before apply. Idempotent, reversible configuration changes with backups and meaningful errors.
 3. Declarative package catalogs, named profiles, safe package-name validation, official repository preference, AUR only when needed, and never run AUR builds as root.
 4. Separate pure planning, system probing, privileged execution, and user configuration. Keep command execution testable with fake tools.
@@ -374,3 +375,52 @@ This audit combines the actual recovered v0.10.0 archive inventory and its docum
 
 - 2026-11-09: A1 legacy source tree committed (104 files, reference only). A2 to A4 real Arch container harness (`tests/arch/`) and CI stage 5; run 42539644723 green, 23/23 steps. Not yet verified on real CachyOS KDE. A5 draft command contract: [docs/architecture/COMMAND-CONTRACT.md](docs/architecture/COMMAND-CONTRACT.md), pending review.
 - 2026-11-09 decisions: legacy tree is the real source, kept untouched, never backed up or copied. Product config backup/restore/journal design stays (an earlier edit removing it was a misreading and is reverted). yay is installed by bootstrap only if absent. Exit codes 7 to 9 accepted. Catalog check design and first measurement in the command contract, section 8.
+
+## 19. Target: opinionated Hyprland + Noctalia on CachyOS (supersedes KDE-first)
+
+Decided 2026-11-09. BxCachy turns a vanilla CachyOS install into a finished, curated Hyprland + Noctalia desktop with our opinions, similar in spirit to Omarchy 4.5, with a smooth transition from macOS as the guiding goal. If Hyprland or Noctalia is missing, `bxcachy setup` installs and configures it. KDE stays installed side by side as a fallback session. Legacy v0.10.0 is a feature reference, not code to port.
+
+### 19.1 Research summary (Omarchy 4.5, public sources, 2026-11-09)
+
+Omarchy 4.5 (RC1 at the time of the sources; DistroWatch reports a final 4.5.0) is a full distro: own ISO and installer, own Arch mirror, own in-house shell, releases delivered as pacman packages with migrations, four update channels (stable, rc, edge, dev), a snapshot before each update, direct `pacman -Syu` blocked, `omarchy reinstall` to reset configs. Experience features worth matching: one menu (`Super+Alt+Space`) and a CLI that mirrors it; key cheat sheet (`Super+K`); per-workspace layout cycling tiling/scrolling/floating (`Super+L`) with themed titlebars, a dock and minimize; per-monitor workspaces; an Appearance menu (theme, background, font, bar, dock, gaps, corners, opacity, animations); about 19 themes applied across terminal, Neovim, btop and lock screen, with theme intros, video wallpapers and a remembered wallpaper per theme; rebuilt notifications (grouping, snooze, Do Not Disturb, history); screenshots, OCR, QR and screen recording; unified clipboard with history; dictation (Superwhisper or Voxtype, hold-to-talk); a drop-down agent console (`Super+~`), 23 tracked AI agents, multiple accounts and usage meters; mise language environments, Docker, LazyVim, tmux layouts, shell tools; web apps as frameless windows; Install menu for gaming, a Windows VM and Microsoft 365 web apps; fingerprint and FIDO2 unlock; 50 languages and input methods.
+
+We do not copy: own ISO/installer, own mirror, ARM and Apple Silicon, own shell (Noctalia provides it), the Quasar/Tauri GUI (still deferred).
+
+Noctalia: Quickshell-based shell with multi-monitor bars, dock, launcher, control center, notifications, wallpaper picker, OSD, lock screen, session panel, clipboard, desktop widgets; TOML config with hot reload, theme/palette system, plugins, IPC. Verified in the CachyOS-enabled test container: `noctalia` 5.4.1 is in Arch `extra`; `noctalia-shell` and `noctalia-qs` are in the `cachyos` repo; `quickshell`, `hyprland`, `hyprlock`, `hypridle`, `hyprpaper`, `uwsm`, `ghostty` are in `extra`; `yay`, `paru`, `brave-bin` are in the `cachyos` repo; and CachyOS ships the meta-package `cachyos-hypr-noctalia` 1.2.6 (depends on `hyprland noctalia uwsm kitty dolphin grim slurp wl-clipboard hyprpicker nwg-look qt6ct adw-gtk-theme brightnessctl ddcutil` and fonts; conflicts with `cachyos-desktop-settings`). Still to verify: whether `noctalia` and `noctalia-shell` are the same product (the CachyOS package page lists `noctalia-shell` 5.4.1 depending on `noctalia-qs`), and how Hyprland keybinds should call Noctalia IPC.
+
+### 19.2 Supported feature set
+
+1. `bxcachy setup`: detect CachyOS, Hyprland, Noctalia; install and configure what is missing (plan first, `--yes` to apply). Prefer the CachyOS meta-package where it fits.
+2. Curated app catalog with categories, a default tier and optional installs; macOS-transition equivalents.
+3. Web apps as frameless windows.
+4. Themes and wallpapers across terminal, Neovim, btop, GTK/Qt and Noctalia colors.
+5. Menu, key cheat sheet and our own keybinding set in a BxCachy-owned Hyprland file; macOS-style key option.
+6. Layouts: tiling, scrolling, floating cycle.
+7. Launcher/runner provider choice that never overrides the existing launcher.
+8. Capture: screenshot, OCR, QR, screen recording.
+9. Clipboard history.
+10. Dictation, opt-in.
+11. AI agents, drop-down console, local models.
+12. Developer tools: Java 21, Maven, Gradle, BoxLang, BVM, MVM, mise, shell tools.
+13. Containers, databases, vector stores, VMs, networking.
+14. Cloud storage (rclone mounts as per-user services).
+15. `bxcachy update` with migrations, `doctor`, `reinstall`.
+16. Hardware auth, languages and input methods (later).
+
+### 19.3 Build order
+
+1. CachyOS repos in the test container (done 2026-11-09, `tests/arch/cachyos-repos.sh`).
+2. Simple catalog checker (validate the file, resolve against CachyOS repos and AUR) with CI; finish curating the catalog by category.
+3. Pinned toolchain and full bootstrap; yay only if absent.
+4. Native core: shared argument parser, exit codes, `--json`, `--dry-run`, embedded catalog with merge-only user override.
+5. Native config service in BoxLang (prove file operations in the harness first; Bash only for bootstrap).
+6. `bxcachy setup` for Hyprland + Noctalia.
+7. Keybindings, menu, layouts, themes (the identity layer).
+8. Capture, clipboard, dictation, AI console.
+9. Dev tools, containers, databases, VMs, networking, cloud.
+10. Update engine with migrations.
+11. Real CachyOS hardware acceptance (needs a real machine or VM).
+
+### 19.4 Decisions
+
+KDE kept side by side. Catalog: legacy `apps.json` is canonical; `filezilla` and `podman-tui` join the default tier (63 defaults); `dbeaver`, `krdc`, `rustdesk` remain optional installs; full category review pending. Catalog is embedded with a merge-only user override. Config backup/restore design stays. Legacy source tree is kept untouched.

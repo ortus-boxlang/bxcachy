@@ -43,6 +43,10 @@ step mock-package-manager 0 bash tests/package-manager-test.sh
 step mock-bootstrap       0 bash tests/bootstrap-test.sh
 step mock-config          0 bash tests/config-test.sh
 
+# --- CachyOS package sources ---
+step cachyos-repos-present 0 bash -c 'for r in cachyos cachyos-v3 cachyos-core-v3 cachyos-extra-v3 cachyos-v4 cachyos-core-v4 cachyos-extra-v4 multilib; do pacman-conf --repo-list | grep -qx "$r" || { echo "missing repo $r"; exit 1; }; done'
+step cachyos-stack-resolves 0 bash -c 'for p in cachyos-hypr-noctalia noctalia noctalia-shell hyprland quickshell yay; do pacman -Si "$p" >/dev/null || { echo "unresolved: $p"; exit 1; }; done'
+
 # --- Bootstrap against the real system ---
 step bootstrap-check          0 bash bootstrap/install.sh --check
 step bootstrap-needs-confirm  2 bash bootstrap/install.sh --install

@@ -1,5 +1,7 @@
 # BxCachy command contract (A5 draft, v3)
 
+Target (2026-11-09): Hyprland + Noctalia on CachyOS, KDE kept side by side; see plan.md section 19. `setup` is the headline command.
+
 Status: **proposal, no code written.** Note 2026-11-09: the legacy tree in `artifacts/legacy/original/` is the real v0.10.0 source. It is kept as is and never copied, backed up or modified. Decisions here are inputs to M0 hardening (tasks 1.2 to 1.5) and M1 catalog work. Legacy v0.10.0 is a feature reference only (`artifacts/legacy/original/`).
 
 ## 1. Grammar
@@ -8,7 +10,7 @@ Status: **proposal, no code written.** Note 2026-11-09: the legacy tree in `arti
 bxcachy <group> <verb> [args...] [--yes] [--dry-run] [--json] [--quiet]
 ```
 
-- Groups mirror the legacy dispatcher so users keep their muscle memory: `apps app-manager catalog profile base extras dev web podman ai vector db db-center vm network cloud cloud-center cloud-services files quicklook dictation integrations desktop desktop-keys mac-keys omarchy-base layout themes icons runner menu shortcuts system config first-run doctor setup`.
+- Groups mirror the legacy dispatcher so users keep their muscle memory: `setup apps app-manager catalog profile base extras dev web podman ai vector db db-center vm network cloud cloud-center cloud-services files quicklook dictation integrations desktop desktop-keys mac-keys omarchy-base layout themes icons runner menu shortcuts system config first-run doctor setup`.
 - Global verbs on every group: `plan` (read-only), `status` (read-only), `doctor` (read-only checks), `help`.
 - Mutating verbs: `install`, `apply`, `remove`, `restore`, `enable`, `disable`. All require `--yes`.
 - Existing flat commands (`install`, `optional-install`, `profile-install`, `package-status`, `package-source`, ...) stay as aliases until the grouped form ships, then print a deprecation note.
@@ -139,4 +141,4 @@ The check must also run against the CachyOS repos on a real CachyOS machine befo
 
 1. The 5 dropped base entries: keep as curated, or re-flag any as default?
 2. Catalog embed with merge-only user override: confirmed?
-3. Hyprland-era features (layout, runner, shortcuts, menus): undecided, not needed until Phase 4.
+3. Hyprland features (layout, runner, shortcuts, menus) are now in scope, not deferred.

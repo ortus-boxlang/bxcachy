@@ -5,6 +5,10 @@ FROM archlinux:latest
 # to extra-ca.crt; the bracket glob keeps COPY valid when the file is absent.
 COPY extra-ca.cr[t] /tmp/
 RUN if [ -f /tmp/extra-ca.crt ]; then cp /tmp/extra-ca.crt /etc/ca-certificates/trust-source/anchors/ && update-ca-trust; fi
+# CachyOS package sources (cachyos, v3, v4, multilib) so catalog and install tests
+# resolve against the same repositories a real CachyOS machine uses.
+COPY cachyos-repos.sh /tmp/cachyos-repos.sh
+RUN bash /tmp/cachyos-repos.sh && rm /tmp/cachyos-repos.sh
 RUN pacman -Syu --noconfirm --needed sudo base-devel git curl unzip bash jdk21-openjdk rustup \
  && useradd -m -G wheel dev \
  && echo '%wheel ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/wheel \
