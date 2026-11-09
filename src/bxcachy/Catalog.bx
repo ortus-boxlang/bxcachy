@@ -30,13 +30,17 @@ class Catalog {
       if ( !reFind( "^[a-z0-9][a-z0-9-]*$", a.id ) ) errors.append( who & ": id must be lowercase letters, digits and dashes" );
       if ( !arrayFind( [ "desktop", "tui", "web" ], a.kind ) ) errors.append( who & ": unknown kind " & a.kind );
       if ( !arrayFind( [ "default", "optional" ], a.tier ) ) errors.append( who & ": unknown tier " & a.tier );
-      if ( !arrayFind( [ "pacman", "aur", "pkgbuild", "web", "script", "unresolved" ], a.source ) ) errors.append( who & ": unknown source " & a.source );
+      if ( !arrayFind( [ "pacman", "aur", "pkgbuild", "npm", "web", "script", "unresolved" ], a.source ) ) errors.append( who & ": unknown source " & a.source );
       if ( !arrayFind( groupIds, a.group ) ) errors.append( who & ": unknown group " & a.group );
       else if ( !arrayFind( pairs, a.group & "/" & a.category ) ) errors.append( who & ": category " & a.category & " is not in group " & a.group );
       if ( !structKeyExists( a, "description" ) || !len( a.description ) ) errors.append( who & ": missing description" );
       if ( arrayFind( [ "pacman", "aur", "pkgbuild", "unresolved" ], a.source ) ) {
        if ( !structKeyExists( a, "targets" ) || !a.targets.len() ) errors.append( who & ": " & a.source & " needs targets" );
        else for ( t in a.targets ) if ( !reFind( "^[a-zA-Z0-9@._+-]+$", t ) ) errors.append( who & ": unsafe package name " & t );
+      }
+      if ( a.source == "npm" ) {
+       if ( !structKeyExists( a, "targets" ) || a.targets.len() != 1 || !reFind( "^(@[a-z0-9~-][a-z0-9._~-]*/)?[a-z0-9~-][a-z0-9._~-]*$", a.targets[1] ) ) errors.append( who & ": npm needs one valid package name in targets" );
+       if ( !structKeyExists( a, "bin" ) || !reFind( "^[a-z0-9][a-z0-9._-]*$", a.bin ) ) errors.append( who & ": npm needs bin, the command the package installs" );
       }
       if ( a.source == "web" ) {
        if ( !structKeyExists( a, "url" ) || !reFind( "^https://[^/@\s]+(/\S*)?$", a.url ) ) errors.append( who & ": web url must be https without credentials" );

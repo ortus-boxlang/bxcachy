@@ -34,4 +34,10 @@ mb="${MATCHBOX:-$(command -v matchbox || true)}"
 if [[ -n "$mb" ]]; then
  (cd "$root/src" && "$mb" ../tests/catalog_check.bxs) | tail -n 1 | grep -Fq 'negative tests passed' || fail 'catalog check negative tests'
 fi
+# Owner's 2026-11-09 corrections
+for id in amp-desktop elsewhen learn-omarchy; do [[ "$(jq --arg i "$id" '[.apps[]|select(.id==$i)]|length' "$cat")" == 0 ]] || fail "$id must not be in the catalog"; done
+for id in datagrip opencode-desktop; do [[ "$(jq -r --arg i "$id" '.apps[]|select(.id==$i)|.tier' "$cat")" == optional ]] || fail "$id is an optional app"; done
+[[ "$(jq -r '.apps[]|select(.id=="pi-agent")|"\(.source) \(.tier) \(.bin)"' "$cat")" == 'npm optional pi' ]] || fail 'pi-agent is an optional npm app'
+[[ "$(jq -r '.apps[]|select(.id=="disktree")|.tier' "$cat")" == default ]] || fail 'disktree is default'
+[[ "$(jq '[.apps[]|select(.source=="unresolved")]|length' "$cat")" -le 1 ]] || fail 'only codex-cli may stay unresolved'
 echo 'catalog tests passed'

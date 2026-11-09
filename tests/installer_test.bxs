@@ -43,6 +43,18 @@ check( "run: no stray temp file left", directoryList( getDirectoryFromPath( b.st
 r = inst.run( b.steps );
 check( "run: writing the launcher again is fine", r.done.len() == 1 && r.failed.len() == 0 );
 directoryDelete( home, true );
+// npm apps go through nvm; the package name is an argument, not part of the script text
+npmHome = getTempDirectory() & "/bxcachy-npm-" & left( createUUID(), 8 );
+pi = { id: "pi-agent", source: "npm", targets: [ "@earendil-works/pi-coding-agent" ], bin: "pi" };
+b = inst.steps( [ pi ], false, npmHome );
+check( "npm without nvm is blocked with a reason", b.steps.len() == 0 && b.blocked.len() == 1 && find( "nvm is not installed", b.blocked[1].error ) );
+directoryCreate( npmHome & "/.nvm", true ); fileWrite( npmHome & "/.nvm/nvm.sh", "true" );
+b = inst.steps( [ pi ], false, npmHome );
+npmCmd = b.steps[1].commands[1];
+check( "npm with nvm: one bash step", b.steps.len() == 1 && b.steps[1].kind == "npm" && npmCmd[1] == "bash" && npmCmd[2] == "-c" );
+check( "npm: nvm dir and package are separate arguments", npmCmd[5] == npmHome & "/.nvm" && npmCmd[6] == "@earendil-works/pi-coding-agent" && !find( "earendil", npmCmd[3] ) );
+check( "npm: script installs globally without lifecycle scripts", find( "npm install -g --ignore-scripts", npmCmd[3] ) );
+directoryDelete( npmHome, true );
 // running
 calls = [];
 b = inst.steps( sel, false );

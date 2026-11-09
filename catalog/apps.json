@@ -1,6 +1,6 @@
 {
   "schema": 3,
-  "catalog_version": "0.3.0-draft",
+  "catalog_version": "0.4.0-draft",
   "generated": "2026-11-09",
   "notes": [
     "Tier default = installed by a plain install; optional = offered in the picker; apps not listed are not part of the catalog.",
@@ -471,28 +471,6 @@
       ]
     },
     {
-      "id": "intellij",
-      "name": "IntelliJ IDEA Community",
-      "description": "JetBrains IntelliJ IDEA Community, the Java and Kotlin IDE",
-      "description_source": "curated",
-      "kind": "desktop",
-      "group": "development",
-      "category": "Editors and IDEs",
-      "tier": "default",
-      "source": "unresolved",
-      "targets": [
-        "intellij-idea-community-edition"
-      ],
-      "macos": "IntelliJ IDEA (same)",
-      "origin": [
-        "owner-pick"
-      ],
-      "verified_on": "2026-11-09",
-      "profiles": {
-        "editors": "optional"
-      }
-    },
-    {
       "id": "micro",
       "name": "Micro",
       "description": "Modern and intuitive terminal-based text editor",
@@ -590,6 +568,26 @@
       }
     },
     {
+      "id": "datagrip",
+      "name": "DataGrip",
+      "description": "Smart SQL Editor and Advanced Database Client Packed Together for Optimum Productivity",
+      "description_source": "aur",
+      "kind": "desktop",
+      "group": "development",
+      "category": "Editors and IDEs",
+      "tier": "optional",
+      "source": "aur",
+      "targets": [
+        "datagrip"
+      ],
+      "homepage": "https://www.jetbrains.com/datagrip/",
+      "macos": "DataGrip (same)",
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-09"
+    },
+    {
       "id": "helix",
       "name": "Helix",
       "description": "A post-modern modal text editor",
@@ -609,6 +607,29 @@
       "profiles": {
         "editors": "optional"
       }
+    },
+    {
+      "id": "intellij",
+      "name": "IntelliJ IDEA Community",
+      "description": "IDE for Java, Groovy and other programming languages with advanced refactoring features",
+      "description_source": "arch",
+      "kind": "desktop",
+      "group": "development",
+      "category": "Editors and IDEs",
+      "tier": "optional",
+      "source": "pacman",
+      "targets": [
+        "intellij-idea-oss"
+      ],
+      "macos": "IntelliJ IDEA (same)",
+      "origin": [
+        "owner-pick"
+      ],
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "editors": "optional"
+      },
+      "repo": "extra"
     },
     {
       "id": "omazed",
@@ -1329,11 +1350,10 @@
       "group": "ai",
       "category": "Assistants",
       "tier": "optional",
-      "source": "pacman",
+      "source": "aur",
       "targets": [
         "claude-desktop"
       ],
-      "repo": "cachyos",
       "homepage": "https://claude.com/download",
       "macos": "Claude (same)",
       "origin": [
@@ -1363,21 +1383,16 @@
     {
       "id": "grokbot",
       "name": "GrokBot",
-      "description": "Grok Bot desktop agent",
-      "description_source": "pkgbuild",
+      "description": "Grok Bot desktop agent (repacked from the official Linux .deb)",
+      "description_source": "aur",
       "kind": "desktop",
       "group": "ai",
       "category": "Assistants",
       "tier": "optional",
-      "source": "pkgbuild",
+      "source": "aur",
       "targets": [
-        "grok-bot"
+        "grokbot-linux-port-bin"
       ],
-      "pkgbuild": {
-        "repo": "omacom/omarchy-pkgs",
-        "path": "pkgbuilds/grok-bot",
-        "ref": "master"
-      },
       "homepage": "https://x.ai/bot",
       "macos": "Grok",
       "origin": [
@@ -1426,68 +1441,6 @@
       "origin": [
         "omarchy-desktop"
       ],
-      "verified_on": "2026-11-09"
-    },
-    {
-      "id": "opencode-cli",
-      "name": "OpenCode",
-      "description": "The open source coding agent",
-      "description_source": "arch",
-      "kind": "tui",
-      "group": "ai",
-      "category": "Coding agents",
-      "tier": "default",
-      "source": "pacman",
-      "targets": [
-        "opencode"
-      ],
-      "repo": "extra",
-      "homepage": "https://github.com/anomalyco/opencode",
-      "macos": null,
-      "origin": [
-        "owner-pick"
-      ],
-      "decided_by_owner": true,
-      "verified_on": "2026-11-09",
-      "profiles": {
-        "ai": "default"
-      }
-    },
-    {
-      "id": "pi-agent",
-      "name": "Pi coding agent",
-      "description": "Pi, a minimal terminal coding agent (package not yet verified)",
-      "description_source": "curated",
-      "kind": "tui",
-      "group": "ai",
-      "category": "Coding agents",
-      "tier": "default",
-      "source": "unresolved",
-      "targets": [
-        "pi-agent"
-      ],
-      "macos": null,
-      "origin": [
-        "owner-pick"
-      ],
-      "decided_by_owner": true,
-      "verified_on": "2026-11-09"
-    },
-    {
-      "id": "amp-desktop",
-      "name": "Amp Desktop",
-      "description": "Amp coding agent as a desktop app (package not yet verified)",
-      "description_source": "curated",
-      "kind": "desktop",
-      "group": "ai",
-      "category": "Coding agents",
-      "tier": "optional",
-      "source": "unresolved",
-      "targets": [
-        "amp-desktop"
-      ],
-      "macos": null,
-      "note": "No package found; not yet investigated",
       "verified_on": "2026-11-09"
     },
     {
@@ -1591,6 +1544,73 @@
       "verified_on": "2026-11-09"
     },
     {
+      "id": "opencode-cli",
+      "name": "OpenCode",
+      "description": "The open source coding agent",
+      "description_source": "arch",
+      "kind": "tui",
+      "group": "ai",
+      "category": "Coding agents",
+      "tier": "optional",
+      "source": "pacman",
+      "targets": [
+        "opencode"
+      ],
+      "repo": "extra",
+      "homepage": "https://github.com/anomalyco/opencode",
+      "macos": null,
+      "origin": [
+        "owner-pick"
+      ],
+      "decided_by_owner": true,
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "ai": "optional"
+      }
+    },
+    {
+      "id": "opencode-desktop",
+      "name": "OpenCode Desktop",
+      "description": "OpenCode desktop client",
+      "description_source": "aur",
+      "kind": "desktop",
+      "group": "ai",
+      "category": "Coding agents",
+      "tier": "optional",
+      "source": "aur",
+      "targets": [
+        "opencode-desktop-bin"
+      ],
+      "homepage": "https://opencode.ai/",
+      "macos": "OpenCode (same)",
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-09"
+    },
+    {
+      "id": "pi-agent",
+      "name": "Pi coding agent",
+      "description": "Pi, a minimal terminal coding agent harness (installed with npm through nvm)",
+      "description_source": "curated",
+      "kind": "tui",
+      "group": "ai",
+      "category": "Coding agents",
+      "tier": "optional",
+      "source": "npm",
+      "targets": [
+        "@earendil-works/pi-coding-agent"
+      ],
+      "macos": null,
+      "origin": [
+        "owner-pick"
+      ],
+      "decided_by_owner": true,
+      "verified_on": "2026-11-09",
+      "bin": "pi",
+      "homepage": "https://pi.dev/"
+    },
+    {
       "id": "t3-code",
       "name": "T3 Code",
       "description": "Desktop control surface for local coding agents",
@@ -1613,15 +1633,15 @@
     {
       "id": "lm-studio",
       "name": "LM Studio",
-      "description": "Run large language models locally with a desktop app (package not yet verified)",
-      "description_source": "curated",
+      "description": "LM Studio - A desktop app for exploring and running large language models locally",
+      "description_source": "aur",
       "kind": "desktop",
       "group": "ai",
       "category": "Local models",
       "tier": "optional",
-      "source": "unresolved",
+      "source": "aur",
       "targets": [
-        "lmstudio"
+        "lmstudio-bin"
       ],
       "macos": "LM Studio (same)",
       "origin": [
@@ -1636,19 +1656,23 @@
     {
       "id": "ollama",
       "name": "Ollama",
-      "description": "Ollama, run language models locally (installed from its web installer)",
-      "description_source": "curated",
-      "kind": "web",
+      "description": "Create, run and share large language models (LLMs)",
+      "description_source": "arch",
+      "kind": "tui",
       "group": "ai",
       "category": "Local models",
       "tier": "optional",
-      "source": "web",
-      "url": "https://ollama.com",
-      "homepage": "https://ollama.com",
+      "source": "pacman",
+      "homepage": "https://github.com/ollama/ollama",
       "macos": null,
       "profiles": {
         "ai": "optional"
-      }
+      },
+      "targets": [
+        "ollama"
+      ],
+      "repo": "extra",
+      "verified_on": "2026-11-09"
     },
     {
       "id": "dropbox",
@@ -2286,6 +2310,26 @@
       }
     },
     {
+      "id": "disktree",
+      "name": "Disktree",
+      "description": "A treemap for finding and removing what fills your disk, for Omarchy. Rust + GPUI (prebuilt binary)",
+      "description_source": "aur",
+      "kind": "desktop",
+      "group": "system",
+      "category": "System",
+      "tier": "default",
+      "source": "aur",
+      "targets": [
+        "disktree-bin"
+      ],
+      "homepage": "https://github.com/tobi/disktree",
+      "macos": "DaisyDisk",
+      "origin": [
+        "omarchy-desktop"
+      ],
+      "verified_on": "2026-11-09"
+    },
+    {
       "id": "pacseek",
       "name": "Pacseek",
       "description": "A terminal user interface for searching and installing Arch Linux packages",
@@ -2322,26 +2366,6 @@
       "macos": "Activity Monitor",
       "origin": [
         "owner-pick",
-        "omarchy-desktop"
-      ],
-      "verified_on": "2026-11-09"
-    },
-    {
-      "id": "disktree",
-      "name": "Disktree",
-      "description": "A treemap for finding and removing what fills your disk, for Omarchy. Rust + GPUI (prebuilt binary)",
-      "description_source": "aur",
-      "kind": "desktop",
-      "group": "system",
-      "category": "System",
-      "tier": "optional",
-      "source": "aur",
-      "targets": [
-        "disktree-bin"
-      ],
-      "homepage": "https://github.com/tobi/disktree",
-      "macos": "DaisyDisk",
-      "origin": [
         "omarchy-desktop"
       ],
       "verified_on": "2026-11-09"
@@ -2466,26 +2490,6 @@
       "profiles": {
         "core": "default"
       }
-    },
-    {
-      "id": "elsewhen",
-      "name": "Elsewhen",
-      "description": "World clock; now a plugin of the Omarchy shell, with no standalone package",
-      "description_source": "curated",
-      "kind": "desktop",
-      "group": "system",
-      "category": "Utilities",
-      "tier": "optional",
-      "source": "unresolved",
-      "targets": [
-        "elsewhen"
-      ],
-      "macos": "World Clock",
-      "origin": [
-        "omarchy-desktop"
-      ],
-      "note": "Now a plugin of the Omarchy shell; no standalone package",
-      "verified_on": "2026-11-09"
     },
     {
       "id": "makima",
@@ -3246,25 +3250,6 @@
       }
     },
     {
-      "id": "zap-whatsapp",
-      "name": "Zap (WhatsApp)",
-      "description": "WhatsApp desktop client for Linux (package not yet verified)",
-      "description_source": "curated",
-      "kind": "desktop",
-      "group": "everyday",
-      "category": "Communication",
-      "tier": "default",
-      "source": "unresolved",
-      "targets": [
-        "zap-whatsapp"
-      ],
-      "macos": null,
-      "origin": [
-        "owner-pick"
-      ],
-      "verified_on": "2026-11-09"
-    },
-    {
       "id": "zoom",
       "name": "Zoom",
       "description": "Video Conferencing and Web Conferencing Service",
@@ -3355,6 +3340,25 @@
         "owner-pick"
       ],
       "decided_by_owner": true,
+      "verified_on": "2026-11-09"
+    },
+    {
+      "id": "zap-whatsapp",
+      "name": "Zap (WhatsApp)",
+      "description": "Fast native WhatsApp client built with Rust and egui",
+      "description_source": "aur",
+      "kind": "desktop",
+      "group": "everyday",
+      "category": "Communication",
+      "tier": "optional",
+      "source": "aur",
+      "targets": [
+        "zapfast-bin"
+      ],
+      "macos": null,
+      "origin": [
+        "owner-pick"
+      ],
       "verified_on": "2026-11-09"
     },
     {
@@ -3464,13 +3468,13 @@
     {
       "id": "hype",
       "name": "Hype",
-      "description": "Presentation app (right package not yet found)",
-      "description_source": "curated",
+      "description": "Simple Markdown presentations with a visual slide editor",
+      "description_source": "pkgbuild",
       "kind": "desktop",
       "group": "everyday",
       "category": "Presentations",
       "tier": "optional",
-      "source": "unresolved",
+      "source": "pkgbuild",
       "targets": [
         "hype"
       ],
@@ -3479,7 +3483,13 @@
         "omarchy-desktop"
       ],
       "note": "AUR package 'hype' is a Twitch tool, not the Omarchy presentation app; the right package is not found yet",
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "homepage": "https://github.com/omacom/hype",
+      "pkgbuild": {
+        "repo": "omacom/omarchy-pkgs",
+        "path": "pkgbuilds/hype",
+        "ref": "master"
+      }
     },
     {
       "id": "omapresent",
@@ -3506,36 +3516,6 @@
       ],
       "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
       "verified_on": "2026-11-09"
-    },
-    {
-      "id": "notion-desktop",
-      "name": "Notion Desktop",
-      "description": "Official Notion desktop app",
-      "description_source": "pkgbuild",
-      "kind": "desktop",
-      "group": "everyday",
-      "category": "Productivity",
-      "tier": "default",
-      "source": "pkgbuild",
-      "targets": [
-        "notion-desktop"
-      ],
-      "pkgbuild": {
-        "repo": "omacom/omarchy-pkgs",
-        "path": "pkgbuilds/notion-desktop",
-        "ref": "master"
-      },
-      "homepage": "https://www.notion.com/desktop",
-      "macos": "Notion (same)",
-      "origin": [
-        "owner-pick",
-        "omarchy-desktop"
-      ],
-      "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
-      "verified_on": "2026-11-09",
-      "profiles": {
-        "productivity": "default"
-      }
     },
     {
       "id": "onlyoffice",
@@ -3626,6 +3606,31 @@
       "homepage": "https://github.com/jankeesvw/omarchy-meeting-recorder",
       "macos": "Otter / Granola",
       "origin": [
+        "omarchy-desktop"
+      ],
+      "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "productivity": "optional"
+      }
+    },
+    {
+      "id": "notion-desktop",
+      "name": "Notion Desktop",
+      "description": "Your connected workspace for wiki, docs & projects",
+      "description_source": "aur",
+      "kind": "desktop",
+      "group": "everyday",
+      "category": "Productivity",
+      "tier": "optional",
+      "source": "aur",
+      "targets": [
+        "notion-app-electron"
+      ],
+      "homepage": "https://www.notion.com/desktop",
+      "macos": "Notion (same)",
+      "origin": [
+        "owner-pick",
         "omarchy-desktop"
       ],
       "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
