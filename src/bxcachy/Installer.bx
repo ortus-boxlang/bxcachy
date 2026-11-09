@@ -63,8 +63,8 @@ class Installer {
     // The build step for a pinned PKGBUILD entry, or a { blocked } struct when it cannot be built yet.
     function pkgbuildStep( app ) {
         var ref = app.pkgbuild.ref;
-        if ( ref == "master" || ref == "main" ) {
-            return { blocked: { id: app.id, source: "pkgbuild", error: "the PKGBUILD ref is not pinned to a commit yet" } };
+        if ( !reFind( "^[0-9a-f]{40}$", ref ) ) {
+            return { blocked: { id: app.id, source: "pkgbuild", error: "the PKGBUILD ref is not a full commit" } };
         }
         var dir = getTempDirectory() & "/bxcachy-pkg-" & app.id & "-" & left( createUUID(), 8 );
         return { step: { kind: "pkgbuild", ids: [ app.id ], dir: dir, commands: [

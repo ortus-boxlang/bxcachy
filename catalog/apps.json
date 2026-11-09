@@ -1,13 +1,13 @@
 {
   "schema": 3,
-  "catalog_version": "0.4.3-draft",
+  "catalog_version": "0.5.0-draft",
   "generated": "2026-11-09",
   "notes": [
     "Tier default = installed by a plain install; optional = offered in the picker; apps not listed are not part of the catalog.",
-    "pkgbuild.ref is master and MUST be pinned to a commit before any installer uses it.",
     "Sources checked 2026-11-09 against CachyOS (cachyos, v3, v4), Arch (core, extra, multilib) and the AUR. Entries with source unresolved have no installable package yet.",
     "Omarchy app inventory comes from the unofficial store omarchyapps.com plus the Omarchy 4.5 notes; verify before release.",
-    "Schema 3 adds group and category tables for presentation, description (with description_source: arch, aur, pkgbuild or curated), homepage and a filled-in macos hint where one exists."
+    "Schema 3 adds group and category tables for presentation, description (with description_source: arch, aur, pkgbuild or curated), homepage and a filled-in macos hint where one exists.",
+    "pkgbuild.ref is a full 40-character commit of the recipe repository; `catalog check` rejects anything else. Re-pin by resolving the new head and checking every recipe path and pkgname at it."
   ],
   "groups": [
     {
@@ -647,7 +647,7 @@
       "pkgbuild": {
         "repo": "omacom/omarchy-pkgs",
         "path": "pkgbuilds/omazed",
-        "ref": "master"
+        "ref": "65a4b0f646f7afe480fdebc7c0cf8cf2b56bf27f"
       },
       "homepage": "https://github.com/aps6/omazed",
       "macos": "Zed theme",
@@ -1261,7 +1261,7 @@
       "pkgbuild": {
         "repo": "omacom/omarchy-pkgs",
         "path": "pkgbuilds/buzz",
-        "ref": "master"
+        "ref": "65a4b0f646f7afe480fdebc7c0cf8cf2b56bf27f"
       },
       "homepage": "https://github.com/block/buzz",
       "macos": "Agent workspace",
@@ -1287,7 +1287,7 @@
       "pkgbuild": {
         "repo": "omacom/omarchy-pkgs",
         "path": "pkgbuilds/collie-bin",
-        "ref": "master"
+        "ref": "65a4b0f646f7afe480fdebc7c0cf8cf2b56bf27f"
       },
       "homepage": "https://github.com/AltanS/collie",
       "macos": "Agent remote UI",
@@ -1333,7 +1333,7 @@
       "pkgbuild": {
         "repo": "omacom/omarchy-pkgs",
         "path": "pkgbuilds/hermes-desktop",
-        "ref": "master"
+        "ref": "65a4b0f646f7afe480fdebc7c0cf8cf2b56bf27f"
       },
       "homepage": "https://github.com/NousResearch/hermes-agent",
       "macos": "Agent desktop",
@@ -1541,7 +1541,7 @@
       "pkgbuild": {
         "repo": "omacom/omarchy-pkgs",
         "path": "pkgbuilds/openai-codex-desktop",
-        "ref": "master"
+        "ref": "65a4b0f646f7afe480fdebc7c0cf8cf2b56bf27f"
       },
       "homepage": "https://chatgpt.com/codex/",
       "macos": "ChatGPT (same)",
@@ -2106,7 +2106,7 @@
       "pkgbuild": {
         "repo": "omacom/omarchy-pkgs",
         "path": "pkgbuilds/omarchy-speedtest",
-        "ref": "master"
+        "ref": "65a4b0f646f7afe480fdebc7c0cf8cf2b56bf27f"
       },
       "homepage": "https://github.com/omacom/omarchy-speedtest",
       "macos": "Network Utility",
@@ -2185,7 +2185,7 @@
       "pkgbuild": {
         "repo": "omacom/omarchy-pkgs",
         "path": "pkgbuilds/gliff",
-        "ref": "master"
+        "ref": "65a4b0f646f7afe480fdebc7c0cf8cf2b56bf27f"
       },
       "homepage": "https://github.com/omacom/gliff",
       "macos": "Screen Sharing",
@@ -2296,7 +2296,7 @@
       "pkgbuild": {
         "repo": "omacom/omarchy-pkgs",
         "path": "pkgbuilds/superwhisper-bin",
-        "ref": "master"
+        "ref": "65a4b0f646f7afe480fdebc7c0cf8cf2b56bf27f"
       },
       "homepage": "https://superwhisper.com",
       "macos": "Dictation / Superwhisper",
@@ -2469,7 +2469,7 @@
       "pkgbuild": {
         "repo": "omacom/omarchy-pkgs",
         "path": "pkgbuilds/rumb",
-        "ref": "master"
+        "ref": "65a4b0f646f7afe480fdebc7c0cf8cf2b56bf27f"
       },
       "homepage": "https://github.com/HANCORE-linux/rumb",
       "macos": "Software Update",
@@ -2563,7 +2563,7 @@
       "pkgbuild": {
         "repo": "omacom/omarchy-pkgs",
         "path": "pkgbuilds/omacalc",
-        "ref": "master"
+        "ref": "65a4b0f646f7afe480fdebc7c0cf8cf2b56bf27f"
       },
       "homepage": "https://github.com/omacom-io/omacalc",
       "macos": "Calculator",
@@ -2589,7 +2589,7 @@
       "pkgbuild": {
         "repo": "omacom/omarchy-pkgs",
         "path": "pkgbuilds/omakeyboard",
-        "ref": "master"
+        "ref": "65a4b0f646f7afe480fdebc7c0cf8cf2b56bf27f"
       },
       "homepage": "https://github.com/gabamnml/omakeyboard",
       "macos": "Karabiner-Elements",
@@ -2615,7 +2615,7 @@
       "pkgbuild": {
         "repo": "omacom/omarchy-pkgs",
         "path": "pkgbuilds/omawake-bin",
-        "ref": "master"
+        "ref": "65a4b0f646f7afe480fdebc7c0cf8cf2b56bf27f"
       },
       "homepage": "https://github.com/jacob-vincent-mink/omawake",
       "macos": "Siri wake word",
@@ -2966,7 +2966,7 @@
       "pkgbuild": {
         "repo": "omacom/omarchy-pkgs",
         "path": "pkgbuilds/flea",
-        "ref": "master"
+        "ref": "65a4b0f646f7afe480fdebc7c0cf8cf2b56bf27f"
       },
       "homepage": "https://github.com/thisisgm/flea",
       "macos": "Finder",
@@ -3012,7 +3012,7 @@
       "pkgbuild": {
         "repo": "omacom/omarchy-pkgs",
         "path": "pkgbuilds/strata",
-        "ref": "master"
+        "ref": "65a4b0f646f7afe480fdebc7c0cf8cf2b56bf27f"
       },
       "homepage": "https://github.com/lgse/strata",
       "macos": "Finder",
@@ -3325,7 +3325,7 @@
       "pkgbuild": {
         "repo": "omacom/omarchy-pkgs",
         "path": "pkgbuilds/omairc",
-        "ref": "master"
+        "ref": "65a4b0f646f7afe480fdebc7c0cf8cf2b56bf27f"
       },
       "homepage": "https://github.com/fredimachado/omairc",
       "macos": "Colloquy",
@@ -3491,7 +3491,7 @@
       "pkgbuild": {
         "repo": "omacom/omarchy-pkgs",
         "path": "pkgbuilds/slap-notes-bin",
-        "ref": "master"
+        "ref": "65a4b0f646f7afe480fdebc7c0cf8cf2b56bf27f"
       },
       "homepage": "https://slapnotes.com",
       "macos": "Notes",
@@ -3544,7 +3544,7 @@
       "pkgbuild": {
         "repo": "omacom/omarchy-pkgs",
         "path": "pkgbuilds/hype",
-        "ref": "master"
+        "ref": "65a4b0f646f7afe480fdebc7c0cf8cf2b56bf27f"
       }
     },
     {
@@ -3631,7 +3631,7 @@
       "pkgbuild": {
         "repo": "omacom/omarchy-pkgs",
         "path": "pkgbuilds/omarchy-meeting-recorder-bin",
-        "ref": "master"
+        "ref": "65a4b0f646f7afe480fdebc7c0cf8cf2b56bf27f"
       },
       "homepage": "https://github.com/jankeesvw/omarchy-meeting-recorder",
       "macos": "Otter / Granola",
@@ -4204,7 +4204,7 @@
       "pkgbuild": {
         "repo": "omacom/omarchy-pkgs",
         "path": "pkgbuilds/omaspeak-bin",
-        "ref": "master"
+        "ref": "65a4b0f646f7afe480fdebc7c0cf8cf2b56bf27f"
       },
       "homepage": "https://github.com/jacob-vincent-mink/omaspeak",
       "macos": "Spoken Content",
@@ -4301,7 +4301,7 @@
       "pkgbuild": {
         "repo": "omacom/omarchy-pkgs",
         "path": "pkgbuilds/omacharts",
-        "ref": "master"
+        "ref": "65a4b0f646f7afe480fdebc7c0cf8cf2b56bf27f"
       },
       "homepage": "https://github.com/jorgemanrubia/omacharts",
       "macos": "Numbers charts",
@@ -4327,7 +4327,7 @@
       "pkgbuild": {
         "repo": "omacom/omarchy-pkgs",
         "path": "pkgbuilds/omadesign-bin",
-        "ref": "master"
+        "ref": "65a4b0f646f7afe480fdebc7c0cf8cf2b56bf27f"
       },
       "homepage": "https://github.com/michaelmonetized/omadesign",
       "macos": "Pixelmator / Affinity",
@@ -4485,7 +4485,7 @@
       "pkgbuild": {
         "repo": "omacom/omarchy-pkgs",
         "path": "pkgbuilds/link-studio",
-        "ref": "master"
+        "ref": "65a4b0f646f7afe480fdebc7c0cf8cf2b56bf27f"
       },
       "homepage": "https://jweaver60.github.io/link-studio/",
       "macos": "Insta360 Link Controller",
@@ -4511,7 +4511,7 @@
       "pkgbuild": {
         "repo": "omacom/omarchy-pkgs",
         "path": "pkgbuilds/monologue",
-        "ref": "master"
+        "ref": "65a4b0f646f7afe480fdebc7c0cf8cf2b56bf27f"
       },
       "homepage": "https://github.com/omacom/monologue",
       "macos": "Photo Booth",
@@ -4558,7 +4558,7 @@
       "pkgbuild": {
         "repo": "omacom/omarchy-pkgs",
         "path": "pkgbuilds/omacut",
-        "ref": "master"
+        "ref": "65a4b0f646f7afe480fdebc7c0cf8cf2b56bf27f"
       },
       "homepage": "https://github.com/omacom/omacut",
       "macos": "QuickTime trim",
@@ -4584,7 +4584,7 @@
       "pkgbuild": {
         "repo": "omacom/omarchy-pkgs",
         "path": "pkgbuilds/omareel",
-        "ref": "master"
+        "ref": "65a4b0f646f7afe480fdebc7c0cf8cf2b56bf27f"
       },
       "homepage": "https://github.com/omacom/omareel",
       "macos": "ScreenFlow",
@@ -4658,7 +4658,7 @@
       "pkgbuild": {
         "repo": "omacom/omarchy-pkgs",
         "path": "pkgbuilds/rawmakase-bin",
-        "ref": "master"
+        "ref": "65a4b0f646f7afe480fdebc7c0cf8cf2b56bf27f"
       },
       "homepage": "https://github.com/pch/rawmakase",
       "macos": "Lightroom",
@@ -4732,7 +4732,7 @@
       "pkgbuild": {
         "repo": "omacom/omarchy-pkgs",
         "path": "pkgbuilds/omasnap",
-        "ref": "master"
+        "ref": "65a4b0f646f7afe480fdebc7c0cf8cf2b56bf27f"
       },
       "homepage": "https://github.com/omacom/omasnap",
       "macos": "Screenshot (Shift+Cmd+4)",
@@ -4894,7 +4894,7 @@
       "pkgbuild": {
         "repo": "omacom/omarchy-pkgs",
         "path": "pkgbuilds/omakade",
-        "ref": "master"
+        "ref": "65a4b0f646f7afe480fdebc7c0cf8cf2b56bf27f"
       },
       "homepage": "https://btsouth.github.io/omakade/",
       "macos": "Game Center",

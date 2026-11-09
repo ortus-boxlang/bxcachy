@@ -29,7 +29,18 @@ cat > "$tmp/id" <<'MOCK'
 #!/usr/bin/env bash
 if [[ "$1" == -u ]]; then printf '%s\n' "${MOCK_UID:-1000}"; else /usr/bin/id "$@"; fi
 MOCK
-chmod +x "$tmp/pacman" "$tmp/yay" "$tmp/sudo" "$tmp/id"
+# git and makepkg for the PKGBUILD path: `git clone URL DIR` creates DIR; everything is logged
+cat > "$tmp/git" <<'MOCK'
+#!/usr/bin/env bash
+printf 'git %s\n' "$*" >> "$INSTALL_TEST_LOG"
+if [[ "$1" == clone ]]; then mkdir -p "${@: -1}/pkgbuilds/hype"; fi
+MOCK
+cat > "$tmp/makepkg" <<'MOCK'
+#!/usr/bin/env bash
+[[ -z "${MOCK_MAKEPKG_FAIL:-}" ]] || exit 1
+printf 'makepkg %s in %s\n' "$*" "$PWD" >> "$INSTALL_TEST_LOG"
+MOCK
+chmod +x "$tmp/pacman" "$tmp/yay" "$tmp/sudo" "$tmp/id" "$tmp/git" "$tmp/makepkg"
 export PATH="$tmp:$PATH" INSTALL_TEST_LOG="$tmp/installed.log" HOME="$tmp/home"
 mkdir -p "$HOME"
 reset() { : > "$INSTALL_TEST_LOG"; }
@@ -88,10 +99,18 @@ launcher="$HOME/.local/share/applications/bxcachy-gmail.desktop"
 grep -Fq 'Exec=brave --app=https://mail.google.com' "$launcher" || fail 'launcher runs brave in app mode'
 [[ "$(env PATH="$PATH" HOME="$HOME" "$binary" package-status gmail)" == 'gmail: installed' ]] || fail 'package-status sees the launcher'
 
-# the default tier installs completely: no default app needs an unpinned PKGBUILD any more
+# the default tier installs completely
 reset
 [[ "$(code "$binary" install --yes)" == 0 ]] || fail 'default install exits 0'
 grep -Fq neovim "$INSTALL_TEST_LOG" || fail 'default install ran pacman'
-# an optional PKGBUILD app (ref still master) is reported failed, not built
-[[ "$(code "$binary" install hype --yes)" == 3 ]] || fail 'unpinned PKGBUILD app exits 3 when nothing else is installed'
+# a PKGBUILD app is cloned at its pinned commit and built as the normal user
+reset
+"$binary" install hype --yes >/dev/null 2>&1 || fail 'install hype'
+grep -Fq 'git clone --quiet https://github.com/omacom/omarchy-pkgs.git' "$INSTALL_TEST_LOG" || fail 'hype is cloned from the recipe repository'
+grep -Eq 'git -C .* checkout --quiet [0-9a-f]{40}$' "$INSTALL_TEST_LOG" || fail 'hype is checked out at a full commit'
+grep -Fq 'makepkg -si --noconfirm --needed' "$INSTALL_TEST_LOG" || fail 'makepkg ran'
+reset
+[[ "$(MOCK_UID=0 code "$binary" install hype --yes)" == 4 ]] || fail 'root never builds a PKGBUILD (exit 4)'
+[[ ! -s "$INSTALL_TEST_LOG" ]] || fail 'root PKGBUILD run changed something'
+[[ "$(MOCK_MAKEPKG_FAIL=1 code "$binary" install hype --yes)" == 6 ]] || fail 'failed makepkg exits 6'
 echo 'native package integration tests passed'

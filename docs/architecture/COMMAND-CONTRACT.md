@@ -78,7 +78,7 @@ Entry schema (legacy fields kept, new fields marked):
 |---|---|
 | `id`, `name`, `kind` (`desktop` `tui` `web`), `category`, `description` | as legacy |
 | `source` (`pacman` `aur` `pkgbuild` `script` `manual` `web`), `target` | package name, or URL for web and script |
-| `pkgbuild` source: `repo`, `path`, `ref` | Build with `makepkg` as the normal user from a PKGBUILD in a public git repo, pinned to a commit or tag, then install the result with pacman. Used for Omarchy 4.5 apps (`omacom/omarchy-pkgs`). The PKGBUILD is shown before it is built. |
+| `pkgbuild` source: `repo`, `path`, `ref` | Build with `makepkg` as the normal user from a PKGBUILD in a public git repo, pinned to a full 40-character commit (`catalog check` rejects anything else), then install the result with pacman. Used for Omarchy 4.5 apps (`omacom/omarchy-pkgs`). The PKGBUILD is shown before it is built. |
 | `check` (for `script`) | argv array that exits 0 when installed, for example `["command","-v","pi"]` |
 | `default` | base tier flag |
 | `source_status`, `source_confirmed` | legacy provenance flags, kept |
@@ -211,5 +211,5 @@ Human output is the same lists, one app per line with its source.
 - Catalog 0.3.0: `profiles`, per-profile tier, `shells` (section 11, `catalog/README.md`).
 - `Resolver` class (selection) and `Packages` class (read-only commands). `plan`, `install-plan`, `optional-plan`, `profile-plan`, `profile-install-plan`, `package-status`, `package-source`, `profile-list`, `desktop-list`, `tui-list`, `web-list`, `optional-list` run on the catalog. Installed state comes from one `pacman -Qq` call (web apps: launcher file).
 - `install`, `optional-install`, `profile-install` run on the catalog through `Installer` (one `pacman -S` call, `yay` per AUR app, pinned PKGBUILDs via `git clone` + `makepkg -si`). Rules as in sections 2 and 11: no `--yes` prints the plan (exit 2), `--dry-run` exits 0, root with AUR or PKGBUILD builds exits 4 before any change, a named app without a source exits 3, partial results exit 7 (5 or 6 when nothing succeeded).
-- Web apps install as launchers (see section 11 table). Not installable yet, reported as `failed`: the 30 `pkgbuild` apps (refs still `master`, must be pinned to commits). All of them are optional now, so a plain `bxcachy install` exits 0.
+- Web apps install as launchers (see section 11 table). The 28 `pkgbuild` apps are pinned to one commit of `omacom/omarchy-pkgs` and install with `git clone`, `git checkout COMMIT`, `makepkg -si` as the normal user (root exits 4). All of them are optional, so a plain `bxcachy install` skips them.
 - Not on the catalog: `apps-doctor`, `dev-plan`.

@@ -9,7 +9,7 @@ class Catalog {
     }
     // Offline validation: returns { errors: [], warnings: [] }.
     function check( cat ) {
-     errors = []; warnings = []; unpinned = 0;
+     errors = []; warnings = [];
      if ( cat.schema != 3 ) errors.append( "schema must be 3, found " & cat.schema );
      groupIds = cat.groups.map( function( g ) { return g.id; } );
      pairs = cat.categories.map( function( c ) { return c.group & "/" & c.title; } );
@@ -43,7 +43,7 @@ class Catalog {
       }
       if ( a.source == "pkgbuild" ) {
        if ( !structKeyExists( a, "pkgbuild" ) || !structKeyExists( a.pkgbuild, "repo" ) || !structKeyExists( a.pkgbuild, "path" ) || !structKeyExists( a.pkgbuild, "ref" ) ) errors.append( who & ": pkgbuild needs repo, path and ref" );
-       else if ( a.pkgbuild.ref == "master" || a.pkgbuild.ref == "main" ) unpinned++;
+       else if ( !reFind( "^[0-9a-f]{40}$", a.pkgbuild.ref ) ) errors.append( who & ": pkgbuild ref must be a full 40-character commit, found " & a.pkgbuild.ref );
       }
       if ( structKeyExists( a, "shells" ) ) {
        if ( !isArray( a.shells ) || !a.shells.len() ) errors.append( who & ": shells must be a non-empty list" );
@@ -59,7 +59,6 @@ class Catalog {
       if ( a.source == "unresolved" && a.tier == "default" ) warnings.append( who & ": default entry has no installable package yet" );
      }
      for ( pid in profileIds ) if ( !structKeyExists( defaults, pid ) ) errors.append( "profile " & pid & ": needs at least one default app" );
-     if ( unpinned ) warnings.append( unpinned & " pkgbuild entries use a branch ref; pin them to commits before an installer builds them" );
      return { errors: errors, warnings: warnings };
     }
     function row( a ) {

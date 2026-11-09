@@ -26,10 +26,12 @@ check( "root: no sudo", b.steps[1].commands[1][1] == "pacman" );
 b = inst.steps( [ app( "omazed", "pkgbuild", [ "omazed" ], { pkgbuild: { repo: "omacom/omarchy-pkgs", path: "pkgbuilds/omazed", ref: "master" } } ),
                   app( "intellij", "unresolved", [ "x" ] ) ], false );
 check( "unpinned pkgbuild and unresolved are blocked, no steps", b.steps.len() == 0 && b.blocked.len() == 2 );
-check( "blocked reasons are explicit", find( "not pinned", b.blocked[1].error ) && find( "no installable source", b.blocked[2].error ) );
-b = inst.steps( [ app( "omazed", "pkgbuild", [ "omazed" ], { pkgbuild: { repo: "omacom/omarchy-pkgs", path: "pkgbuilds/omazed", ref: "abc1234" } } ) ], false );
+check( "blocked reasons are explicit", find( "not a full commit", b.blocked[1].error ) && find( "no installable source", b.blocked[2].error ) );
+b = inst.steps( [ app( "omazed", "pkgbuild", [ "omazed" ], { pkgbuild: { repo: "omacom/omarchy-pkgs", path: "pkgbuilds/omazed", ref: "65a4b0f646f7afe480fdebc7c0cf8cf2b56bf27f" } } ) ], false );
 cmds = b.steps[1].commands;
-check( "pinned pkgbuild: clone, checkout the ref, makepkg in the path", b.steps.len() == 1 && find( "https://github.com/omacom/omarchy-pkgs.git", cmds[1].toList( " " ) ) && cmds[2][6] == "abc1234" && cmds[3][3] == b.steps[1].dir & "/pkgbuilds/omazed" && cmds[3][4] == "makepkg" );
+shortRef = inst.steps( [ app( "x", "pkgbuild", [ "x" ], { pkgbuild: { repo: "o/r", path: "p", ref: "abc1234" } } ) ], false );
+check( "a short ref is not built", shortRef.steps.len() == 0 && shortRef.blocked.len() == 1 );
+check( "pinned pkgbuild: clone, checkout the ref, makepkg in the path", b.steps.len() == 1 && find( "https://github.com/omacom/omarchy-pkgs.git", cmds[1].toList( " " ) ) && cmds[2][6] == "65a4b0f646f7afe480fdebc7c0cf8cf2b56bf27f" && cmds[3][3] == b.steps[1].dir & "/pkgbuilds/omazed" && cmds[3][4] == "makepkg" );
 // web apps: a launcher file, written for real into a temporary home
 home = getTempDirectory() & "/bxcachy-installer-" & left( createUUID(), 8 );
 web = { id: "gmail", name: "Gmail", description: "Google mail", source: "web", url: "https://mail.google.com/mail/u/0/#inbox?a=100%25" };

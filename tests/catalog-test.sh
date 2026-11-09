@@ -42,4 +42,6 @@ for id in datagrip opencode-desktop; do [[ "$(jq -r --arg i "$id" '.apps[]|selec
 for id in gemini-cli hermes-agent; do [[ "$(jq -r --arg i "$id" '.apps[]|select(.id==$i)|.tier' "$cat")" == optional ]] || fail "$id is an optional app"; done
 [[ "$(jq -r '.apps[]|select(.id=="disktree")|.tier' "$cat")" == default ]] || fail 'disktree is default'
 [[ "$(jq '[.apps[]|select(.source=="unresolved")]|length' "$cat")" == 0 ]] || fail 'no app is left unresolved'
+[[ "$(jq '[.apps[]|select(.source=="pkgbuild" and (.pkgbuild.ref|test("^[0-9a-f]{40}$")|not))]|length' "$cat")" == 0 ]] || fail 'every pkgbuild ref is a full commit'
+for id in zoom-web omapresent task-manager; do [[ "$(jq --arg i "$id" '[.apps[]|select(.id==$i)]|length' "$cat")" == 0 ]] || fail "$id was removed as an overlap"; done
 echo 'catalog tests passed'

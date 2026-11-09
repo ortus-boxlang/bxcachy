@@ -35,5 +35,11 @@ expect( "unknown shell", c, "unknown shell gnome" );
 c = copyOf( good ); c.apps[1].shells = [];
 expect( "empty shells", c, "shells must be a non-empty list" );
 
+for ( bad in [ "master", "main", "abc1234", "65A4B0F646F7AFE480FDEBC7C0CF8CF2B56BF27F" ] ) {
+ c = copyOf( good );
+ for ( a in c.apps ) if ( a.source == "pkgbuild" ) { a.pkgbuild.ref = bad; break; }
+ expect( "pkgbuild ref '" & bad & "' is rejected", c, "full 40-character commit" );
+}
+
 if ( failures > 0 ) { println( failures & " failed" ); CLIExit( 1 ); }
 println( "catalog check negative tests passed" );
