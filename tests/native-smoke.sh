@@ -23,7 +23,7 @@ usage_exit2 "$binary" optional-plan
 "$binary" help | has 'optional-plan'
 
 "$binary" profile-list | has 'containers: Containers'
-"$binary" profile-plan jvm | has 'jdk21'
+"$binary" profile-plan jvm | has 'maven'
 "$binary" profile-plan terminal | has 'lazygit'
 expect_error 'unknown profile invalid' "$binary" profile-plan invalid
 usage_exit2 "$binary" profile-plan
