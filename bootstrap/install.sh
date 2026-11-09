@@ -61,6 +61,11 @@ load_manifest() {
   JAVA_MAJOR="$(jq -r .toolchain.java.version "$MANIFEST")"
   JAVA_PKG="$(jq -r .toolchain.java.package "$MANIFEST")"
   MATCHBOX_VERSION="$(jq -r .toolchain.matchbox.version "$MANIFEST")"
+  # With "downloads" set, MatchBox is not installed by mvm: it is the build of the MatchBox `bxcachy` branch
+  # that CI publishes to S3 (see .github/workflows/matchbox.yml), checked against its sha256 and kept in
+  # $MATCHBOX_HOME so it never replaces the `matchbox` that mvm manages.
+  MATCHBOX_DOWNLOADS="$(jq -r '.toolchain.matchbox.downloads // empty' "$MANIFEST")"
+  MATCHBOX_HOME="${BXCACHY_HOME:-$HOME/.local/share/bxcachy}/matchbox"
   BVM_URL="$(jq -r .toolchain.bvm.installer "$MANIFEST")"
   MVM_URL="$(jq -r .toolchain.mvm.installer "$MANIFEST")"
   RUST_CHANNEL="$(jq -r .toolchain.rust.channel "$MANIFEST")"
@@ -80,6 +85,7 @@ BIN_DIR="${BXCACHY_BIN_DIR:-$HOME/.local/bin}"
 BVM_HOME="${BVM_HOME:-$HOME/.bvm}"
 MVM_HOME="${MVM_HOME:-$HOME/.mvm}"
 probe_path="$BVM_HOME/bin:$BVM_HOME/current/bin:$MVM_HOME/bin:$HOME/.cargo/bin:$BIN_DIR:$PATH"
+[[ -z "${MATCHBOX_DOWNLOADS:-}" ]] || probe_path="${MATCHBOX_HOME}/bin:$probe_path"
 
 tool_path() { PATH="$probe_path" command -v "$1" 2>/dev/null; }
 first_version() { grep -m1 -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' || true; }
@@ -104,6 +110,28 @@ step_retry() {
     "$@" && return 0
   done
   echo "Failed after 3 attempts: $what (if GitHub reports HTTP 403, wait a while and rerun; this is a rate limit)" >&2; exit 1
+}
+# MatchBox from the published bxcachy-branch build: download, verify the sha256, replace atomically.
+# BXCACHY_MATCHBOX_FILE=PATH installs a local build instead (CI builds it from source before it is published).
+install_matchbox_download() {
+  local arch=linux-x86_64 tmp expected actual
+  tmp="$(mktemp -d)"
+  if [[ -n "${BXCACHY_MATCHBOX_FILE:-}" ]]; then
+    [[ -f "$BXCACHY_MATCHBOX_FILE" && -x "$BXCACHY_MATCHBOX_FILE" && ! -L "$BXCACHY_MATCHBOX_FILE" ]] || { echo "BXCACHY_MATCHBOX_FILE must be an executable regular file: $BXCACHY_MATCHBOX_FILE" >&2; rm -rf "$tmp"; exit 1; }
+    cp "$BXCACHY_MATCHBOX_FILE" "$tmp/matchbox"
+  else
+    step_retry "download MatchBox" curl -fsSL -m 300 -o "$tmp/matchbox" "$MATCHBOX_DOWNLOADS/matchbox-$arch"
+    step_retry "download the MatchBox checksum" curl -fsSL -m 30 -o "$tmp/matchbox.sha256" "$MATCHBOX_DOWNLOADS/matchbox-$arch.sha256"
+    expected="$(awk '{print $1; exit}' "$tmp/matchbox.sha256")"
+    actual="$(sha256sum "$tmp/matchbox" | awk '{print $1}')"
+    [[ -n "$expected" && "$expected" == "$actual" ]] || { echo "MatchBox checksum mismatch (expected ${expected:-none}, got $actual); nothing was installed" >&2; rm -rf "$tmp"; exit 1; }
+  fi
+  chmod 755 "$tmp/matchbox"
+  # run it once before it replaces anything
+  "$tmp/matchbox" --version >/dev/null 2>&1 || { echo "The downloaded MatchBox does not run; nothing was installed" >&2; rm -rf "$tmp"; exit 1; }
+  mkdir -p "$MATCHBOX_HOME/bin"
+  mv -f "$tmp/matchbox" "$MATCHBOX_HOME/bin/.matchbox.new" && mv -f "$MATCHBOX_HOME/bin/.matchbox.new" "$MATCHBOX_HOME/bin/matchbox"
+  rm -rf "$tmp"
 }
 # BoxLang's active version, read from BVM's `current` symlink. Running `boxlang --version` starts the whole
 # runtime, which rewrites its logs under ~/.boxlang on every call, so routine probes avoid it. Falls back to
@@ -156,11 +184,15 @@ build_steps() {
   if (( ! have_yay )); then
     steps+=("yay|sudo pacman -S --needed yay|AUR helper, found in the cachyos repository; only runs if yay is absent (part of --install)")
   fi
-  if (( ! have_mvm )); then
+  if (( ! have_mvm )) && [[ -z "$MATCHBOX_DOWNLOADS" ]]; then
     steps+=("mvm|download and run $MVM_URL|external script, shown first; typed EXECUTE or --allow-external-scripts")
   fi
   if [[ "$mb_ver" != "$MATCHBOX_VERSION" ]]; then
-    steps+=("matchbox|mvm install $MATCHBOX_VERSION && mvm use $MATCHBOX_VERSION|pinned MatchBox compiler")
+    if [[ -n "$MATCHBOX_DOWNLOADS" ]]; then
+      steps+=("matchbox|download $MATCHBOX_DOWNLOADS/matchbox-linux-x86_64 and check its sha256|MatchBox $MATCHBOX_VERSION from the bxcachy branch, installed under $MATCHBOX_HOME")
+    else
+      steps+=("matchbox|mvm install $MATCHBOX_VERSION && mvm use $MATCHBOX_VERSION|pinned MatchBox compiler")
+    fi
   fi
   if (( ! have_bvm )); then
     steps+=("bvm|download and run $BVM_URL|external script, shown first; typed EXECUTE or --allow-external-scripts; it may add BVM to your shell startup files")
@@ -174,7 +206,7 @@ build_steps() {
     steps+=("rust|rustup default $RUST_CHANNEL|activates Rust and Cargo for your user (part of --install)")
   fi
   if (( ! have_bxcachy )); then
-    steps+=("binary|install.sh --install-binary --yes|builds src/bxcachy.bxs with MatchBox (or use --binary PATH), verifies it, installs to $BIN_DIR/bxcachy, no sudo")
+    steps+=("binary|install.sh --install-binary --yes|builds src/Main.bx with MatchBox (or use --binary PATH), verifies it, installs to $BIN_DIR/bxcachy, no sudo")
   fi
   if (( have_bxcachy && ! bin_on_path )); then
     steps+=("path|add $BIN_DIR to PATH yourself|BxCachy does not edit shell startup files; the commands are printed by --install")
@@ -275,12 +307,16 @@ if [[ "$mode" == --install-toolchains ]]; then
   }
 
   done_any=0
-  if (( ! have_mvm )); then
+  if (( ! have_mvm )) && [[ -z "$MATCHBOX_DOWNLOADS" ]]; then
     run_external mvm "$MVM_URL" ${BXCACHY_MVM_VERSION:+MVM_VERSION="$BXCACHY_MVM_VERSION"}; done_any=1
     tool_path mvm >/dev/null || { echo "MVM installation failed: mvm not found afterwards" >&2; exit 1; }
   fi
   if [[ "$(tool_version matchbox)" != "$MATCHBOX_VERSION" ]]; then
-    step_retry "mvm install $MATCHBOX_VERSION" mvm install "$MATCHBOX_VERSION"; step_run "mvm use $MATCHBOX_VERSION" mvm use "$MATCHBOX_VERSION"; done_any=1
+    if [[ -n "$MATCHBOX_DOWNLOADS" ]]; then
+      install_matchbox_download; done_any=1
+    else
+      step_retry "mvm install $MATCHBOX_VERSION" mvm install "$MATCHBOX_VERSION"; step_run "mvm use $MATCHBOX_VERSION" mvm use "$MATCHBOX_VERSION"; done_any=1
+    fi
     [[ "$(tool_version matchbox)" == "$MATCHBOX_VERSION" ]] || { echo "MatchBox $MATCHBOX_VERSION not active after install" >&2; exit 1; }
     echo "MatchBox $MATCHBOX_VERSION installed and verified."
   fi
@@ -321,20 +357,20 @@ if [[ "$mode" == --install-binary ]]; then
     new_version="$(check_binary "$candidate")" || exit 1
     if [[ -f "$installed" ]] && cmp -s "$candidate" "$installed" && (( ! force )); then echo "Nothing to do: $installed is identical ($new_version)."; exit 0; fi
   else
-    src="$root/src/bxcachy.bxs"
+    src="$root/src/Main.bx"
     [[ -n "$root" && -f "$src" ]] || { echo "Source not found ($src). Run this script from a BxCachy checkout, or pass --binary PATH." >&2; exit 1; }
     want="$(grep -m1 -oE 'BxCachy [0-9][0-9A-Za-z.+-]*' "$src" || true)"
     if (( ! force )) && [[ -x "$installed" && -n "$want" ]] && [[ "$(check_binary "$installed" 2>/dev/null || true)" == "$want" ]]; then
       echo "Nothing to do: $installed is already $want (use --force to rebuild)."; exit 0
     fi
     [[ "$(tool_version matchbox)" == "$MATCHBOX_VERSION" ]] || { echo "MatchBox $MATCHBOX_VERSION is required (found: $(tool_version matchbox || true)). Run install.sh --install-toolchains --yes first." >&2; exit 1; }
-    cp "$src" "$work/bxcachy.bxs"; chmod 644 "$work/bxcachy.bxs"
+    cp -r "$root/src" "$work/src"; chmod -R u+rwX,go+rX "$work/src"
     echo "Building bxcachy with MatchBox $MATCHBOX_VERSION"
-    if ! ( cd "$work" && PATH="$probe_path" matchbox --target native bxcachy.bxs ) > "$work/build.log" 2>&1; then
+    if ! ( cd "$work" && PATH="$probe_path" matchbox --target native --output "$work/bxcachy" src/Main.bx ) > "$work/build.log" 2>&1; then
       echo "Build failed; the installed copy was not touched. Last lines of the build log:" >&2; tail -n 20 "$work/build.log" >&2; exit 1
     fi
-    candidate="$(find "$work" -maxdepth 5 -type f -executable \( -name bxcachy -o -name bxcachy.bxs \) -print -quit)"
-    [[ -n "$candidate" ]] || { echo "Build produced no executable; the installed copy was not touched" >&2; tail -n 20 "$work/build.log" >&2; exit 1; }
+    candidate="$work/bxcachy"
+    [[ -f "$candidate" && -x "$candidate" ]] || { echo "Build produced no executable; the installed copy was not touched" >&2; tail -n 20 "$work/build.log" >&2; exit 1; }
     new_version="$(check_binary "$candidate")" || { echo "The built binary failed its self-check; the installed copy was not touched" >&2; exit 1; }
   fi
   mkdir -p "$BIN_DIR"

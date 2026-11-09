@@ -43,7 +43,7 @@ snaplist() {
 }
 skip() { printf 'SKIP\t%s\t%s\n' "$1" "$2" | tee -a "$OUT/results.tsv"; }
 
-export PATH="$HOME/.mvm/bin:$HOME/.cargo/bin:$PATH"
+export PATH="$HOME/.local/share/bxcachy/matchbox/bin:$HOME/.mvm/bin:$HOME/.cargo/bin:$PATH"
 
 # --- Existing mocked suites, now on real Arch ---
 step mock-package-manager 0 bash tests/package-manager-test.sh
@@ -96,8 +96,8 @@ fi
 # --- Native build ---
 BIN=""
 if [[ $NET == 1 ]]; then
-  step native-compile 0 bash -c 'matchbox --version | grep -F "$(jq -r .toolchain.matchbox.version box.json)" && matchbox --target native src/bxcachy.bxs'
-  BIN="$(find . -maxdepth 5 -type f -executable \( -name bxcachy -o -name 'bxcachy.bxs' \) -print -quit)"
+  step native-compile 0 bash -c 'matchbox --version | grep -F "$(jq -r .toolchain.matchbox.version box.json)" && matchbox --target native --output bxcachy-built src/Main.bx'
+  BIN="$(find . -maxdepth 1 -type f -executable -name bxcachy-built -print -quit)"
 else
   skip native-compile "GitHub unreachable (MatchBox cannot install); native and real-pacman CLI steps skipped"
   BIN=SKIP

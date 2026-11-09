@@ -38,7 +38,7 @@ for t in bash env grep awk df id uname head tr cat sort dirname mktemp sed cut m
 done
 # Fixture repository: a copy of the script next to a box.json with known pins. Tests run this copy.
 repo="$tmp/repo"; mkdir -p "$repo/bootstrap" "$repo/src"
-cp "$root/bootstrap/install.sh" "$repo/bootstrap/install.sh"; cp "$root/src/bxcachy.bxs" "$repo/src/bxcachy.bxs"
+cp "$root/bootstrap/install.sh" "$repo/bootstrap/install.sh"; cp -r "$root/src/." "$repo/src/"
 cat > "$repo/box.json" <<'JSON'
 { "name": "bxcachy", "version": "0.11.0-dev",
   "toolchain": {
@@ -232,7 +232,7 @@ if out="$(MOCK_UID=0 irun bash "$repo/bootstrap/install.sh" --install --yes 2>&1
 echo 'bootstrap install tests passed'
 
 # ---- B5: --install-binary builds (or accepts) bxcachy, verifies it first, installs atomically ----
-SRCVER="$(grep -m1 -oE 'BxCachy [0-9][0-9A-Za-z.+-]*' "$root/src/bxcachy.bxs")"
+SRCVER="$(grep -m1 -oE 'BxCachy [0-9][0-9A-Za-z.+-]*' "$root/src/Main.bx")"
 fake_bin() { printf '#!/usr/bin/env bash\n[[ "$1" == version ]] && echo "%s" || echo "other"\n' "$1"; }
 b_mocks() {
   reset_mocks; fresh_home
@@ -240,7 +240,8 @@ b_mocks() {
   mock matchbox 'if [[ "$1" == --version ]]; then echo "MatchBox ${MOCK_MB:-0.12.0}"; exit 0; fi
 [[ "${MOCK_BUILD_FAIL:-0}" == 1 ]] && { echo "boom: compile error" >&2; exit 1; }
 echo "$*" >> "$BLOG"
-cp "$FAKE" bxcachy; chmod 755 bxcachy'
+out=bxcachy; while [[ $# -gt 0 ]]; do [[ "$1" == --output ]] && { out="$2"; break; }; shift; done
+cp "$FAKE" "$out"; chmod 755 "$out"'
   : > "$tmp/build.log"; fake_bin "$SRCVER" > "$tmp/fake_built"
 }
 brun() { env -i HOME="$home" PATH="$bin:$sys" BXCACHY_SKIP_NETWORK=1 BLOG="$tmp/build.log" FAKE="$tmp/fake_built" MOCK_UID="${MOCK_UID:-1000}" MOCK_MB="${MOCK_MB:-0.12.0}" MOCK_BUILD_FAIL="${MOCK_BUILD_FAIL:-0}" "$@"; }
@@ -251,7 +252,7 @@ b_mocks
 out="$(brun bash "$repo/bootstrap/install.sh" --install-binary --yes 2>&1)"
 need "$out" 'Building bxcachy with MatchBox 0.12.0'; need "$out" "Installed $dest ($SRCVER)"
 [[ -x "$dest" ]] && [[ "$("$dest" version)" == "$SRCVER" ]] || { echo 'FAIL: binary not installed or not working' >&2; exit 1; }
-need "$(cat "$tmp/build.log")" '--target native bxcachy.bxs'
+need "$(cat "$tmp/build.log")" '--target native --output'; need "$(cat "$tmp/build.log")" 'src/Main.bx'
 # 2. Same version again: nothing built, nothing replaced. --force rebuilds.
 : > "$tmp/build.log"; stamp="$(stat -c %Y-%i "$dest")"
 out="$(brun bash "$repo/bootstrap/install.sh" --install-binary --yes 2>&1)"; need "$out" 'Nothing to do'
@@ -367,7 +368,7 @@ echo 'bootstrap latest-BoxLang tests passed'
 for k in .name .version .toolchain.java.version .toolchain.java.package .toolchain.boxlang.version .toolchain.bvm.installer .toolchain.mvm.installer .toolchain.matchbox.version .toolchain.rust.channel; do
   jq -e "$k" "$root/box.json" >/dev/null || { echo "FAIL: real box.json lacks $k" >&2; exit 1; }
 done
-[[ "BxCachy $(jq -r .version "$root/box.json")" == "$(grep -m1 -oE 'BxCachy [0-9][0-9A-Za-z.+-]*' "$root/src/bxcachy.bxs")" ]] || { echo 'FAIL: box.json version differs from the version in src/bxcachy.bxs' >&2; exit 1; }
+[[ "BxCachy $(jq -r .version "$root/box.json")" == "$(grep -m1 -oE 'BxCachy [0-9][0-9A-Za-z.+-]*' "$root/src/Main.bx")" ]] || { echo 'FAIL: box.json version differs from the version in src/Main.bx' >&2; exit 1; }
 # A different pin in box.json changes the plan (no copy of the version lives in the script).
 reset_mocks; MOCK_INSTALLED="jdk21-openjdk git curl unzip rustup base-devel jq"; mock sudo 'exit 9'
 jq '.toolchain.matchbox.version="0.13.0" | .toolchain.rust.channel="beta" | .toolchain.java.package="jdk-test-openjdk"' "$repo/box.json" > "$tmp/box-other.json"
@@ -418,3 +419,48 @@ fresh_home
 if out="$(MVM_FAKE="$FLAKY_MVM" trun env BXCACHY_RETRY_WAITS="0 0 0" MVM_FAIL_TIMES=9 bash "$repo/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null 2>&1)"; then echo 'FAIL: persistent failure treated as success' >&2; exit 1; fi
 need "$out" 'Failed after 3 attempts'; need "$out" 'HTTP 403'
 echo 'bootstrap retry tests passed'
+
+# ---- MatchBox from the published bxcachy-branch build (box.json "downloads"): download, sha256, no mvm ----
+jq '.toolchain.matchbox = { "version": "0.13.0", "downloads": "https://downloads.example.test/bxcachy/matchbox" }' "$repo/box.json" > "$tmp/box-dl.json"
+MB_BIN='#!/usr/bin/env bash
+[[ "$1" == --version ]] && echo "matchbox version 0.13.0" || echo "matchbox"'
+printf '%s\n' "$MB_BIN" > "$tmp/mb-good"; chmod 755 "$tmp/mb-good"
+GOOD_SUM="$(sha256sum "$tmp/mb-good" | awk '{print $1}')"
+reset_mocks; MOCK_INSTALLED="jdk21-openjdk git curl unzip rustup base-devel jq"
+mock sudo 'exit 9'; mock java 'echo "openjdk version \"21.0.13\" 2026-04-21" >&2'
+mock curl 'url=""; out=""; while [[ $# -gt 0 ]]; do case "$1" in -o) out="$2"; shift 2 ;; http*) url="$1"; shift ;; *) shift ;; esac; done
+[[ -n "$out" ]] && echo "$url" >> "$CURL_LOG"
+[[ "${MOCK_CURL_FAIL:-0}" == 1 ]] && exit 22
+case "$url" in
+  *bxcachy/matchbox/matchbox-linux-x86_64.sha256) echo "${MB_SUM:-$GOOD_SUM}  matchbox-linux-x86_64" > "$out" ;;
+  *bxcachy/matchbox/matchbox-linux-x86_64) cat "$MB_FILE" > "$out" ;;
+  *install-bvm*) printf "%s\n" "$BVM_FAKE" > "$out" ;;
+  *version-latest.properties*) printf "version=1.19.0+1\n" ;;
+  *) exit 22 ;;
+esac'
+drun() { env -i HOME="$home" PATH="$bin:$sys" BXCACHY_SKIP_NETWORK=1 BXCACHY_OS_RELEASE="$tmp/os-arch" MOCK_INSTALLED="$MOCK_INSTALLED" CURL_LOG="$tmp/curl.log" BVM_FAKE="$BVM_FAKE" MB_FILE="$tmp/mb-good" GOOD_SUM="$GOOD_SUM" MB_SUM="${MB_SUM:-$GOOD_SUM}" MOCK_UID="${MOCK_UID:-1000}" BXCACHY_MANIFEST="$tmp/box-dl.json" "$@"; }
+fresh_home
+plan="$(drun bash "$repo/bootstrap/install.sh" --plan)"
+need "$plan" 'download https://downloads.example.test/bxcachy/matchbox/matchbox-linux-x86_64 and check its sha256'; refuse "$plan" 'mvm install'; refuse "$plan" 'matchbox-quick-installer'
+# install: downloaded, verified, kept under ~/.local/share/bxcachy/matchbox, mvm not involved
+out="$(drun bash "$repo/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null 2>&1)"
+need "$out" 'MatchBox 0.13.0 installed and verified.'
+[[ -x "$home/.local/share/bxcachy/matchbox/bin/matchbox" && ! -e "$home/.mvm" ]] || { echo 'FAIL: MatchBox not installed under the bxcachy home, or mvm ran' >&2; exit 1; }
+need "$(cat "$tmp/curl.log")" 'bxcachy/matchbox/matchbox-linux-x86_64.sha256'; refuse "$(cat "$tmp/curl.log")" 'matchbox-quick-installer'
+# a second run changes nothing
+: > "$tmp/curl.log"; drun bash "$repo/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null >/dev/null 2>&1
+refuse "$(cat "$tmp/curl.log")" 'matchbox-linux-x86_64'
+chk="$(drun bash "$repo/bootstrap/install.sh" --check)"; need "$chk" 'matchbox: 0.13.0'
+# a checksum mismatch installs nothing
+fresh_home; : > "$tmp/curl.log"
+if out="$(MB_SUM=deadbeef drun bash "$repo/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null 2>&1)"; then echo 'FAIL: checksum mismatch accepted' >&2; exit 1; fi
+need "$out" 'checksum mismatch'; [[ ! -e "$home/.local/share/bxcachy/matchbox/bin/matchbox" ]] || { echo 'FAIL: unverified MatchBox was installed' >&2; exit 1; }
+# a download that does not run installs nothing
+printf '#!/usr/bin/env bash\nexit 3\n' > "$tmp/mb-broken"; chmod 755 "$tmp/mb-broken"; fresh_home
+if out="$(MB_SUM="$(sha256sum "$tmp/mb-broken" | awk '{print $1}')" drun env MB_FILE="$tmp/mb-broken" bash "$repo/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null 2>&1)"; then echo 'FAIL: broken MatchBox accepted' >&2; exit 1; fi
+need "$out" 'does not run'
+# a local build (CI) is installed without any download
+fresh_home; : > "$tmp/curl.log"
+out="$(drun env BXCACHY_MATCHBOX_FILE="$tmp/mb-good" bash "$repo/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null 2>&1)"
+need "$out" 'MatchBox 0.13.0 installed and verified.'; refuse "$(cat "$tmp/curl.log")" 'matchbox-linux-x86_64'
+echo 'bootstrap matchbox download tests passed'

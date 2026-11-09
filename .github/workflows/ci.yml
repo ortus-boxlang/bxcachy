@@ -20,13 +20,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          bash -n bootstrap/install.sh scripts/package-manager.sh tests/package-manager-test.sh tests/bootstrap-test.sh tests/native-smoke.sh tests/native-package-integration.sh scripts/config.sh tests/config-test.sh tests/config-native-test.sh tests/cli-contract-test.sh tests/catalog-test.sh bootstrap/gen-catalog.sh
-          test -s src/bxcachy.bxs
+          bash -n bootstrap/install.sh scripts/package-manager.sh tests/package-manager-test.sh tests/bootstrap-test.sh tests/native-smoke.sh tests/native-package-integration.sh scripts/config.sh tests/config-test.sh tests/config-native-test.sh tests/cli-contract-test.sh tests/catalog-test.sh bootstrap/gen-catalog.sh scripts/get-matchbox.sh scripts/dev-build.sh
+          test -s src/Main.bx -a -s src/Application.bx
           jq -e . catalog/apps.json >/dev/null
-          bash bootstrap/gen-catalog.sh --check   # src/bxcachy.bxs embeds the current catalog
+          bash bootstrap/gen-catalog.sh --check   # src/bxcachy/CatalogData.bx embeds the current catalog
           jq -e . box.json >/dev/null   # the manifest must be valid JSON
           for command in version doctor prerequisites desktop-list tui-list web-list optional-list optional-plan profile-list profile-plan plan apps-doctor dev-plan help; do
-            grep -Fq "\"$command\"" src/bxcachy.bxs
+            grep -Fq "\"$command\"" src/Main.bx
           done
   package-tests:
     name: 2 - Mocked package-manager tests
@@ -56,91 +56,66 @@ jobs:
           rustc --version
       - uses: actions/checkout@v4
       - run: bash -n bootstrap/install.sh
+  toolchain:
+    name: 3b - MatchBox from the bxcachy branch
+    needs: package-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Rust
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: matchbox-cargo-${{ runner.os }}-${{ hashFiles('box.json') }}
+          restore-keys: matchbox-cargo-${{ runner.os }}-
+      - name: Get MatchBox (published build, else built from source)
+        run: |
+          set -euo pipefail
+          scripts/get-matchbox.sh matchbox-out/matchbox-linux-x86_64
+          cat matchbox-out/matchbox-linux-x86_64.info
+      - uses: actions/upload-artifact@v4
+        with:
+          name: matchbox-linux-x86_64
+          path: matchbox-out/matchbox-linux-x86_64
+          if-no-files-found: error
   native:
-    name: 4 - MatchBox compile and native tests
-    needs: arch
+    name: 4 - Compile BxCachy and native tests
+    needs: [arch, toolchain]
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
-      - name: Install MVM
+      - uses: actions/download-artifact@v4
+        with:
+          name: matchbox-linux-x86_64
+          path: matchbox-out
+      - name: Compile with MatchBox
         shell: bash
         run: |
           set -euo pipefail
-          curl -fsSL https://raw.githubusercontent.com/ortus-boxlang/matchbox-quick-installer/main/install/install.sh -o /tmp/install-mvm.sh
-          bash /tmp/install-mvm.sh
-          echo "$HOME/.mvm/bin" >> "$GITHUB_PATH"
-      - name: Install MatchBox and compile
-        shell: bash
-        run: |
-          set -euo pipefail
-          export PATH="$HOME/.mvm/bin:$PATH"
-          MB="$(jq -r .toolchain.matchbox.version box.json)"   # the pin lives in box.json
-          # GitHub's anonymous API limit on shared runner addresses answers 403 now and then: retry with backoff.
-          for wait in 0 10 30; do sleep "$wait"; mvm install "$MB" && break; [ "$wait" = 30 ] && exit 1; done
-          mvm use "$MB"
+          install -D -m 755 matchbox-out/matchbox-linux-x86_64 "$HOME/.local/bin/matchbox"
+          export PATH="$HOME/.local/bin:$PATH"
           matchbox --version
-          matchbox --version | grep -F "$MB"
-          matchbox --target native src/bxcachy.bxs
+          matchbox --version | grep -F "$(jq -r .toolchain.matchbox.version box.json)"
+          mkdir -p dist
+          matchbox --target native --output dist/bxcachy src/Main.bx
       - name: Run smoke tests on compiled executable
         shell: bash
         run: |
           set -euo pipefail
-          candidate="$(find . -maxdepth 5 -type f -executable \( -name bxcachy -o -name 'bxcachy.bxs' \) -print -quit)"
-          test -n "$candidate" || { echo "::error::No compiled executable found"; exit 1; }
-          candidate="$(realpath "$candidate")"
+          candidate="$(realpath dist/bxcachy)"
           bash tests/native-smoke.sh "$candidate"
           bash -x tests/native-package-integration.sh "$candidate"
           bash tests/config-native-test.sh "$candidate"
           bash tests/cli-contract-test.sh "$candidate"
           bash tests/catalog-test.sh "$candidate"
-          mkdir -p dist
-          cp "$candidate" dist/bxcachy
-          chmod +x dist/bxcachy
-      - name: Probe file operations under MatchBox (informational)
-        continue-on-error: true
-        shell: bash
-        run: |
-          export PATH="$HOME/.mvm/bin:$PATH"
-          mkdir -p /tmp/spike && cp tests/spikes/fileops.bxs /tmp/spike/ && cd /tmp/spike
-          matchbox --target native fileops.bxs 2>&1 | tail -n 20
-          exe="$(find . -maxdepth 3 -type f -executable \( -name fileops -o -name fileops.bxs \) -print -quit)"
-          test -n "$exe" || { echo "::warning::probe did not compile with MatchBox"; exit 1; }
-          "$exe" 2>&1 | tee /tmp/spike/result.txt
-          { echo '### MatchBox file-operation probe'; echo '```'; cat /tmp/spike/result.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
-      - name: Probe Native Fusion (Rust BIFs) under MatchBox (informational)
-        continue-on-error: true
-        shell: bash
-        run: |
-          export PATH="$HOME/.mvm/bin:$PATH"
-          rm -rf /tmp/spike2 /tmp/bxspike-native
-          cp -r tests/spikes/native /tmp/spike2 && cd /tmp/spike2
-          matchbox --target native app.bxs 2>&1 | tail -n 30
-          exe="$(find . -maxdepth 3 -type f -executable \( -name app -o -name app.bxs \) -print -quit)"
-          test -n "$exe" || { echo "::warning::Native Fusion probe did not compile"; exit 1; }
-          mkdir -p /tmp/bxspike-native && ln -s cfg.txt /tmp/bxspike-native/link.txt
-          "$exe" /tmp/bxspike-native 2>&1 | tee /tmp/spike2/result.txt
-          { echo '### MatchBox Native Fusion probe'; echo '```'; cat /tmp/spike2/result.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
-          ! grep -q '^FAIL' /tmp/spike2/result.txt
-      - name: Probe Native Fusion with the latest MatchBox (informational)
-        continue-on-error: true
-        shell: bash
-        run: |
-          export PATH="$HOME/.mvm/bin:$PATH"
-          pinned="$(jq -r .toolchain.matchbox.version box.json)"
-          trap 'mvm use "$pinned" >/dev/null 2>&1 || true' EXIT
-          for wait in 0 10 30; do sleep "$wait"; mvm install latest && break; [ "$wait" = 30 ] && exit 1; done
-          mvm use latest
-          matchbox --version
-          rm -rf /tmp/spike3 /tmp/bxspike-native3
-          cp -r tests/spikes/native /tmp/spike3 && cd /tmp/spike3
-          matchbox --target native app.bxs 2>&1 | tail -n 30
-          exe="$(find . -maxdepth 3 -type f -executable \( -name app -o -name app.bxs \) -print -quit)"
-          test -n "$exe" || { echo "::warning::Native Fusion did not compile with the latest MatchBox either"; exit 1; }
-          mkdir -p /tmp/bxspike-native3 && ln -s cfg.txt /tmp/bxspike-native3/link.txt
-          "$exe" /tmp/bxspike-native3 2>&1 | tee /tmp/spike3/result.txt
-          { echo '### Native Fusion with the latest MatchBox'; echo '```'; matchbox --version; cat /tmp/spike3/result.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
-          ! grep -q '^FAIL' /tmp/spike3/result.txt
       - name: Publish verified native artifact
         uses: actions/upload-artifact@v4
         with:
@@ -154,11 +129,16 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: matchbox-linux-x86_64
+          path: matchbox-out
       - name: Run real-system suite
         shell: bash
         run: |
           set -o pipefail
-          bash tests/arch/run.sh "$PWD/arch-test-out" 2>&1 | tee arch-run.txt
+          chmod +x matchbox-out/matchbox-linux-x86_64
+          BXCACHY_MATCHBOX_FILE="$PWD/matchbox-out/matchbox-linux-x86_64" bash tests/arch/run.sh "$PWD/arch-test-out" 2>&1 | tee arch-run.txt
       - name: Result table
         if: always()
         shell: bash
@@ -178,3 +158,50 @@ jobs:
             arch-test-out/
             arch-run.txt
           if-no-files-found: warn
+  publish:
+    name: 6 - Publish BxCachy to S3
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/development'
+    needs: [native, arch-real]
+    runs-on: ubuntu-latest
+    env:
+      HAS_S3: ${{ secrets.AWS_ACCESS_KEY != '' && secrets.AWS_ACCESS_SECRET != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: bxcachy-linux-native
+          path: dist
+      - name: Lay out the S3 folders (same shape as BoxLang downloads)
+        run: |
+          set -euo pipefail
+          VERSION="$(jq -r .version box.json)"
+          sum="$(sha256sum dist/bxcachy | awk '{print $1}')"
+          for d in "build/s3/${VERSION}" build/evergreen; do
+            mkdir -p "$d"
+            cp dist/bxcachy "$d/bxcachy-linux-x86_64"
+            echo "${sum}  bxcachy-linux-x86_64" > "$d/bxcachy-linux-x86_64.sha256"
+          done
+          printf 'version=%s\ncommit=%s\nsha256=%s\nbuiltAt=%s\n' "$VERSION" "${GITHUB_SHA::7}" "$sum" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > build/evergreen/version-latest.properties
+          cp build/evergreen/version-latest.properties "build/s3/${VERSION}/version.properties"
+      - name: Upload this version to S3
+        if: env.HAS_S3 == 'true'
+        uses: jakejarvis/s3-sync-action@master
+        with:
+          args: --acl public-read
+        env:
+          AWS_S3_BUCKET: "downloads.ortussolutions.com"
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_ACCESS_SECRET }}
+          SOURCE_DIR: "build/s3"
+          DEST_DIR: "ortussolutions/bxcachy"
+      - name: Upload the evergreen build to S3
+        if: env.HAS_S3 == 'true'
+        uses: jakejarvis/s3-sync-action@master
+        with:
+          args: --acl public-read
+        env:
+          AWS_S3_BUCKET: "downloads.ortussolutions.com"
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_ACCESS_SECRET }}
+          SOURCE_DIR: "build/evergreen"
+          DEST_DIR: "ortussolutions/bxcachy/"

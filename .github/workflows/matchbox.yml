@@ -1,0 +1,109 @@
+name: MatchBox toolchain
+# Builds the MatchBox `bxcachy` branch (develop plus the open BxCachy pull requests, see box.json
+# toolchain.matchbox) and publishes it to S3, laid out like BoxLang's downloads:
+#
+#   https://downloads.ortussolutions.com/ortussolutions/bxcachy/matchbox/matchbox-linux-x86_64            evergreen
+#   https://downloads.ortussolutions.com/ortussolutions/bxcachy/matchbox/matchbox-linux-x86_64.sha256
+#   https://downloads.ortussolutions.com/ortussolutions/bxcachy/matchbox/version-latest.properties
+#   https://downloads.ortussolutions.com/ortussolutions/bxcachy/matchbox/<version>-<commit>/...           per build
+#
+# bootstrap/install.sh and CI download the evergreen build and check its sha256.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 5 * * *" # picks up new commits on the MatchBox bxcachy branch
+  push:
+    branches: [development]
+    paths:
+      - box.json
+      - scripts/get-matchbox.sh
+      - .github/workflows/matchbox.yml
+permissions:
+  contents: read
+concurrency:
+  group: bxcachy-matchbox-publish
+  cancel-in-progress: false
+jobs:
+  publish:
+    name: Build MatchBox from the bxcachy branch and publish to S3
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      # secrets cannot be tested in `if`: expose whether the S3 credentials exist
+      HAS_S3: ${{ secrets.AWS_ACCESS_KEY != '' && secrets.AWS_ACCESS_SECRET != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          cargo --version
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: matchbox-cargo-${{ runner.os }}-${{ hashFiles('box.json') }}
+          restore-keys: matchbox-cargo-${{ runner.os }}-
+
+      - name: Build MatchBox from source
+        run: |
+          set -euo pipefail
+          scripts/get-matchbox.sh build/matchbox/matchbox-linux-x86_64 --from-source
+          cat build/matchbox/matchbox-linux-x86_64.info
+
+      - name: Lay out the S3 folders
+        run: |
+          set -euo pipefail
+          . build/matchbox/matchbox-linux-x86_64.info
+          VERSION_DIR="${version}-${commit}"
+          sum="$(sha256sum build/matchbox/matchbox-linux-x86_64 | awk '{print $1}')"
+          for d in "build/s3/${VERSION_DIR}" build/evergreen; do
+            mkdir -p "$d"
+            cp build/matchbox/matchbox-linux-x86_64 "$d/matchbox-linux-x86_64"
+            echo "${sum}  matchbox-linux-x86_64" > "$d/matchbox-linux-x86_64.sha256"
+          done
+          {
+            echo "version=${version}"
+            echo "commit=${commit}"
+            echo "ref=${ref}"
+            echo "builtAt=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "sha256=${sum}"
+          } > build/evergreen/version-latest.properties
+          cp build/evergreen/version-latest.properties "build/s3/${VERSION_DIR}/version.properties"
+          echo "VERSION_DIR=${VERSION_DIR}" >> "$GITHUB_ENV"
+          cat build/evergreen/version-latest.properties
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: matchbox-linux-x86_64
+          path: build/evergreen/
+          if-no-files-found: error
+
+      - name: Upload this build to S3
+        if: env.HAS_S3 == 'true'
+        uses: jakejarvis/s3-sync-action@master
+        with:
+          args: --acl public-read
+        env:
+          AWS_S3_BUCKET: "downloads.ortussolutions.com"
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_ACCESS_SECRET }}
+          SOURCE_DIR: "build/s3"
+          DEST_DIR: "ortussolutions/bxcachy/matchbox"
+
+      - name: Upload the evergreen build to S3
+        if: env.HAS_S3 == 'true'
+        uses: jakejarvis/s3-sync-action@master
+        with:
+          args: --acl public-read
+        env:
+          AWS_S3_BUCKET: "downloads.ortussolutions.com"
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_ACCESS_SECRET }}
+          SOURCE_DIR: "build/evergreen"
+          DEST_DIR: "ortussolutions/bxcachy/matchbox/"
