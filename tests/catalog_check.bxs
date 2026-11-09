@@ -1,0 +1,39 @@
+// Negative cases for Catalog.check: each broken copy of the real catalog must produce the named error.
+// Run from src/ so that bxcachy.Catalog resolves: (cd src && matchbox ../tests/catalog_check.bxs)
+catalogClass = new bxcachy.Catalog();
+good = catalogClass.load();
+failures = 0;
+function copyOf( c ) { return jsonDeserialize( jsonSerialize( c ) ); }
+function expect( label, c, needle ) {
+ r = catalogClass.check( c );
+ hit = false;
+ for ( e in r.errors ) if ( findNoCase( needle, e ) ) hit = true;
+ if ( hit ) println( "ok   " & label );
+ else { println( "FAIL " & label & " (wanted '" & needle & "', got " & r.errors.len() & " errors)" ); failures++; }
+}
+r = catalogClass.check( good );
+if ( r.errors.len() == 0 ) println( "ok   real catalog has no errors" ); else { println( "FAIL real catalog: " & r.errors.toList( "; " ) ); failures++; }
+
+c = copyOf( good ); c.delete( "profiles" );
+expect( "missing profiles", c, "profiles are missing" );
+
+c = copyOf( good ); c.apps[1].profiles = { nope: "default" };
+expect( "unknown profile on an app", c, "unknown profile nope" );
+
+c = copyOf( good ); c.apps[1].profiles = { core: "mandatory" };
+expect( "bad profile tier", c, "must be default or optional" );
+
+c = copyOf( good ); c.profiles.append( { id: "empty", title: "Empty", blurb: "nothing", order: 99 } );
+expect( "profile without apps", c, "needs at least one default app" );
+
+c = copyOf( good ); c.profiles.append( { id: "core", title: "Again", blurb: "dup", order: 98 } );
+expect( "duplicate profile id", c, "duplicate id" );
+
+c = copyOf( good ); c.apps[1].shells = [ "gnome" ];
+expect( "unknown shell", c, "unknown shell gnome" );
+
+c = copyOf( good ); c.apps[1].shells = [];
+expect( "empty shells", c, "shells must be a non-empty list" );
+
+if ( failures > 0 ) { println( failures & " failed" ); CLIExit( 1 ); }
+println( "catalog check negative tests passed" );

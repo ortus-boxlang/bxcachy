@@ -18,3 +18,8 @@ Status: draft for testing. `pkgbuild.ref` is `master` and must be pinned to a co
 - `homepage`: upstream URL from the same package metadata, or the web app URL.
 - `macos`: macOS equivalent or "(same)" when the app exists on macOS, `null` when there is no useful mapping.
 - Found while enriching: the AUR package `hype` is a Twitch tool, not the Omarchy presentation app, so `hype` is now `unresolved`.
+
+## Profiles and shells (0.3.0)
+
+- `profiles`: ordered top-level list (`id`, `title`, `blurb`, `order`), like `groups`. An app joins profiles through `profiles`, a map of profile id to `default` or `optional` for that profile: `{ "jq": { "core": "default", "terminal": "optional" } }`. `install --profile=NAME` installs the `default` members; `--optional` adds the `optional` ones. An app's own `tier` still decides a plain `install`. Every profile needs at least one `default` member.
+- `shells`: optional list of `hyprland` and/or `plasma`. No `shells` means the app installs under either desktop. An app that does not match the running shell is skipped with `wrong_shell`, unless it is named explicitly. Hyprland-only entries today: hyprsunset, hyprpicker, wayfreeze, walker, owe, aether, learn-omarchy (hyprpicker, wayfreeze and walker are unverified on Plasma).

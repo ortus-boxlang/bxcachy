@@ -23,4 +23,15 @@ cat="$root/catalog/apps.json"
 # Presentation metadata is complete for every app.
 [[ "$(jq '[.apps[]|select((.description//"")=="")]|length' "$cat")" == 0 ]] || fail 'app without description'
 [[ "$(jq '[.groups[].id] as $g | [.apps[]|select(.group as $x|$g|index($x)|not)]|length' "$cat")" == 0 ]] || fail 'app in unknown group'
+# Profiles and shells (schema 3 additions).
+[[ "$(jq '.profiles|length' "$cat")" -ge 12 ]] || fail 'profiles missing'
+[[ "$(jq '[.profiles[].id] as $p | [.apps[]|select(.profiles)|.profiles|keys[]|select(. as $k|$p|index($k)|not)]|length' "$cat")" == 0 ]] || fail 'app in unknown profile'
+[[ "$(jq '[.apps[]|select(.shells)|.shells[]|select(.!="hyprland" and .!="plasma")]|length' "$cat")" == 0 ]] || fail 'unknown shell'
+[[ "$("$bin" catalog show git --json | jq -r '.data.profiles.core')" == default ]] || fail 'git is a default core app'
+[[ "$("$bin" catalog show hyprsunset --json | jq -r '.data.shells[0]')" == hyprland ]] || fail 'hyprsunset targets hyprland'
+# Negative cases for the check itself (needs a MatchBox to run the script).
+mb="${MATCHBOX:-$(command -v matchbox || true)}"
+if [[ -n "$mb" ]]; then
+ (cd "$root/src" && "$mb" ../tests/catalog_check.bxs) | tail -n 1 | grep -Fq 'negative tests passed' || fail 'catalog check negative tests'
+fi
 echo 'catalog tests passed'

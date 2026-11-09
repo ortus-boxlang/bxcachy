@@ -166,10 +166,11 @@ bxcachy install --optional            # default tier plus optional tier
 
 - Naming an app is enough. There is **no `--aur` flag**: anything in the catalog installs from its `source` (`pacman`, `aur`, `pkgbuild`, `web`).
 - Unknown id: usage error (exit 2), nothing runs.
-- Skip reasons, the only two: `optional` (not selected) and `unresolved` (catalog has no installable source yet; a named `unresolved` app is reported `failed`, exit 3).
+- Skip reasons: `optional` (not selected), `wrong_shell` and `unresolved` (catalog has no installable source yet; a named `unresolved` app is reported `failed`, exit 3).
 - Already installed apps are `skipped` with reason `installed`.
 - Section 2 still applies: no `--yes` prints the plan and exits 2; `--dry-run --yes` prints it and exits 0. AUR and `pkgbuild` builds never run as root (exit 4).
-- Profiles: schema 3 has no `profiles` field yet, so the four existing profiles (`core jvm containers terminal`) stay as a small table in code until the catalog gains them (open question below).
+- Profiles live in the catalog (0.3.0): a top-level `profiles` list and, per app, a map profile id to `default`/`optional`. `--profile=NAME` installs the profile's `default` members; `--optional` adds its `optional` ones. See `catalog/README.md`.
+- Shells: an app may carry `shells` (`hyprland`, `plasma`). The running shell comes from `XDG_CURRENT_DESKTOP`, overridable with `--shell=hyprland|plasma|all`. Non-matching apps are `skipped: wrong_shell`; a named app still installs.
 
 ### Per-source steps
 
@@ -203,5 +204,4 @@ Human output is the same lists, one app per line with its source.
 
 ### Open questions
 
-1. Add `profiles` (list of ids) to catalog schema 3, or keep the four profiles in code?
-2. How is "installed" detected for `web` apps (launcher file present)?
+1. Decided: a `web` app counts as installed when its launcher file exists.

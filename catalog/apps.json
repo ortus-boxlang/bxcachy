@@ -1,6 +1,6 @@
 {
   "schema": 3,
-  "catalog_version": "0.2.0-draft",
+  "catalog_version": "0.3.0-draft",
   "generated": "2026-11-09",
   "notes": [
     "Tier default = installed by a plain install; optional = offered in the picker; apps not listed are not part of the catalog.",
@@ -75,6 +75,80 @@
       "title": "Gaming",
       "blurb": "Optional: launchers, streaming and game tools",
       "order": 11
+    }
+  ],
+  "profiles": [
+    {
+      "id": "core",
+      "title": "Core tools",
+      "blurb": "git, curl, jq, unzip: the base every other tool assumes",
+      "order": 1
+    },
+    {
+      "id": "jvm",
+      "title": "JVM",
+      "blurb": "JDK 21, Maven and Gradle",
+      "order": 2
+    },
+    {
+      "id": "containers",
+      "title": "Containers",
+      "blurb": "Podman (with buildah and skopeo), its UIs, lazydocker",
+      "order": 3
+    },
+    {
+      "id": "terminal",
+      "title": "Terminal",
+      "blurb": "Everyday command line tools",
+      "order": 4
+    },
+    {
+      "id": "editors",
+      "title": "Editors",
+      "blurb": "Editors and IDEs",
+      "order": 5
+    },
+    {
+      "id": "networking",
+      "title": "Networking",
+      "blurb": "VPN, network file systems, file transfer and remote desktop",
+      "order": 6
+    },
+    {
+      "id": "productivity",
+      "title": "Productivity",
+      "blurb": "Notes, documents, chat and meetings",
+      "order": 7
+    },
+    {
+      "id": "workspace",
+      "title": "Workspace",
+      "blurb": "Google and Microsoft web apps",
+      "order": 8
+    },
+    {
+      "id": "ai",
+      "title": "AI",
+      "blurb": "Coding agents and local models",
+      "order": 9
+    },
+    {
+      "id": "media",
+      "title": "Media",
+      "blurb": "Players, recording and conversion",
+      "order": 10
+    },
+    {
+      "id": "gaming",
+      "title": "Gaming",
+      "blurb": "Launchers and compatibility tools",
+      "order": 11
+    },
+    {
+      "id": "files",
+      "title": "Files",
+      "blurb": "File manager, archives and thumbnails",
+      "order": 12
     }
   ],
   "categories": [
@@ -379,7 +453,10 @@
       "origin": [
         "omarchy-shell-tool"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "core": "default"
+      }
     },
     {
       "id": "boxlang-docs",
@@ -415,7 +492,10 @@
       "origin": [
         "owner-pick"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "editors": "optional"
+      }
     },
     {
       "id": "micro",
@@ -436,7 +516,10 @@
       "origin": [
         "owner-pick"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "editors": "optional"
+      }
     },
     {
       "id": "neovim",
@@ -457,7 +540,11 @@
       "origin": [
         "owner-pick"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "terminal": "default",
+        "editors": "default"
+      }
     },
     {
       "id": "vscode",
@@ -478,7 +565,10 @@
         "owner-pick",
         "omarchy-desktop"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "editors": "default"
+      }
     },
     {
       "id": "cursor",
@@ -499,7 +589,10 @@
       "origin": [
         "omarchy-desktop"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "editors": "optional"
+      }
     },
     {
       "id": "helix",
@@ -517,7 +610,10 @@
       "repo": "extra",
       "homepage": "https://helix-editor.com",
       "macos": "Helix (same)",
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "editors": "optional"
+      }
     },
     {
       "id": "omazed",
@@ -581,7 +677,82 @@
       "repo": "extra",
       "homepage": "https://zed.dev",
       "macos": "Zed (same)",
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "editors": "optional"
+      }
+    },
+    {
+      "id": "maven",
+      "name": "Maven",
+      "description": "Java project management and project comprehension tool",
+      "description_source": "arch",
+      "kind": "tui",
+      "group": "development",
+      "category": "Language tooling",
+      "tier": "default",
+      "source": "pacman",
+      "targets": [
+        "maven"
+      ],
+      "repo": "extra",
+      "homepage": "https://maven.apache.org",
+      "macos": "Maven via Homebrew",
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "jvm": "default"
+      }
+    },
+    {
+      "id": "jdk21",
+      "name": "OpenJDK 21",
+      "description": "OpenJDK Java 21 development kit",
+      "description_source": "arch",
+      "kind": "tui",
+      "group": "development",
+      "category": "Language tooling",
+      "tier": "default",
+      "source": "pacman",
+      "targets": [
+        "jdk21-openjdk"
+      ],
+      "repo": "extra",
+      "homepage": "https://openjdk.java.net/",
+      "macos": "OpenJDK via Homebrew",
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "jvm": "default"
+      }
+    },
+    {
+      "id": "gradle",
+      "name": "Gradle",
+      "description": "Powerful build system for the JVM",
+      "description_source": "arch",
+      "kind": "tui",
+      "group": "development",
+      "category": "Language tooling",
+      "tier": "optional",
+      "source": "pacman",
+      "targets": [
+        "gradle"
+      ],
+      "repo": "extra",
+      "homepage": "https://gradle.org/",
+      "macos": "Gradle via Homebrew",
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "jvm": "default"
+      }
     },
     {
       "id": "mise",
@@ -623,7 +794,10 @@
       "origin": [
         "omarchy-shell-tool"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "terminal": "default"
+      }
     },
     {
       "id": "eza",
@@ -644,7 +818,10 @@
       "origin": [
         "omarchy-shell-tool"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "terminal": "optional"
+      }
     },
     {
       "id": "fd",
@@ -665,7 +842,10 @@
       "origin": [
         "omarchy-shell-tool"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "terminal": "default"
+      }
     },
     {
       "id": "ripgrep",
@@ -686,7 +866,10 @@
       "origin": [
         "omarchy-shell-tool"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "terminal": "default"
+      }
     },
     {
       "id": "starship",
@@ -707,7 +890,10 @@
       "origin": [
         "omarchy-shell-tool"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "terminal": "optional"
+      }
     },
     {
       "id": "tldr",
@@ -728,7 +914,34 @@
       "origin": [
         "omarchy-shell-tool"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "terminal": "optional"
+      }
+    },
+    {
+      "id": "git",
+      "name": "Git",
+      "description": "the fast distributed version control system",
+      "description_source": "arch",
+      "kind": "tui",
+      "group": "development",
+      "category": "Version control",
+      "tier": "default",
+      "source": "pacman",
+      "targets": [
+        "git"
+      ],
+      "repo": "extra",
+      "homepage": "https://git-scm.com/",
+      "macos": "git (same)",
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "core": "default"
+      }
     },
     {
       "id": "lazygit",
@@ -749,7 +962,10 @@
       "origin": [
         "owner-pick"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "terminal": "default"
+      }
     },
     {
       "id": "virt-manager",
@@ -811,7 +1027,34 @@
       "origin": [
         "omarchy-shell-tool"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "terminal": "default"
+      }
+    },
+    {
+      "id": "yazi",
+      "name": "Yazi",
+      "description": "Blazing fast terminal file manager written in Rust, based on async I/O",
+      "description_source": "arch",
+      "kind": "tui",
+      "group": "terminal",
+      "category": "Navigation",
+      "tier": "default",
+      "source": "pacman",
+      "targets": [
+        "yazi"
+      ],
+      "repo": "extra",
+      "homepage": "https://github.com/sxyazi/yazi",
+      "macos": "yazi via Homebrew",
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "terminal": "default"
+      }
     },
     {
       "id": "fzf",
@@ -832,7 +1075,10 @@
       "origin": [
         "omarchy-shell-tool"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "terminal": "default"
+      }
     },
     {
       "id": "zoxide",
@@ -853,7 +1099,10 @@
       "origin": [
         "omarchy-shell-tool"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "terminal": "optional"
+      }
     },
     {
       "id": "alacritty",
@@ -1204,7 +1453,10 @@
         "owner-pick"
       ],
       "decided_by_owner": true,
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "ai": "default"
+      }
     },
     {
       "id": "pi-agent",
@@ -1259,7 +1511,10 @@
       "repo": "cachyos",
       "homepage": "https://github.com/anthropics/claude-code",
       "macos": null,
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "ai": "default"
+      }
     },
     {
       "id": "codex-cli",
@@ -1275,7 +1530,10 @@
         "codex-cli"
       ],
       "macos": null,
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "ai": "default"
+      }
     },
     {
       "id": "codex-desktop",
@@ -1315,7 +1573,10 @@
       "source": "web",
       "url": "https://github.com/features/copilot",
       "homepage": "https://github.com/features/copilot",
-      "macos": "GitHub Copilot (same)"
+      "macos": "GitHub Copilot (same)",
+      "profiles": {
+        "ai": "optional"
+      }
     },
     {
       "id": "antigravity",
@@ -1372,7 +1633,10 @@
         "omarchy-desktop"
       ],
       "note": "In Omarchy catalog; no public PKGBUILD found",
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "ai": "optional"
+      }
     },
     {
       "id": "ollama",
@@ -1386,7 +1650,10 @@
       "source": "web",
       "url": "https://ollama.com",
       "homepage": "https://ollama.com",
-      "macos": null
+      "macos": null,
+      "profiles": {
+        "ai": "optional"
+      }
     },
     {
       "id": "dropbox",
@@ -1450,7 +1717,10 @@
         "owner-pick"
       ],
       "decided_by_owner": true,
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "networking": "optional"
+      }
     },
     {
       "id": "lazydocker",
@@ -1471,7 +1741,10 @@
       "origin": [
         "owner-pick"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "containers": "default"
+      }
     },
     {
       "id": "podman",
@@ -1494,7 +1767,10 @@
       "origin": [
         "owner-pick"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "containers": "default"
+      }
     },
     {
       "id": "podman-desktop",
@@ -1515,7 +1791,10 @@
       "origin": [
         "owner-pick"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "containers": "default"
+      }
     },
     {
       "id": "podman-tui",
@@ -1535,7 +1814,10 @@
       "origin": [
         "owner-pick"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "containers": "default"
+      }
     },
     {
       "id": "docker",
@@ -1557,7 +1839,10 @@
       "origin": [
         "omarchy-shell-tool"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "containers": "optional"
+      }
     },
     {
       "id": "beekeeper-studio",
@@ -1599,7 +1884,10 @@
         "owner-pick"
       ],
       "decided_by_owner": true,
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "networking": "optional"
+      }
     },
     {
       "id": "nfs-utils",
@@ -1621,7 +1909,10 @@
         "owner-pick"
       ],
       "decided_by_owner": true,
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "networking": "default"
+      }
     },
     {
       "id": "cifs-utils",
@@ -1643,7 +1934,10 @@
         "owner-pick"
       ],
       "decided_by_owner": true,
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "networking": "default"
+      }
     },
     {
       "id": "sshfs",
@@ -1665,7 +1959,10 @@
         "owner-pick"
       ],
       "decided_by_owner": true,
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "networking": "default"
+      }
     },
     {
       "id": "tailscale",
@@ -1687,7 +1984,10 @@
         "owner-pick"
       ],
       "decided_by_owner": true,
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "networking": "default"
+      }
     },
     {
       "id": "nordvpn",
@@ -1704,7 +2004,10 @@
       ],
       "homepage": "https://nordvpn.com/download/linux/",
       "macos": "VPN settings",
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "networking": "optional"
+      }
     },
     {
       "id": "speedtest",
@@ -1730,7 +2033,10 @@
         "omarchy-desktop"
       ],
       "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "networking": "optional"
+      }
     },
     {
       "id": "remmina",
@@ -1752,7 +2058,10 @@
         "owner-pick"
       ],
       "decided_by_owner": true,
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "networking": "default"
+      }
     },
     {
       "id": "freerdp",
@@ -1774,7 +2083,10 @@
         "owner-pick"
       ],
       "decided_by_owner": true,
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "networking": "optional"
+      }
     },
     {
       "id": "gliff",
@@ -1841,7 +2153,10 @@
       "origin": [
         "omarchy-desktop"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "networking": "optional"
+      }
     },
     {
       "id": "sunshine",
@@ -1970,7 +2285,10 @@
       "origin": [
         "owner-pick"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "terminal": "default"
+      }
     },
     {
       "id": "pacseek",
@@ -2105,6 +2423,54 @@
       ],
       "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
       "verified_on": "2026-11-09"
+    },
+    {
+      "id": "curl",
+      "name": "curl",
+      "description": "command line tool and library for transferring data with URLs",
+      "description_source": "arch",
+      "kind": "tui",
+      "group": "system",
+      "category": "Utilities",
+      "tier": "default",
+      "source": "pacman",
+      "targets": [
+        "curl"
+      ],
+      "repo": "core",
+      "homepage": "https://curl.se/",
+      "macos": "curl (preinstalled)",
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "core": "default"
+      }
+    },
+    {
+      "id": "unzip",
+      "name": "unzip",
+      "description": "For extracting and viewing files in .zip archives",
+      "description_source": "arch",
+      "kind": "tui",
+      "group": "system",
+      "category": "Utilities",
+      "tier": "default",
+      "source": "pacman",
+      "targets": [
+        "unzip"
+      ],
+      "repo": "extra",
+      "homepage": "http://infozip.sourceforge.net/UnZip.html",
+      "macos": "unzip (preinstalled)",
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "core": "default"
+      }
     },
     {
       "id": "elsewhen",
@@ -2263,7 +2629,10 @@
       "origin": [
         "omarchy-shell-tool"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "shells": [
+        "hyprland"
+      ]
     },
     {
       "id": "hyprsunset",
@@ -2284,7 +2653,10 @@
       "origin": [
         "omarchy-shell-tool"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "shells": [
+        "hyprland"
+      ]
     },
     {
       "id": "owe",
@@ -2304,7 +2676,10 @@
       "origin": [
         "omarchy-desktop"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "shells": [
+        "hyprland"
+      ]
     },
     {
       "id": "wayfreeze",
@@ -2324,7 +2699,10 @@
       "origin": [
         "omarchy-desktop"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "shells": [
+        "hyprland"
+      ]
     },
     {
       "id": "learn-omarchy",
@@ -2350,7 +2728,10 @@
         "omarchy-desktop"
       ],
       "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "shells": [
+        "hyprland"
+      ]
     },
     {
       "id": "ark",
@@ -2370,7 +2751,10 @@
       "origin": [
         "owner-pick"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "files": "default"
+      }
     },
     {
       "id": "kdegraphics-thumbnailers",
@@ -2411,7 +2795,10 @@
       "origin": [
         "owner-pick"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "files": "default"
+      }
     },
     {
       "id": "dolphin-plugins",
@@ -2432,7 +2819,10 @@
       "origin": [
         "owner-pick"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "files": "default"
+      }
     },
     {
       "id": "filelight",
@@ -2453,7 +2843,10 @@
       "origin": [
         "owner-pick"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "files": "default"
+      }
     },
     {
       "id": "kimageformats",
@@ -2474,7 +2867,10 @@
       "origin": [
         "owner-pick"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "files": "default"
+      }
     },
     {
       "id": "kio-extras",
@@ -2495,7 +2891,10 @@
       "origin": [
         "owner-pick"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "files": "default"
+      }
     },
     {
       "id": "kompare",
@@ -2516,7 +2915,10 @@
       "origin": [
         "owner-pick"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "files": "optional"
+      }
     },
     {
       "id": "ffmpegthumbs",
@@ -2537,7 +2939,10 @@
       "origin": [
         "owner-pick"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "files": "default"
+      }
     },
     {
       "id": "flea",
@@ -2630,7 +3035,10 @@
       "origin": [
         "omarchy-desktop"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "shells": [
+        "hyprland"
+      ]
     },
     {
       "id": "aether",
@@ -2650,7 +3058,10 @@
       "origin": [
         "omarchy-desktop"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "shells": [
+        "hyprland"
+      ]
     },
     {
       "id": "brave",
@@ -2838,7 +3249,10 @@
         "owner-pick",
         "omarchy-desktop"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "productivity": "optional"
+      }
     },
     {
       "id": "slack",
@@ -2860,7 +3274,10 @@
         "omarchy-desktop"
       ],
       "decided_by_owner": true,
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "productivity": "optional"
+      }
     },
     {
       "id": "zap-whatsapp",
@@ -2900,7 +3317,10 @@
         "owner-pick"
       ],
       "decided_by_owner": true,
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "productivity": "optional"
+      }
     },
     {
       "id": "omairc",
@@ -3146,7 +3566,10 @@
         "omarchy-desktop"
       ],
       "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "productivity": "default"
+      }
     },
     {
       "id": "onlyoffice",
@@ -3168,7 +3591,10 @@
         "owner-pick"
       ],
       "decided_by_owner": true,
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "productivity": "default"
+      }
     },
     {
       "id": "gridcraft",
@@ -3208,7 +3634,10 @@
       "origin": [
         "omarchy-desktop"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "productivity": "optional"
+      }
     },
     {
       "id": "meeting-recorder",
@@ -3234,7 +3663,10 @@
         "omarchy-desktop"
       ],
       "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "productivity": "optional"
+      }
     },
     {
       "id": "obsidian",
@@ -3255,7 +3687,10 @@
       "origin": [
         "omarchy-desktop"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "productivity": "default"
+      }
     },
     {
       "id": "wordcraft",
@@ -3315,7 +3750,10 @@
       "origin": [
         "omarchy-desktop"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "productivity": "optional"
+      }
     },
     {
       "id": "maps",
@@ -3453,7 +3891,10 @@
       "macos": "Pages",
       "origin": [
         "owner-pick"
-      ]
+      ],
+      "profiles": {
+        "workspace": "default"
+      }
     },
     {
       "id": "google-drive",
@@ -3470,7 +3911,10 @@
       "macos": "iCloud Drive",
       "origin": [
         "owner-pick"
-      ]
+      ],
+      "profiles": {
+        "workspace": "default"
+      }
     },
     {
       "id": "google-sheets",
@@ -3487,7 +3931,10 @@
       "macos": "Numbers",
       "origin": [
         "owner-pick"
-      ]
+      ],
+      "profiles": {
+        "workspace": "default"
+      }
     },
     {
       "id": "google-slides",
@@ -3504,7 +3951,10 @@
       "macos": "Keynote",
       "origin": [
         "owner-pick"
-      ]
+      ],
+      "profiles": {
+        "workspace": "default"
+      }
     },
     {
       "id": "excel",
@@ -3521,7 +3971,10 @@
       "macos": "Excel (same)",
       "origin": [
         "omarchy-web"
-      ]
+      ],
+      "profiles": {
+        "workspace": "optional"
+      }
     },
     {
       "id": "microsoft-teams-web",
@@ -3538,7 +3991,10 @@
       "macos": "Teams (same)",
       "origin": [
         "omarchy-web"
-      ]
+      ],
+      "profiles": {
+        "workspace": "optional"
+      }
     },
     {
       "id": "onedrive",
@@ -3555,7 +4011,10 @@
       "macos": "OneDrive (same)",
       "origin": [
         "omarchy-web"
-      ]
+      ],
+      "profiles": {
+        "workspace": "optional"
+      }
     },
     {
       "id": "outlook",
@@ -3572,7 +4031,10 @@
       "macos": "Outlook (same)",
       "origin": [
         "omarchy-web"
-      ]
+      ],
+      "profiles": {
+        "workspace": "optional"
+      }
     },
     {
       "id": "powerpoint",
@@ -3606,7 +4068,10 @@
       "macos": "Word (same)",
       "origin": [
         "omarchy-web"
-      ]
+      ],
+      "profiles": {
+        "workspace": "optional"
+      }
     },
     {
       "id": "x",
@@ -3640,7 +4105,10 @@
       "macos": "Mail",
       "origin": [
         "owner-pick"
-      ]
+      ],
+      "profiles": {
+        "workspace": "default"
+      }
     },
     {
       "id": "google-calendar",
@@ -3657,7 +4125,10 @@
       "macos": "Calendar",
       "origin": [
         "owner-pick"
-      ]
+      ],
+      "profiles": {
+        "workspace": "default"
+      }
     },
     {
       "id": "basecamp",
@@ -3923,7 +4394,10 @@
         "owner-pick",
         "omarchy-desktop"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "media": "default"
+      }
     },
     {
       "id": "spotify",
@@ -3944,7 +4418,10 @@
         "owner-pick",
         "omarchy-desktop"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "media": "optional"
+      }
     },
     {
       "id": "ffmpeg",
@@ -3965,7 +4442,10 @@
       "origin": [
         "omarchy-shell-tool"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "media": "default"
+      }
     },
     {
       "id": "imv",
@@ -4004,7 +4484,10 @@
       "repo": "extra",
       "homepage": "https://apps.kde.org/kdenlive/",
       "macos": "iMovie / Final Cut",
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "media": "optional"
+      }
     },
     {
       "id": "link-studio",
@@ -4074,7 +4557,10 @@
       "repo": "extra",
       "homepage": "https://obsproject.com",
       "macos": "ScreenFlow / QuickTime",
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "media": "optional"
+      }
     },
     {
       "id": "omacut",
@@ -4147,7 +4633,10 @@
       "origin": [
         "omarchy-shell-tool"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "media": "default"
+      }
     },
     {
       "id": "rawmakase",
@@ -4194,7 +4683,10 @@
       "origin": [
         "owner-pick"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "media": "optional"
+      }
     },
     {
       "id": "gpu-screen-recorder",
@@ -4215,7 +4707,10 @@
       "origin": [
         "omarchy-shell-tool"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "media": "optional"
+      }
     },
     {
       "id": "omasnap",
@@ -4281,7 +4776,10 @@
       "origin": [
         "gaming"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "gaming": "optional"
+      }
     },
     {
       "id": "cachyos-gaming",
@@ -4303,7 +4801,10 @@
         "gaming"
       ],
       "note": "CachyOS meta-packages: Steam, Lutris, Heroic, Faugus, gamescope, MangoHud, GOverlay, Proton/Wine runtimes",
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "gaming": "default"
+      }
     },
     {
       "id": "heroic",
@@ -4324,7 +4825,10 @@
       "origin": [
         "omarchy-desktop"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "gaming": "default"
+      }
     },
     {
       "id": "lutris",
@@ -4345,7 +4849,10 @@
       "origin": [
         "gaming"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "gaming": "default"
+      }
     },
     {
       "id": "minecraft-launcher",
@@ -4453,7 +4960,10 @@
       "origin": [
         "gaming"
       ],
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "gaming": "default"
+      }
     },
     {
       "id": "greenlight",
@@ -4534,7 +5044,10 @@
         "gaming"
       ],
       "note": "Installs Proton-GE and Wine-GE compatibility tools",
-      "verified_on": "2026-11-09"
+      "verified_on": "2026-11-09",
+      "profiles": {
+        "gaming": "default"
+      }
     }
   ]
 }
