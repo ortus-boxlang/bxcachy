@@ -20,6 +20,7 @@ step() {
   local status=PASS
   [[ "$rc" == "$want" ]] || { status=FAIL; fails=$((fails+1)); }
   printf '%s\t%s\texpected=%s\tgot=%s\t%ss\n' "$status" "$name" "$want" "$rc" "$((SECONDS-start))" | tee -a "$OUT/results.tsv"
+  if [[ $status == FAIL ]]; then echo "--- last lines of $name.log:"; tail -n 25 "$OUT/$name.log" | sed 's/^/    | /'; fi
 }
 # Like step, but also requires the log to contain a string.
 step_grep() {
@@ -34,11 +35,11 @@ step_grep() {
 # GitHub reachability decides whether toolchain/native steps can run. Some sandboxes
 # block api.github.com; there they are reported SKIP (never silently PASS). CI runs them.
 if curl -fsS -m 15 -o /dev/null https://api.github.com/; then NET=1; else NET=0; fi
-# Fingerprint of everything a bootstrap run could change for this user (and the pacman log length).
-# Used to prove that a second full run changes nothing.
-snap() {
-  { find "$HOME" -path "$WORK" -prune -o -path "$HOME/.cache/bxcachy" -prune -o \( -type f -o -type l \) -printf '%p %s %T@\n' 2>/dev/null | sort
-    wc -l < /var/log/pacman.log 2>/dev/null || echo 0; } | sha256sum | cut -d' ' -f1
+# Listing of everything a bootstrap run could change for this user (path, size, mtime), plus the pacman
+# log length. Two listings are diffed to prove that a second full run changes nothing.
+snaplist() {
+  find "$HOME" -path "$WORK" -prune -o -path "$HOME/.cache/bxcachy" -prune -o \( -type f -o -type l \) -printf '%p %s %T@\n' 2>/dev/null | sort
+  echo "pacman.log lines: $(wc -l < /var/log/pacman.log 2>/dev/null || echo 0)"
 }
 skip() { printf 'SKIP\t%s\t%s\n' "$1" "$2" | tee -a "$OUT/results.tsv"; }
 
@@ -79,10 +80,10 @@ if [[ $NET == 1 ]]; then
   step bootstrap-binary-rejects-impostor   1 bash -c 'printf "#!/bin/sh\necho nope\n" > /tmp/impostor; chmod 755 /tmp/impostor; bash bootstrap/install.sh --install-binary --yes --binary /tmp/impostor'
   # B7: the whole path on this clean machine is finished, and running it all again changes nothing.
   step_grep bootstrap-fullpath-ready 0 'summary: ready' env PATH="$HOME/.local/bin:$PATH" bash bootstrap/install.sh --check
-  before="$(snap)"
+  snaplist > "$OUT/snap-before.txt"
   step bootstrap-fullpath-rerun 0 bash -c 'bash bootstrap/install.sh --install --yes </dev/null && bash bootstrap/install.sh --install-toolchains --yes --allow-external-scripts </dev/null && bash bootstrap/install.sh --install-binary --yes </dev/null'
-  after="$(snap)"
-  step bootstrap-fullpath-no-changes 0 bash -c "[[ '$before' == '$after' ]] || { echo 'system changed on the second run'; exit 1; }"
+  snaplist > "$OUT/snap-after.txt"
+  step bootstrap-fullpath-no-changes 0 bash -c "if diff -u '$OUT/snap-before.txt' '$OUT/snap-after.txt' > '$OUT/snap.diff'; then exit 0; else echo 'the second run changed these:'; grep -E '^[-+][^-+]' '$OUT/snap.diff' | head -40; exit 1; fi"
 else
   skip bootstrap-toolchains "GitHub unreachable"; skip bootstrap-toolchains-rerun "GitHub unreachable"
 fi
