@@ -53,8 +53,10 @@ step_grep bootstrap-check-report 0 'summary:' bash bootstrap/install.sh --check
 step_grep bootstrap-plan      0 'Read-only plan' bash bootstrap/install.sh --plan
 step bootstrap-plan-rejects-args 2 bash bootstrap/install.sh --plan extra
 step bootstrap-needs-confirm  2 bash bootstrap/install.sh --install
-step bootstrap-install        0 bash bootstrap/install.sh --install --yes
-step bootstrap-install-rerun  0 bash bootstrap/install.sh --install --yes
+step_grep bootstrap-install   0 'Next: install.sh --install-toolchains --yes' bash bootstrap/install.sh --install --yes
+step_grep bootstrap-install-rerun  0 'Nothing to do for packages, yay and Rust.' bash bootstrap/install.sh --install --yes
+step bootstrap-yay-present 0 bash -c 'command -v yay'
+step bootstrap-rust-active 0 bash -c 'rustc --version'
 step rust-default             0 rustup default stable
 # Unattended runs must refuse to execute external installers without the flag (nothing is installed yet here).
 step_grep bootstrap-toolchains-refuses-unattended 2 'allow-external-scripts' bash -c 'bash bootstrap/install.sh --install-toolchains --yes </dev/null 2>&1'

@@ -46,6 +46,7 @@ tool_version() {  # NAME [ARG]: first x.y[.z] printed by the tool, empty if unkn
   local bin; bin="$(tool_path "$1")" || return 0
   PATH="$probe_path" "$bin" "${2:---version}" 2>&1 | first_version || true
 }
+is_interactive() { [[ "${BXCACHY_INTERACTIVE:-0}" == 1 || ( -t 0 && -t 1 ) ]]; }
 os_id() { ( . "${BXCACHY_OS_RELEASE:-/etc/os-release}" 2>/dev/null; echo "${ID:-unknown}|${ID_LIKE:-}" ) || echo "unknown|"; }
 
 inspect() {
@@ -78,7 +79,7 @@ build_steps() {
     steps+=("packages|sudo pacman -Syu --needed ${missing_pkgs[*]}|installs missing packages and also upgrades the system")
   fi
   if (( ! have_yay )); then
-    steps+=("yay|sudo pacman -S --needed yay|AUR helper, found in the cachyos repository; only runs if yay is absent")
+    steps+=("yay|sudo pacman -S --needed yay|AUR helper, found in the cachyos repository; only runs if yay is absent (part of --install)")
   fi
   if (( ! have_mvm )); then
     steps+=("mvm|download and run $MVM_URL|external script, shown first; typed EXECUTE or --allow-external-scripts")
@@ -93,13 +94,13 @@ build_steps() {
     steps+=("boxlang|bvm install $BOXLANG_VERSION && bvm use $BOXLANG_VERSION|pinned BoxLang runtime")
   fi
   if (( ! have_rustup )) || [[ -z "$rust_ver" ]]; then
-    steps+=("rust|rustup default stable|activates Rust and Cargo for your user")
+    steps+=("rust|rustup default stable|activates Rust and Cargo for your user (part of --install)")
   fi
   if (( ! have_bxcachy )); then
     steps+=("binary|matchbox --target native src/bxcachy.bxs, then install to $BIN_DIR/bxcachy|built from source, no sudo")
   fi
   if (( have_bxcachy && ! bin_on_path )); then
-    steps+=("path|add $BIN_DIR to PATH|bxcachy is installed but its directory is not on PATH")
+    steps+=("path|add $BIN_DIR to PATH yourself|BxCachy does not edit shell startup files; the commands are printed by --install")
   fi
 }
 
@@ -155,7 +156,6 @@ if [[ "$mode" == --install-toolchains ]]; then
   export PATH="$probe_path"
   cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/bxcachy/external"
 
-  is_interactive() { [[ "${BXCACHY_INTERACTIVE:-0}" == 1 || ( -t 0 && -t 1 ) ]]; }
   # Download an external installer, show what it is, and run it only after approval:
   # typed EXECUTE when interactive, or --allow-external-scripts when unattended.
   run_external() {  # NAME URL
@@ -206,7 +206,43 @@ if [[ "$mode" == --install-toolchains ]]; then
   exit 0
 fi
 
-sudo pacman -Syu --needed "${packages[@]}"
-echo "Java 21 and rustup packages provisioned."
-echo "Run 'rustup default stable' as your normal user to activate Rust/Cargo."
-echo "BVM, MVM, BoxLang and MatchBox provisioning is still pending verified, version-pinned installers."
+# ---- --install --yes: packages, yay (only if absent), Rust. Runs as the normal user; sudo only for pacman. ----
+[[ "$(id -u)" != 0 ]] || { echo "Run as a regular user; sudo is used only for pacman steps" >&2; exit 1; }
+inspect
+changed=0
+# At a terminal pacman shows its own transaction prompt (a full upgrade deserves a second look);
+# unattended there is nobody to answer it, and --yes already approved the plan.
+pm_flags=(); is_interactive || pm_flags=(--noconfirm)
+if (( ${#missing_pkgs[@]} )); then
+  echo "Installing missing packages (this also upgrades the system): ${missing_pkgs[*]}"
+  sudo pacman -Syu "${pm_flags[@]}" --needed "${missing_pkgs[@]}" || { echo "pacman failed; nothing else was changed" >&2; exit 1; }
+  changed=1
+else
+  echo "packages: all installed"
+fi
+if ! tool_path yay >/dev/null; then
+  echo "Installing yay (AUR helper) from your configured repositories"
+  if ! sudo pacman -S "${pm_flags[@]}" --needed yay; then
+    echo "yay is not available in your configured repositories. On CachyOS it is in the cachyos repo; otherwise install it from the AUR by hand." >&2
+    exit 1
+  fi
+  changed=1
+else
+  echo "yay: already installed"
+fi
+if tool_path rustup >/dev/null && [[ -z "$(tool_version rustc)" ]]; then
+  echo "Activating the stable Rust toolchain for your user"
+  rustup default stable || { echo "rustup could not install the stable toolchain" >&2; exit 1; }
+  [[ -n "$(tool_version rustc)" ]] || { echo "Rust is still not available after rustup default stable" >&2; exit 1; }
+  changed=1
+else
+  echo "rust: ${rust_ver:-rustup not available}"
+fi
+if (( ! changed )); then echo "Nothing to do for packages, yay and Rust."; fi
+case ":$PATH:" in
+  *":$BIN_DIR:"*) ;;
+  *) echo "Note: $BIN_DIR is not on your PATH. BxCachy does not edit shell startup files. Add it yourself:"
+     echo "  bash/zsh: export PATH=\"$BIN_DIR:\$PATH\""
+     echo "  fish:     fish_add_path $BIN_DIR" ;;
+esac
+echo "Next: install.sh --install-toolchains --yes"

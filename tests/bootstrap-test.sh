@@ -168,3 +168,47 @@ if out="$(trun env MOCK_UID=0 bash "$root/bootstrap/install.sh" --install-toolch
 if trun bash "$root/bootstrap/install.sh" --install-toolchains --yes --bogus >/dev/null 2>&1; then echo 'FAIL: unknown flag accepted' >&2; exit 1; fi
 if trun bash "$root/bootstrap/install.sh" --install --yes --allow-external-scripts >/dev/null 2>&1; then echo 'FAIL: --install accepted the external-scripts flag' >&2; exit 1; fi
 echo 'bootstrap toolchain tests passed'
+
+# ---- B4: --install installs missing packages, yay only if absent, and Rust; reruns change nothing ----
+install_mocks() {
+  reset_mocks; : > "$tmp/pacman.log"; : > "$tmp/state"
+  mock pacman 'case "$1" in
+  -Qq) grep -qx -- "$2" "$STATE" ;;
+  -Syu) shift; echo "Syu $*" >> "$PLOG"; for p in "$@"; do [[ "$p" == --needed ]] || echo "$p" >> "$STATE"; done ;;
+  -S) shift; echo "S $*" >> "$PLOG"; [[ "${MOCK_YAY_FAIL:-0}" == 1 ]] && exit 1
+      printf "#!/usr/bin/env bash\nexit 0\n" > "$BINDIR/yay"; chmod +x "$BINDIR/yay" ;;
+  *) exit 9 ;;
+esac'
+  mock sudo '"$@"'
+  mock rustup 'if [[ "$1 $2" == "default stable" ]]; then echo "rustup $*" >> "$PLOG"; printf "#!/usr/bin/env bash\necho \"rustc 1.90.0\"\n" > "$BINDIR/rustc"; chmod +x "$BINDIR/rustc"; fi'
+  mock java 'echo "openjdk version \"21.0.13\" 2026-04-21" >&2'
+}
+irun() { env -i HOME="$home" PATH="$bin:$sys" BXCACHY_SKIP_NETWORK=1 BXCACHY_OS_RELEASE="$tmp/os-arch" STATE="$tmp/state" PLOG="$tmp/pacman.log" BINDIR="$bin" MOCK_UID="${MOCK_UID:-1000}" MOCK_YAY_FAIL="${MOCK_YAY_FAIL:-0}" "$@"; }
+
+install_mocks; fresh_home
+out="$(irun bash "$root/bootstrap/install.sh" --install --yes 2>&1)"
+log="$(cat "$tmp/pacman.log")"
+need "$log" 'Syu --noconfirm --needed jdk21-openjdk git curl unzip rustup base-devel'; need "$log" 'S --noconfirm --needed yay'; need "$log" 'rustup default stable'
+need "$out" 'does not edit shell startup files'; need "$out" 'Next: install.sh --install-toolchains --yes'
+before="$(wc -l < "$tmp/pacman.log")"
+out="$(irun bash "$root/bootstrap/install.sh" --install --yes 2>&1)"
+need "$out" 'packages: all installed'; need "$out" 'yay: already installed'; need "$out" 'Nothing to do for packages, yay and Rust.'
+[[ "$(wc -l < "$tmp/pacman.log")" == "$before" ]] || { echo 'FAIL: rerun changed the system again' >&2; cat "$tmp/pacman.log" >&2; exit 1; }
+
+# Only the missing package is requested, and yay is skipped when present.
+install_mocks; fresh_home; echo "git" >> "$tmp/state"; echo "curl" >> "$tmp/state"; mock yay 'exit 0'
+irun bash "$root/bootstrap/install.sh" --install --yes >/dev/null 2>&1
+log="$(cat "$tmp/pacman.log")"; need "$log" 'Syu --noconfirm --needed jdk21-openjdk unzip rustup base-devel'; refuse "$log" 'S --noconfirm --needed yay'
+
+# At a terminal pacman is left to ask itself: no --noconfirm.
+install_mocks; fresh_home
+irun env BXCACHY_INTERACTIVE=1 bash "$root/bootstrap/install.sh" --install --yes >/dev/null 2>&1
+log="$(cat "$tmp/pacman.log")"; need "$log" 'Syu --needed jdk21-openjdk'; refuse "$log" '--noconfirm'
+
+# Failure paths: yay unavailable, root.
+install_mocks; fresh_home
+if out="$(MOCK_YAY_FAIL=1 irun bash "$root/bootstrap/install.sh" --install --yes 2>&1)"; then echo 'FAIL: missing yay ignored' >&2; exit 1; fi; need "$out" 'yay is not available'
+install_mocks; fresh_home
+if out="$(MOCK_UID=0 irun bash "$root/bootstrap/install.sh" --install --yes 2>&1)"; then echo 'FAIL: --install ran as root' >&2; exit 1; fi; need "$out" 'regular user'
+[[ ! -s "$tmp/pacman.log" ]] || { echo 'FAIL: root run touched the system' >&2; exit 1; }
+echo 'bootstrap install tests passed'
