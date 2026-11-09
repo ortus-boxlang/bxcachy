@@ -1,6 +1,6 @@
 {
   "schema": 3,
-  "catalog_version": "0.4.1-draft",
+  "catalog_version": "0.4.2-draft",
   "generated": "2026-11-09",
   "notes": [
     "Tier default = installed by a plain install; optional = offered in the picker; apps not listed are not part of the catalog.",
@@ -1298,6 +1298,26 @@
       "verified_on": "2026-11-09"
     },
     {
+      "id": "hermes-agent",
+      "name": "Hermes Agent",
+      "description": "Locally-run AI agent with tool use, web browsing, and automation",
+      "description_source": "aur",
+      "kind": "tui",
+      "group": "ai",
+      "category": "Agent tools",
+      "tier": "optional",
+      "source": "aur",
+      "targets": [
+        "hermes-agent"
+      ],
+      "homepage": "https://github.com/NousResearch/hermes-agent",
+      "macos": "Hermes Agent (same)",
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-09"
+    },
+    {
       "id": "hermes-desktop",
       "name": "Hermes Desktop",
       "description": "Native desktop shell for Hermes Agent",
@@ -1487,21 +1507,23 @@
     {
       "id": "codex-cli",
       "name": "Codex CLI",
-      "description": "OpenAI Codex, a coding agent for the terminal (package not yet verified)",
-      "description_source": "curated",
+      "description": "OpenAIs lightweight coding agent that runs in your terminal",
+      "description_source": "arch",
       "kind": "tui",
       "group": "ai",
       "category": "Coding agents",
       "tier": "optional",
-      "source": "unresolved",
+      "source": "pacman",
       "targets": [
-        "codex-cli"
+        "openai-codex"
       ],
       "macos": null,
       "verified_on": "2026-11-09",
       "profiles": {
-        "ai": "default"
-      }
+        "ai": "optional"
+      },
+      "repo": "extra",
+      "homepage": "https://github.com/openai/codex"
     },
     {
       "id": "codex-desktop",
@@ -1527,6 +1549,27 @@
         "omarchy-desktop"
       ],
       "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
+      "verified_on": "2026-11-09"
+    },
+    {
+      "id": "gemini-cli",
+      "name": "Gemini CLI",
+      "description": "Open-source AI agent that brings the power of Gemini directly into your terminal",
+      "description_source": "arch",
+      "kind": "tui",
+      "group": "ai",
+      "category": "Coding agents",
+      "tier": "optional",
+      "source": "pacman",
+      "targets": [
+        "gemini-cli"
+      ],
+      "repo": "extra",
+      "homepage": "https://github.com/google-gemini/gemini-cli",
+      "macos": "Gemini CLI (same)",
+      "origin": [
+        "owner-request"
+      ],
       "verified_on": "2026-11-09"
     },
     {
@@ -1611,15 +1654,15 @@
     {
       "id": "pi-agent",
       "name": "Pi coding agent",
-      "description": "Pi, a minimal terminal coding agent harness (installed with npm through nvm)",
-      "description_source": "curated",
+      "description": "AI agent toolkit: unified LLM API, agent loop, TUI, coding agent CLI (pi-mono)",
+      "description_source": "aur",
       "kind": "tui",
       "group": "ai",
       "category": "Coding agents",
       "tier": "optional",
-      "source": "npm",
+      "source": "aur",
       "targets": [
-        "@earendil-works/pi-coding-agent"
+        "pi-bin"
       ],
       "macos": null,
       "origin": [
@@ -1627,7 +1670,6 @@
       ],
       "decided_by_owner": true,
       "verified_on": "2026-11-09",
-      "bin": "pi",
       "homepage": "https://pi.dev/"
     },
     {

@@ -1,6 +1,5 @@
 // Turns the apps a request selected into install steps and runs them. Rules (COMMAND-CONTRACT sections 2 and 11):
-// one pacman call for all pacman apps (sudo unless already root), AUR and PKGBUILD builds as the normal user, npm apps
-// through nvm (the package name is passed as an argument, never spliced into the script text), one
+// one pacman call for all pacman apps (sudo unless already root), AUR and PKGBUILD builds as the normal user, one
 // app at a time, commands are argument arrays (never a shell string). Apps that cannot be installed yet
 // (unpinned PKGBUILD ref, no source) come back in `blocked`, not as steps.
 //
@@ -78,9 +77,8 @@ class Installer {
     // Builds the steps for the selected apps, in catalog order within each kind: pacman, aur, pkgbuild.
     function steps( selected, asRoot, home = "" ) {
         var homeDir = len( home ) ? home : getSystemSetting( "HOME", "" );
-        var nvmDir = getSystemSetting( "NVM_DIR", homeDir & "/.nvm" );
         var pacmanIds = []; var pacmanTargets = [];
-        var aur = []; var builds = []; var webs = []; var npms = []; var blocked = [];
+        var aur = []; var builds = []; var webs = []; var blocked = [];
         for ( var app in selected ) {
             var targets = structKeyExists( app, "targets" ) ? app.targets : [];
             if ( app.source == "pacman" ) {
@@ -94,14 +92,6 @@ class Installer {
                 var built = pkgbuildStep( app );
                 if ( structKeyExists( built, "blocked" ) ) blocked.append( built.blocked );
                 else builds.append( built.step );
-            } else if ( app.source == "npm" ) {
-                if ( !fileExists( nvmDir & "/nvm.sh" ) ) {
-                    blocked.append( { id: app.id, source: "npm", error: "nvm is not installed (install.sh --all installs it)" } );
-                } else {
-                    npms.append( { kind: "npm", ids: [ app.id ], commands: [
-                        [ "bash", "-c", '. "$1/nvm.sh" >/dev/null 2>&1 && npm install -g --ignore-scripts "$2"', "_", nvmDir, targets[1] ]
-                    ] } );
-                }
             } else if ( app.source == "web" ) {
                 webs.append( { kind: "web", ids: [ app.id ], commands: [], files: [ launcherFile( app, homeDir ) ] } );
             } else {
@@ -117,7 +107,6 @@ class Installer {
         }
         for ( var s in aur ) out.append( s );
         for ( var s in builds ) out.append( s );
-        for ( var s in npms ) out.append( s );
         for ( var s in webs ) out.append( s );
         return { steps: out, blocked: blocked };
     }

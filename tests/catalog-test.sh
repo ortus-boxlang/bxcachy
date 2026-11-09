@@ -37,7 +37,9 @@ fi
 # Owner's 2026-11-09 corrections
 for id in amp-desktop elsewhen learn-omarchy; do [[ "$(jq --arg i "$id" '[.apps[]|select(.id==$i)]|length' "$cat")" == 0 ]] || fail "$id must not be in the catalog"; done
 for id in datagrip opencode-desktop; do [[ "$(jq -r --arg i "$id" '.apps[]|select(.id==$i)|.tier' "$cat")" == optional ]] || fail "$id is an optional app"; done
-[[ "$(jq -r '.apps[]|select(.id=="pi-agent")|"\(.source) \(.tier) \(.bin)"' "$cat")" == 'npm optional pi' ]] || fail 'pi-agent is an optional npm app'
+[[ "$(jq -r '.apps[]|select(.id=="pi-agent")|"\(.source) \(.tier) \(.targets[0])"' "$cat")" == 'aur optional pi-bin' ]] || fail 'pi-agent is the optional AUR package pi-bin'
+[[ "$(jq -r '.apps[]|select(.id=="codex-cli")|"\(.source) \(.tier) \(.targets[0])"' "$cat")" == 'pacman optional openai-codex' ]] || fail 'codex-cli is the optional package openai-codex'
+for id in gemini-cli hermes-agent; do [[ "$(jq -r --arg i "$id" '.apps[]|select(.id==$i)|.tier' "$cat")" == optional ]] || fail "$id is an optional app"; done
 [[ "$(jq -r '.apps[]|select(.id=="disktree")|.tier' "$cat")" == default ]] || fail 'disktree is default'
-[[ "$(jq '[.apps[]|select(.source=="unresolved")]|length' "$cat")" -le 1 ]] || fail 'only codex-cli may stay unresolved'
+[[ "$(jq '[.apps[]|select(.source=="unresolved")]|length' "$cat")" == 0 ]] || fail 'no app is left unresolved'
 echo 'catalog tests passed'

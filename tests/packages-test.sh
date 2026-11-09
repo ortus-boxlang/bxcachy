@@ -57,7 +57,6 @@ jq -e '[.data.skipped[]|select(.reason=="optional").id]|index("walker")|not' <<<
 # named apps
 out="$(j plan hyprsunset --shell=plasma)"
 [[ "$(jq -r '.data.would_install[0].id' <<<"$out")" == hyprsunset ]] || fail 'named app ignores shell'
-[[ "$(rc run "$bin" plan codex-cli)" == 3 ]] || fail 'named unresolved app exits 3'
 [[ "$(rc run "$bin" plan nope-app)" == 2 ]] || fail 'unknown app exits 2'
 [[ "$(rc run "$bin" plan neovim --profile=core)" == 2 ]] || fail 'ids with --profile exit 2'
 [[ "$(rc run "$bin" plan --profile)" == 2 ]] || fail '--profile needs a value'
@@ -65,11 +64,6 @@ out="$(j plan hyprsunset --shell=plasma)"
 # web apps pull in brave
 out="$(j plan gmail)"
 [[ "$(jq -r '[.data.would_install[].id]|join(",")' <<<"$out")" == brave,gmail ]] || fail 'plan gmail includes brave first'
-
-# npm apps count as installed when their command is in an nvm Node version
-[[ "$(rc run "$bin" package-status pi-agent)" == 1 ]] || fail 'pi-agent missing without nvm'
-mkdir -p "$tmp/home/.nvm/versions/node/v22.1.0/bin"; touch "$tmp/home/.nvm/versions/node/v22.1.0/bin/pi"
-[[ "$(rc run "$bin" package-status pi-agent)" == 0 ]] || fail 'pi-agent installed when pi exists under nvm'
 
 # lists
 [[ "$(j profile-list | jq '.data|length')" -ge 12 ]] || fail 'profile-list'

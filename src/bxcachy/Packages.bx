@@ -26,19 +26,9 @@ class Packages {
         return getSystemSetting( "HOME", "" ) & "/.local/share/applications/bxcachy-" & id & ".desktop";
     }
 
-    // True when `bin` exists in any Node version managed by nvm (global npm packages live there).
-    function npmInstalled( bin ) {
-        var nvmDir = getSystemSetting( "NVM_DIR", getSystemSetting( "HOME", "" ) & "/.nvm" );
-        var versions = nvmDir & "/versions/node";
-        if ( !directoryExists( versions ) ) return false;
-        for ( var v in directoryList( versions, false, "name" ) ) if ( fileExists( versions & "/" & v & "/bin/" & bin ) ) return true;
-        return false;
-    }
-
     // True when the app is on the system: every target installed, or the launcher file for a web app.
     function isInstalled( app, names ) {
         if ( app.source == "web" ) return fileExists( launcherPath( app.id ) );
-        if ( app.source == "npm" ) return npmInstalled( app.bin );
         if ( !structKeyExists( app, "targets" ) || !app.targets.len() ) return false;
         for ( var t in app.targets ) if ( !structKeyExists( names, t ) ) return false;
         return true;

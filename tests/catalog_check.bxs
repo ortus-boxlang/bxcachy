@@ -35,15 +35,5 @@ expect( "unknown shell", c, "unknown shell gnome" );
 c = copyOf( good ); c.apps[1].shells = [];
 expect( "empty shells", c, "shells must be a non-empty list" );
 
-c = copyOf( good ); c.apps[1].source = "npm"; c.apps[1].targets = [ "@scope/pkg" ]; c.apps[1].delete( "bin" );
-expect( "npm without bin", c, "npm needs bin" );
-
-c = copyOf( good ); c.apps[1].source = "npm"; c.apps[1].targets = [ "bad name; rm" ]; c.apps[1].bin = "x";
-expect( "npm with an unsafe package name", c, "npm needs one valid package name" );
-
-c = copyOf( good ); c.apps[1].source = "npm"; c.apps[1].targets = [ "@scope/pkg" ]; c.apps[1].bin = "x";
-r = catalogClass.check( c ); hit = false; for ( e in r.errors ) if ( findNoCase( "npm", e ) ) hit = true;
-if ( !hit ) println( "ok   a valid npm entry passes" ); else { println( "FAIL a valid npm entry was rejected" ); failures++; }
-
 if ( failures > 0 ) { println( failures & " failed" ); CLIExit( 1 ); }
 println( "catalog check negative tests passed" );

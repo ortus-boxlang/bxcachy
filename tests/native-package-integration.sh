@@ -75,7 +75,6 @@ out="$(MOCK_YAY_FAIL=1 "$binary" install git vscode --yes --json 2>/dev/null || 
 # bad requests change nothing
 reset
 [[ "$(code "$binary" install nope-app --yes)" == 2 ]] || fail 'unknown app exits 2'
-[[ "$(code "$binary" install codex-cli --yes)" == 3 ]] || fail 'named unresolved app exits 3'
 [[ "$(code "$binary" install git --profile=core --yes)" == 2 ]] || fail 'ids with --profile exit 2'
 [[ "$(code "$binary" optional-install --yes)" == 2 ]] || fail 'optional-install needs ids'
 [[ ! -s "$INSTALL_TEST_LOG" ]] || fail 'bad request changed something'
@@ -88,15 +87,6 @@ launcher="$HOME/.local/share/applications/bxcachy-gmail.desktop"
 [[ -f "$launcher" ]] || fail 'launcher file written'
 grep -Fq 'Exec=brave --app=https://mail.google.com' "$launcher" || fail 'launcher runs brave in app mode'
 [[ "$(env PATH="$PATH" HOME="$HOME" "$binary" package-status gmail)" == 'gmail: installed' ]] || fail 'package-status sees the launcher'
-
-# an npm app goes through nvm (a fake nvm.sh with an npm function that logs)
-reset
-mkdir -p "$HOME/.nvm"
-printf '%s\n' 'npm() { printf "npm %s\n" "$*" >> "$INSTALL_TEST_LOG"; }' 'true' > "$HOME/.nvm/nvm.sh"
-"$binary" install pi-agent --yes >/dev/null 2>&1 || fail 'install pi-agent'
-grep -Fq -- 'npm install -g --ignore-scripts @earendil-works/pi-coding-agent' "$INSTALL_TEST_LOG" || fail 'npm install ran through nvm'
-rm -rf "$HOME/.nvm"
-[[ "$(code "$binary" install pi-agent --yes)" == 3 ]] || fail 'npm app without nvm fails with exit 3'
 
 # the default tier installs completely: no default app needs an unpinned PKGBUILD any more
 reset
