@@ -1,17 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Pinned versions (owner decision 2026-11-09). BoxLang is pinned to an exact release.
-MATCHBOX_VERSION="0.12.0"
-# BoxLang follows the latest stable release (owner decision 2026-11-09). BXCACHY_BOXLANG_VERSION=x.y.z pins it.
-# MatchBox stays pinned: it compiles bxcachy itself, so the tested version matters. BVM and MVM installers
-# fetch their own newest release; BXCACHY_MVM_VERSION=x.y.z asks the MVM installer for a specific one.
-BOXLANG_VERSION="${BXCACHY_BOXLANG_VERSION:-latest}"
-BOXLANG_LATEST_URL="https://downloads.ortussolutions.com/ortussolutions/boxlang/version-latest.properties"
-JAVA_MAJOR=21
+# Tool versions, installer URLs and the Java package live in box.json at the repository root (loaded below).
+# BoxLang follows the latest stable release (owner decision 2026-11-09); BXCACHY_BOXLANG_VERSION=x.y.z pins it.
+# MatchBox stays pinned in box.json: it compiles bxcachy itself, so the tested version matters.
+# BXCACHY_MVM_VERSION=x.y.z asks the MVM installer for a specific release.
 MIN_FREE_GB=5
-BVM_URL="https://install-bvm.boxlang.io"
-MVM_URL="https://raw.githubusercontent.com/ortus-boxlang/matchbox-quick-installer/main/install/install.sh"
+BOXLANG_LATEST_URL="https://downloads.ortussolutions.com/ortussolutions/boxlang/version-latest.properties"
 
 usage() {
   echo "Usage: install.sh --check | --plan | --install --yes | --install-toolchains --yes [--allow-external-scripts] | --install-binary --yes [--binary PATH] [--force]" >&2
@@ -47,8 +42,38 @@ command -v pacman >/dev/null 2>&1 || {
   echo "BxCachy requires Arch Linux/CachyOS (pacman)" >&2
   exit 1
 }
-packages=(jdk21-openjdk git curl unzip rustup base-devel)
+packages=(git curl unzip rustup base-devel jq)   # the Java package is added from box.json
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." 2>/dev/null && pwd || true)"
+
+# ---- box.json: the single place that names tool versions (needs jq, so --install installs jq first) ----
+MANIFEST="${BXCACHY_MANIFEST:-$root/box.json}"
+manifest_error=""
+load_manifest() {
+  manifest_error=""
+  command -v jq >/dev/null 2>&1 || { manifest_error="jq is required to read box.json"; return 1; }
+  [[ -f "$MANIFEST" ]] || { manifest_error="box.json not found at $MANIFEST (run this script from a BxCachy checkout)"; return 1; }
+  jq -e . "$MANIFEST" >/dev/null 2>&1 || { manifest_error="box.json is not valid JSON: $MANIFEST"; return 1; }
+  local key
+  for key in .toolchain.java.version .toolchain.java.package .toolchain.boxlang.version .toolchain.bvm.installer \
+             .toolchain.mvm.installer .toolchain.matchbox.version .toolchain.rust.channel; do
+    jq -e "$key" "$MANIFEST" >/dev/null 2>&1 || { manifest_error="box.json is missing ${key#.}"; return 1; }
+  done
+  JAVA_MAJOR="$(jq -r .toolchain.java.version "$MANIFEST")"
+  JAVA_PKG="$(jq -r .toolchain.java.package "$MANIFEST")"
+  MATCHBOX_VERSION="$(jq -r .toolchain.matchbox.version "$MANIFEST")"
+  BVM_URL="$(jq -r .toolchain.bvm.installer "$MANIFEST")"
+  MVM_URL="$(jq -r .toolchain.mvm.installer "$MANIFEST")"
+  RUST_CHANNEL="$(jq -r .toolchain.rust.channel "$MANIFEST")"
+  BOXLANG_VERSION="${BXCACHY_BOXLANG_VERSION:-$(jq -r .toolchain.boxlang.version "$MANIFEST")}"
+  packages=("$JAVA_PKG" git curl unzip rustup base-devel jq)
+}
+if load_manifest; then manifest_ok=1; else manifest_ok=0; fi
+need_manifest() {  # for modes that cannot work without it
+  (( manifest_ok )) && return 0
+  echo "$manifest_error" >&2
+  [[ "$manifest_error" == jq* ]] && echo "Run install.sh --install --yes first: it installs jq, then reads box.json." >&2
+  exit 1
+}
 
 # ---- Read-only inspection (used by --check and --plan; never changes the system) ----
 BIN_DIR="${BXCACHY_BIN_DIR:-$HOME/.local/bin}"
@@ -136,7 +161,7 @@ build_steps() {
     steps+=("boxlang|bvm install $BOXLANG_VERSION && bvm use $BOXLANG_VERSION|update BoxLang $bl_ver to $bl_want")
   fi
   if (( ! have_rustup )) || [[ -z "$rust_ver" ]]; then
-    steps+=("rust|rustup default stable|activates Rust and Cargo for your user (part of --install)")
+    steps+=("rust|rustup default $RUST_CHANNEL|activates Rust and Cargo for your user (part of --install)")
   fi
   if (( ! have_bxcachy )); then
     steps+=("binary|install.sh --install-binary --yes|builds src/bxcachy.bxs with MatchBox (or use --binary PATH), verifies it, installs to $BIN_DIR/bxcachy, no sudo")
@@ -186,6 +211,17 @@ report_plan() {
   echo "To apply the package steps: install.sh --install --yes. Toolchain steps: install.sh --install-toolchains --yes."
 }
 
+if [[ "$mode" == --check || "$mode" == --plan ]] && (( ! manifest_ok )); then
+  if [[ "$manifest_error" == jq* ]]; then
+    if [[ "$mode" == --check ]]; then
+      printf '== manifest ==\nbox.json: cannot be read (%s)\nsummary: 1 step(s) needed, run install.sh --plan\n' "$manifest_error"
+    else
+      printf 'Read-only plan. Nothing below has been run.\n1. jq\n   run: sudo pacman -S --needed jq\n   why: %s; the other steps depend on versions listed in box.json\nThen run install.sh --plan again for the full list. (install.sh --install --yes installs jq first.)\n' "$manifest_error"
+    fi
+    exit 0
+  fi
+  echo "$manifest_error" >&2; exit 1
+fi
 if [[ "$mode" == --check || "$mode" == --plan ]]; then
   inspect; build_steps
   if [[ "$mode" == --check ]]; then report_check; else report_plan; fi
@@ -194,6 +230,7 @@ fi
 
 if [[ "$mode" == --install-toolchains ]]; then
   # Re-runnable: only the steps still needed are performed. Runs as the normal user.
+  need_manifest
   command -v curl >/dev/null 2>&1 || { echo "curl is required" >&2; exit 1; }
   [[ "$(id -u)" != 0 ]] || { echo "Toolchains must be installed as a regular user" >&2; exit 1; }
   inspect
@@ -260,6 +297,7 @@ fi
 if [[ "$mode" == --install-binary ]]; then
   # Build (or accept) the bxcachy binary, verify it BEFORE touching the installed copy, then replace atomically.
   [[ "$(id -u)" != 0 ]] || { echo "Run as a regular user; no sudo is needed" >&2; exit 1; }
+  need_manifest
   work="$(mktemp -d)"; trap 'rm -rf "$work"' EXIT
   installed="$BIN_DIR/bxcachy"
   check_binary() {  # PATH -> prints its version line; fails unless it identifies itself as BxCachy
@@ -300,15 +338,23 @@ fi
 
 # ---- --install --yes: packages, yay (only if absent), Rust. Runs as the normal user; sudo only for pacman. ----
 [[ "$(id -u)" != 0 ]] || { echo "Run as a regular user; sudo is used only for pacman steps" >&2; exit 1; }
+# At a terminal pacman shows its own transaction prompt (a full upgrade deserves a second look);
+# unattended there is nobody to answer it, and --yes already approved the plan.
+pm_flags=(); is_interactive || pm_flags=(--noconfirm)
+# box.json needs jq to be read, so jq comes first.
+if (( ! manifest_ok )) && ! command -v jq >/dev/null 2>&1; then
+  command -v sudo >/dev/null 2>&1 || { echo "sudo is required to install packages but was not found" >&2; exit 1; }
+  echo "Installing jq first (needed to read box.json)"
+  sudo pacman -S "${pm_flags[@]}" --needed jq || { echo "Could not install jq; nothing else was changed" >&2; exit 1; }
+  if load_manifest; then manifest_ok=1; else manifest_ok=0; fi
+fi
+need_manifest
 inspect
 preflight_common
 if (( ${#missing_pkgs[@]} )) || ! tool_path yay >/dev/null; then
   (( have_sudo )) || { echo "sudo is required to install packages but was not found" >&2; exit 1; }
 fi
 changed=0
-# At a terminal pacman shows its own transaction prompt (a full upgrade deserves a second look);
-# unattended there is nobody to answer it, and --yes already approved the plan.
-pm_flags=(); is_interactive || pm_flags=(--noconfirm)
 if (( ${#missing_pkgs[@]} )); then
   echo "Installing missing packages (this also upgrades the system): ${missing_pkgs[*]}"
   sudo pacman -Syu "${pm_flags[@]}" --needed "${missing_pkgs[@]}" || { echo "pacman failed; nothing else was changed" >&2; exit 1; }
@@ -328,8 +374,8 @@ else
 fi
 if tool_path rustup >/dev/null && [[ -z "$(tool_version rustc)" ]]; then
   echo "Activating the stable Rust toolchain for your user"
-  rustup default stable || { echo "rustup could not install the stable toolchain" >&2; exit 1; }
-  [[ -n "$(tool_version rustc)" ]] || { echo "Rust is still not available after rustup default stable" >&2; exit 1; }
+  rustup default "$RUST_CHANNEL" || { echo "rustup could not install the stable toolchain" >&2; exit 1; }
+  [[ -n "$(tool_version rustc)" ]] || { echo "Rust is still not available after rustup default $RUST_CHANNEL" >&2; exit 1; }
   changed=1
 else
   echo "rust: ${rust_ver:-rustup not available}"

@@ -9,7 +9,7 @@ RUN if [ -f /tmp/extra-ca.crt ]; then cp /tmp/extra-ca.crt /etc/ca-certificates/
 # resolve against the same repositories a real CachyOS machine uses.
 COPY cachyos-repos.sh /tmp/cachyos-repos.sh
 RUN bash /tmp/cachyos-repos.sh && rm /tmp/cachyos-repos.sh
-RUN pacman -Syu --noconfirm --needed sudo base-devel git curl unzip bash jdk21-openjdk rustup \
+RUN pacman -Syu --noconfirm --needed sudo base-devel git curl unzip bash jq jdk21-openjdk rustup \
  && useradd -m -G wheel dev \
  && echo '%wheel ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/wheel \
  && chmod 0440 /etc/sudoers.d/wheel

@@ -1,0 +1,32 @@
+{
+  "name": "bxcachy",
+  "slug": "bxcachy",
+  "version": "0.11.0-dev",
+  "shortDescription": "Developer kickstarter for CachyOS with Hyprland and Noctalia",
+  "toolchain": {
+    "java": {
+      "version": "21",
+      "package": "jdk21-openjdk"
+    },
+    "boxlang": {
+      "version": "latest",
+      "testedWith": "1.19.0"
+    },
+    "bvm": {
+      "version": "latest",
+      "testedWith": "1.40.0",
+      "installer": "https://install-bvm.boxlang.io"
+    },
+    "mvm": {
+      "version": "latest",
+      "testedWith": "2.0.1",
+      "installer": "https://raw.githubusercontent.com/ortus-boxlang/matchbox-quick-installer/main/install/install.sh"
+    },
+    "matchbox": {
+      "version": "0.12.0"
+    },
+    "rust": {
+      "channel": "stable"
+    }
+  }
+}

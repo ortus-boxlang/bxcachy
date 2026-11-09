@@ -60,7 +60,11 @@ step_grep bootstrap-check-report 0 'summary:' bash bootstrap/install.sh --check
 step_grep bootstrap-plan      0 'Read-only plan' bash bootstrap/install.sh --plan
 step bootstrap-plan-rejects-args 2 bash bootstrap/install.sh --plan extra
 step bootstrap-needs-confirm  2 bash bootstrap/install.sh --install
-step_grep bootstrap-install   0 'Next: install.sh --install-toolchains --yes' bash bootstrap/install.sh --install --yes
+step bootstrap-remove-jq    0 sudo pacman -Rdd --noconfirm jq
+step_grep bootstrap-check-without-jq 0 'jq is required to read box.json' bash bootstrap/install.sh --check
+step bootstrap-toolchains-need-jq 1 bash bootstrap/install.sh --install-toolchains --yes --allow-external-scripts
+step_grep bootstrap-install   0 'Installing jq first' bash bootstrap/install.sh --install --yes
+step_grep bootstrap-install-completes 0 'Next: install.sh --install-toolchains --yes' bash bootstrap/install.sh --install --yes
 step_grep bootstrap-install-rerun  0 'Nothing to do for packages, yay and Rust.' bash bootstrap/install.sh --install --yes
 step bootstrap-yay-present 0 bash -c 'command -v yay'
 step bootstrap-rust-active 0 bash -c 'rustc --version'
@@ -72,7 +76,7 @@ if [[ $NET == 1 ]]; then
   step_grep bootstrap-toolchains-rerun 0 'Nothing to do' bash -c 'bash bootstrap/install.sh --install-toolchains --yes --allow-external-scripts </dev/null'
   # BoxLang follows the latest stable release: the installed version must equal what Ortus publishes as latest.
   step bootstrap-boxlang-is-latest   0 bash -c 'want=$(curl -fsS -m 10 https://downloads.ortussolutions.com/ortussolutions/boxlang/version-latest.properties | sed -n "s/^version=\([0-9][0-9.]*\).*/\1/p" | head -1); [ -n "$want" ] && bash bootstrap/install.sh --check | grep -F "boxlang: $want (want latest = $want)"'
-  step_grep bootstrap-pins-matchbox  0 'matchbox: 0.12.0' bash bootstrap/install.sh --check
+  step_grep bootstrap-pins-matchbox  0 "matchbox: $(jq -r .toolchain.matchbox.version box.json)" bash bootstrap/install.sh --check
   # B5: build the real binary with MatchBox and install it for the user.
   step_grep bootstrap-install-binary       0 'Installed '      bash bootstrap/install.sh --install-binary --yes
   step_grep bootstrap-binary-runs          0 'BxCachy 0.'      "$HOME/.local/bin/bxcachy" version
@@ -92,7 +96,7 @@ fi
 # --- Native build ---
 BIN=""
 if [[ $NET == 1 ]]; then
-  step native-compile 0 bash -c 'matchbox --version | grep -F 0.12.0 && matchbox --target native src/bxcachy.bxs'
+  step native-compile 0 bash -c 'matchbox --version | grep -F "$(jq -r .toolchain.matchbox.version box.json)" && matchbox --target native src/bxcachy.bxs'
   BIN="$(find . -maxdepth 5 -type f -executable \( -name bxcachy -o -name 'bxcachy.bxs' \) -print -quit)"
 else
   skip native-compile "GitHub unreachable (MatchBox cannot install); native and real-pacman CLI steps skipped"

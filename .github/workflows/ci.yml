@@ -22,6 +22,7 @@ jobs:
           set -euo pipefail
           bash -n bootstrap/install.sh scripts/package-manager.sh tests/package-manager-test.sh tests/bootstrap-test.sh tests/native-smoke.sh tests/native-package-integration.sh scripts/config.sh tests/config-test.sh
           test -s src/bxcachy.bxs
+          jq -e . box.json >/dev/null   # the manifest must be valid JSON
           for command in version doctor prerequisites desktop-list tui-list web-list optional-list optional-plan profile-list profile-plan plan apps-doctor dev-plan help; do
             grep -Fq "\"$command\"" src/bxcachy.bxs
           done
@@ -72,10 +73,11 @@ jobs:
         run: |
           set -euo pipefail
           export PATH="$HOME/.mvm/bin:$PATH"
-          mvm install 0.12.0
-          mvm use 0.12.0
+          MB="$(jq -r .toolchain.matchbox.version box.json)"   # the pin lives in box.json
+          mvm install "$MB"
+          mvm use "$MB"
           matchbox --version
-          matchbox --version | grep -F '0.12.0'
+          matchbox --version | grep -F "$MB"
           matchbox --target native src/bxcachy.bxs
       - name: Run smoke tests on compiled executable
         shell: bash
