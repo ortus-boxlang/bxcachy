@@ -24,7 +24,8 @@ finish() {  # FILE SOURCE COMMIT
   local out; out="$("$1" --version 2>&1 | head -n 1)" || true
   [[ "$out" == *"$want"* ]] || { echo "The MatchBox found reports '${out:-nothing}', box.json wants $want" >&2; return 1; }
   cp "$1" "$dest.new"; mv -f "$dest.new" "$dest"
-  printf 'version=%s\nref=%s\ncommit=%s\nsource=%s\n' "$want" "$ref" "$3" "$2" > "$dest.info"
+  # shell-safe: the file is sourced by the workflow (values contain spaces)
+  printf 'version=%q\nref=%q\ncommit=%q\nsource=%q\n' "$want" "$ref" "$3" "$2" > "$dest.info"
   echo "MatchBox $want ($2${3:+, $3}) -> $dest"
 }
 
