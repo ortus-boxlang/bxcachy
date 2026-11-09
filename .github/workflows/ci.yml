@@ -117,6 +117,25 @@ jobs:
           "$exe" /tmp/bxspike-native 2>&1 | tee /tmp/spike2/result.txt
           { echo '### MatchBox Native Fusion probe'; echo '```'; cat /tmp/spike2/result.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           ! grep -q '^FAIL' /tmp/spike2/result.txt
+      - name: Probe Native Fusion with the latest MatchBox (informational)
+        continue-on-error: true
+        shell: bash
+        run: |
+          export PATH="$HOME/.mvm/bin:$PATH"
+          pinned="$(jq -r .toolchain.matchbox.version box.json)"
+          trap 'mvm use "$pinned" >/dev/null 2>&1 || true' EXIT
+          for wait in 0 10 30; do sleep "$wait"; mvm install latest && break; [ "$wait" = 30 ] && exit 1; done
+          mvm use latest
+          matchbox --version
+          rm -rf /tmp/spike3 /tmp/bxspike-native3
+          cp -r tests/spikes/native /tmp/spike3 && cd /tmp/spike3
+          matchbox --target native app.bxs 2>&1 | tail -n 30
+          exe="$(find . -maxdepth 3 -type f -executable \( -name app -o -name app.bxs \) -print -quit)"
+          test -n "$exe" || { echo "::warning::Native Fusion did not compile with the latest MatchBox either"; exit 1; }
+          mkdir -p /tmp/bxspike-native3 && ln -s cfg.txt /tmp/bxspike-native3/link.txt
+          "$exe" /tmp/bxspike-native3 2>&1 | tee /tmp/spike3/result.txt
+          { echo '### Native Fusion with the latest MatchBox'; echo '```'; matchbox --version; cat /tmp/spike3/result.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          ! grep -q '^FAIL' /tmp/spike3/result.txt
       - name: Publish verified native artifact
         uses: actions/upload-artifact@v4
         with:
