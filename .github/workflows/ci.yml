@@ -116,6 +116,8 @@ jobs:
           bash tests/config-native-test.sh "$candidate"
           bash tests/cli-contract-test.sh "$candidate"
           bash tests/catalog-test.sh "$candidate"
+          (cd src && matchbox ../tests/resolver_test.bxs)
+          (cd src && matchbox ../tests/catalog_check.bxs)
       - name: Publish verified native artifact
         uses: actions/upload-artifact@v4
         with:

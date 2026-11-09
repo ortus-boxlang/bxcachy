@@ -1,0 +1,74 @@
+// Resolver rules on a small fixed catalog and on the real one. Run from src/:
+//   (cd src && matchbox ../tests/resolver_test.bxs)
+resolverClass = new bxcachy.Resolver();
+failures = 0;
+function check( label, ok ) {
+ if ( ok ) println( "ok   " & label ); else { println( "FAIL " & label ); failures++; }
+}
+function idsOf( r ) { return r.selected.map( function( a ) { return a.id; } ).toList( "," ); }
+function reasonOf( r, id ) {
+ for ( s in r.skipped ) if ( s.id == id ) return s.reason;
+ return "";
+}
+fixture = {
+ profiles: [ { id: "dev", title: "Dev", blurb: "x", order: 1 } ],
+ apps: [
+  { id: "git", tier: "default", source: "pacman", profiles: { dev: "default" } },
+  { id: "jq", tier: "optional", source: "pacman", profiles: { dev: "optional" } },
+  { id: "hyprsunset", tier: "default", source: "pacman", shells: [ "hyprland" ] },
+  { id: "dolphin", tier: "default", source: "pacman", shells: [ "plasma" ] },
+  { id: "intellij", tier: "default", source: "unresolved", profiles: { dev: "default" } },
+  { id: "btop", tier: "default", source: "pacman" },
+  { id: "zed", tier: "optional", source: "pacman" }
+ ]
+};
+// default set
+r = resolverClass.resolve( fixture, {} );
+check( "default: default-tier apps, no shell filter", idsOf( r ) == "git,hyprsunset,dolphin,btop" );
+check( "default: optional is skipped with a reason", reasonOf( r, "zed" ) == "optional" );
+check( "default: unresolved is skipped", reasonOf( r, "intellij" ) == "unresolved" );
+r = resolverClass.resolve( fixture, { shell: "hyprland" } );
+check( "shell hyprland drops plasma-only apps", idsOf( r ) == "git,hyprsunset,btop" && reasonOf( r, "dolphin" ) == "wrong_shell" );
+r = resolverClass.resolve( fixture, { shell: "plasma" } );
+check( "shell plasma drops hyprland-only apps", idsOf( r ) == "git,dolphin,btop" && reasonOf( r, "hyprsunset" ) == "wrong_shell" );
+r = resolverClass.resolve( fixture, { shell: "all" } );
+check( "shell all keeps both", idsOf( r ) == "git,hyprsunset,dolphin,btop" );
+r = resolverClass.resolve( fixture, { optional: true } );
+check( "--optional adds the optional tier", idsOf( r ) == "git,jq,hyprsunset,dolphin,btop,zed" );
+r = resolverClass.resolve( fixture, { installed: function( a ) { return a.id == "git"; } } );
+check( "installed apps are skipped", reasonOf( r, "git" ) == "installed" && !find( "git", idsOf( r ) ) );
+// profile
+r = resolverClass.resolve( fixture, { profile: "dev" } );
+check( "profile: default members only", idsOf( r ) == "git" && reasonOf( r, "jq" ) == "optional" && reasonOf( r, "intellij" ) == "unresolved" );
+check( "profile: non-members are not mentioned", reasonOf( r, "btop" ) == "" );
+r = resolverClass.resolve( fixture, { profile: "dev", optional: true } );
+check( "profile --optional adds optional members", idsOf( r ) == "git,jq" );
+r = resolverClass.resolve( fixture, { profile: "nope" } );
+check( "unknown profile is an error", r.errors.len() == 1 && r.selected.len() == 0 );
+// named apps
+r = resolverClass.resolve( fixture, { ids: [ "zed", "dolphin", "zed" ], shell: "hyprland" } );
+check( "named apps ignore tier and shell, order kept, duplicates dropped", r.mode == "ids" && idsOf( r ) == "zed,dolphin" );
+r = resolverClass.resolve( fixture, { ids: [ "intellij" ] } );
+check( "named unresolved app fails", r.failed.len() == 1 && r.failed[1].id == "intellij" && r.selected.len() == 0 );
+r = resolverClass.resolve( fixture, { ids: [ "git" ], installed: function( a ) { return true; } } );
+check( "named installed app is skipped", reasonOf( r, "git" ) == "installed" );
+r = resolverClass.resolve( fixture, { ids: [ "nope", "git" ] } );
+check( "unknown app is an error and nothing is selected", r.errors.len() == 1 && r.selected.len() == 0 );
+r = resolverClass.resolve( fixture, { ids: [ "git" ], profile: "dev" } );
+check( "ids with a profile is an error", r.errors.len() == 1 );
+r = resolverClass.resolve( fixture, { shell: "gnome" } );
+check( "unknown shell is an error", r.errors.len() == 1 );
+// shell detection
+check( "detect Hyprland", resolverClass.detectShell( "Hyprland" ) == "hyprland" );
+check( "detect KDE", resolverClass.detectShell( "KDE" ) == "plasma" );
+check( "detect unknown", resolverClass.detectShell( "GNOME" ) == "" && resolverClass.detectShell( "" ) == "" );
+// real catalog
+real = new bxcachy.Catalog().load();
+r = resolverClass.resolve( real, { profile: "core" } );
+check( "real: core profile is git, curl, jq, unzip", listSort( idsOf( r ), "text", "asc" ) == "curl,git,jq,unzip" );
+r = resolverClass.resolve( real, { profile: "jvm" } );
+check( "real: jvm profile", listSort( idsOf( r ), "text", "asc" ) == "gradle,jdk21,maven" );
+r = resolverClass.resolve( real, { shell: "plasma" } );
+check( "real: no hyprland-only app is selected on plasma", r.selected.filter( function( a ) { return structKeyExists( a, "shells" ) && !arrayFind( a.shells, "plasma" ); } ).len() == 0 );
+if ( failures > 0 ) { println( failures & " failed" ); CLIExit( 1 ); }
+println( "resolver tests passed" );

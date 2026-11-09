@@ -1,0 +1,74 @@
+// Turns a request (ids, profile, optional, shell) and the catalog into the apps an install acts on.
+// Pure: no I/O. The caller passes `installed( app )` so tests can mock the system.
+//
+//   resolve( cat, { ids: [], profile: "", optional: false, shell: "hyprland", installed: function( app ) {...} } )
+//     -> { mode, errors: [ text ], selected: [ app ], failed: [ { id, error } ], skipped: [ { id, reason } ] }
+//
+// mode: "ids" (named apps), "profile" (members of a profile) or "default" (the default tier).
+// Skip reasons: optional, wrong_shell, unresolved, installed. Named apps ignore tier and shell rules;
+// a named app that is `unresolved` is reported in `failed`. `errors` is non-empty on a usage problem
+// (unknown id or profile, ids together with a profile); nothing is selected then.
+class Resolver {
+    // The shells a request may name; "all" and "" turn the shell filter off.
+    function shells() {
+     return [ "hyprland", "plasma", "all" ];
+    }
+
+    // Detects the running shell from XDG_CURRENT_DESKTOP text: "hyprland", "plasma" or "" when unknown.
+    function detectShell( desktop ) {
+     var d = lCase( desktop ?: "" );
+     if ( find( "hyprland", d ) ) return "hyprland";
+     if ( find( "kde", d ) || find( "plasma", d ) ) return "plasma";
+     return "";
+    }
+
+    function resolve( cat, req ) {
+     var ids = req.ids ?: [];
+     var profile = req.profile ?: "";
+     var wantOptional = req.optional ?: false;
+     var shell = req.shell ?: "";
+     var out = { mode: "default", errors: [], selected: [], failed: [], skipped: [] };
+     if ( shell != "" && !arrayFind( shells(), shell ) ) out.errors.append( "unknown shell " & shell );
+     if ( ids.len() && len( profile ) ) out.errors.append( "name apps or a profile, not both" );
+     var byId = {};
+     for ( var a in cat.apps ) byId[a.id] = a;
+     if ( ids.len() ) {
+      out.mode = "ids";
+      for ( var id in ids ) if ( !structKeyExists( byId, id ) ) out.errors.append( "unknown app " & id );
+     } else if ( len( profile ) ) {
+      out.mode = "profile";
+      var known = cat.profiles.filter( function( p ) { return p.id == profile; } );
+      if ( !known.len() ) out.errors.append( "unknown profile " & profile );
+     }
+     if ( out.errors.len() ) return out;
+
+     var isInstalled = req.installed ?: function( app ) { return false; };
+     var seen = {};
+     if ( out.mode == "ids" ) {
+      for ( var id in ids ) {
+       if ( structKeyExists( seen, id ) ) continue;
+       seen[id] = true;
+       var app = byId[id];
+       if ( app.source == "unresolved" ) out.failed.append( { id: id, error: "no installable source in the catalog yet" } );
+       else if ( isInstalled( app ) ) out.skipped.append( { id: id, reason: "installed" } );
+       else out.selected.append( app );
+      }
+      return out;
+     }
+
+     for ( var app in cat.apps ) {
+      // Which tier decides: the profile's own tier for a profile, the app's tier for the default set.
+      var tier = app.tier;
+      if ( out.mode == "profile" ) {
+       if ( !structKeyExists( app, "profiles" ) || !structKeyExists( app.profiles, profile ) ) continue;
+       tier = app.profiles[profile];
+      }
+      if ( tier == "optional" && !wantOptional ) { out.skipped.append( { id: app.id, reason: "optional" } ); continue; }
+      if ( structKeyExists( app, "shells" ) && shell != "" && shell != "all" && !arrayFind( app.shells, shell ) ) { out.skipped.append( { id: app.id, reason: "wrong_shell" } ); continue; }
+      if ( app.source == "unresolved" ) { out.skipped.append( { id: app.id, reason: "unresolved" } ); continue; }
+      if ( isInstalled( app ) ) { out.skipped.append( { id: app.id, reason: "installed" } ); continue; }
+      out.selected.append( app );
+     }
+     return out;
+    }
+}
