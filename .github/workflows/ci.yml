@@ -95,3 +95,34 @@ jobs:
           name: bxcachy-linux-native
           path: dist/bxcachy
           if-no-files-found: error
+  arch-real:
+    name: 5 - Real Arch system tests (container, non-root, real pacman)
+    needs: native
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run real-system suite
+        shell: bash
+        run: |
+          set -o pipefail
+          bash tests/arch/run.sh "$PWD/arch-test-out" 2>&1 | tee arch-run.txt
+      - name: Result table
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '### Real Arch system tests'
+            echo '| Result | Step | Detail |'
+            echo '| --- | --- | --- |'
+            [[ -f arch-test-out/results.tsv ]] && awk -F'\t' '{printf "| %s | %s | %s %s %s |\n",$1,$2,$3,$4,$5}' arch-test-out/results.tsv
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: arch-real-logs
+          path: |
+            arch-test-out/
+            arch-run.txt
+          if-no-files-found: warn

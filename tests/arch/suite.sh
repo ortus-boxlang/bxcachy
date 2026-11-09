@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+# Runs INSIDE the Arch container as the unprivileged `dev` user.
+# Every step is independent: a failure is recorded and the suite continues, so
+# one run reports the whole picture. Exit code is 1 if any step failed.
+set -uo pipefail
+SRC="${SRC:-/src}"
+OUT="${OUT:-/out}"
+WORK="$HOME/bxcachy"
+mkdir -p "$OUT"
+rm -rf "$WORK"; cp -a "$SRC" "$WORK"; cd "$WORK"
+: > "$OUT/results.tsv"
+fails=0
+
+# step NAME EXPECTED_EXIT COMMAND...
+step() {
+  local name="$1" want="$2"; shift 2
+  local start=$SECONDS rc
+  { echo "\$ $*"; "$@"; } > "$OUT/$name.log" 2>&1
+  rc=$?
+  local status=PASS
+  [[ "$rc" == "$want" ]] || { status=FAIL; fails=$((fails+1)); }
+  printf '%s\t%s\texpected=%s\tgot=%s\t%ss\n' "$status" "$name" "$want" "$rc" "$((SECONDS-start))" | tee -a "$OUT/results.tsv"
+}
+# Like step, but also requires the log to contain a string.
+step_grep() {
+  local name="$1" want="$2" needle="$3"; shift 3
+  step "$name" "$want" "$@"
+  if ! grep -Fq -- "$needle" "$OUT/$name.log"; then
+    sed -i "\$s/^PASS/FAIL/" "$OUT/results.tsv"; fails=$((fails+1))
+    printf 'FAIL\t%s\toutput missing: %s\n' "$name" "$needle" | tee -a "$OUT/results.tsv"
+  fi
+}
+
+# GitHub reachability decides whether toolchain/native steps can run. Some sandboxes
+# block api.github.com; there they are reported SKIP (never silently PASS). CI runs them.
+if curl -fsS -m 15 -o /dev/null https://api.github.com/; then NET=1; else NET=0; fi
+skip() { printf 'SKIP\t%s\t%s\n' "$1" "$2" | tee -a "$OUT/results.tsv"; }
+
+export PATH="$HOME/.mvm/bin:$HOME/.cargo/bin:$PATH"
+
+# --- Existing mocked suites, now on real Arch ---
+step mock-package-manager 0 bash tests/package-manager-test.sh
+step mock-bootstrap       0 bash tests/bootstrap-test.sh
+step mock-config          0 bash tests/config-test.sh
+
+# --- Bootstrap against the real system ---
+step bootstrap-check          0 bash bootstrap/install.sh --check
+step bootstrap-needs-confirm  2 bash bootstrap/install.sh --install
+step bootstrap-install        0 bash bootstrap/install.sh --install --yes
+step bootstrap-install-rerun  0 bash bootstrap/install.sh --install --yes
+step rust-default             0 rustup default stable
+if [[ $NET == 1 ]]; then
+  step bootstrap-toolchains     0 bash bootstrap/install.sh --install-toolchains --yes
+  step bootstrap-toolchains-rerun 0 bash bootstrap/install.sh --install-toolchains --yes
+else
+  skip bootstrap-toolchains "GitHub unreachable"; skip bootstrap-toolchains-rerun "GitHub unreachable"
+fi
+
+# --- Native build ---
+BIN=""
+if [[ $NET == 1 ]]; then
+  step native-compile 0 bash -c 'matchbox --version | grep -F 0.12.0 && matchbox --target native src/bxcachy.bxs'
+  BIN="$(find . -maxdepth 5 -type f -executable \( -name bxcachy -o -name 'bxcachy.bxs' \) -print -quit)"
+else
+  skip native-compile "GitHub unreachable (MatchBox cannot install); native and real-pacman CLI steps skipped"
+  BIN=SKIP
+fi
+if [[ "$BIN" == SKIP ]]; then :
+elif [[ -z "$BIN" ]]; then
+  echo "FAIL native-binary-found (no executable)" | tee -a "$OUT/results.tsv"; fails=$((fails+1))
+else
+  BIN="$(realpath "$BIN")"
+  step native-smoke       0 bash tests/native-smoke.sh "$BIN"
+  step native-mock-install 0 bash tests/native-package-integration.sh "$BIN"
+
+  # --- Real pacman, no mocks ---
+  step_grep real-pkg-status-installed   0 "installed"   "$BIN" package-status pacman
+  step real-pkg-status-missing          1               "$BIN" package-status bxcachy-no-such-pkg
+  step_grep real-pkg-source-installed   0 "installed"   "$BIN" package-source pacman
+  step_grep real-pkg-source-official    0 "pacman"      bash -c "sudo pacman -Sy >/dev/null; '$BIN' package-source cowsay"
+  step real-pkg-source-unavailable      1               "$BIN" package-source bxcachy-no-such-pkg
+  step real-install-no-yes              2               "$BIN" profile-install core
+  step real-install-profile-core        0               "$BIN" profile-install core --yes
+  step real-install-profile-core-rerun  0               "$BIN" profile-install core --yes
+  step_grep real-verify-jq              0 "installed"   "$BIN" package-status jq
+  step real-install-optional-official   0               "$BIN" optional-install pinta --yes
+fi
+
+# --- Config helper on real filesystem ---
+step config-apply-restore 0 bash -c '
+  set -e; d=$(mktemp -d); echo one > $d/src; bash scripts/config.sh apply $d/src $d/dst --yes
+  echo two > $d/src; bash scripts/config.sh apply $d/src $d/dst --yes
+  b=$(ls $d/dst.bxcachy.*.bak | head -1); bash scripts/config.sh restore "$b" $d/dst --yes; grep -Fx one $d/dst'
+
+echo
+echo "===== SUMMARY ====="
+column -t -s $'\t' "$OUT/results.tsv"
+echo "failures: $fails"
+[[ "$fails" == 0 ]]
