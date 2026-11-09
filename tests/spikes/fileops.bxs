@@ -1,0 +1,51 @@
+// Spike: which file operations does a MatchBox-compiled BoxLang program support?
+// A native config service needs: atomic replace, permissions, symlink detection, JSON, temp dirs, env access.
+// Every probe prints one PASS/FAIL line so the result is readable in CI. Informational: it never exits non-zero.
+println( "spike: runtime check start" );
+tmp = getTempDirectory() & "/bxcachy-spike-" & createUUID();
+results = [];
+
+function probe( name, detail ) {
+  println( "PASS " & name & ( len( detail ) ? ": " & detail : "" ) );
+}
+function fail( name, detail ) {
+  println( "FAIL " & name & ": " & detail );
+}
+
+try { directoryCreate( tmp, true, true ); probe( "directoryCreate", tmp ); } catch ( any e ) { fail( "directoryCreate", e.message ); }
+try { println( ( directoryExists( tmp ) ? "PASS" : "FAIL" ) & " directoryExists" ); } catch ( any e ) { fail( "directoryExists", e.message ); }
+
+a = tmp & "/a.txt";
+b = tmp & "/b.txt";
+try { fileWrite( a, "one" ); probe( "fileWrite", "" ); } catch ( any e ) { fail( "fileWrite", e.message ); }
+try { println( ( fileRead( a ) == "one" ? "PASS" : "FAIL" ) & " fileRead round trip" ); } catch ( any e ) { fail( "fileRead", e.message ); }
+try { fileWrite( b, "two" ); fileMove( a, b ); println( ( fileRead( b ) == "one" && !fileExists( a ) ? "PASS" : "FAIL" ) & " fileMove replaces an existing file" ); } catch ( any e ) { fail( "fileMove over existing", e.message ); }
+try { fileCopy( b, tmp & "/c.txt" ); println( ( fileRead( tmp & "/c.txt" ) == "one" ? "PASS" : "FAIL" ) & " fileCopy" ); } catch ( any e ) { fail( "fileCopy", e.message ); }
+try { info = getFileInfo( b ); probe( "getFileInfo", "keys=" & structKeyList( info ) ); } catch ( any e ) { fail( "getFileInfo", e.message ); }
+try { fileSetAccessMode( b, "600" ); probe( "fileSetAccessMode", "600" ); } catch ( any e ) { fail( "fileSetAccessMode", e.message ); }
+try { println( ( getFileInfo( b ).keyExists( "mode" ) ? "PASS getFileInfo has mode: " & getFileInfo( b ).mode : "FAIL getFileInfo has no mode key" ) ); } catch ( any e ) { fail( "getFileInfo mode", e.message ); }
+try { fileDelete( tmp & "/c.txt" ); println( ( !fileExists( tmp & "/c.txt" ) ? "PASS" : "FAIL" ) & " fileDelete" ); } catch ( any e ) { fail( "fileDelete", e.message ); }
+
+// Symlink detection: create one with the shell (as the CLI already uses systemExecute) and look for a BoxLang-side way to see it.
+link = tmp & "/link.txt";
+try {
+  r = systemExecute( name = "ln", arguments = "-s " & b & " " & link, timeout = 10, terminateOnTimeout = true );
+  println( ( r.exitCode == 0 ? "PASS" : "FAIL" ) & " systemExecute ln -s (exit " & r.exitCode & ")" );
+} catch ( any e ) { fail( "systemExecute ln -s", e.message ); }
+try { fi = getFileInfo( link ); probe( "getFileInfo(link)", "keys=" & structKeyList( fi ) ); } catch ( any e ) { fail( "getFileInfo(link)", e.message ); }
+try { println( "INFO isSymbolicLink BIF: " & ( isSymbolicLink( link ) ? "true" : "false" ) ); } catch ( any e ) { fail( "isSymbolicLink", e.message ); }
+try {
+  t = systemExecute( name = "test", arguments = "-L " & link, timeout = 10, terminateOnTimeout = true );
+  println( ( t.exitCode == 0 ? "PASS" : "FAIL" ) & " shell fallback `test -L` sees the symlink" );
+} catch ( any e ) { fail( "shell test -L", e.message ); }
+
+// JSON, hashing, ids, environment.
+try { s = jsonSerialize( { a: 1, b: [ "x", "y" ] } ); back = jsonDeserialize( s ); println( ( back.b[2] == "y" ? "PASS" : "FAIL" ) & " JSON round trip: " & s ); } catch ( any e ) { fail( "JSON", e.message ); }
+try { probe( "hash", hash( "bxcachy", "SHA-256" ) ); } catch ( any e ) { fail( "hash SHA-256", e.message ); }
+try { probe( "createUUID", createUUID() ); } catch ( any e ) { fail( "createUUID", e.message ); }
+try { probe( "env HOME", getSystemSetting( "HOME", "unset" ) ); } catch ( any e ) { fail( "getSystemSetting", e.message ); }
+try { probe( "now", dateTimeFormat( now(), "yyyyMMdd'T'HHmmss" ) ); } catch ( any e ) { fail( "dateTimeFormat", e.message ); }
+try { probe( "directoryList", arrayToList( directoryList( tmp, false, "name" ) ) ); } catch ( any e ) { fail( "directoryList", e.message ); }
+
+try { directoryDelete( tmp, true ); println( ( !directoryExists( tmp ) ? "PASS" : "FAIL" ) & " directoryDelete recursive" ); } catch ( any e ) { fail( "directoryDelete", e.message ); }
+println( "spike: done" );

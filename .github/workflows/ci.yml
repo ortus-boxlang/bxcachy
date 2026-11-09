@@ -91,6 +91,17 @@ jobs:
           mkdir -p dist
           cp "$candidate" dist/bxcachy
           chmod +x dist/bxcachy
+      - name: Probe file operations under MatchBox (informational)
+        continue-on-error: true
+        shell: bash
+        run: |
+          export PATH="$HOME/.mvm/bin:$PATH"
+          mkdir -p /tmp/spike && cp tests/spikes/fileops.bxs /tmp/spike/ && cd /tmp/spike
+          matchbox --target native fileops.bxs 2>&1 | tail -n 20
+          exe="$(find . -maxdepth 3 -type f -executable \( -name fileops -o -name fileops.bxs \) -print -quit)"
+          test -n "$exe" || { echo "::warning::probe did not compile with MatchBox"; exit 1; }
+          "$exe" 2>&1 | tee /tmp/spike/result.txt
+          { echo '### MatchBox file-operation probe'; echo '```'; cat /tmp/spike/result.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - name: Publish verified native artifact
         uses: actions/upload-artifact@v4
         with:
