@@ -1,6 +1,6 @@
 # `bxcachy setup` (plan, 2026-11-09)
 
-Status: **plan, no code yet.** Decided with the owner on 2026-11-09 (answers marked [owner]). Builds on COMMAND-CONTRACT.md (mutation rules, exit codes, `--json`), the config service (backup, drift, restore) and the `Installer` (argument arrays, done/failed/skipped, exit 5/6/7).
+Status: **plan, decisions made, no code yet.** Decided with the owner on 2026-11-09 (answers marked [owner]). Builds on COMMAND-CONTRACT.md (mutation rules, exit codes, `--json`), the config service (backup, drift, restore) and the `Installer` (argument arrays, done/failed/skipped, exit 5/6/7).
 
 ## 1. Shape
 
@@ -33,7 +33,7 @@ HyprKwin (`DGBooth/HyprKwin`) is a KWin script with Hyprland-style dwindle, mast
 ## 3. `setup hyprland`
 
 1. Preflight: CachyOS or Arch, x86_64, free disk, not root, `sudo` present, KDE detected (kept as is).
-2. Packages, from the CachyOS and Arch repos, one `pacman -S --needed` call (plan lists them): `hyprland`, Noctalia (`noctalia` / `noctalia-shell` + `noctalia-qs`), `uwsm`, `hyprlock`, `hypridle`, `xdg-desktop-portal-hyprland`, `hyprpolkitagent`, `qt6ct`, `nwg-look`, fonts, and the terminal/file manager already chosen in the catalog. **Open:** use the CachyOS meta-package `cachyos-hypr-noctalia` or individual packages (section 5).
+2. Packages, from the CachyOS and Arch repos, one `pacman -S --needed` call (plan lists them): `hyprland`, Noctalia (`noctalia` / `noctalia-shell` + `noctalia-qs`), `uwsm`, `hyprlock`, `hypridle`, `xdg-desktop-portal-hyprland`, `hyprpolkitagent`, `qt6ct`, `nwg-look`, fonts, and the terminal/file manager already chosen in the catalog. Individual packages, not the CachyOS meta-package (section 5).
 3. Session entry: make sure a Hyprland (uwsm) session exists at the login screen. The default session is not changed by `setup`.
 4. Configs, written through the config service (backup, atomic replace, journal, drift states): `~/.config/hypr/hyprland.conf` as a BxCachy-managed file that sources a user-owned `hyprland.local.conf`; Noctalia settings and theme; keybindings (Super-based, macOS-friendly: Super acts as Cmd for copy/paste/quit/tab-switch where the apps allow it).
 5. A keybinding that logs out to the login screen so KDE can be picked [owner].
@@ -43,12 +43,12 @@ HyprKwin (`DGBooth/HyprKwin`) is a KWin script with Hyprland-style dwindle, mast
 
 `session show` prints the current login-screen default. `session set hyprland|plasma|ask` writes `/etc/sddm.conf.d/bxcachy.conf` (`Session=`) with sudo, shown in the plan, backed up, and removed by `session set ask`. SDDM is the login manager CachyOS KDE uses; if another display manager is found, `session set` exits 4 and says so.
 
-## 5. Open questions
+## 5. Decisions (owner, 2026-11-09)
 
-1. `cachyos-hypr-noctalia` conflicts with `cachyos-desktop-settings`. Installing the meta-package could remove a package the KDE session relies on. Proposal: **individual packages**, never the meta-package. Needs the owner's call.
-2. Keybinding scheme: how far to go with the macOS mapping (Super as Cmd) in Hyprland and in Plasma. Needs a short list of the shortcuts that matter most.
-3. Which login-screen shortcut names the logout binding (proposal: `Super+Shift+Q`).
-4. Do Noctalia and Hyprland configs ship as templates inside the binary (like the catalog) or as files in the repo that `setup` copies? Proposal: templates embedded and written through the config service.
+1. **Individual packages**, never the CachyOS meta-package `cachyos-hypr-noctalia` (it conflicts with `cachyos-desktop-settings`, which the KDE session may rely on).
+2. **Super acts as Cmd**, minimum set: Super+C copy, Super+V paste, Super+Tab app switch. More mappings come later. Design notes to verify on a real Hyprland: Hyprland's `sendshortcut` dispatcher can send Ctrl+C/V to the focused window; terminals need Ctrl+Shift+C/V, so terminal classes get their own binding; Super+Tab cycles windows (or uses Noctalia's switcher).
+3. **Logout to the login screen: `Super+Shift+Q`.**
+4. **Config templates are embedded in the binary** (like the catalog) and written through the config service.
 
 ## 6. Tests
 
