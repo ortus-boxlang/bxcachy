@@ -150,3 +150,58 @@ The check must also run against the CachyOS repos on a real CachyOS machine befo
 - `config list|diff|apply|restore|history` (section 6 design; lock is a file created with `fileWriteExclusive`, temp files and journal records are created exclusive with their mode).
 - Global flag check and the `--json` envelope (sections 1 and 4) for the read-only commands.
 - `catalog list|show|groups|check|version`: the catalog is schema 3 (`catalog/README.md`) and is embedded in the binary by `bootstrap/gen-catalog.sh` (CI fails if `src/bxcachy.bxs` is stale). Filters use the `--name=value` form (`--tier=default --group=infra`), because MatchBox `CLIGetArgs` takes `--name value` as a flag plus a positional. `catalog check` is offline: errors exit 1, warnings (unpinned `pkgbuild` refs, default entries without a package) do not. The user override file is deliberately last (extensibility phase).
+
+## 11. Package commands on the catalog (B2, decided 2026-11-09)
+
+Applies to `plan`, `install-plan`, `install`, `optional-*`, `profile-*`, `package-status`, `package-source`. All read the embedded catalog (schema 3). Hardcoded lists in `Main.bx` go away.
+
+### Selection
+
+```
+bxcachy install                       # tier default
+bxcachy install ID [ID...]            # exactly these apps
+bxcachy install --profile=NAME        # a profile
+bxcachy install --optional            # default tier plus optional tier
+```
+
+- Naming an app is enough. There is **no `--aur` flag**: anything in the catalog installs from its `source` (`pacman`, `aur`, `pkgbuild`, `web`).
+- Unknown id: usage error (exit 2), nothing runs.
+- Skip reasons, the only two: `optional` (not selected) and `unresolved` (catalog has no installable source yet; a named `unresolved` app is reported `failed`, exit 3).
+- Already installed apps are `skipped` with reason `installed`.
+- Section 2 still applies: no `--yes` prints the plan and exits 2; `--dry-run --yes` prints it and exits 0. AUR and `pkgbuild` builds never run as root (exit 4).
+- Profiles: schema 3 has no `profiles` field yet, so the four existing profiles (`core jvm containers terminal`) stay as a small table in code until the catalog gains them (open question below).
+
+### Per-source steps
+
+| source | step |
+|---|---|
+| `pacman` | one `pacman -S --needed` call for all pacman apps (sudo shown in the plan) |
+| `aur` | AUR helper (yay) as the normal user, apps one at a time |
+| `pkgbuild` | PKGBUILD shown, `makepkg` as the normal user, result installed with pacman |
+| `web` | frameless web app launcher from `url` (no package) |
+
+### Result shape (`--json`, inside the section 4 envelope)
+
+`data` for `plan`, `install-plan` and `install`:
+
+```json
+{
+  "selection": { "mode": "default|ids|profile|optional", "ids": [], "profile": null },
+  "would_install": [ { "id": "git", "source": "pacman", "targets": ["git"] } ],
+  "done":    [ { "id": "git", "source": "pacman" } ],
+  "failed":  [ { "id": "docker", "source": "pacman", "error": "target not found" } ],
+  "skipped": [ { "id": "jq", "reason": "optional" } ]
+}
+```
+
+- `plan` and `--dry-run` fill `would_install` and leave `done`/`failed` empty. A real run fills `done`/`failed` and leaves `would_install` empty.
+- Exit: 0 all done or nothing to do; 5 pacman phase failed, 6 AUR/pkgbuild phase failed (only when nothing succeeded); 7 some done and some failed.
+- `package-status ID` exits 0 when installed, 1 when missing; `data` is `{ "id", "source", "installed": true|false }`.
+- `package-source ID` prints `{ "id", "source", "targets", "tier", "group" }`.
+
+Human output is the same lists, one app per line with its source.
+
+### Open questions
+
+1. Add `profiles` (list of ids) to catalog schema 3, or keep the four profiles in code?
+2. How is "installed" detected for `web` apps (launcher file present)?
