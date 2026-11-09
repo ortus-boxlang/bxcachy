@@ -66,6 +66,17 @@ preflight_common() {
   (( free_gb >= MIN_FREE_GB )) || { echo "Not enough free disk space: ${free_gb} GB free in $HOME, need at least $MIN_FREE_GB GB" >&2; exit 1; }
 }
 step_run() { local what="$1"; shift; "$@" || { echo "Failed: $what" >&2; exit 1; }; }
+# BoxLang's active version, read from BVM's `current` symlink. Running `boxlang --version` starts the whole
+# runtime, which rewrites its logs under ~/.boxlang on every call, so routine probes avoid it. Falls back to
+# running boxlang only when BVM is not managing it. Install steps still run the real binary to verify.
+bl_version() {
+  local t
+  if [[ -L "$BVM_HOME/current" ]] && t="$(basename "$(readlink "$BVM_HOME/current")")" && [[ "$t" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    printf '%s\n' "$t"
+  else
+    tool_version boxlang
+  fi
+}
 os_id() { ( . "${BXCACHY_OS_RELEASE:-/etc/os-release}" 2>/dev/null; echo "${ID:-unknown}|${ID_LIKE:-}" ) || echo "unknown|"; }
 
 inspect() {
@@ -85,7 +96,7 @@ inspect() {
   mvm_ver="$(tool_version mvm)"; have_mvm=0; tool_path mvm >/dev/null && have_mvm=1
   mb_ver="$(tool_version matchbox)"
   have_bvm=0; tool_path bvm >/dev/null && have_bvm=1; bvm_ver="$(tool_version bvm)"
-  bl_ver="$(tool_version boxlang)"
+  bl_ver="$(bl_version)"
   rust_ver="$(tool_version rustc)"; have_rustup=0; tool_path rustup >/dev/null && have_rustup=1
   have_bxcachy=0; tool_path bxcachy >/dev/null && have_bxcachy=1; bx_ver="$(tool_version bxcachy version)"
   case ":$PATH:" in *":$BIN_DIR:"*) bin_on_path=1 ;; *) bin_on_path=0 ;; esac
@@ -216,7 +227,7 @@ if [[ "$mode" == --install-toolchains ]]; then
     tool_path bvm >/dev/null || { echo "BVM installation failed: bvm not found afterwards" >&2; exit 1; }
     echo "Note: the BVM installer may add BVM to your shell startup files; open a new shell to pick that up."
   fi
-  if [[ "$(tool_version boxlang)" != "$BOXLANG_VERSION" ]]; then
+  if [[ "$(bl_version)" != "$BOXLANG_VERSION" ]]; then
     step_run "bvm install $BOXLANG_VERSION" bvm install "$BOXLANG_VERSION"; step_run "bvm use $BOXLANG_VERSION" bvm use "$BOXLANG_VERSION"; done_any=1
     [[ "$(tool_version boxlang)" == "$BOXLANG_VERSION" ]] || { echo "BoxLang $BOXLANG_VERSION not active after install (found: $(tool_version boxlang))" >&2; exit 1; }
     echo "BoxLang $BOXLANG_VERSION installed and verified."

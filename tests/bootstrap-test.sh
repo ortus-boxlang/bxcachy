@@ -33,7 +33,7 @@ echo 'bootstrap check tests passed'
 # ---- B1/B2: read-only --check and --plan, with a fully isolated PATH and HOME ----
 sys="$tmp/sys"; bin="$tmp/bin"; home="$tmp/home"
 mkdir -p "$sys" "$bin" "$home/.local/bin"
-for t in bash env grep awk df id uname head tr cat sort dirname mktemp sed cut mkdir chmod rm wc sha256sum basename ls cp mv find cmp tail stat; do
+for t in bash env grep awk df id uname head tr cat sort dirname mktemp sed cut mkdir chmod rm wc sha256sum basename ls cp mv find cmp tail stat readlink ln; do
   p="$(command -v "$t")" && ln -sf "$p" "$sys/$t"
 done
 mock() { printf '#!/usr/bin/env bash\n%s\n' "$2" > "$bin/$1"; chmod +x "$bin/$1"; }
@@ -309,3 +309,15 @@ BAD_BVM="${BVM_FAKE/install) : ;;/install) exit 1 ;;}"
 if out="$(BVM_FAKE="$BAD_BVM" trun bash "$root/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null 2>&1)"; then echo 'FAIL: bvm install failure ignored' >&2; exit 1; fi
 need "$out" 'Failed: bvm install 1.19.0'
 echo 'bootstrap failure-path tests passed'
+
+# ---- Routine probes must not start the BoxLang runtime (it rewrites its own logs on every start) ----
+reset_mocks; fresh_home; MOCK_INSTALLED="jdk21-openjdk git curl unzip rustup base-devel"
+mock java 'echo "openjdk version \"21.0.13\" 2026-04-21" >&2'
+mock boxlang 'echo ran >> "$HOME/boxlang-ran"; echo "Ortus BoxLang v9.9.9+1"'
+mkdir -p "$home/.bvm/versions/1.19.0"; ln -s "$home/.bvm/versions/1.19.0" "$home/.bvm/current"; ln -sf "$bin/boxlang" "$home/.bvm/bin-boxlang" 2>/dev/null || true
+out="$(run bash "$root/bootstrap/install.sh" --check)"; need "$out" 'boxlang: 1.19.0 (want 1.19.0)'
+run bash "$root/bootstrap/install.sh" --plan >/dev/null
+[[ ! -e "$home/boxlang-ran" ]] || { echo 'FAIL: a read-only probe started the BoxLang runtime' >&2; exit 1; }
+# Without BVM's symlink, it falls back to asking boxlang itself.
+rm "$home/.bvm/current"; out="$(run bash "$root/bootstrap/install.sh" --check)"; need "$out" 'boxlang: 9.9.9'
+echo 'bootstrap probe tests passed'
