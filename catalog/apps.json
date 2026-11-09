@@ -1,6 +1,6 @@
 {
   "schema": 3,
-  "catalog_version": "0.4.2-draft",
+  "catalog_version": "0.4.3-draft",
   "generated": "2026-11-09",
   "notes": [
     "Tier default = installed by a plain install; optional = offered in the picker; apps not listed are not part of the catalog.",
@@ -2480,32 +2480,6 @@
       "verified_on": "2026-11-09"
     },
     {
-      "id": "task-manager",
-      "name": "Task Manager",
-      "description": "Floating native task manager for Omarchy",
-      "description_source": "pkgbuild",
-      "kind": "desktop",
-      "group": "system",
-      "category": "System",
-      "tier": "optional",
-      "source": "pkgbuild",
-      "targets": [
-        "omarchy-task-manager"
-      ],
-      "pkgbuild": {
-        "repo": "omacom/omarchy-pkgs",
-        "path": "pkgbuilds/omarchy-task-manager",
-        "ref": "master"
-      },
-      "homepage": "https://github.com/tcballard/omarchy-task-manager",
-      "macos": "Activity Monitor",
-      "origin": [
-        "omarchy-desktop"
-      ],
-      "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
-      "verified_on": "2026-11-09"
-    },
-    {
       "id": "curl",
       "name": "curl",
       "description": "command line tool and library for transferring data with URLs",
@@ -3574,32 +3548,6 @@
       }
     },
     {
-      "id": "omapresent",
-      "name": "Omapresent",
-      "description": "Dead-simple, Markdown-only presentation app built with Qt Quick",
-      "description_source": "pkgbuild",
-      "kind": "desktop",
-      "group": "everyday",
-      "category": "Presentations",
-      "tier": "optional",
-      "source": "pkgbuild",
-      "targets": [
-        "omapresent"
-      ],
-      "pkgbuild": {
-        "repo": "omacom/omarchy-pkgs",
-        "path": "pkgbuilds/omapresent",
-        "ref": "master"
-      },
-      "homepage": "https://github.com/jethrojones/omapresent",
-      "macos": "Keynote",
-      "origin": [
-        "omarchy-desktop"
-      ],
-      "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
-      "verified_on": "2026-11-09"
-    },
-    {
       "id": "onlyoffice",
       "name": "ONLYOFFICE",
       "description": "An office suite that combines text, spreadsheet and presentation editors",
@@ -4216,23 +4164,6 @@
       "url": "https://basecamp.com",
       "homepage": "https://basecamp.com",
       "macos": "Basecamp (same)",
-      "origin": [
-        "omarchy-web"
-      ]
-    },
-    {
-      "id": "zoom-web",
-      "name": "Zoom",
-      "description": "Zoom meetings in the browser",
-      "description_source": "curated",
-      "kind": "web",
-      "group": "webapps",
-      "category": "Work",
-      "tier": "optional",
-      "source": "web",
-      "url": "https://zoom.us",
-      "homepage": "https://zoom.us",
-      "macos": "Zoom (same)",
       "origin": [
         "omarchy-web"
       ]
