@@ -49,6 +49,9 @@ step cachyos-stack-resolves 0 bash -c 'for p in cachyos-hypr-noctalia noctalia n
 
 # --- Bootstrap against the real system ---
 step bootstrap-check          0 bash bootstrap/install.sh --check
+step_grep bootstrap-check-report 0 'summary:' bash bootstrap/install.sh --check
+step_grep bootstrap-plan      0 'Read-only plan' bash bootstrap/install.sh --plan
+step bootstrap-plan-rejects-args 2 bash bootstrap/install.sh --plan extra
 step bootstrap-needs-confirm  2 bash bootstrap/install.sh --install
 step bootstrap-install        0 bash bootstrap/install.sh --install --yes
 step bootstrap-install-rerun  0 bash bootstrap/install.sh --install --yes
