@@ -59,6 +59,13 @@ tool_version() {  # NAME [ARG]: first x.y[.z] printed by the tool, empty if unkn
   PATH="$probe_path" "$bin" "${2:---version}" 2>&1 | first_version || true
 }
 is_interactive() { [[ "${BXCACHY_INTERACTIVE:-0}" == 1 || ( -t 0 && -t 1 ) ]]; }
+# Refuse early, with a reason, when the machine cannot be provisioned. Needs inspect() to have run.
+preflight_common() {
+  [[ "$os_ok" == 1 ]] || { echo "Unsupported OS: $os_name (BxCachy supports CachyOS and Arch Linux)" >&2; exit 1; }
+  [[ "$cpu" == x86_64 ]] || { echo "Unsupported CPU: $cpu (x86_64 only)" >&2; exit 1; }
+  (( free_gb >= MIN_FREE_GB )) || { echo "Not enough free disk space: ${free_gb} GB free in $HOME, need at least $MIN_FREE_GB GB" >&2; exit 1; }
+}
+step_run() { local what="$1"; shift; "$@" || { echo "Failed: $what" >&2; exit 1; }; }
 os_id() { ( . "${BXCACHY_OS_RELEASE:-/etc/os-release}" 2>/dev/null; echo "${ID:-unknown}|${ID_LIKE:-}" ) || echo "unknown|"; }
 
 inspect() {
@@ -164,6 +171,7 @@ if [[ "$mode" == --install-toolchains ]]; then
   command -v curl >/dev/null 2>&1 || { echo "curl is required" >&2; exit 1; }
   [[ "$(id -u)" != 0 ]] || { echo "Toolchains must be installed as a regular user" >&2; exit 1; }
   inspect
+  preflight_common
   [[ "$java_major" == "$JAVA_MAJOR" ]] || { echo "Java $JAVA_MAJOR is required (found: ${java_ver:-none})" >&2; exit 1; }
   export PATH="$probe_path"
   cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/bxcachy/external"
@@ -199,7 +207,7 @@ if [[ "$mode" == --install-toolchains ]]; then
     tool_path mvm >/dev/null || { echo "MVM installation failed: mvm not found afterwards" >&2; exit 1; }
   fi
   if [[ "$(tool_version matchbox)" != "$MATCHBOX_VERSION" ]]; then
-    mvm install "$MATCHBOX_VERSION"; mvm use "$MATCHBOX_VERSION"; done_any=1
+    step_run "mvm install $MATCHBOX_VERSION" mvm install "$MATCHBOX_VERSION"; step_run "mvm use $MATCHBOX_VERSION" mvm use "$MATCHBOX_VERSION"; done_any=1
     [[ "$(tool_version matchbox)" == "$MATCHBOX_VERSION" ]] || { echo "MatchBox $MATCHBOX_VERSION not active after install" >&2; exit 1; }
     echo "MatchBox $MATCHBOX_VERSION installed and verified."
   fi
@@ -209,7 +217,7 @@ if [[ "$mode" == --install-toolchains ]]; then
     echo "Note: the BVM installer may add BVM to your shell startup files; open a new shell to pick that up."
   fi
   if [[ "$(tool_version boxlang)" != "$BOXLANG_VERSION" ]]; then
-    bvm install "$BOXLANG_VERSION"; bvm use "$BOXLANG_VERSION"; done_any=1
+    step_run "bvm install $BOXLANG_VERSION" bvm install "$BOXLANG_VERSION"; step_run "bvm use $BOXLANG_VERSION" bvm use "$BOXLANG_VERSION"; done_any=1
     [[ "$(tool_version boxlang)" == "$BOXLANG_VERSION" ]] || { echo "BoxLang $BOXLANG_VERSION not active after install (found: $(tool_version boxlang))" >&2; exit 1; }
     echo "BoxLang $BOXLANG_VERSION installed and verified."
   fi
@@ -262,6 +270,10 @@ fi
 # ---- --install --yes: packages, yay (only if absent), Rust. Runs as the normal user; sudo only for pacman. ----
 [[ "$(id -u)" != 0 ]] || { echo "Run as a regular user; sudo is used only for pacman steps" >&2; exit 1; }
 inspect
+preflight_common
+if (( ${#missing_pkgs[@]} )) || ! tool_path yay >/dev/null; then
+  (( have_sudo )) || { echo "sudo is required to install packages but was not found" >&2; exit 1; }
+fi
 changed=0
 # At a terminal pacman shows its own transaction prompt (a full upgrade deserves a second look);
 # unattended there is nobody to answer it, and --yes already approved the plan.

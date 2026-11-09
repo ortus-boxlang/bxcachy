@@ -174,16 +174,16 @@ install_mocks() {
   reset_mocks; : > "$tmp/pacman.log"; : > "$tmp/state"
   mock pacman 'case "$1" in
   -Qq) grep -qx -- "$2" "$STATE" ;;
-  -Syu) shift; echo "Syu $*" >> "$PLOG"; for p in "$@"; do [[ "$p" == --needed ]] || echo "$p" >> "$STATE"; done ;;
+  -Syu) shift; echo "Syu $*" >> "$PLOG"; [[ "${MOCK_SYU_FAIL:-0}" == 1 ]] && exit 1; for p in "$@"; do [[ "$p" == --needed ]] || echo "$p" >> "$STATE"; done ;;
   -S) shift; echo "S $*" >> "$PLOG"; [[ "${MOCK_YAY_FAIL:-0}" == 1 ]] && exit 1
       printf "#!/usr/bin/env bash\nexit 0\n" > "$BINDIR/yay"; chmod +x "$BINDIR/yay" ;;
   *) exit 9 ;;
 esac'
   mock sudo '"$@"'
-  mock rustup 'if [[ "$1 $2" == "default stable" ]]; then echo "rustup $*" >> "$PLOG"; printf "#!/usr/bin/env bash\necho \"rustc 1.90.0\"\n" > "$BINDIR/rustc"; chmod +x "$BINDIR/rustc"; fi'
+  mock rustup '[[ "${MOCK_RUSTUP_FAIL:-0}" == 1 ]] && exit 1; if [[ "$1 $2" == "default stable" ]]; then echo "rustup $*" >> "$PLOG"; printf "#!/usr/bin/env bash\necho \"rustc 1.90.0\"\n" > "$BINDIR/rustc"; chmod +x "$BINDIR/rustc"; fi'
   mock java 'echo "openjdk version \"21.0.13\" 2026-04-21" >&2'
 }
-irun() { env -i HOME="$home" PATH="$bin:$sys" BXCACHY_SKIP_NETWORK=1 BXCACHY_OS_RELEASE="$tmp/os-arch" STATE="$tmp/state" PLOG="$tmp/pacman.log" BINDIR="$bin" MOCK_UID="${MOCK_UID:-1000}" MOCK_YAY_FAIL="${MOCK_YAY_FAIL:-0}" "$@"; }
+irun() { env -i HOME="$home" PATH="$bin:$sys" BXCACHY_SKIP_NETWORK=1 BXCACHY_OS_RELEASE="$tmp/os-arch" STATE="$tmp/state" PLOG="$tmp/pacman.log" BINDIR="$bin" MOCK_UID="${MOCK_UID:-1000}" MOCK_YAY_FAIL="${MOCK_YAY_FAIL:-0}" MOCK_SYU_FAIL="${MOCK_SYU_FAIL:-0}" MOCK_RUSTUP_FAIL="${MOCK_RUSTUP_FAIL:-0}" "$@"; }
 
 install_mocks; fresh_home
 out="$(irun bash "$root/bootstrap/install.sh" --install --yes 2>&1)"
@@ -263,3 +263,49 @@ if brun bash "$root/bootstrap/install.sh" --install-binary >/dev/null 2>&1; then
 if brun bash "$root/bootstrap/install.sh" --install-binary --yes --bogus >/dev/null 2>&1; then echo 'FAIL: unknown flag' >&2; exit 1; fi
 if brun bash "$root/bootstrap/install.sh" --install-binary --yes --binary >/dev/null 2>&1; then echo 'FAIL: --binary without a path' >&2; exit 1; fi
 echo 'bootstrap binary tests passed'
+
+# ---- B6: failure paths. Every one must say why, and leave the system as it was ----
+# Network unreachable is reported, not fatal, for the read-only report.
+reset_mocks; mock curl 'exit 22'
+out="$(env -i HOME="$home" PATH="$bin:$sys" BXCACHY_OS_RELEASE="$tmp/os-arch" MOCK_INSTALLED="" bash "$root/bootstrap/install.sh" --check 2>&1)"; need "$out" 'network: unreachable'
+
+# Unsupported OS and too little disk stop every installing mode before anything runs.
+install_mocks; fresh_home; mock curl 'exit 22'
+for m in "--install --yes" "--install-toolchains --yes --allow-external-scripts"; do
+  if out="$(OSREL="$tmp/os-ubuntu" env -i HOME="$home" PATH="$bin:$sys" BXCACHY_SKIP_NETWORK=1 BXCACHY_OS_RELEASE="$tmp/os-ubuntu" STATE="$tmp/state" PLOG="$tmp/pacman.log" BINDIR="$bin" bash "$root/bootstrap/install.sh" $m 2>&1 </dev/null)"; then echo "FAIL: '$m' ran on an unsupported OS" >&2; exit 1; fi
+  need "$out" 'Unsupported OS: ubuntu'
+done
+[[ ! -s "$tmp/pacman.log" ]] || { echo 'FAIL: unsupported OS touched the system' >&2; exit 1; }
+mock df 'printf "Filesystem 1024-blocks Used Available Capacity Mounted\nx 100 50 1024 5%% /\n"'
+if out="$(irun bash "$root/bootstrap/install.sh" --install --yes 2>&1)"; then echo 'FAIL: low disk accepted' >&2; exit 1; fi; need "$out" 'Not enough free disk space'
+[[ ! -s "$tmp/pacman.log" ]] || { echo 'FAIL: low disk touched the system' >&2; exit 1; }
+rm -f "$bin/df"
+
+# sudo missing, pacman failing, rustup failing.
+install_mocks; fresh_home; rm -f "$bin/sudo"
+if out="$(irun bash "$root/bootstrap/install.sh" --install --yes 2>&1)"; then echo 'FAIL: missing sudo ignored' >&2; exit 1; fi; need "$out" 'sudo is required'
+install_mocks; fresh_home
+if out="$(MOCK_SYU_FAIL=1 irun bash "$root/bootstrap/install.sh" --install --yes 2>&1)"; then echo 'FAIL: pacman failure ignored' >&2; exit 1; fi
+need "$out" 'pacman failed; nothing else was changed'; refuse "$(cat "$tmp/pacman.log")" 'S --noconfirm --needed yay'
+install_mocks; fresh_home; echo jdk21-openjdk >> "$tmp/state"; for q in git curl unzip rustup base-devel; do echo $q >> "$tmp/state"; done; mock yay 'exit 0'
+if out="$(MOCK_RUSTUP_FAIL=1 irun bash "$root/bootstrap/install.sh" --install --yes 2>&1)"; then echo 'FAIL: rustup failure ignored' >&2; exit 1; fi; need "$out" 'rustup could not install'
+
+# Interrupted toolchain install: the MVM installer dies midway; a later run resumes and finishes.
+reset_mocks; MOCK_INSTALLED="jdk21-openjdk git curl unzip rustup base-devel"
+mock sudo 'exit 9'; mock java 'echo "openjdk version \"21.0.13\" 2026-04-21" >&2'
+mock curl 'url=""; out=""; while [[ $# -gt 0 ]]; do case "$1" in -o) out="$2"; shift 2 ;; http*) url="$1"; shift ;; *) shift ;; esac; done
+echo "$url" >> "$CURL_LOG"
+case "$url" in *matchbox-quick-installer*) printf "%s\n" "$MVM_FAKE" > "$out" ;; *install-bvm*) printf "%s\n" "$BVM_FAKE" > "$out" ;; *) exit 22 ;; esac'
+fresh_home
+GOOD_MVM="$MVM_FAKE"
+if out="$(MVM_FAKE='echo half-done; exit 1' trun bash "$root/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null 2>&1)"; then echo 'FAIL: dying installer treated as success' >&2; exit 1; fi
+need "$out" 'mvm installer failed (script kept at'
+[[ ! -e "$home/.bvm" ]] || { echo 'FAIL: later steps ran after a failed one' >&2; exit 1; }
+out="$(MVM_FAKE="$GOOD_MVM" trun bash "$root/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null 2>&1)"
+need "$out" 'BoxLang 1.19.0 installed and verified.'
+# A failing "bvm install" is named, not silent.
+fresh_home; rm -rf "$home/.bvm"; : > "$tmp/curl.log"
+BAD_BVM="${BVM_FAKE/install) : ;;/install) exit 1 ;;}"
+if out="$(BVM_FAKE="$BAD_BVM" trun bash "$root/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null 2>&1)"; then echo 'FAIL: bvm install failure ignored' >&2; exit 1; fi
+need "$out" 'Failed: bvm install 1.19.0'
+echo 'bootstrap failure-path tests passed'
