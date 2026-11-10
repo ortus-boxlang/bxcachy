@@ -1,0 +1,56 @@
+// SetupPlan: facts and request to steps. Run from src/: (cd src && matchbox ../tests/setup_plan_test.bxs)
+failures = 0;
+function check( label, ok ) { if ( ok ) println( "ok   " & label ); else { println( "FAIL " & label ); failures++; } }
+plan = new bxcachy.SetupPlan();
+function facts( over = {} ) {
+ f = { isRoot: false, hasSudo: true, kwinVersion: "6.6.2", desktop: "KDE", sessionType: "wayland", installed: { git: true, "python-dbus": true, "python-gobject": true, "qt6-tools": true }, hyprkwinInstalled: false, workDir: "/tmp/hk" };
+ for ( k in over ) f[k] = over[k];
+ return f;
+}
+ids = function( p ) { return p.steps.map( function( s ) { return s.id; } ).toList( "," ); };
+
+check( "pins: a full commit", reFind( "^[0-9a-f]{40}$", plan.pins().hyprkwin.commit ) > 0 );
+check( "support: 6.6 and 6.8 tested, 6.7 untested, 6.5 and 5.27 not", plan.plasmaSupport( "6.6.2" ) == "tested" && plan.plasmaSupport( "6.8.0" ) == "tested" && plan.plasmaSupport( "6.7.1" ) == "untested" && plan.plasmaSupport( "6.5.4" ) == "unsupported" && plan.plasmaSupport( "5.27.9" ) == "unsupported" );
+
+p = plan.plasma( facts(), {} );
+check( "fresh install: fetch then install, no keys step", p.errors.len() == 0 && ids( p ) == "fetch,install" );
+check( "fetch clones the repo and checks out the pinned commit", p.steps[1].commands[1][2] == "clone" && p.steps[1].commands[2][6] == plan.pins().hyprkwin.commit && p.steps[1].commands[2][3] == "/tmp/hk" );
+check( "install runs tools/install.sh inside the checkout, as the user (no sudo)", p.steps[2].commands[1].toList( " " ) == "env -C /tmp/hk tools/install.sh" );
+check( "keys stay off by default and the notes say how to enable them", find( "--keys", p.notes.toList( " " ) ) > 0 && find( "Log out", p.notes.toList( " " ) ) > 0 );
+
+p = plan.plasma( facts( { installed: { git: true } } ), {} );
+check( "missing packages: one sudo pacman step first", ids( p ) == "packages,fetch,install" && p.steps[1].commands[1].toList( " " ) == "sudo pacman -S --needed --noconfirm python-dbus python-gobject qt6-tools" );
+p = plan.plasma( facts( { installed: {}, hasSudo: false } ), {} );
+check( "missing packages without sudo is an error", p.errors.len() == 1 && p.steps.len() == 0 );
+
+p = plan.plasma( facts(), { keys: true } );
+check( "--keys adds the apply step after the install", ids( p ) == "fetch,install,keys-apply" && p.steps[3].commands[1].toList( " " ) == "env -C /tmp/hk python3 tools/hyprkwin-shortcuts.py apply" && p.notes.len() == 1 );
+p = plan.plasma( facts( { hyprkwinInstalled: true } ), { undoKeys: true } );
+check( "--undo-keys: fetch then restore, no install", ids( p ) == "fetch,keys-restore" && p.steps[2].commands[1][6] == "restore" );
+p = plan.plasma( facts(), { undoKeys: true } );
+check( "--undo-keys without HyprKwin is an error", p.errors.len() == 1 && find( "not installed", p.errors[1] ) > 0 );
+p = plan.plasma( facts(), { keys: true, undoKeys: true } );
+check( "--keys with --undo-keys is an error", find( "not both", p.errors.toList( " " ) ) > 0 );
+p = plan.plasma( facts( { hyprkwinInstalled: true } ), {} );
+check( "already installed: an update step, no logout note", ids( p ) == "fetch,install" && find( "update HyprKwin", p.steps[2].title ) > 0 && find( "Log out", p.notes.toList( " " ) ) == 0 );
+
+p = plan.plasma( facts( { isRoot: true } ), {} );
+check( "root is refused", p.errors.len() == 1 && p.steps.len() == 0 );
+p = plan.plasma( facts( { kwinVersion: "" } ), {} );
+check( "no Plasma is refused", find( "not installed", p.errors[1] ) > 0 );
+p = plan.plasma( facts( { kwinVersion: "6.4.0" } ), {} );
+check( "an unsupported Plasma is refused", find( "6.6 and 6.8", p.errors[1] ) > 0 );
+p = plan.plasma( facts( { kwinVersion: "6.7.1" } ), {} );
+check( "Plasma 6.7 runs with a warning", p.errors.len() == 0 && p.warnings.len() == 1 );
+p = plan.plasma( facts( { sessionType: "x11" } ), {} );
+check( "an X11 Plasma session is refused", find( "Wayland", p.errors[1] ) > 0 );
+p = plan.plasma( facts( { desktop: "Hyprland", sessionType: "wayland" } ), {} );
+check( "running it from another desktop is fine", p.errors.len() == 0 );
+
+p = plan.undoPlasma( facts( { hyprkwinInstalled: true } ) );
+check( "undo: fetch then uninstall", ids( p ) == "fetch,uninstall" && p.steps[2].commands[1].toList( " " ) == "env -C /tmp/hk tools/uninstall.sh" );
+p = plan.undoPlasma( facts() );
+check( "undo without HyprKwin is an error", p.errors.len() == 1 );
+
+if ( failures > 0 ) { println( failures & " failed" ); CLIExit( 1 ); }
+println( "setup plan tests passed" );

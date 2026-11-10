@@ -1,0 +1,103 @@
+// Turns facts about the machine and a request into the ordered steps of `bxcachy setup`. Pure: no I/O.
+//
+//   plasma( facts, opts )      -> { target, errors: [ text ], warnings: [ text ], notes: [ text ], steps: [ step ] }
+//   undoPlasma( facts )        -> same shape
+//   step = { id, title, kind: "pacman"|"git"|"hyprkwin", commands: [ argv... ] }
+//
+// facts: { isRoot, hasSudo, kwinVersion ("6.6.2" or ""), desktop (XDG_CURRENT_DESKTOP), sessionType (XDG_SESSION_TYPE),
+//          installed (set of pacman package names), hyprkwinInstalled, workDir (temp dir for the HyprKwin checkout) }
+// opts:  { keys: bool, undoKeys: bool }
+//
+// Errors are preconditions (exit 4): nothing runs when there is one. HyprKwin is taken from a pinned full commit.
+class SetupPlan {
+    // The pinned HyprKwin release (v1.2.0). Re-pin by resolving a new tag and checking `tools/` still has the scripts used below.
+    function pins() {
+        return { hyprkwin: { repo: "https://github.com/DGBooth/HyprKwin.git", tag: "v1.2.0", commit: "31abb63939111a811d1e356c693cda5dbe54ed69" } };
+    }
+
+    // Packages HyprKwin's helper scripts need (python-dbus, qdbus6 from qt6-tools, PyGObject for hyprkwinctl) and git for the checkout.
+    function plasmaDeps() {
+        return [ "git", "python-dbus", "python-gobject", "qt6-tools" ];
+    }
+
+    // Plasma versions HyprKwin is tested on: 6.6 and 6.8; 6.7 should work but is untested.
+    function plasmaSupport( version ) {
+        var parts = listToArray( version, "." );
+        if ( parts.len() < 2 || parts[1] != "6" ) return "unsupported";
+        if ( parts[2] == "6" || parts[2] == "8" ) return "tested";
+        if ( parts[2] == "7" ) return "untested";
+        return "unsupported";
+    }
+
+    // The two commands that check out HyprKwin at the pinned commit into `dir`.
+    function fetchCommands( dir ) {
+        var pin = pins().hyprkwin;
+        return [
+            [ "git", "clone", "--quiet", pin.repo, dir ],
+            [ "git", "-C", dir, "checkout", "--quiet", pin.commit ]
+        ];
+    }
+
+    // A command that runs a script of the HyprKwin checkout from its own directory, as the normal user.
+    function inCheckout( dir, script ) {
+        var argv = [ "env", "-C", dir ];
+        for ( var a in script ) argv.append( a );
+        return argv;
+    }
+
+    // Preconditions shared by every plasma request. Returns { errors, warnings }.
+    function plasmaPreflight( facts ) {
+        var out = { errors: [], warnings: [] };
+        if ( facts.isRoot ) out.errors.append( "Run as a regular user; sudo is used only for the pacman step shown in the plan" );
+        if ( !len( facts.kwinVersion ) ) out.errors.append( "KDE Plasma is not installed (kwin was not found)" );
+        else {
+            var support = plasmaSupport( facts.kwinVersion );
+            if ( support == "unsupported" ) out.errors.append( "HyprKwin supports Plasma 6.6 and 6.8; found " & facts.kwinVersion );
+            if ( support == "untested" ) out.warnings.append( "Plasma " & facts.kwinVersion & " should work but HyprKwin is no longer tested on 6.7" );
+        }
+        if ( findNoCase( "kde", facts.desktop ) > 0 && lCase( facts.sessionType ) == "x11" ) out.errors.append( "HyprKwin needs a Wayland session; this is an X11 session" );
+        return out;
+    }
+
+    // The steps for `setup plasma`, `setup plasma --keys` and `setup plasma --undo-keys`.
+    function plasma( facts, opts ) {
+        var out = { target: "plasma", errors: [], warnings: [], notes: [], steps: [] };
+        var pre = plasmaPreflight( facts );
+        out.errors = pre.errors; out.warnings = pre.warnings;
+        if ( ( opts.keys ?: false ) && ( opts.undoKeys ?: false ) ) out.errors.append( "Choose --keys or --undo-keys, not both" );
+        if ( ( opts.undoKeys ?: false ) && !facts.hyprkwinInstalled ) out.errors.append( "HyprKwin is not installed, so there are no keys to hand back" );
+        var missing = plasmaDeps().filter( function( p ) { return !structKeyExists( facts.installed, p ); } );
+        if ( missing.len() && !facts.hasSudo ) out.errors.append( "sudo is required to install " & missing.toList( " " ) & " but was not found" );
+        if ( out.errors.len() ) return out;
+
+        if ( missing.len() ) {
+            var pac = [ "sudo", "pacman", "-S", "--needed", "--noconfirm" ];
+            for ( var m in missing ) pac.append( m );
+            out.steps.append( { id: "packages", title: "install " & missing.toList( " " ), kind: "pacman", commands: [ pac ] } );
+        }
+        out.steps.append( { id: "fetch", title: "check out HyprKwin " & pins().hyprkwin.tag & " (commit " & left( pins().hyprkwin.commit, 7 ) & ")", kind: "git", commands: fetchCommands( facts.workDir ) } );
+        if ( opts.undoKeys ?: false ) {
+            out.steps.append( { id: "keys-restore", title: "give Plasma's keys back to their old owners", kind: "hyprkwin", commands: [ inCheckout( facts.workDir, [ "python3", "tools/hyprkwin-shortcuts.py", "restore" ] ) ] } );
+            return out;
+        }
+        out.steps.append( { id: "install", title: facts.hyprkwinInstalled ? "update HyprKwin (backs up your shortcuts first, reloads the script)" : "install HyprKwin and its animations (backs up your shortcuts first)", kind: "hyprkwin", commands: [ inCheckout( facts.workDir, [ "tools/install.sh" ] ) ] } );
+        if ( opts.keys ?: false ) {
+            out.steps.append( { id: "keys-apply", title: "hand Plasma's clashing keys (Meta+Left, Meta+1...) to HyprKwin", kind: "hyprkwin", commands: [ inCheckout( facts.workDir, [ "python3", "tools/hyprkwin-shortcuts.py", "apply" ] ) ] } );
+        } else {
+            out.notes.append( "Plasma keeps its own shortcuts. Run `bxcachy setup plasma --keys` to hand the clashing ones to HyprKwin (backed up; --undo-keys restores them)." );
+        }
+        if ( !facts.hyprkwinInstalled ) out.notes.append( "Log out and back in once so KWin picks up the animations effect." );
+        return out;
+    }
+
+    // The steps for `setup undo plasma`: HyprKwin's own uninstall, which puts every global shortcut back.
+    function undoPlasma( facts ) {
+        var out = { target: "plasma", errors: [], warnings: [], notes: [], steps: [] };
+        if ( facts.isRoot ) out.errors.append( "Run as a regular user" );
+        if ( !facts.hyprkwinInstalled ) out.errors.append( "HyprKwin is not installed, nothing to undo" );
+        if ( out.errors.len() ) return out;
+        out.steps.append( { id: "fetch", title: "check out HyprKwin " & pins().hyprkwin.tag & " (for its uninstall script)", kind: "git", commands: fetchCommands( facts.workDir ) } );
+        out.steps.append( { id: "uninstall", title: "uninstall HyprKwin and put every global shortcut back", kind: "hyprkwin", commands: [ inCheckout( facts.workDir, [ "tools/uninstall.sh" ] ) ] } );
+        return out;
+    }
+}

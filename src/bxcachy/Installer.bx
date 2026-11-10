@@ -66,7 +66,7 @@ class Installer {
         if ( !reFind( "^[0-9a-f]{40}$", ref ) ) {
             return { blocked: { id: app.id, source: "pkgbuild", error: "the PKGBUILD ref is not a full commit" } };
         }
-        var dir = getTempDirectory() & "/bxcachy-pkg-" & app.id & "-" & left( createUUID(), 8 );
+        var dir = reReplace( getTempDirectory(), "/+$", "" ) & "/bxcachy-pkg-" & app.id & "-" & left( createUUID(), 8 );
         return { step: { kind: "pkgbuild", ids: [ app.id ], dir: dir, commands: [
             [ "git", "clone", "--quiet", cloneUrl( app.pkgbuild.repo ), dir ],
             [ "git", "-C", dir, "checkout", "--quiet", ref ],

@@ -1,0 +1,114 @@
+// `bxcachy setup`: gathers the facts, asks SetupPlan for the steps, prints the plan and runs it.
+// Rules as for `install` (COMMAND-CONTRACT section 2): no --yes prints the plan and exits 2, --dry-run exits 0, a failed
+// precondition exits 4 before anything changes, a failing step stops the steps after it. Exit 5 pacman step failed,
+// 6 another step failed, 7 something was done before the failure. The runner is injectable for tests.
+class Setup {
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.inst = new bxcachy.Installer( arguments.runner );
+        return this;
+    }
+
+    // The version of the installed kwin package ("6.6.2"), or "" when it is not installed.
+    function kwinVersion() {
+        try {
+            var r = variables.inst.exec( [ "pacman", "-Q", "kwin" ], 15 );
+            if ( r.exitCode != 0 ) return "";
+            var parts = listToArray( trim( r.output ), " " );
+            return parts.len() >= 2 ? listFirst( parts[2], "-" ) : "";
+        } catch ( any e ) {
+            return "";
+        }
+    }
+
+    // True when HyprKwin looks installed for this user (its data folder or a hyprkwin script package).
+    function hyprkwinInstalled() {
+        var home = getSystemSetting( "HOME", "" );
+        if ( directoryExists( home & "/.local/share/hyprkwin" ) ) return true;
+        var scripts = home & "/.local/share/kwin/scripts";
+        if ( !directoryExists( scripts ) ) return false;
+        for ( var d in directoryList( scripts, false, "name" ) ) if ( left( lCase( d ), 8 ) == "hyprkwin" ) return true;
+        return false;
+    }
+
+    // Everything SetupPlan needs to know about this machine.
+    function facts() {
+        return {
+            isRoot: variables.inst.isRoot(),
+            hasSudo: variables.inst.hasCommand( "sudo" ),
+            kwinVersion: kwinVersion(),
+            desktop: getSystemSetting( "XDG_CURRENT_DESKTOP", "" ),
+            sessionType: getSystemSetting( "XDG_SESSION_TYPE", "" ),
+            installed: new bxcachy.Packages( variables.cli, {} ).installedNames(),
+            hyprkwinInstalled: hyprkwinInstalled(),
+            workDir: reReplace( getTempDirectory(), "/+$", "" ) & "/bxcachy-hyprkwin-" & left( createUUID(), 8 )
+        };
+    }
+
+    // `setup plasma [--keys | --undo-keys]`
+    function plasma( opts, yes, dryRun, asJson ) {
+        var f = facts();
+        return execute( "setup plasma", new bxcachy.SetupPlan().plasma( f, opts ), f, yes, dryRun, asJson );
+    }
+
+    // `setup undo plasma`
+    function undoPlasma( yes, dryRun, asJson ) {
+        var f = facts();
+        return execute( "setup undo plasma", new bxcachy.SetupPlan().undoPlasma( f ), f, yes, dryRun, asJson );
+    }
+
+    // `setup status`
+    function status( asJson ) {
+        var data = { plasma: { kwin: kwinVersion(), hyprkwin: hyprkwinInstalled() } };
+        if ( asJson ) println( variables.cli.envelope( "setup status", 0, data ) );
+        else {
+            println( "plasma: kwin " & ( len( data.plasma.kwin ) ? data.plasma.kwin : "not installed" ) );
+            println( "plasma: HyprKwin " & ( data.plasma.hyprkwin ? "installed" : "not installed" ) );
+        }
+        return 0;
+    }
+
+    // Prints the plan (or the errors) and, with --yes, runs the steps. Returns the exit code.
+    function execute( command, plan, facts, yes, dryRun, asJson ) {
+        var data = { target: plan.target, errors: plan.errors, warnings: plan.warnings, notes: plan.notes, steps: plan.steps, done: [], failed: [], skipped: [] };
+        if ( plan.errors.len() ) {
+            if ( asJson ) println( variables.cli.envelope( command, 4, data ) );
+            else for ( var e in plan.errors ) println( "error: " & e );
+            return 4;
+        }
+        if ( !yes || dryRun ) {
+            var code = dryRun ? 0 : 2;
+            if ( asJson ) { println( variables.cli.envelope( command, code, data, dryRun ) ); return code; }
+            println( ( dryRun ? "Dry run" : "Plan" ) & ": " & command & ", " & plan.steps.len() & " steps" );
+            for ( var w in plan.warnings ) println( "  warning: " & w );
+            for ( var s in plan.steps ) {
+                println( "  " & s.id & ": " & s.title );
+                for ( var c in s.commands ) println( "    " & c.toList( " " ) );
+            }
+            for ( var n in plan.notes ) println( "  note: " & n );
+            println( dryRun ? "Nothing was changed." : "Nothing was changed. Add --yes to apply." );
+            return code;
+        }
+        var stopped = false; var firstKind = "";
+        for ( var step in plan.steps ) {
+            if ( stopped ) { data.skipped.append( { id: step.id, reason: "an earlier step failed" } ); continue; }
+            var problem = "";
+            for ( var cmd in step.commands ) {
+                if ( len( problem ) ) continue;
+                var r = variables.inst.exec( cmd, 1800 );
+                if ( r.timeout ) problem = "timed out";
+                else if ( r.exitCode != 0 ) problem = "failed (exit " & r.exitCode & ")";
+            }
+            if ( len( problem ) ) { data.failed.append( { id: step.id, error: step.title & " " & problem } ); stopped = true; firstKind = step.kind; }
+            else data.done.append( { id: step.id } );
+        }
+        if ( directoryExists( facts.workDir ) ) { try { directoryDelete( facts.workDir, true ); } catch ( any e ) {} }
+        var exit = !data.failed.len() ? 0 : ( data.done.len() ? 7 : ( firstKind == "pacman" ? 5 : 6 ) );
+        if ( asJson ) { println( variables.cli.envelope( command, exit, data ) ); return exit; }
+        for ( var d in data.done ) println( "Done: " & d.id );
+        for ( var f in data.failed ) println( "Failed: " & f.id & ": " & f.error );
+        for ( var k in data.skipped ) println( "Skipped: " & k.id & " (" & k.reason & ")" );
+        if ( !data.failed.len() ) for ( var n in plan.notes ) println( "Note: " & n );
+        return exit;
+    }
+}

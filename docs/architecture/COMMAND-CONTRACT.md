@@ -213,3 +213,7 @@ Human output is the same lists, one app per line with its source.
 - `install`, `optional-install`, `profile-install` run on the catalog through `Installer` (one `pacman -S` call, `yay` per AUR app, pinned PKGBUILDs via `git clone` + `makepkg -si`). Rules as in sections 2 and 11: no `--yes` prints the plan (exit 2), `--dry-run` exits 0, root with AUR or PKGBUILD builds exits 4 before any change, a named app without a source exits 3, partial results exit 7 (5 or 6 when nothing succeeded).
 - Web apps install as launchers (see section 11 table). The 28 `pkgbuild` apps are pinned to one commit of `omacom/omarchy-pkgs` and install with `git clone`, `git checkout COMMIT`, `makepkg -si` as the normal user (root exits 4). All of them are optional, so a plain `bxcachy install` skips them.
 - Not on the catalog: `apps-doctor`, `dev-plan`.
+
+## 13. `setup` (first slice, 2026-11-10)
+
+Plan and decisions: `docs/architecture/SETUP.md`. Implemented: `setup plasma [--keys | --undo-keys]`, `setup undo plasma`, `setup status`. HyprKwin is taken from a pinned full commit (v1.2.0) and installed with its own `tools/install.sh` as the normal user; Plasma's keys are left alone unless `--keys`. Exits: 0, 2 (no `--yes`), 4 (precondition: root, no Plasma, unsupported Plasma, X11, nothing to undo), 5 (the pacman step failed), 6 (another step failed with nothing done), 7 (a step failed after earlier ones were done; later steps are skipped). `setup hyprland` exits 3 until it is built.
