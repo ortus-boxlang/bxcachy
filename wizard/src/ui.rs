@@ -176,10 +176,23 @@ fn welcome(buf: &mut Buffer, area: Rect, app: &App, phase: f32) {
     let prompt = "press  enter  to begin";
     let pulse = ((app.tick as f32 / 8.0).sin() * 0.5 + 0.5) * 0.7 + 0.3;
     put(buf, area, cx - prompt.len() as i32 / 2, y + 2, prompt, fg(lerp(OVERLAY, GREEN, pulse)).bg(BASE));
+    powered_by(buf, area, cx, area.height as i32 - 4, phase);
     if !app.spec.version.is_empty() {
         let v = format!("v{}", app.spec.version);
         put(buf, area, cx - v.len() as i32 / 2, area.height as i32 - 2, &v, fg(OVERLAY).bg(BASE));
     }
+}
+
+/// "Powered by BoxLang" with the address under it, centred on column `cx`.
+fn powered_by(buf: &mut Buffer, area: Rect, cx: i32, y: i32, phase: f32) {
+    let line = "Powered by ";
+    let name = "BoxLang";
+    let w = (line.len() + name.len()) as i32;
+    let x = cx - w / 2;
+    put(buf, area, x, y, line, fg(SUB).bg(BASE));
+    gradient_text(buf, area, x + line.len() as i32, y, name, true, phase, BASE);
+    let url = "www.boxlang.io";
+    put(buf, area, cx - url.len() as i32 / 2, y + 1, url, fg(OVERLAY).bg(BASE));
 }
 
 fn pages(buf: &mut Buffer, area: Rect, app: &mut App, phase: f32) {
@@ -192,6 +205,9 @@ fn pages(buf: &mut Buffer, area: Rect, app: &mut App, phase: f32) {
     // header
     gradient_text(buf, area, 3, 1, "◆ BxCachy", true, phase, BASE);
     put(buf, area, 13, 1, "setup", fg(SUB).bg(BASE));
+    if area.width < 92 {
+        put(buf, area, 20, 1, "· Powered by BoxLang · www.boxlang.io", fg(OVERLAY).bg(BASE));
+    }
     let label = format!("step {} of {}", step.min(n + 1), n + 1);
     let bar_w = 24;
     let bar_x = w - bar_w - 3;
@@ -226,6 +242,15 @@ fn pages(buf: &mut Buffer, area: Rect, app: &mut App, phase: f32) {
 
 fn sidebar(buf: &mut Buffer, r: Rect, app: &mut App, phase: f32) {
     panel(buf, r, "Steps", false, phase);
+    // the credit sits at the bottom of the panel, centred
+    let line = "Powered by BoxLang";
+    let cx = r.x as i32 + r.width as i32 / 2;
+    let y = (r.y + r.height) as i32 - 4;
+    let x = cx - line.len() as i32 / 2;
+    put(buf, r, x, y, "Powered by ", fg(OVERLAY).bg(MANTLE));
+    gradient_text(buf, r, x + 11, y, "BoxLang", true, phase, MANTLE);
+    let url = "www.boxlang.io";
+    put(buf, r, cx - url.len() as i32 / 2, y + 1, url, fg(SURFACE1).bg(MANTLE));
     let current = match app.screen {
         Screen::Page(i) => Some(i),
         _ => None,
