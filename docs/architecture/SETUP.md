@@ -50,6 +50,21 @@ HyprKwin (`DGBooth/HyprKwin`) is a KWin script with Hyprland-style dwindle, mast
 3. **Logout to the login screen: `Super+Shift+Q`.**
 4. **Config templates are embedded in the binary** (like the catalog) and written through the config service.
 
+## 5b. One shortcut set on both desktops (owner, 2026-11-10)
+
+The keyboard shortcuts are the same on KDE Plasma and Hyprland. They are defined once, in an embedded table (`id`, `keys`, `action`, optional `apps`), and `setup` renders that table per target:
+
+| Part | Hyprland | Plasma |
+|---|---|---|
+| Tiling and workspace keys | Hyprland's own default keys | HyprKwin, which uses the same defaults; its clashing-key hand-over is `--keys` |
+| Cmd-style keys: Super+C, Super+V, Super+Tab | xremap (Hyprland build) | xremap (KDE build) |
+| Logout to the login screen, Super+Shift+Q | a Hyprland bind | a KDE global shortcut (kwriteconfig6 / kglobalshortcutsrc) |
+
+- **xremap, one shared YAML config** [owner]: Super+C / Super+V send Ctrl+C / Ctrl+V; for terminal apps they send Ctrl+Shift+C / Ctrl+Shift+V (plain Ctrl+C would interrupt the running program). The terminal list is part of the table. xremap comes from the AUR (`xremap-hypr-bin`, `xremap-kde-bin`), so `setup hyprland` installs the first and `setup plasma` the second, each as a user service. Both builds read the same config file, written through the config service.
+- It needs access to input devices (the `input` group or a udev rule); the plan shows this and it is undone by `setup undo`.
+- To verify on a real machine: that xremap's per-app rules match window classes the same way on both builds, and how Super+Tab should behave (window cycle vs Noctalia switcher on Hyprland, KWin's Walk Through Windows on Plasma).
+- `bxcachy keys show` prints the table with each target's rendering, and `bxcachy keys check` reports where a target's actual shortcut differs from it (drift).
+
 ## 6. Tests
 
 - Pure `SetupPlan` class (like `Resolver`/`Installer`): preflight results to steps, tested with script tests and injected facts.
@@ -59,4 +74,4 @@ HyprKwin (`DGBooth/HyprKwin`) is a KWin script with Hyprland-style dwindle, mast
 
 ## 7. Tasks
 
-S1 contract text (this file into COMMAND-CONTRACT.md) · S2 `SetupPlan` + preflight facts · S3 `setup plasma` (HyprKwin, pinned) · S4 `tiling on|off|status` · S5 `setup hyprland` packages · S6 config templates + keybindings through the config service · S7 `session show|set` + logout binding · S8 Arch CI steps · S9 real-machine acceptance.
+S1 contract text (this file into COMMAND-CONTRACT.md) · S2 `SetupPlan` + preflight facts · S3 `setup plasma` (HyprKwin, pinned) · S4 `tiling on|off|status` · S5 `setup hyprland` packages · S6 config templates + the shared shortcut table, xremap config and per-target rendering · S7 `session show|set` + logout binding · S8 Arch CI steps · S9 real-machine acceptance.
