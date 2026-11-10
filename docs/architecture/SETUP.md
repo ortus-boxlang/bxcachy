@@ -67,8 +67,8 @@ The keyboard shortcuts are the same on KDE Plasma and Hyprland. They are defined
 
 ## 5c. Brand assets and starter configs (owner, 2026-11-10)
 
-- Look: Catppuccin-style dark with BoxLang's green-to-cyan gradient (`#00ff75` to `#00dbff`, from boxlang.svg) as the accent. Super+Q closes a window (Cmd+Q habit), logout stays Super+Shift+Q. Natural scrolling is **off** ("inverse", to confirm).
-- Images: `assets/` holds the SVG sources (`build.py`), the rendered files (`render.js`): icon, logo and four wallpapers (box, grid, aurora, minimal). `bootstrap/gen-assets.sh` embeds them in `AssetData.bx`; `bxcachy assets list|install [--yes]` writes them to `~/Pictures/BxCachy` and `~/.local/share/bxcachy`, never overwriting a file the user changed. Written as base64 text and decoded with `base64 -d` because MatchBox's `fileWrite` turns binary into a string (upstream gap).
+- Look: Ortus Brand Book 2025 palette (main #00FF78, second #00DBFF, accent #FFF500, dark #303446, which is also Catppuccin Frappé's base) on Frappé neutrals. The images use the official BoxLang icon from Ortus-Solutions/ortus-artwork (copied unchanged into `assets/brand/`). Super+Q closes a window (Cmd+Q habit), logout stays Super+Shift+Q. Natural scrolling is **off** ("inverse", to confirm).
+- Images: `assets/` holds the SVG sources (`build.py`, composed from the official icons), the rendered files (`render.js`): icon, logo and four wallpapers (box, grid, aurora, minimal). `bootstrap/gen-assets.sh` embeds them in `AssetData.bx`; `bxcachy assets list|install [--yes]` writes them to `~/Pictures/BxCachy` and `~/.local/share/bxcachy`, never overwriting a file the user changed. Written as base64 text and decoded with `base64 -d` because MatchBox's `fileWrite` turns binary into a string (upstream gap).
 - Next: the Noctalia starter (`~/.config/noctalia/config.toml` plus a custom palette in `palettes/`) and a starter `hyprland.lua` written only when none exists, both through the config service.
 
 ## 6. Tests
