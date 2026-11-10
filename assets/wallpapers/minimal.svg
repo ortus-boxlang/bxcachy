@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2560 1440" width="2560" height="1440"><defs>
+<linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#00ff75"/><stop offset="1" stop-color="#00dbff"/></linearGradient>
+</defs><rect width="2560" height="1440" fill="#070d0b"/>
+<g transform="translate(1280 600) scale(4.4)"><g fill="none" stroke="url(#g)" stroke-width="2.2" stroke-linejoin="round"><path d="M0,-100 L86.6,-50.0 L0,0 L-86.6,-50.0 Z"/><path d="M-86.6,-50.0 L0,0 L0,100 L-86.6,50.0 Z"/><path d="M86.6,-50.0 L0,0 L0,100 L86.6,50.0 Z"/></g></g>
+<text x="1280" y="1250" text-anchor="middle" font-family="Inter, 'Noto Sans', 'DejaVu Sans', sans-serif" font-size="40" fill="#5f8a76" letter-spacing="10">BXCACHY</text></svg>
