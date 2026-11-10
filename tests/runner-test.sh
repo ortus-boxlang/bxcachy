@@ -70,6 +70,19 @@ hypr "$binary" runner menu-set rofi >/dev/null
 [[ "$(code "$binary" runner)" == 2 && "$(code "$binary" runner set)" == 2 && "$(code "$binary" runner list extra)" == 2 && "$(code "$binary" runner bogus)" == 2 ]] || fail 'usage exits 2'
 echo '{' > "$tmp/cfg/bxcachy/runner.json"; [[ "$(code "$binary" runner list)" == 4 ]] || fail 'a broken runner.json exits 4'
 
+# Super+Space: the bound command opens whichever launcher is chosen, and falls back to Noctalia when it cannot
+mkdir -p "$tmp/home/.local/bin"; cp "$binary" "$tmp/home/.local/bin/bxcachy"
+printf '#!/usr/bin/env bash\necho "rofi $*" >> "$LOG"\n' > "$tmp/bin/rofi"; chmod +x "$tmp/bin/rofi"
+bound="$("$binary" keys render hyprland | sed -n 's/.*+Space.*\[\[\(.*\)\]\].*/\1/p')"
+[[ -n "$bound" ]] || fail 'no Super+Space bind found in the Hyprland module'
+press() { : > "$LOG"; rm -f "$tmp/cfg/bxcachy/runner.json"; [[ -z "${1:-}" ]] || hypr "$binary" runner set "$1" >/dev/null; hypr sh -c "$bound" >/dev/null 2>&1; for _ in 1 2 3 4 5 6 7 8 9 10; do [[ -s "$LOG" ]] && break; sleep 0.3; done; cat "$LOG"; }
+[[ "$(press)" == "noctalia msg panel-toggle launcher" ]] || fail 'Super+Space opens Noctalia by default'
+[[ "$(press rofi)" == "rofi -show drun" ]] || fail 'after runner set rofi, Super+Space opens Rofi'
+[[ "$(press system)" == "noctalia msg panel-toggle launcher" ]] || fail 'with the system runner it falls back to Noctalia'
+: > "$LOG"; rm -f "$tmp/cfg/bxcachy/runner.json"; hypr "$binary" runner set krunner >/dev/null
+hypr sh -c "$bound" >/dev/null 2>&1; for _ in 1 2 3 4 5 6 7 8 9 10; do [[ -s "$LOG" ]] && break; sleep 0.3; done
+[[ "$(cat "$LOG")" == "noctalia msg panel-toggle launcher" ]] || fail 'a launcher that is not installed falls back to Noctalia'
+
 # it never changes keybindings
 [[ "$(sha256sum "$tmp/cfg/hypr/"*)" == "$before" ]] || fail 'the runner touched the Hyprland config'
 echo "runner tests passed"

@@ -12,6 +12,7 @@ h = sc.render( "hyprland" );
 check( "hyprland: Lua module, logout bind via uwsm", find( 'hl.dsp.exec_cmd("uwsm stop")', h ) > 0 && find( 'mainMod .. " + SHIFT + Q"', h ) > 0 );
 check( "hyprland: Noctalia autostart and launcher", find( 'hl.exec_cmd("noctalia")', h ) > 0 && find( "panel-toggle launcher", h ) > 0 );
 check( "hyprland: Alt+Tab opens the Noctalia window switcher", find( 'hl.bind("ALT + Tab"', h ) > 0 && find( "window-switcher hold", h ) > 0 );
+check( "hyprland: Super+Space follows the chosen launcher and falls back to Noctalia", find( "bxcachy runner launch || noctalia msg panel-toggle launcher", h ) > 0 && find( '+Space", hl.dsp.exec_cmd(ipc', h ) == 0 );
 check( "hyprland: no hyprlang bind lines", find( "bind = ", h ) == 0 );
 check( "hyprland load line", sc.hyprlandLoadLine() == 'require("bxcachy")' );
 check( "plasma: ksmserver Log Out is Meta+Shift+Q", find( "[ksmserver]", sc.render( "plasma" ) ) > 0 && find( "Log Out=Meta+Shift+Q", sc.render( "plasma" ) ) > 0 );

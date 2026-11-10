@@ -301,7 +301,7 @@ Runner.launch()                      open or toggle the launcher
 Runner.select( prompt, entries )     show [ { label, icon } ] in a menu, return the chosen position (0 = cancelled)
 ```
 
-Which launcher answers is a setting, recorded in `~/.config/bxcachy/runner.json` (written atomically); the launcher and the menu provider are chosen separately. **Nothing here changes a keybinding or a desktop file** (`doctor` ends with `Shortcut ownership: unchanged`). `set` and `menu-set` are user settings that act at once (no `--yes`), like `tiling`.
+**Super+Space (Hyprland)** is bound once, in the managed `bxcachy.lua`, to `bxcachy runner launch` (falling back to `noctalia msg panel-toggle launcher` when the chosen launcher cannot run), so `runner set` changes what Super+Space opens without ever editing a keybinding. Which launcher answers is a setting, recorded in `~/.config/bxcachy/runner.json` (written atomically); the launcher and the menu provider are chosen separately. **The runner never changes a keybinding or a desktop file** (`doctor` ends with `Shortcut ownership: unchanged`). `set` and `menu-set` are user settings that act at once (no `--yes`), like `tiling`.
 
 Providers are data in `RunnerProviders` (one descriptor each: `id`, `title`, `package`, `launch` argv, and `menu`: dmenu argv with `{prompt}`, `icons`, `returns`). Adding a launcher is adding one descriptor.
 
