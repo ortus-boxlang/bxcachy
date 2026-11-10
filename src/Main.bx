@@ -15,7 +15,7 @@ class {
         var config = new bxcachy.ConfigService();
         // One shared flag check for every command: unknown flags are usage errors and nothing runs.
         for ( var flag in args.options ) {
-            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys" ], flag ) ) {
+            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build" ], flag ) ) {
                 println( "Unknown option: --" & flag );
                 CLIExit( 2 );
             }
@@ -238,7 +238,13 @@ class {
           if ( setupSub == "undo" && p.len() == 3 && p[3] == "hyprland" ) {
            CLIExit( st.undoHyprland( setupYes, setupDry, asJson ) );
           }
-          println( "Usage: bxcachy setup plasma [--keys | --undo-keys] | hyprland | undo plasma|hyprland | status [--yes] [--dry-run] [--json]" );
+          if ( setupSub == "xremap" && p.len() == 2 ) {
+           CLIExit( st.xremap( { build: args.options.build ?: "" }, setupYes, setupDry, asJson ) );
+          }
+          if ( setupSub == "undo" && p.len() == 3 && p[3] == "xremap" ) {
+           CLIExit( st.undoXremap( setupYes, setupDry, asJson ) );
+          }
+          println( "Usage: bxcachy setup plasma [--keys | --undo-keys] | hyprland | xremap [--build hypr|kde] | undo plasma|hyprland|xremap | status [--yes] [--dry-run] [--json]" );
           CLIExit( 2 );
           break;
          case "keys":

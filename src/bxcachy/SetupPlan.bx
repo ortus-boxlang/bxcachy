@@ -162,4 +162,75 @@ class SetupPlan {
         out.steps.append( { id: "uninstall", title: "uninstall HyprKwin and put every global shortcut back", kind: "hyprkwin", commands: [ inCheckout( facts.workDir, [ "tools/uninstall.sh" ] ) ] } );
         return out;
     }
+
+    // The udev rule that lets the `input` group use /dev/uinput (xremap needs it).
+    function udevRulePath() {
+        return "/etc/udev/rules.d/99-bxcachy-input.rules";
+    }
+
+    // The rule text (one line).
+    function udevRule() {
+        return 'KERNEL=="uinput", GROUP="input", TAG+="uaccess"';
+    }
+
+    // The AUR package for a build: "hypr" or "kde".
+    function xremapPackage( build ) {
+        return "xremap-" & build & "-bin";
+    }
+
+    // Which xremap build suits the running session: "hypr", "kde", or "" when it cannot tell.
+    function xremapBuild( facts, opts ) {
+        if ( len( opts.build ?: "" ) ) return opts.build;
+        if ( findNoCase( "hyprland", facts.desktop ) > 0 ) return "hypr";
+        if ( findNoCase( "kde", facts.desktop ) > 0 ) return "kde";
+        return "";
+    }
+
+    // The steps for `setup xremap`: AUR package, input-device access, the shared config and user service.
+    // facts used: isRoot hasSudo hasYay desktop installed user groups udevRule
+    function xremap( facts, opts ) {
+        var out = { target: "xremap", errors: [], warnings: [], notes: [], steps: [], added: { package: "", group: false, udev: false } };
+        var build = xremapBuild( facts, opts );
+        if ( facts.isRoot ) out.errors.append( "Run as a regular user; sudo is used only for the steps shown in the plan" );
+        if ( !arrayFind( [ "hypr", "kde" ], build ) ) out.errors.append( "Cannot tell which xremap build to use (run inside Hyprland or Plasma, or pass --build hypr|kde)" );
+        if ( !facts.hasSudo ) out.errors.append( "sudo is required (udev rule and input group) but was not found" );
+        var pkg = len( build ) ? xremapPackage( build ) : "";
+        var havePkg = len( pkg ) && structKeyExists( facts.installed, pkg );
+        if ( len( pkg ) && !havePkg && !facts.hasYay ) out.errors.append( "yay is required to install " & pkg & " from the AUR but was not found" );
+        if ( out.errors.len() ) return out;
+        if ( !havePkg ) {
+            out.steps.append( { id: "package", title: "install " & pkg & " (AUR)", kind: "aur", commands: [ [ "yay", "-S", "--needed", "--noconfirm", pkg ] ] } );
+            out.added.package = pkg;
+        }
+        if ( !facts.udevRule ) {
+            out.steps.append( { id: "udev", title: "let the input group use /dev/uinput (" & udevRulePath() & ")", kind: "sudo", commands: [
+                [ "sudo", "sh", "-c", "echo '" & udevRule() & "' > " & udevRulePath() ],
+                [ "sudo", "udevadm", "control", "--reload-rules" ],
+                [ "sudo", "udevadm", "trigger" ] ] } );
+            out.added.udev = true;
+        }
+        if ( !arrayFind( facts.groups, "input" ) ) {
+            out.steps.append( { id: "group", title: "add " & facts.user & " to the input group", kind: "sudo", commands: [ [ "sudo", "gpasswd", "-a", facts.user, "input" ] ] } );
+            out.added.group = true;
+        }
+        out.steps.append( { id: "config", title: "write the shared shortcut files (xremap config, Hyprland binds, systemd user unit, Plasma Log Out)", kind: "keys", commands: [] } );
+        out.steps.append( { id: "service", title: "enable the xremap user service", kind: "systemd", commands: [ [ "systemctl", "--user", "daemon-reload" ], [ "systemctl", "--user", "enable", "xremap.service" ] ] } );
+        out.notes.append( "Log out and back in once: the input group and the service take effect at the next login." );
+        return out;
+    }
+
+    // The steps for `setup undo xremap`: stops and removes what `setup xremap` added (the group only if it added it).
+    function undoXremap( facts, state ) {
+        var out = { target: "xremap", errors: [], warnings: [], notes: [], steps: [] };
+        if ( facts.isRoot ) out.errors.append( "Run as a regular user" );
+        if ( !structKeyExists( state, "package" ) ) out.errors.append( "setup xremap has not run on this machine, nothing to undo" );
+        if ( !facts.hasSudo ) out.errors.append( "sudo is required but was not found" );
+        if ( out.errors.len() ) return out;
+        out.steps.append( { id: "service", title: "stop and disable the xremap user service", kind: "systemd", commands: [ [ "systemctl", "--user", "disable", "--now", "xremap.service" ] ] } );
+        if ( len( state.package ) && structKeyExists( facts.installed, state.package ) ) out.steps.append( { id: "package", title: "remove " & state.package, kind: "pacman", commands: [ [ "sudo", "pacman", "-Rs", "--noconfirm", state.package ] ] } );
+        if ( state.udev ) out.steps.append( { id: "udev", title: "remove the udev rule", kind: "sudo", commands: [ [ "sudo", "rm", "-f", udevRulePath() ], [ "sudo", "udevadm", "control", "--reload-rules" ] ] } );
+        if ( state.group ) out.steps.append( { id: "group", title: "remove " & facts.user & " from the input group", kind: "sudo", commands: [ [ "sudo", "gpasswd", "-d", facts.user, "input" ] ] } );
+        out.notes.append( "The shortcut files stay (restore them with `config restore`). Log out and back in for the group change." );
+        return out;
+    }
 }

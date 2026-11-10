@@ -72,6 +72,10 @@ class Setup {
             sessionType: getSystemSetting( "XDG_SESSION_TYPE", "" ),
             installed: new bxcachy.Packages( variables.cli, {} ).installedNames(),
             hyprkwinInstalled: hyprkwinInstalled(),
+            user: getSystemSetting( "USER", "" ),
+            hasYay: variables.inst.hasCommand( "yay" ),
+            groups: listToArray( trim( variables.inst.exec( [ "id", "-nG" ], 10 ).output ), " " ),
+            udevRule: fileExists( new bxcachy.SetupPlan().udevRulePath() ),
             workDir: reReplace( getTempDirectory(), "/+$", "" ) & "/bxcachy-hyprkwin-" & left( createUUID(), 8 )
         };
     }
@@ -106,6 +110,35 @@ class Setup {
         var f = facts();
         var exit = execute( "setup undo hyprland", new bxcachy.SetupPlan().undoHyprland( f ), f, yes, dryRun, asJson );
         if ( exit == 0 && yes && !dryRun && fileExists( hyprlandStateFile() ) ) fileDelete( hyprlandStateFile() );
+        return exit;
+    }
+
+    // Where `setup xremap` remembers what it added (package, udev rule, group) so undo removes only that.
+    function xremapStateFile() {
+        return new bxcachy.ConfigService().stateDir() & "/setup-xremap.json";
+    }
+
+    // `setup xremap [--build hypr|kde]`
+    function xremap( opts, yes, dryRun, asJson ) {
+        var f = facts();
+        var plan = new bxcachy.SetupPlan().xremap( f, opts );
+        var exit = execute( "setup xremap", plan, f, yes, dryRun, asJson );
+        if ( exit == 0 && yes && !dryRun && plan.steps.len() ) {
+            var old = fileExists( xremapStateFile() ) ? jsonDeserialize( fileRead( xremapStateFile() ) ) : { package: "", group: false, udev: false };
+            if ( len( plan.added.package ) ) old.package = plan.added.package;
+            if ( plan.added.group ) old.group = true;
+            if ( plan.added.udev ) old.udev = true;
+            new bxcachy.ConfigService().writeAtomic( xremapStateFile(), jsonSerialize( old ), "600" );
+        }
+        return exit;
+    }
+
+    // `setup undo xremap`
+    function undoXremap( yes, dryRun, asJson ) {
+        var f = facts();
+        var state = fileExists( xremapStateFile() ) ? jsonDeserialize( fileRead( xremapStateFile() ) ) : {};
+        var exit = execute( "setup undo xremap", new bxcachy.SetupPlan().undoXremap( f, state ), f, yes, dryRun, asJson );
+        if ( exit == 0 && yes && !dryRun && fileExists( xremapStateFile() ) ) fileDelete( xremapStateFile() );
         return exit;
     }
 
@@ -149,6 +182,7 @@ class Setup {
         for ( var step in plan.steps ) {
             if ( stopped ) { data.skipped.append( { id: step.id, reason: "an earlier step failed" } ); continue; }
             var problem = "";
+            if ( step.kind == "keys" && new bxcachy.KeysService( variables.cli, variables.inst.runner() ).apply( true, false, false, false ) != 0 ) problem = "failed";
             for ( var cmd in step.commands ) {
                 if ( len( problem ) ) continue;
                 var r = variables.inst.exec( cmd, 1800 );

@@ -87,12 +87,20 @@ class Shortcuts {
     function entries( cfgHome ) {
         return [
             { name: "xremap", target: cfgHome & "/xremap/config.yml", mode: "644", content: xremap() },
-            { name: "hypr-keys", target: cfgHome & "/hypr/bxcachy-keys.conf", mode: "644", content: hyprland() }
+            { name: "hypr-keys", target: cfgHome & "/hypr/bxcachy-keys.conf", mode: "644", content: hyprland() },
+            { name: "xremap-service", target: cfgHome & "/systemd/user/xremap.service", mode: "644", content: xremapService() }
         ];
     }
 
     // Plasma settings written with kwriteconfig6 into kglobalshortcutsrc: [ { group, key, value } ].
     function plasmaSettings() {
         return table().filter( function( r ) { return r.kind == "bind"; } ).map( function( r ) { return r.plasma; } );
+    }
+
+    // The systemd user unit that runs xremap with the shared config. Enabled by `setup xremap`.
+    function xremapService() {
+        return [ "# Written by bxcachy (keys).", "[Unit]", "Description=xremap key remapper (bxcachy)", "PartOf=graphical-session.target", "After=graphical-session.target",
+                 "", "[Service]", "ExecStart=/usr/bin/xremap %h/.config/xremap/config.yml", "Restart=on-failure",
+                 "", "[Install]", "WantedBy=graphical-session.target" ].toList( chr( 10 ) ) & chr( 10 );
     }
 }

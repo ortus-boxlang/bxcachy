@@ -31,7 +31,7 @@ grep -q 'Super-c: Ctrl-Shift-c' "$tmp/cfg/xremap/config.yml" || fail 'xremap fil
 grep -q 'uwsm stop' "$tmp/cfg/hypr/bxcachy-keys.conf" || fail 'hypr file written'
 [[ "$(cat "$tmp/kg/Log Out")" == "Meta+Shift+Q,Ctrl+Alt+Del,Log Out" ]] || fail 'plasma shortcut set'
 [[ "$(code "$binary" keys check)" == 0 ]] || fail 'check after apply exits 0'
-run "$binary" keys check --json | jq -e '.ok and (.data.items | length) == 3' >/dev/null || fail 'check --json'
+run "$binary" keys check --json | jq -e '.ok and (.data.items | length) == 4' >/dev/null || fail 'check --json'
 run "$binary" config list | grep -q '^xremap: clean' || fail 'config list shows xremap'
 [[ "$(code "$binary" keys apply --yes)" == 0 ]] || fail 're-run exits 0'
 # drift

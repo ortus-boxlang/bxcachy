@@ -14,6 +14,11 @@ class Installer {
         return this;
     }
 
+    // The injected runner, or "" when commands run for real (lets a collaborator share the same runner).
+    function runner() {
+        return variables.custom;
+    }
+
     // Runs one command through the injected runner, or for real (argument array, timeout in seconds).
     function exec( argv, timeout ) {
         if ( !isSimpleValue( variables.custom ) ) return variables.custom( argv, timeout );

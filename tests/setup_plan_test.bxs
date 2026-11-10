@@ -73,5 +73,30 @@ check( "undo hyprland: removes only what setup installed", p.steps.len() == 1 &&
 check( "undo hyprland: nothing recorded is an error", plan.undoHyprland( facts( { hyprlandAdded: [] } ) ).errors.len() == 1 );
 check( "undo hyprland: already removed is an error", plan.undoHyprland( facts( { hyprlandAdded: added, installed: {} } ) ).errors.len() == 1 );
 
+// setup xremap
+function xfacts( over = {} ) {
+ f = facts( { desktop: "Hyprland", installed: {}, hasYay: true, user: "dev", groups: [ "dev", "wheel" ], udevRule: false } );
+ for ( k in over ) f[k] = over[k];
+ return f;
+}
+x = plan.xremap( xfacts(), {} );
+check( "xremap on Hyprland: package, udev, group, config, service", ids( x ) == "package,udev,group,config,service" && x.steps[1].commands[1][5] == "xremap-hypr-bin" );
+check( "xremap udev step writes one rule line and reloads udev", x.steps[2].commands.len() == 3 && find( 'KERNEL=="uinput"', x.steps[2].commands[1][4] ) > 0 && x.steps[2].commands[1][4] contains "99-bxcachy-input.rules" );
+check( "xremap remembers what it added", x.added.package == "xremap-hypr-bin" && x.added.group && x.added.udev );
+x = plan.xremap( xfacts( { desktop: "KDE" } ), {} );
+check( "xremap on KDE uses the kde build", x.steps[1].commands[1][5] == "xremap-kde-bin" );
+x = plan.xremap( xfacts( { desktop: "KDE" } ), { build: "hypr" } );
+check( "--build overrides the detected desktop", x.steps[1].commands[1][5] == "xremap-hypr-bin" );
+x = plan.xremap( xfacts( { installed: { "xremap-hypr-bin": true }, udevRule: true, groups: [ "dev", "input" ] } ), {} );
+check( "xremap already set up: only config and service", ids( x ) == "config,service" && x.added.package == "" && !x.added.group && !x.added.udev );
+check( "xremap: unknown desktop is an error", plan.xremap( xfacts( { desktop: "" } ), {} ).errors.len() == 1 );
+check( "xremap: no yay is an error when the package is missing", plan.xremap( xfacts( { hasYay: false } ), {} ).errors.len() == 1 );
+check( "xremap: root is an error", plan.xremap( xfacts( { isRoot: true } ), {} ).errors.len() == 1 );
+u = plan.undoXremap( xfacts( { installed: { "xremap-hypr-bin": true } } ), { package: "xremap-hypr-bin", group: true, udev: true } );
+check( "undo xremap: service, package, udev, group", ids( u ) == "service,package,udev,group" );
+u = plan.undoXremap( xfacts( { installed: { "xremap-hypr-bin": true } } ), { package: "xremap-hypr-bin", group: false, udev: false } );
+check( "undo xremap leaves a group and rule it did not add", ids( u ) == "service,package" );
+check( "undo xremap: nothing recorded is an error", plan.undoXremap( xfacts(), {} ).errors.len() == 1 );
+
 if ( failures > 0 ) { println( failures & " failed" ); CLIExit( 1 ); }
 println( "setup plan tests passed" );
