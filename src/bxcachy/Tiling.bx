@@ -1,0 +1,78 @@
+// `bxcachy tiling on|off|status`: switches the HyprKwin KWin script on or off inside a running Plasma, no logout.
+// It does what HyprKwin's own install and uninstall scripts do: the kwinrc plugin flag plus a KWin reconfigure over D-Bus
+// (and unloadScript when turning it off, so the windows are released at once). Not a `setup` step: it is a reversible
+// user setting meant to sit behind a shortcut, so it acts without --yes (documented exception to COMMAND-CONTRACT section 2).
+//
+// Exit codes: on/off 0 done, 4 precondition (root, HyprKwin not installed, tools missing); status 0 on, 1 off, 4 not installed.
+class Tiling {
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.inst = new bxcachy.Installer( arguments.runner );
+        return this;
+    }
+
+    // Runs one command and returns its trimmed output, or "" when it fails or the tool is missing.
+    function out( argv ) {
+        try {
+            var r = variables.inst.exec( argv, 15 );
+            return r.exitCode == 0 ? trim( r.output ) : "";
+        } catch ( any e ) {
+            return "";
+        }
+    }
+
+    // True when HyprKwin looks installed for this user (same check as `setup status`).
+    function installed() {
+        return new bxcachy.Setup( variables.cli, "" ).hyprkwinInstalled();
+    }
+
+    // Whether the kwinrc flag is on, and whether KWin has the script loaded right now.
+    function state() {
+        var flag = out( [ "kreadconfig6", "--file", "kwinrc", "--group", "Plugins", "--key", "hyprkwinEnabled" ] );
+        var loaded = out( [ "qdbus6", "org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting.isScriptLoaded", "hyprkwin" ] );
+        return { installed: installed(), enabled: flag == "true", loaded: loaded == "true" };
+    }
+
+    // True when KWin answers on D-Bus (a Plasma session is running for this user).
+    function kwinRunning() {
+        try {
+            return variables.inst.exec( [ "qdbus6", "org.kde.KWin", "/KWin" ], 10 ).exitCode == 0;
+        } catch ( any e ) {
+            return false;
+        }
+    }
+
+    // `tiling status`
+    function status( asJson ) {
+        var s = state();
+        var code = !s.installed ? 4 : ( s.enabled ? 0 : 1 );
+        if ( asJson ) { println( variables.cli.envelope( "tiling status", code, s ) ); return code; }
+        if ( !s.installed ) println( "tiling: HyprKwin is not installed (bxcachy setup plasma)" );
+        else println( "tiling: " & ( s.enabled ? "on" : "off" ) & ( s.loaded ? " (loaded in KWin)" : " (not loaded in KWin)" ) );
+        return code;
+    }
+
+    // `tiling on` and `tiling off`
+    function set( on, asJson ) {
+        var command = on ? "tiling on" : "tiling off";
+        var errors = [];
+        if ( variables.inst.isRoot() ) errors.append( "Run as a regular user" );
+        else if ( !installed() ) errors.append( "HyprKwin is not installed (bxcachy setup plasma)" );
+        else if ( !variables.inst.hasCommand( "kwriteconfig6" ) ) errors.append( "kwriteconfig6 was not found (part of KDE Plasma)" );
+        if ( errors.len() ) {
+            if ( asJson ) println( variables.cli.envelope( command, 4, { errors: errors } ) );
+            else println( "error: " & errors[1] );
+            return 4;
+        }
+        var wasRunning = kwinRunning();
+        variables.inst.exec( [ "kwriteconfig6", "--file", "kwinrc", "--group", "Plugins", "--key", "hyprkwinEnabled", on ? "true" : "false" ], 15 );
+        if ( wasRunning ) {
+            if ( !on ) variables.inst.exec( [ "qdbus6", "org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting.unloadScript", "hyprkwin" ], 15 );
+            variables.inst.exec( [ "qdbus6", "org.kde.KWin", "/KWin", "org.kde.KWin.reconfigure" ], 15 );
+        }
+        var data = { enabled: on, applied: wasRunning };
+        if ( asJson ) println( variables.cli.envelope( command, 0, data ) );
+        else println( "tiling " & ( on ? "on" : "off" ) & ( wasRunning ? "" : " (KWin is not running; it takes effect at the next Plasma login)" ) );
+        return 0;
+    }
+}

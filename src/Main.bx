@@ -238,8 +238,18 @@ class {
           println( "Usage: bxcachy setup plasma [--keys | --undo-keys] | undo plasma | status [--yes] [--dry-run] [--json]" );
           CLIExit( 2 );
           break;
+         case "tiling":
+          // HyprKwin on/off inside Plasma; on and off act at once (reversible user setting, see Tiling.bx).
+          tilingSub = p.len() == 2 ? p[2] : "";
+          if ( !arrayFind( [ "on", "off", "status" ], tilingSub ) ) {
+           println( "Usage: bxcachy tiling on|off|status [--json]" );
+           CLIExit( 2 );
+          }
+          tl = new bxcachy.Tiling( cli );
+          CLIExit( tilingSub == "status" ? tl.status( asJson ) : tl.set( tilingSub == "on", asJson ) );
+          break;
          case "help":
-          println( "BxCachy commands: version, doctor, prerequisites, desktop-list, tui-list, web-list, optional-list, optional-plan, profile-list, profile-plan, profile-install-plan, install-plan, package-status, package-source, profile-install, optional-install, install, plan, apps-doctor, dev-plan, config, catalog, setup, help" );
+          println( "BxCachy commands: version, doctor, prerequisites, desktop-list, tui-list, web-list, optional-list, optional-plan, profile-list, profile-plan, profile-install-plan, install-plan, package-status, package-source, profile-install, optional-install, install, plan, apps-doctor, dev-plan, config, catalog, setup, tiling, help" );
           break;
          default:
           println( "Unsupported command: " & cmd );
