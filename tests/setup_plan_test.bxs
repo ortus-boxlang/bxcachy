@@ -99,5 +99,26 @@ u = plan.undoXremap( xfacts( { installed: { "xremap-hypr-bin": true } } ), { pac
 check( "undo xremap leaves a group and rule it did not add", ids( u ) == "service,package" );
 check( "undo xremap: nothing recorded is an error", plan.undoXremap( xfacts(), {} ).errors.len() == 1 );
 
+// session set
+function sfacts( over = {} ) {
+ f = { isRoot: false, hasSudo: true, sessions: [ { file: "hyprland.desktop", path: "/usr/share/wayland-sessions/hyprland.desktop" }, { file: "hyprland-uwsm.desktop", path: "/usr/share/wayland-sessions/hyprland-uwsm.desktop" }, { file: "plasma.desktop", path: "/usr/share/wayland-sessions/plasma.desktop" } ], stateFile: "/var/lib/sddm/state.conf", stateLines: [ "[Last]", "Session=/usr/share/wayland-sessions/plasma.desktop", "User=dev" ], autologin: "", workDir: "" };
+ for ( k in over ) f[k] = over[k];
+ return f;
+}
+se = plan.session( sfacts(), "hyprland" );
+check( "session hyprland prefers the uwsm session", se.errors.len() == 0 && se.chosen == "/usr/share/wayland-sessions/hyprland-uwsm.desktop" && ids( se ) == "backup,write" );
+w = se.steps[2].commands[1];
+check( "session write replaces Session= and keeps the other lines", w[1] == "sudo" && w[2] == "sh" && w[5] == "/var/lib/sddm/state.conf" && w[6] == "[Last]" & chr( 10 ) && w[7] == "Session=/usr/share/wayland-sessions/hyprland-uwsm.desktop" & chr( 10 ) && w[8] == "User=dev" & chr( 10 ) && w.len() == 8 );
+se = plan.session( sfacts( { sessions: [ { file: "hyprland.desktop", path: "/usr/share/wayland-sessions/hyprland.desktop" } ] } ), "hyprland" );
+check( "session falls back to plain hyprland.desktop", se.chosen == "/usr/share/wayland-sessions/hyprland.desktop" );
+se = plan.session( sfacts(), "plasma" );
+check( "session plasma", se.chosen == "/usr/share/wayland-sessions/plasma.desktop" );
+se = plan.session( sfacts( { stateLines: [] } ), "plasma" );
+check( "session on a missing state file adds [Last]", se.steps[2].commands[1][6] == "[Last]" & chr( 10 ) && se.steps[2].commands[1][7] == "Session=/usr/share/wayland-sessions/plasma.desktop" & chr( 10 ) );
+se = plan.session( sfacts( { stateLines: [ "[Last]", "User=dev" ] } ), "plasma" );
+check( "session without a Session= line gets one inside [Last]", se.steps[2].commands[1].len() == 8 && se.steps[2].commands[1][8] == "Session=/usr/share/wayland-sessions/plasma.desktop" & chr( 10 ) );
+check( "session: unknown target, no such session, root, no sudo are refused", plan.session( sfacts(), "gnome" ).errors.len() == 1 && plan.session( sfacts( { sessions: [] } ), "hyprland" ).errors.len() == 1 && plan.session( sfacts( { isRoot: true } ), "plasma" ).errors.len() == 1 && plan.session( sfacts( { hasSudo: false } ), "plasma" ).errors.len() == 1 );
+check( "session: automatic login is a warning", plan.session( sfacts( { autologin: "plasma" } ), "plasma" ).warnings.len() == 1 );
+
 if ( failures > 0 ) { println( failures & " failed" ); CLIExit( 1 ); }
 println( "setup plan tests passed" );

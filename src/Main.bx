@@ -281,6 +281,15 @@ class {
           println( "Usage: bxcachy assets list | install [--yes] [--dry-run] [--json]" );
           CLIExit( 2 );
           break;
+         case "session":
+          // Which session the SDDM login screen preselects: session show | session set hyprland|plasma [--yes] [--dry-run].
+          sessionSub = p.len() >= 2 ? p[2] : "";
+          sessionSvc = new bxcachy.Session( cli );
+          if ( sessionSub == "show" && p.len() == 2 ) CLIExit( sessionSvc.show( asJson ) );
+          if ( sessionSub == "set" && p.len() == 3 ) CLIExit( sessionSvc.set( p[3], structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
+          println( "Usage: bxcachy session show | set hyprland|plasma [--yes] [--dry-run] [--json]" );
+          CLIExit( 2 );
+          break;
          case "tiling":
           // HyprKwin on/off inside Plasma; on and off act at once (reversible user setting, see Tiling.bx).
           tilingSub = p.len() == 2 ? p[2] : "";
@@ -292,7 +301,7 @@ class {
           CLIExit( tilingSub == "status" ? tl.status( asJson ) : tl.set( tilingSub == "on", asJson ) );
           break;
          case "help":
-          println( "BxCachy commands: version, doctor, prerequisites, desktop-list, tui-list, web-list, optional-list, optional-plan, profile-list, profile-plan, profile-install-plan, install-plan, package-status, package-source, profile-install, optional-install, install, plan, apps-doctor, dev-plan, config, catalog, setup, tiling, keys, assets, help" );
+          println( "BxCachy commands: version, doctor, prerequisites, desktop-list, tui-list, web-list, optional-list, optional-plan, profile-list, profile-plan, profile-install-plan, install-plan, package-status, package-source, profile-install, optional-install, install, plan, apps-doctor, dev-plan, config, catalog, setup, tiling, keys, assets, session, help" );
           break;
          default:
           println( "Unsupported command: " & cmd );

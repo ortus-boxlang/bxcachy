@@ -234,4 +234,49 @@ class SetupPlan {
         out.notes.append( "The shortcut files stay (restore them with `config restore`). Log out and back in for the group change." );
         return out;
     }
+
+    // The session files that stand for each target, best first. Hyprland started through uwsm is preferred when it is installed.
+    function sessionCandidates( target ) {
+        if ( target == "hyprland" ) return [ "hyprland-uwsm.desktop", "hyprland.desktop" ];
+        if ( target == "plasma" ) return [ "plasma.desktop" ];
+        return [];
+    }
+
+    // The steps for `session set hyprland|plasma`: makes that session the one the SDDM login screen preselects, by rewriting
+    // `Session=` under [Last] in SDDM's state file (the login screen still lets you pick). Pure: facts only.
+    // facts used: isRoot hasSudo sessions ([ { file, path } ]) stateFile stateLines (the current state file, one entry per line) autologin ("" or the Session= value)
+    function session( facts, target ) {
+        var out = { target: "session " & target, errors: [], warnings: [], notes: [], steps: [], chosen: "" };
+        if ( !arrayFind( [ "hyprland", "plasma" ], target ) ) out.errors.append( "Unknown session: " & target & " (hyprland or plasma)" );
+        if ( facts.isRoot ) out.errors.append( "Run as a regular user; sudo is used only to write SDDM's state file" );
+        if ( !facts.hasSudo ) out.errors.append( "sudo is required to write SDDM's state file but was not found" );
+        if ( out.errors.len() ) return out;
+        var found = {};
+        for ( var s in facts.sessions ) found[s.file] = s.path;
+        for ( var c in sessionCandidates( target ) ) if ( !len( out.chosen ) && structKeyExists( found, c ) ) out.chosen = found[c];
+        if ( !len( out.chosen ) ) {
+            out.errors.append( "No " & target & " session is installed (looked for " & sessionCandidates( target ).toList( ", " ) & ")" );
+            return out;
+        }
+        // keep every other line of the state file; replace or add Session= in [Last]
+        var lines = []; var inLast = false; var done = false; var hadLast = false;
+        for ( var line in facts.stateLines ) {
+            var t = trim( line );
+            if ( left( t, 1 ) == "[" ) {
+                if ( inLast && !done ) { lines.append( "Session=" & out.chosen ); done = true; }
+                inLast = lCase( t ) == "[last]"; if ( inLast ) hadLast = true;
+            } else if ( inLast && lCase( left( t, 8 ) ) == "session=" ) { lines.append( "Session=" & out.chosen ); done = true; continue; }
+            lines.append( line );
+        }
+        if ( !hadLast ) { lines.append( "[Last]" ); lines.append( "Session=" & out.chosen ); }
+        else if ( !done ) lines.append( "Session=" & out.chosen );
+        // each line carries its own newline, so the script needs no escape sequences
+        var write = [ "sudo", "sh", "-c", 'printf %s "$@" > "$0"', facts.stateFile ];
+        for ( var l in lines ) write.append( l & chr( 10 ) );
+        out.steps.append( { id: "backup", title: "keep a copy of SDDM's state file", kind: "sudo", commands: [ [ "sudo", "cp", "-f", facts.stateFile, facts.stateFile & ".bxcachy.bak" ] ] } );
+        out.steps.append( { id: "write", title: "preselect " & out.chosen & " at the login screen", kind: "sudo", commands: [ write ] } );
+        if ( len( facts.autologin ) ) out.warnings.append( "SDDM is set to log in automatically to " & facts.autologin & "; that setting wins over the preselected session" );
+        out.notes.append( "Takes effect at the next login screen. Log out with Super+Shift+Q to see it." );
+        return out;
+    }
 }

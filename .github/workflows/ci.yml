@@ -20,7 +20,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          bash -n bootstrap/install.sh scripts/package-manager.sh tests/package-manager-test.sh tests/bootstrap-test.sh tests/native-smoke.sh tests/native-package-integration.sh scripts/config.sh tests/config-test.sh tests/config-native-test.sh tests/cli-contract-test.sh tests/catalog-test.sh tests/packages-test.sh tests/setup-test.sh tests/tiling-test.sh tests/keys-test.sh tests/keys-apply-test.sh tests/xremap-test.sh tests/assets-test.sh tests/noctalia-config-test.sh tests/hyprland-setup-test.sh bootstrap/gen-catalog.sh bootstrap/gen-templates.sh bootstrap/gen-assets.sh scripts/get-matchbox.sh scripts/dev-build.sh
+          bash -n bootstrap/install.sh scripts/package-manager.sh tests/package-manager-test.sh tests/bootstrap-test.sh tests/native-smoke.sh tests/native-package-integration.sh scripts/config.sh tests/config-test.sh tests/config-native-test.sh tests/cli-contract-test.sh tests/catalog-test.sh tests/packages-test.sh tests/setup-test.sh tests/tiling-test.sh tests/keys-test.sh tests/keys-apply-test.sh tests/xremap-test.sh tests/assets-test.sh tests/noctalia-config-test.sh tests/hyprland-setup-test.sh tests/session-test.sh bootstrap/gen-catalog.sh bootstrap/gen-templates.sh bootstrap/gen-assets.sh scripts/get-matchbox.sh scripts/dev-build.sh
           test -s src/Main.bx -a -s src/Application.bx
           jq -e . catalog/apps.json >/dev/null
           bash bootstrap/gen-catalog.sh --check   # src/bxcachy/CatalogData.bx embeds the current catalog
@@ -127,6 +127,7 @@ jobs:
           bash tests/assets-test.sh "$candidate"
           bash tests/noctalia-config-test.sh "$candidate"
           bash tests/hyprland-setup-test.sh "$candidate"
+          bash tests/session-test.sh "$candidate"
           (cd src && matchbox ../tests/resolver_test.bxs)
           (cd src && matchbox ../tests/installer_test.bxs)
           (cd src && matchbox ../tests/setup_plan_test.bxs)
