@@ -13,8 +13,8 @@ t = nc.configToml( "/home/dev" );
 check( "config: custom palette is selected by name", find( 'custom_palette = "BxCachy"', t ) > 0 && find( 'source = "custom"', t ) > 0 );
 check( "config: wallpaper paths are absolute under the home directory", find( 'directory = "/home/dev/Pictures/BxCachy"', t ) > 0 && find( 'path = "/home/dev/Pictures/BxCachy/box.jpg"', t ) > 0 );
 check( "config: bar lists real widget names", find( '"launcher"', t ) > 0 && find( '"control-center"', t ) > 0 && find( '"workspaces"', t ) > 0 );
-check( "config: the world clocks and the media player are in the centre", find( 'center = ["clock", "clock-nyc", "clock-lon", "clock-mad", "media"]', t ) > 0 );
-check( "config: each world clock is a clock widget with a timezone", find( '[widget.clock-nyc]', t ) > 0 && find( 'timezone = "America/New_York"', t ) > 0 && find( 'timezone = "Europe/London"', t ) > 0 && find( 'timezone = "Europe/Madrid"', t ) > 0 );
+check( "config: the world clocks and the media player are in the centre", find( 'center = ["clock", "clock-lax", "clock-nyc", "clock-lon", "clock-mad", "media"]', t ) > 0 );
+check( "config: each world clock is a clock widget with a timezone", find( '[widget.clock-nyc]', t ) > 0 && find( 'timezone = "America/Los_Angeles"', t ) > 0 && find( 'timezone = "America/New_York"', t ) > 0 && find( 'timezone = "Europe/London"', t ) > 0 && find( 'timezone = "Europe/Madrid"', t ) > 0 );
 e = nc.entries( "/home/dev/.config", "/home/dev" );
 check( "entries: config.toml and the palette file", e.len() == 2 && e[1].target == "/home/dev/.config/noctalia/config.toml" && e[2].target == "/home/dev/.config/noctalia/palettes/BxCachy.json" );
 if ( failures > 0 ) { println( failures & " failed" ); exit( 1 ); }
