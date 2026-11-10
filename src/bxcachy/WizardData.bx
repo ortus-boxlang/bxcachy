@@ -516,12 +516,12 @@ class WizardData {
               "description": "Anthropic''s coding agent."
             },
             {
-              "value": "codex",
+              "value": "codex-cli",
               "label": "Codex",
               "description": "OpenAI''s coding agent."
             },
             {
-              "value": "gemini",
+              "value": "gemini-cli",
               "label": "Gemini CLI",
               "description": "Google''s coding agent."
             }

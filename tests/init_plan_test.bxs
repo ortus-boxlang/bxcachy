@@ -1,0 +1,43 @@
+// InitPlan: wizard answers to ordered commands (pure). Run from src/: (cd src && matchbox ../tests/init_plan_test.bxs)
+failures = 0;
+function check( label, ok ) { if ( ok ) println( "ok   " & label ); else { println( "FAIL " & label ); failures++; } }
+ip = new bxcachy.InitPlan();
+function ids( p ) { return p.steps.map( function( s ) { return s.id; } ).toList( "," ); }
+function cmd( p, id ) { for ( var s in p.steps ) if ( s.id == id ) return s.argv.toList( " " ); return ""; }
+
+p = ip.plan( {} );
+check( "no answers, no steps (an unanswered page does nothing)", p.steps.len() == 0 && p.pending.len() == 0 && p.errors.len() == 0 );
+
+p = ip.plan( { desktops: "hyprland", layout: "master", terminal: "ghostty", shell: "zsh" } );
+check( "Hyprland only: hyprland, terminal, shell, then the session", ids( p ) == "hyprland,terminal,shell,session" );
+check( "hyprland step carries the terminal and the layout", cmd( p, "hyprland" ) == "bxcachy setup hyprland --terminal=ghostty --layout=master" );
+check( "KDE is not configured when only Hyprland is chosen", find( "plasma", ids( p ) ) == 0 || !find( "setup plasma", p.steps.map( function( s ) { return s.argv.toList( " " ); } ).toList( "|" ) ) );
+check( "the session follows the desktop", cmd( p, "session" ) == "bxcachy session set hyprland" );
+
+p = ip.plan( { desktops: "plasma" } );
+check( "KDE only: plasma and the plasma session", ids( p ) == "plasma,session" && cmd( p, "session" ) == "bxcachy session set plasma" );
+
+p = ip.plan( { desktops: "both", login_session: "plasma", mac_keys: true } );
+check( "Both configures both, login_session picks the session", ids( p ) == "hyprland,plasma,xremap,session" && cmd( p, "session" ) == "bxcachy session set plasma" );
+check( "Both without login_session starts on Hyprland", cmd( ip.plan( { desktops: "both" } ), "session" ) == "bxcachy session set hyprland" );
+check( "xremap builds for KDE when Plasma is the only desktop", cmd( ip.plan( { desktops: "plasma", mac_keys: true } ), "xremap" ) == "bxcachy setup xremap --build=kde" );
+check( "mac_keys false adds nothing", find( "xremap", ids( ip.plan( { desktops: "hyprland", mac_keys: false } ) ) ) == 0 );
+
+p = ip.plan( { terminal: "ghostty", terminals_extra: [ "kitty", "foot" ] } );
+check( "terminals: default plus extras in one step", cmd( p, "terminal" ) == "bxcachy setup terminal --default=ghostty --also=kitty,foot" );
+
+p = ip.plan( { ai_orchestrators: [ "pane", "herdr" ], ai_agents: [ "claude-code" ] } );
+check( "apps: orchestrators and agents in one install", cmd( p, "apps" ) == "bxcachy install pane herdr claude-code" );
+check( "no apps chosen, no install step", find( "apps", ids( ip.plan( { ai_orchestrators: [], ai_agents: [] } ) ) ) == 0 );
+
+p = ip.plan( { git_name: "Ada Lovelace", git_email: "ada@example.com" } );
+check( "git identity is two argument arrays (no shell string)", ids( p ) == "git-name,git-email" && p.steps[ 1 ].argv[ 5 ] == "Ada Lovelace" && p.steps[ 1 ].argv.len() == 5 );
+
+p = ip.plan( { vpn: "tailscale", gaming: "none", databases: [], toolchains: [ "java" ], ssh_key: false, natural_scroll: false } );
+check( "answers without a command are listed as pending, not dropped, and not when empty", p.pending.toList( "," ) == "toolchains,vpn" );
+
+p = ip.plan( { desktops: "gnome" } );
+check( "an unknown desktop is an error", p.errors.len() == 1 && p.steps.len() == 0 );
+
+if ( failures > 0 ) { println( failures & " failed" ); exit( 1 ); }
+println( "all passed" );

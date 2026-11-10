@@ -523,7 +523,7 @@ out="$(env PATH="$tmp/all/bin:$PATH" ALL_LOG="$tmp/all/log" BXCACHY_ALL_SCRIPT="
 out="$(printf 'n\n' | env BXCACHY_INTERACTIVE=1 PATH="$tmp/all/bin:$PATH" ALL_LOG="$tmp/all/log" BXCACHY_ALL_SCRIPT="$tmp/all/stage.sh" bash "$root/bootstrap/install.sh" 2>&1)" && { echo 'FAIL: answering n went on' >&2; exit 1; }
 [[ ! -s "$tmp/all/log" ]] || { echo 'FAIL: a stage ran after answering n' >&2; exit 1; }
 printf 'y\n' | env BXCACHY_INTERACTIVE=1 PATH="$tmp/all/bin:$PATH" ALL_LOG="$tmp/all/log" BXCACHY_ALL_SCRIPT="$tmp/all/stage.sh" bash "$root/bootstrap/install.sh" >/dev/null 2>&1 || { echo 'FAIL: answering y did not run the install' >&2; exit 1; }
-[[ "$(paste -sd'|' "$tmp/all/log")" == 'packages --yes|toolchains --yes|binary --yes|core --yes' ]] || { echo 'FAIL: stages after answering y' >&2; exit 1; }
+[[ "$(paste -sd'|' "$tmp/all/log")" == 'packages --yes|toolchains --yes|binary --yes|core --yes|wizard' ]] || { echo "FAIL: stages after answering y (the wizard follows at a terminal): $(paste -sd'|' "$tmp/all/log")" >&2; exit 1; }
 echo 'bootstrap whole-install tests passed'
 
 # ---- nvm and Node.js are toolchain steps: nvm missing, then Node missing ----

@@ -13,6 +13,7 @@ usage() {
 Usage: install.sh [--yes] [--dry-run]     install everything: packages, toolchains, the bxcachy binary, the core apps
        install.sh check                   read-only report of what is installed
        install.sh packages|toolchains|binary|core --yes [--binary PATH --force]   re-run one stage
+       install.sh wizard                  the setup wizard (bxcachy init); the full install ends with it at a terminal
 USAGE
   exit 2
 }
@@ -24,9 +25,10 @@ case "${1:-}" in
   toolchains) mode=--install-toolchains; shift ;;
   binary) mode=--install-binary; shift ;;
   core) mode=--core; shift ;;
+  wizard) mode=--wizard; shift ;;
 esac
 case "$mode" in
-  --check) [[ $# -eq 0 ]] || usage ;;
+  --check|--wizard) [[ $# -eq 0 ]] || usage ;;
   full)
     for arg in "$@"; do
       case "$arg" in --yes) yes=1 ;; --dry-run) dry=1 ;; *) usage ;; esac
@@ -326,9 +328,19 @@ if [[ "$mode" == full ]]; then
   echo "== 3/4 the bxcachy binary =="; bash "$all_self" binary --yes || exit $?
   echo "== 4/4 the core apps =="; bash "$all_self" core --yes || exit $?
   echo "Everything is installed. Run: bxcachy doctor"
+  if is_interactive; then
+    echo "== the setup wizard =="; bash "$all_self" wizard || exit $?
+  else
+    echo "Next: run bxcachy init at a terminal to choose your desktop, shell, terminal and apps."
+  fi
   exit 0
 fi
 
+if [[ "$mode" == --wizard ]]; then
+  wiz_bin="$BIN_DIR/bxcachy"
+  [[ -x "$wiz_bin" ]] || { echo "bxcachy is not installed at $wiz_bin (run install.sh binary --yes first)" >&2; exit 1; }
+  exec "$wiz_bin" init
+fi
 if [[ "$mode" == --core ]]; then
   # The core profile through the installed binary (it names the apps, installs them with pacman, and re-runs safely).
   [[ "$(id -u)" != 0 ]] || { echo "Run as a regular user; sudo is used only for pacman steps" >&2; exit 1; }

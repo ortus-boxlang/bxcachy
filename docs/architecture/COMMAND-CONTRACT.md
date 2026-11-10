@@ -296,7 +296,7 @@ Ortus Brand Book 2025 palette (main `#00FF78`, second `#00DBFF`, accent `#FFF500
 - The real Arch container (`tests/arch/suite.sh`) runs the xremap plan, checks the AUR package names, runs the whole `setup hyprland`, checks the written files, byte-identical wallpapers, `keys check`, and has Hyprland verify the starter config.
 - Not verifiable in CI: HyprKwin's installer (needs a running KWin), xremap's per-app rules on both builds, Noctalia accepting every config key, and the exact Hyprland bind strings on a running session. These are covered by the owner's acceptance run on a real CachyOS KDE machine.
 
-## 14. Install and the setup wizard (decided with the owner 2026-11-10; plan, not built yet)
+## 14. Install and the setup wizard (decided with the owner 2026-11-10; install, wizard and the init engine are built, the pages' later commands are not)
 
 ### 14.1 Install
 
@@ -336,6 +336,8 @@ Exits: as `setup` (0, 2, 4, 5, 6, 7, 8); 4 also for no terminal without `--answe
 | Import | `dotfiles_repo`, `dotfiles_method` (`chezmoi`, `yadm`, `stow`, `links`) | dotfiles import (last step) |
 
 Fonts are not a question: the install always adds JetBrains Mono, JetBrains Mono Nerd, the Powerline fonts and the Nerd Fonts symbols (with the Noto fonts `setup hyprland` already installs).
+
+**Built (W4):** `init`, `init --answers`, `init --print-answers`. The planner (`InitPlan`, pure) turns answers into this ordered list, one ordinary command each, run through the program itself with `--yes`: `setup hyprland [--terminal --layout]`, `setup plasma`, `setup terminal`, `setup shell`, `setup xremap`, `install` (AI orchestrators and agents), `git config --global` (name, email), and last `session set`. A missing answer adds no step. A step that fails stops the rest (exit 7 when some were done, else that step's exit code; the others are `skipped`). Answers whose command does not exist yet (`toolchains`, `container_engine`, `databases`, `vpn`, `password_manager`, `gaming`, `ssh_key`, `theme`, `wallpaper`, `workspaces`, `natural_scroll`, `layouts`, `app_mode`) are saved and listed as `pending`, never dropped silently. `init` at a terminal runs the wizard, saves `answers.json`, then runs the plan (the review screen is the confirmation; `--dry-run` only prints). `install.sh` ends with `bxcachy init` at a terminal and prints a hint otherwise.
 
 ### 14.4 Rules
 

@@ -1,0 +1,82 @@
+// `bxcachy init`: turns the wizard's answers into an ordered list of ordinary commands. Pure (no files, no processes), so it
+// is unit tested. Every answer is optional: a missing answer adds no step, and nothing runs that the user did not choose.
+//
+// A step is { id, title, argv }. argv is an argument array; argv[1] "bxcachy" means this program (the executor swaps in its own
+// path and adds --yes). Answers that no command applies yet are listed in `pending`, so nothing is silently dropped.
+class InitPlan {
+    // Answer keys that are saved but have no command behind them yet.
+    function pendingKeys() {
+        return [ "toolchains", "container_engine", "databases", "vpn", "password_manager", "gaming", "ssh_key", "theme", "wallpaper", "workspaces", "natural_scroll", "layouts", "app_mode" ];
+    }
+
+    // The value of an answer, or a fallback when it was not answered.
+    function pick( answers, key, fallback = "" ) {
+        return structKeyExists( arguments.answers, arguments.key ) ? arguments.answers[ arguments.key ] : arguments.fallback;
+    }
+
+    // A truthy "set" answer: a non-empty array, a non-empty string other than "none", or true.
+    function isSet( value ) {
+        if ( isArray( arguments.value ) ) return arguments.value.len() > 0;
+        var text = toString( arguments.value );
+        return len( text ) > 0 && text != "none" && text != "false" && text != "no" && text != "0";
+    }
+
+    // The session the login screen should preselect: follows the desktop choice, and `both` uses login_session.
+    function session( answers ) {
+        var desktops = pick( arguments.answers, "desktops" );
+        if ( desktops == "hyprland" ) return "hyprland";
+        if ( desktops == "plasma" ) return "plasma";
+        if ( desktops == "both" ) return pick( arguments.answers, "login_session", "hyprland" );
+        return "";
+    }
+
+    // The plan: { steps, pending, errors }.
+    function plan( answers ) {
+        var a = arguments.answers;
+        var out = { steps: [], pending: [], errors: [] };
+        var desktops = pick( a, "desktops" );
+        if ( len( desktops ) && !arrayFind( [ "hyprland", "plasma", "both" ], desktops ) ) out.errors.append( "desktops: unknown value " & desktops );
+        var terminal = pick( a, "terminal" );
+        var layout = pick( a, "layout" );
+        var wantsHypr = desktops == "hyprland" || desktops == "both";
+        var wantsPlasma = desktops == "plasma" || desktops == "both";
+        if ( wantsHypr ) {
+            var argv = [ "bxcachy", "setup", "hyprland" ];
+            if ( len( terminal ) ) argv.append( "--terminal=" & terminal );
+            if ( len( layout ) ) argv.append( "--layout=" & layout );
+            out.steps.append( { id: "hyprland", title: "set up Hyprland + Noctalia" & ( len( terminal ) ? " (" & terminal & " on Super+Enter" & ( len( layout ) ? ", " & layout & " layout" : "" ) & ")" : "" ), argv: argv } );
+        }
+        if ( wantsPlasma ) out.steps.append( { id: "plasma", title: "set up KDE Plasma tiling (HyprKwin)", argv: [ "bxcachy", "setup", "plasma" ] } );
+        var extras = pick( a, "terminals_extra", [] );
+        if ( len( terminal ) || extras.len() ) {
+            var targv = [ "bxcachy", "setup", "terminal" ];
+            if ( len( terminal ) ) targv.append( "--default=" & terminal );
+            if ( extras.len() ) targv.append( "--also=" & extras.toList( "," ) );
+            out.steps.append( { id: "terminal", title: "install and configure terminals (" & ( len( terminal ) ? terminal : "default" ) & ( extras.len() ? " and " & extras.toList( ", " ) : "" ) & ")", argv: targv } );
+        }
+        var shell = pick( a, "shell" );
+        if ( len( shell ) ) out.steps.append( { id: "shell", title: "set up " & shell & " with the Starship prompt", argv: [ "bxcachy", "setup", "shell", "--shell=" & shell ] } );
+        if ( isSet( pick( a, "mac_keys", false ) ) ) {
+            var build = desktops == "plasma" ? "kde" : "hypr";
+            out.steps.append( { id: "xremap", title: "Cmd-style keys (xremap, " & build & ")", argv: [ "bxcachy", "setup", "xremap", "--build=" & build ] } );
+        }
+        var apps = [];
+        for ( var id in pick( a, "ai_orchestrators", [] ) ) apps.append( id );
+        for ( var id in pick( a, "ai_agents", [] ) ) apps.append( id );
+        if ( apps.len() ) {
+            var iargv = [ "bxcachy", "install" ];
+            for ( var id in apps ) iargv.append( id );
+            out.steps.append( { id: "apps", title: "install " & apps.toList( ", " ), argv: iargv } );
+        }
+        var gname = pick( a, "git_name" );
+        var gmail = pick( a, "git_email" );
+        if ( len( gname ) ) out.steps.append( { id: "git-name", title: "git user.name", argv: [ "git", "config", "--global", "user.name", gname ] } );
+        if ( len( gmail ) ) out.steps.append( { id: "git-email", title: "git user.email", argv: [ "git", "config", "--global", "user.email", gmail ] } );
+        var sess = session( a );
+        if ( len( sess ) ) out.steps.append( { id: "session", title: "start on " & ( sess == "hyprland" ? "Hyprland" : "KDE Plasma" ) & " at the login screen", argv: [ "bxcachy", "session", "set", sess ] } );
+        for ( var key in pendingKeys() ) {
+            if ( structKeyExists( a, key ) && isSet( a[ key ] ) ) out.pending.append( key );
+        }
+        return out;
+    }
+}

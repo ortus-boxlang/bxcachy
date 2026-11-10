@@ -15,7 +15,7 @@ class {
         var config = new bxcachy.ConfigService();
         // One shared flag check for every command: unknown flags are usage errors and nothing runs.
         for ( var flag in args.options ) {
-            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "layout", "terminal", "default", "also", "pages", "out", "answers", "demo" ], flag ) ) {
+            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "print-answers", "layout", "terminal", "default", "also", "pages", "out", "answers", "demo" ], flag ) ) {
                 println( "Unknown option: --" & flag );
                 CLIExit( 2 );
             }
@@ -253,6 +253,25 @@ class {
           }
           println( "Usage: bxcachy setup plasma [--keys | --undo-keys] | hyprland [--terminal=ghostty|kitty|alacritty|foot|konsole] [--layout=dwindle|master|scrolling|floating] | terminal [--default=ghostty] [--also=a,b] | shell [--shell=zsh|fish|bash] | xremap [--build=hypr|kde] | undo plasma|hyprland|xremap | status [--yes] [--dry-run] [--json]" );
           CLIExit( 2 );
+          break;
+         case "init":
+          // The setup wizard and what it runs. init (needs a terminal) | init --answers=FILE [--yes] [--dry-run] [--json] | init --print-answers.
+          if ( p.len() != 1 ) {
+           println( "Usage: bxcachy init | init --answers=FILE [--yes] [--dry-run] [--json] | init --print-answers [--json]" );
+           CLIExit( 2 );
+          }
+          initRun = new bxcachy.Init( cli );
+          if ( structKeyExists( args.options, "print-answers" ) ) CLIExit( initRun.printAnswers( asJson ) );
+          if ( structKeyExists( args.options, "answers" ) ) {
+           try {
+            initAnswers = jsonDeserialize( fileRead( args.options.answers ) );
+           } catch ( any e ) {
+            println( "bxcachy init: cannot read the answers file: " & e.message );
+            CLIExit( 4 );
+           }
+           CLIExit( initRun.run( initAnswers, structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
+          }
+          CLIExit( initRun.wizard( structKeyExists( args.options, "dry-run" ), asJson ) );
           break;
          case "wizard":
           // The full-screen setup wizard on MatchBox's terminal canvas. It shows pages from a JSON file (--pages) or the

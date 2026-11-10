@@ -1,0 +1,102 @@
+// `bxcachy init`: the wizard (or an answers file) in, ordinary commands out. The saved answers live in
+// ~/.config/bxcachy/answers.json (mode 600, written atomically); a re-run starts from them.
+//
+// Exit codes: 0 done, 2 plan printed without --yes, 4 precondition (bad answers file, no terminal), 130 wizard cancelled,
+// 7 some steps done and some failed, otherwise the exit code of the first failed step when nothing was done.
+class Init {
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.inst = new bxcachy.Installer( arguments.runner );
+        variables.config = new bxcachy.ConfigService();
+        return this;
+    }
+
+    function answersFile() { return variables.config.cfgHome() & "/bxcachy/answers.json"; }
+
+    // The saved answers ({} when there are none or the file is unreadable).
+    function loadSaved() {
+        if ( !fileExists( answersFile() ) ) return {};
+        try { return jsonDeserialize( fileRead( answersFile() ) ); } catch ( any e ) { return {}; }
+    }
+
+    function save( answers ) {
+        variables.config.writeAtomic( answersFile(), jsonSerialize( arguments.answers ) & chr( 10 ), "600" );
+    }
+
+    // `init --print-answers`
+    function printAnswers( asJson ) {
+        var saved = loadSaved();
+        if ( arguments.asJson ) println( variables.cli.envelope( "init --print-answers", 0, { answers: saved, file: answersFile() } ) );
+        else println( jsonSerialize( saved ) );
+        return 0;
+    }
+
+    // This program, to run the plan's own commands: BXCACHY_SELF (tests, odd installs), else `bxcachy` on PATH.
+    function selfPath() { return getSystemSetting( "BXCACHY_SELF", "bxcachy" ); }
+
+    // The command line for a step: our own path, --yes on our own commands.
+    function commandFor( step ) {
+        var argv = [];
+        for ( var part in arguments.step.argv ) argv.append( part );
+        if ( argv[ 1 ] == "bxcachy" ) { argv[ 1 ] = selfPath(); argv.append( "--yes" ); }
+        return argv;
+    }
+
+    // Runs the plan for these answers. yes/dryRun as every mutating command: no --yes prints it (exit 2), --dry-run exits 0.
+    function run( answers, yes, dryRun, asJson ) {
+        var plan = new bxcachy.InitPlan().plan( arguments.answers );
+        var data = { steps: plan.steps, pending: plan.pending, errors: plan.errors, done: [], failed: [], skipped: [] };
+        if ( plan.errors.len() ) {
+            if ( arguments.asJson ) println( variables.cli.envelope( "init", 4, data ) );
+            else for ( var e in plan.errors ) println( "error: " & e );
+            return 4;
+        }
+        if ( !arguments.yes || arguments.dryRun ) {
+            var code = arguments.dryRun ? 0 : 2;
+            if ( arguments.asJson ) { println( variables.cli.envelope( "init", code, data, arguments.dryRun ) ); return code; }
+            println( ( arguments.dryRun ? "Dry run" : "Plan" ) & ": init, " & plan.steps.len() & " steps" );
+            for ( var s in plan.steps ) println( "  " & s.id & ": " & s.title & "   (" & commandFor( s ).toList( " " ) & ")" );
+            if ( plan.pending.len() ) println( "  not applied yet (saved, no command for them): " & plan.pending.toList( ", " ) );
+            println( arguments.dryRun ? "Nothing was changed." : "Nothing was changed. Add --yes to apply." );
+            return code;
+        }
+        var stopped = false;
+        var firstCode = 0;
+        for ( var step in plan.steps ) {
+            if ( stopped ) { data.skipped.append( { id: step.id, reason: "an earlier step failed" } ); continue; }
+            var argv = commandFor( step );
+            if ( !arguments.asJson ) println( "==> " & step.title );
+            var r = variables.inst.exec( argv, 3600 );
+            if ( !arguments.asJson && len( r.output ) ) print( r.output );
+            if ( r.timeout || r.exitCode != 0 ) {
+                data.failed.append( { id: step.id, exit: r.timeout ? 124 : r.exitCode } );
+                firstCode = r.timeout ? 124 : r.exitCode;
+                stopped = true;
+            } else data.done.append( { id: step.id } );
+        }
+        var exit = !data.failed.len() ? 0 : ( data.done.len() ? 7 : firstCode );
+        if ( arguments.asJson ) { println( variables.cli.envelope( "init", exit, data ) ); return exit; }
+        for ( var d in data.done ) println( "Done: " & d.id );
+        for ( var f in data.failed ) println( "Failed: " & f.id & " (exit " & f.exit & ")" );
+        for ( var k in data.skipped ) println( "Skipped: " & k.id & " (" & k.reason & ")" );
+        if ( plan.pending.len() ) println( "Saved but not applied yet: " & plan.pending.toList( ", " ) );
+        return exit;
+    }
+
+    // The wizard, then the plan. The review screen is the confirmation, so the steps run without a second prompt
+    // (unless --dry-run). Needs a terminal.
+    function wizard( dryRun, asJson ) {
+        var spec = jsonDeserialize( new bxcachy.WizardData().demoPages() );
+        var result = "";
+        try {
+            result = new bxcachy.Wizard( spec, loadSaved() ).run();
+        } catch ( any e ) {
+            println( "bxcachy init needs a terminal (" & e.message & "). Use --answers FILE to run without one." );
+            return 4;
+        }
+        if ( result.outcome != "done" ) return 130;
+        save( result.answers );
+        println( "Saved your answers to " & answersFile() );
+        return run( result.answers, true, arguments.dryRun, arguments.asJson );
+    }
+}
