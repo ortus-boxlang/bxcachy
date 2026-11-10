@@ -36,6 +36,6 @@ class Wizard {
         } finally {
             variables.tui.shutdown();
         }
-        return { outcome: variables.app.outcome(), answers: variables.app.answers() };
+        return { outcome: variables.app.outcome(), answers: variables.app.finalAnswers() };
     }
 }

@@ -6,29 +6,54 @@
     {
       "id": "desktop",
       "title": "Desktop",
-      "intro": "Hyprland with Noctalia sits beside KDE Plasma. Pick what you want on this machine.",
+      "intro": "Hyprland with Noctalia is the BxCachy desktop. KDE Plasma stays on your machine either way; it is only configured if you choose it.",
       "questions": [
         {
           "type": "choice",
           "id": "desktops",
-          "label": "Which desktops?",
-          "default": "both",
-          "help": "You can switch at the login screen at any time.",
+          "label": "Which desktops should BxCachy set up?",
+          "default": "hyprland",
+          "help": "KDE Plasma is never removed. Choosing Hyprland leaves it untouched.",
+          "options": [
+            {
+              "value": "hyprland",
+              "label": "Hyprland + Noctalia (recommended)",
+              "description": "A fast tiling desktop with a polished shell. Keyboard-first, Mac-style Super keys. KDE Plasma is left as it is."
+            },
+            {
+              "value": "both",
+              "label": "Both: Hyprland + Noctalia, and KDE Plasma with BxCachy tiling",
+              "description": "Configure both with the shared BxCachy keys, and pick which one starts at login."
+            },
+            {
+              "value": "plasma",
+              "label": "KDE Plasma with BxCachy tiling only",
+              "description": "Keep Plasma and add HyprKwin tiling on top. Toggle it any time with: bxcachy tiling on|off."
+            }
+          ]
+        },
+        {
+          "type": "choice",
+          "id": "login_session",
+          "label": "Which one starts when you log in?",
+          "help": "Sets the login screen's preselected session. You can still switch there.",
+          "default": "hyprland",
+          "when": {
+            "id": "desktops",
+            "in": [
+              "both"
+            ]
+          },
           "options": [
             {
               "value": "hyprland",
               "label": "Hyprland + Noctalia",
-              "description": "A fast tiling desktop with a polished shell. Keyboard-first, Mac-style Super keys."
+              "description": "The login screen preselects Hyprland."
             },
             {
               "value": "plasma",
-              "label": "KDE Plasma with tiling",
-              "description": "Keep Plasma and add HyprKwin tiling on top. Toggle it any time with: bxcachy tiling on|off."
-            },
-            {
-              "value": "both",
-              "label": "Both",
-              "description": "Install Hyprland and tiling for Plasma. Choose at the login screen."
+              "label": "KDE Plasma",
+              "description": "The login screen preselects Plasma."
             }
           ]
         },

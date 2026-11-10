@@ -26,6 +26,8 @@ Exit codes: 0 answers written, 130 cancelled (nothing written), 2 usage, 4 unrea
       { "type": "info",    "label": "...", "help": "..." } ] } ] }
 ```
 
+Any question may carry `"when": { "id": "other_question", "in": ["a", "b"] }` (or `"equals": "a"`): it is shown only while that answer matches, and a hidden question is left out of the review and the answers file.
+
 Answers are a flat JSON object keyed by question id: a string (choice, text), an array of strings (multi), a number, or a bool.
 
 ## Keys and mouse

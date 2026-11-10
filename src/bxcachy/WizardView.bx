@@ -395,12 +395,12 @@ class WizardView {
         put( ix, iy + 1, "Everything look right? Nothing has been changed yet.", variables.SUB, variables.MANTLE );
         var cy = iy + 3;
         var labelW = 20;
-        for ( var pg in app.spec().pages ) for ( var q in pg.questions ) if ( q.type != "info" ) labelW = max( labelW, len( q.label ) + 3 );
+        for ( var pg in app.spec().pages ) for ( var q in pg.questions ) if ( q.type != "info" && app.isVisible( q ) ) labelW = max( labelW, len( q.label ) + 3 );
         var maxY = iy + ih - 3;
         var stop = false;
         for ( var pg in app.spec().pages ) {
             for ( var q in pg.questions ) {
-                if ( q.type == "info" ) continue;
+                if ( q.type == "info" || !app.isVisible( q ) ) continue;
                 if ( cy > maxY ) { put( ix, cy, "…", variables.OVERLAY, variables.MANTLE ); stop = true; break; }
                 put( ix, cy, q.label, variables.SUB, variables.MANTLE );
                 put( ix + labelW, cy, left( app.display( q ), max( 1, iw - labelW - 2 ) ), variables.GREEN, variables.MANTLE );

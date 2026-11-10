@@ -315,9 +315,11 @@ Exits: as `setup` (0, 2, 4, 5, 6, 7, 8); 4 also for no terminal without `--answe
 
 ### 14.3 Pages, answers and what they run
 
+**Default desktop (decided 2026-11-10):** Hyprland + Noctalia. KDE Plasma stays installed whatever is chosen but is configured (HyprKwin tiling, shared keys) only for `both` or `plasma`. The login session follows the choice: `hyprland` starts Hyprland, `plasma` starts Plasma, and `both` asks (`login_session`, default Hyprland). `session set` runs for the resulting session. A question may carry `when: { id, in: [...] }` (or `equals`); hidden questions are not asked, not reviewed and not in the answers file.
+
 | Page | Answers (keys in `answers.json`) | Runs or writes |
 |---|---|---|
-| Desktop | `desktops` (`hyprland`, `plasma` or both), `window_style` (`tiled` or `floating`), `workspaces` (persistent count), `login_session` | `setup hyprland`, `setup plasma`, `tiling on|off`, `session set` |
+| Desktop | `desktops` (`hyprland` default, `both`, `plasma`), `window_style` (`tiled` or `floating`), `workspaces` (persistent count), `login_session` (`hyprland` or `plasma`, asked only when `desktops` is `both`) | `setup hyprland`, `setup plasma`, `tiling on|off`, `session set` |
 | Look | `theme` (`dark`, `light`, `auto`), `wallpaper`, `bar_position`, `world_clocks` (IANA zones with labels) | Noctalia config |
 | Input and languages | `keyboard_layouts` (e.g. `us` variant `intl`, `es`), `locale`, `natural_scroll`, `mac_keys` | Hyprland `kb_layout`, KDE keyboard config, locale, `setup xremap` |
 | Developer identity | `git_name`, `git_email`, `ssh_key`, `shell` (`zsh` default, `fish`, `bash`; Starship always), `terminal` (`ghostty` default), `terminals_extra`, `editor` | `git config`, `ssh-keygen`, `setup shell`, `setup terminal`, `setup hyprland --terminal` |

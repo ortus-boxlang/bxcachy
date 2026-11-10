@@ -27,6 +27,26 @@ class WizardApp {
         return this;
     }
 
+    // Whether a question is shown: no `when`, or the answer to when.id is one of when.in (or equals when.equals).
+    // Hidden questions have no rows, are left out of the review and out of finalAnswers().
+    function isVisible( q ) {
+        if ( !structKeyExists( arguments.q, "when" ) ) return true;
+        var w = arguments.q.when;
+        var current = answerString( w.id );
+        if ( structKeyExists( w, "in" ) ) return arrayFind( w.in, current ) > 0;
+        if ( structKeyExists( w, "equals" ) ) return current == w.equals;
+        return true;
+    }
+
+    // The answers of the questions that are shown (what the caller acts on).
+    function finalAnswers() {
+        var out = {};
+        for ( var pg in variables.spec.pages ) for ( var q in pg.questions ) {
+            if ( q.type != "info" && isVisible( q ) ) out[ q.id ] = variables.answers[ q.id ];
+        }
+        return out;
+    }
+
     // What a question starts as: its default, else the first option (choice), none (multi), empty, its default number, no.
     function defaultFor( q ) {
         switch ( q.type ) {
@@ -55,6 +75,7 @@ class WizardApp {
         var qn = 0;
         for ( var q in arguments.pg.questions ) {
             qn++;
+            if ( !isVisible( q ) ) continue;
             if ( out.len() ) out.append( { kind: "space", q: 0, i: 0, group: "" } );
             if ( q.type == "info" ) {
                 out.append( { kind: "info", q: qn, i: 0, group: "" } );
@@ -191,6 +212,8 @@ class WizardApp {
             var q = pg.questions[ row.q ];
             if ( q.type == "confirm" ) variables.answers[ q.id ] = !answerBool( q.id );
         }
+        var rs = rows();
+        if ( variables.focus > rs.len() || !isFocusable( rs[ variables.focus ] ) ) variables.focus = firstFocus( pg );
         return this;
     }
 
@@ -275,6 +298,6 @@ class WizardApp {
 
     // The answers as pretty JSON.
     function answersJson() {
-        return jsonSerialize( variables.answers );
+        return jsonSerialize( finalAnswers() );
     }
 }
