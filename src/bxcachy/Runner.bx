@@ -1,10 +1,9 @@
-// The runner integration (ported from the legacy bxcachy-runner): which launcher Super+Space style shortcuts open, and which
-// menu backend BxCachy's own menus use. The two are independent. It NEVER changes a keybinding or a desktop file: it only
-// records the choice (~/.config/bxcachy/runner.json) and resolves the argument arrays to run. Commands are JSON argument
-// arrays, never shell strings.
-//
-// Launcher providers: system (desktop-owned, nothing to run), noctalia (default on Hyprland), walker, rofi, fuzzel, wofi, krunner, vicinae, custom.
-// Menu providers (dmenu mode): rofi, walker, fuzzel, wofi, vicinae.
+// The runner abstraction (ported from the legacy bxcachy-runner and made provider-neutral). The rest of BxCachy asks for two things:
+//   launch()                       open or toggle the launcher
+//   select( prompt, entries )      show a list of { label, icon } entries in a menu and return the chosen position
+// and never names a launcher. Which launcher answers is a setting (~/.config/bxcachy/runner.json): switch it with `runner set` and
+// `runner menu-set`. The providers are data in RunnerProviders (launch argv, dmenu argv, icon support, how the choice comes back).
+// It NEVER changes a keybinding or a desktop file. Commands are argument arrays, never shell strings.
 class Runner {
     function init( cli = "", runner = "" ) {
         variables.cli = arguments.cli;
@@ -13,24 +12,26 @@ class Runner {
         return this;
     }
 
-    function launcherProviders() { return [ "system", "noctalia", "walker", "rofi", "fuzzel", "wofi", "krunner", "vicinae", "custom" ]; }
-    function menuProviders() { return [ "rofi", "walker", "fuzzel", "wofi", "vicinae" ]; }
+    function registry() { return new bxcachy.RunnerProviders(); }
+    function launcherProviders() { return registry().ids(); }
+    function menuProviders() { return registry().menuIds(); }
 
-    // Argument templates for each provider ({prompt} is replaced in menu commands).
+    // Default argument templates, taken from the registry ({prompt} is replaced in menu commands).
     function launchCommands() {
-        return { noctalia: [ "noctalia", "msg", "panel-toggle", "launcher" ], walker: [ "walker" ], rofi: [ "rofi", "-show", "drun" ],
-                 fuzzel: [ "fuzzel" ], wofi: [ "wofi", "--show", "drun" ], vicinae: [ "vicinae", "toggle" ], krunner: [ "krunner" ] };
+        var out = {};
+        for ( var p in registry().all() ) if ( p.launch.len() ) out[ p.id ] = p.launch;
+        return out;
     }
     function menuCommands() {
-        return { rofi: [ "rofi", "-dmenu", "-i", "-show-icons", "-format", "i", "-p", "{prompt}" ], walker: [ "walker", "--dmenu" ],
-                 fuzzel: [ "fuzzel", "--dmenu", "--index", "--prompt", "{prompt}" ], wofi: [ "wofi", "--dmenu", "--insensitive", "--prompt", "{prompt}" ],
-                 vicinae: [ "vicinae", "dmenu", "--prompt", "{prompt}" ] };
+        var out = {};
+        for ( var p in registry().all() ) if ( !structIsEmpty( p.menu ) ) out[ p.id ] = p.menu.argv;
+        return out;
     }
 
     // The catalog app that provides a provider ("" when none: system, custom, or no package found).
     function catalogId( provider ) {
-        var ids = { noctalia: "", rofi: "rofi", walker: "walker", fuzzel: "fuzzel", wofi: "wofi", krunner: "", vicinae: "vicinae" };
-        return structKeyExists( ids, arguments.provider ) ? ids[ arguments.provider ] : "";
+        var p = registry().get( arguments.provider );
+        return structKeyExists( p, "package" ) ? p.package : "";
     }
 
     function file() { return variables.config.cfgHome() & "/bxcachy/runner.json"; }
@@ -111,6 +112,46 @@ class Runner {
         for ( var part in cmd ) argv.append( part );
         variables.inst.exec( argv, 10 );
         return { ok: true, error: "" };
+    }
+
+    // The menu: shows `entries` (an array of { label, icon } or plain strings) with the chosen menu provider and returns the
+    // 1-based position of the choice, 0 when it was cancelled. Throws a message when the menu cannot run. The provider decides
+    // the protocol: icons are sent only to providers that understand them, and the answer is read as an index or as the label.
+    // `cfg` (optional) replaces the saved settings, for tests.
+    function select( prompt, entries, cfg = "" ) {
+        if ( !isStruct( arguments.cfg ) ) arguments.cfg = load();
+        var cfg = arguments.cfg;
+        var desc = registry().get( cfg.menu_provider );
+        var cmd = menuCommand( cfg.menu_provider, cfg, arguments.prompt );
+        if ( !found( cmd[ 1 ] ) ) throw( message = "Menu provider unavailable: " & cmd[ 1 ] );
+        var labels = [];
+        var payload = "";
+        for ( var e in arguments.entries ) {
+            var label = replace( isStruct( e ) ? e.label : e, chr( 10 ), " ", "all" );
+            labels.append( label );
+            payload &= label;
+            if ( desc.menu.icons && isStruct( e ) && structKeyExists( e, "icon" ) && len( e.icon ) ) payload &= chr( 0 ) & "icon" & chr( 31 ) & e.icon;
+            payload &= chr( 10 );
+        }
+        var tmp = reReplace( getTempDirectory(), "/+$", "" ) & "/bxcachy-menu-" & left( createUUID(), 8 );
+        fileWrite( tmp, payload );
+        try {
+            var argv = [ "sh", "-c", 'f="$1"; shift; exec "$@" < "$f"', "_", tmp ];
+            for ( var part in cmd ) argv.append( part );
+            var r = variables.inst.exec( argv, 600 );
+        } finally {
+            if ( fileExists( tmp ) ) fileDelete( tmp );
+        }
+        if ( r.timeout || r.exitCode != 0 ) return 0;
+        var picked = trim( r.output );
+        if ( !len( picked ) ) return 0;
+        if ( desc.menu.returns == "index" ) {
+            if ( !isNumeric( picked ) ) return 0;
+            var at = picked + 1;
+            return ( at >= 1 && at <= labels.len() ) ? at : 0;
+        }
+        for ( var i = 1; i <= labels.len(); i++ ) if ( labels[ i ] == picked ) return i;
+        return 0;
     }
 
     // Records a choice. kind: provider | menu | launcher-command | menu-command. Returns "" or an error message.

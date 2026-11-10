@@ -236,7 +236,7 @@ bxcachy tiling on|off|status                           HyprKwin inside Plasma, n
 bxcachy keys show | render xremap|hyprland|plasma | check | apply [--yes] [--dry-run] [--force]
 bxcachy assets list | install [--yes] [--dry-run]
 bxcachy session show | set hyprland|plasma [--yes] [--dry-run]
-bxcachy runner list | show | doctor | launch | set P | menu-set P | launcher-command P JSON | menu-command P JSON   launcher and menu providers (13.9)
+bxcachy runner list | show | doctor | launch | select JSON | set P | menu-set P | launcher-command P JSON | menu-command P JSON   the launcher abstraction (13.9)
 ```
 
 - Every target runs, re-runs and undoes on its own; a re-run changes nothing when everything is in place. No `--yes` prints the plan (exit 2); `--dry-run` exits 0. Results as `install`: `done` / `failed` / `skipped`, exits 0, 2, 4 (precondition: root, wrong OS or CPU, no sudo, no Plasma, unsupported Plasma, X11, nothing to undo, session not installed), 5 (the pacman step failed), 6 (another step failed with nothing done), 7 (a step failed after earlier ones were done; later steps are skipped), 8 (config drift or lock). Never run as root: sudo is used only for the steps shown in the plan. `--json` is always one envelope on stdout (the config service has a quiet mode for that).
@@ -292,14 +292,41 @@ Ortus Brand Book 2025 palette (main `#00FF78`, second `#00DBFF`, accent `#FFF500
 
 `session show` lists the installed sessions, the one the login screen preselects, and any automatic login. `session set hyprland|plasma` makes that session the one SDDM preselects by rewriting `Session=` under `[Last]` in `/var/lib/sddm/state.conf` with sudo (a backup `state.conf.bxcachy.bak` is kept; the other lines stay). Hyprland prefers `hyprland-uwsm.desktop`. It never turns on automatic login (a warning if one is set, since it wins). There is no `ask` value: SDDM always remembers the last session. Log out with Super+Shift+Q to see the change.
 
-### 13.9 `runner` (port of the legacy `bxcachy-runner`)
+### 13.9 `runner`: the launcher abstraction (port of the legacy `bxcachy-runner`)
 
-The launcher and the menu backend are chosen separately and recorded in `~/.config/bxcachy/runner.json` (written atomically). **Nothing here changes a keybinding or a desktop file**; `doctor` ends with `Shortcut ownership: unchanged`. `set` and `menu-set` are user settings that act at once (no `--yes`), like `tiling`.
+**Design (owner, 2026-11-10): BxCachy is built on an abstraction so runners can be switched.** The rest of BxCachy asks for two things and never names a launcher:
 
-- Launcher providers: `system` (desktop-owned, nothing to run), `noctalia` (default on Hyprland: `noctalia msg panel-toggle launcher`), `walker`, `rofi`, `fuzzel`, `wofi`, `krunner` (KDE), `vicinae`, `custom`. Menu providers (dmenu mode): `rofi` (default), `walker`, `fuzzel`, `wofi`, `vicinae`. The wizard offers the five popular ones: Noctalia, Walker, Rofi, Fuzzel, Wofi.
-- Commands are JSON argument arrays (`launcher-command rofi '["rofi","-show","run"]'`, `{prompt}` in menu commands); a shell string, an empty array or an empty part exits 4. `launcher-command custom ...` sets the `custom` command.
-- `doctor` shows the commands and whether each executable is on PATH (exit 0 either way, `--json` available); `launch` starts the launcher detached (exit 4 for `system` or a missing program). `list` marks the current choice with `*`.
-- Packages (catalog, Launchers): Rofi, Fuzzel and Wofi (Arch `extra`), Walker (CachyOS repo), Vicinae (`vicinae-bin`, AUR). Noctalia and KRunner come with their desktops. `hyprrunner` was dropped (no package found, 2026-11-10). Fuzzel and Wofi menu commands use their documented dmenu flags (`fuzzel --dmenu --index --prompt`, `wofi --dmenu --insensitive --prompt`). The legacy `menu-select` (read labels on stdin, show them with the menu provider, print the chosen index; it served the legacy menu app) is not ported: nothing here uses it yet.
+```
+Runner.launch()                      open or toggle the launcher
+Runner.select( prompt, entries )     show [ { label, icon } ] in a menu, return the chosen position (0 = cancelled)
+```
+
+Which launcher answers is a setting, recorded in `~/.config/bxcachy/runner.json` (written atomically); the launcher and the menu provider are chosen separately. **Nothing here changes a keybinding or a desktop file** (`doctor` ends with `Shortcut ownership: unchanged`). `set` and `menu-set` are user settings that act at once (no `--yes`), like `tiling`.
+
+Providers are data in `RunnerProviders` (one descriptor each: `id`, `title`, `package`, `launch` argv, and `menu`: dmenu argv with `{prompt}`, `icons`, `returns`). Adding a launcher is adding one descriptor.
+
+| Provider | Launch | Menu (dmenu mode) | Icons | Choice comes back as | Package |
+|---|---|---|---|---|---|
+| `noctalia` (default on Hyprland) | `noctalia msg panel-toggle launcher` | none | | | with Noctalia |
+| `walker` | `walker` | `walker --dmenu` | no | label | Walker |
+| `rofi` (default menu) | `rofi -show drun` | `rofi -dmenu -i -show-icons -format i -p` | yes | index | `rofi` |
+| `fuzzel` | `fuzzel` | `fuzzel --dmenu --index --prompt` | yes | index | `fuzzel` |
+| `wofi` | `wofi --show drun` | `wofi --dmenu --insensitive --prompt` | no | label | `wofi` |
+| `vicinae` | `vicinae toggle` | `vicinae dmenu --prompt` | no | label | `vicinae-bin` (AUR) |
+| `krunner` | `krunner` | none | | | with KDE |
+| `system` | none (the desktop owns it) | none | | | |
+| `custom` | your `custom_command` | none | | | |
+
+`select` writes the labels (one per line, newlines inside a label become spaces) to a temporary file and runs the provider's command with it on stdin through `sh -c 'exec "$@" < "$f"'`. Providers that understand Rofi's extended dmenu protocol (`label` NUL `icon` US `name`) get icons; the others get plain labels. A non-zero exit, an empty answer, an unknown label or an index out of range is a cancel, never a wrong choice.
+
+```
+bxcachy runner list | show | doctor | launch [--json]
+bxcachy runner set P | menu-set P
+bxcachy runner launcher-command P JSON_ARGV | menu-command P JSON_ARGV     JSON argument arrays, {prompt} allowed
+bxcachy runner select JSON_ENTRIES [--prompt=TEXT] [--json]                prints the 0-based index; exit 1 cancelled, 4 menu cannot run
+```
+
+Commands are JSON argument arrays, never shell strings (a string, an empty array or an empty part exits 4). `list` marks the current choice with `*` (`--json` adds each provider's title, package, icon support and answer format). `doctor` shows the commands and whether each executable is on PATH. `launch` starts the launcher detached (exit 4 for `system` or a missing program). The wizard offers Noctalia, Walker, Rofi, Fuzzel and Wofi; Vicinae, KRunner and `custom` work from the command line. `hyprrunner` was dropped (no package found, 2026-11-10). Fuzzel and Wofi flags are from their man pages.
 
 ### 13.8 Tests and what is verified
 

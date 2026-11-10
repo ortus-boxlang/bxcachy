@@ -19,8 +19,8 @@ kde() { XDG_CURRENT_DESKTOP=KDE run "$@"; }
 # defaults and listing
 hypr "$binary" runner list | grep -q '^launcher: system \*noctalia walker rofi fuzzel wofi' || fail 'Hyprland defaults to the Noctalia launcher'
 kde "$binary" runner list | grep -q '^launcher: \*system noctalia' || fail 'KDE defaults to the system runner'
-hypr "$binary" runner list | grep -q '^menu: \*rofi walker fuzzel wofi vicinae' || fail 'Rofi is the default menu'
-hypr "$binary" runner list --json | jq -e '(.data.launchers | map(select(.current)) | .[0].id) == "noctalia" and (.data.menus | map(.id) == ["rofi","walker","fuzzel","wofi","vicinae"])' >/dev/null || fail 'list --json'
+hypr "$binary" runner list | grep -q '^menu: walker \*rofi fuzzel wofi vicinae' || fail 'Rofi is the default menu'
+hypr "$binary" runner list --json | jq -e '(.data.launchers | map(select(.current)) | .[0].id) == "noctalia" and (.data.menus | map(.id) == ["walker","rofi","fuzzel","wofi","vicinae"])' >/dev/null || fail 'list --json'
 
 # choices are saved at once (no --yes) and shown back
 hypr "$binary" runner set rofi | grep -q 'Runner provider: rofi' || fail 'set'
@@ -50,6 +50,21 @@ grep -q 'noctalia msg panel-toggle launcher' "$LOG" || fail 'the launcher comman
 hypr "$binary" runner set system >/dev/null
 [[ "$(code "$binary" runner launch)" == 4 ]] || fail 'launching the system runner exits 4'
 hypr "$binary" runner set vicinae >/dev/null; [[ "$(code "$binary" runner launch)" == 4 ]] || fail 'a missing launcher exits 4'
+
+# the menu abstraction: the same `runner select` call on every menu provider (fake dmenu programs stand in for them)
+for tool in walker fuzzel wofi vicinae; do printf '#!/usr/bin/env bash\ncat > /dev/null\necho "${DMENU_ANSWER:-}"\n' > "$tmp/bin/$tool"; chmod +x "$tmp/bin/$tool"; done
+printf '#!/usr/bin/env bash\ncat > "$LOG.menu"\necho "${DMENU_ANSWER:-}"\n' > "$tmp/bin/rofi"; chmod +x "$tmp/bin/rofi"
+entries='["Apps",{"label":"Settings","icon":"gear"},"Quit"]'
+pick() { DMENU_ANSWER="$1" hypr "$binary" runner select "$entries" --prompt=Menu; }
+for provider in rofi fuzzel; do hypr "$binary" runner menu-set $provider >/dev/null; [[ "$(pick 1)" == 1 ]] || fail "$provider: index answer"; done
+od -An -v -w512 -c "$LOG.menu" | tr -d ' \n' | grep -q 'Settings\\0icon037gear' || fail 'rofi was sent the icon protocol'
+for provider in wofi walker vicinae; do hypr "$binary" runner menu-set $provider >/dev/null; [[ "$(pick Settings)" == 1 ]] || fail "$provider: label answer"; done
+hypr "$binary" runner menu-set rofi >/dev/null
+DMENU_ANSWER=2 hypr "$binary" runner select "$entries" --json | jq -e '.ok and .data.index == 2' >/dev/null || fail 'select --json'
+DMENU_ANSWER="" hypr "$binary" runner select "$entries" >/dev/null && fail 'an empty answer is a cancel' || [[ $? == 1 ]] || fail 'cancel exits 1'
+[[ "$(code "$binary" runner select 'not json')" == 4 && "$(code "$binary" runner select '[]')" == 4 && "$(code "$binary" runner select '[{"icon":"x"}]')" == 4 ]] || fail 'bad entries exit 4'
+hypr "$binary" runner menu-set walker >/dev/null; rm "$tmp/bin/walker"; [[ "$(code "$binary" runner select "$entries")" == 4 ]] || fail 'a missing menu program exits 4'
+hypr "$binary" runner menu-set rofi >/dev/null
 
 # usage and bad state
 [[ "$(code "$binary" runner)" == 2 && "$(code "$binary" runner set)" == 2 && "$(code "$binary" runner list extra)" == 2 && "$(code "$binary" runner bogus)" == 2 ]] || fail 'usage exits 2'

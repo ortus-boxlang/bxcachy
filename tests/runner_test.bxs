@@ -3,7 +3,7 @@ failures = 0;
 function check( label, ok ) { if ( ok ) println( "ok   " & label ); else { println( "FAIL " & label ); failures++; } }
 r = new bxcachy.Runner();
 check( "legacy launcher providers are all there", r.launcherProviders().toList( "," ) == "system,noctalia,walker,rofi,fuzzel,wofi,krunner,vicinae,custom" );
-check( "menu providers", r.menuProviders().toList( "," ) == "rofi,walker,fuzzel,wofi,vicinae" );
+check( "menu providers", r.menuProviders().toList( "," ) == "walker,rofi,fuzzel,wofi,vicinae" );
 check( "default launcher on Hyprland is Noctalia", r.defaults( "Hyprland" ).provider == "noctalia" );
 check( "default launcher on KDE is the system runner", r.defaults( "KDE" ).provider == "system" && r.defaults( "KDE" ).menu_provider == "rofi" );
 cfg = r.defaults( "Hyprland" );
@@ -23,5 +23,32 @@ cfg = r.defaults( "KDE" ); cfg.menu_commands.vicinae = [ "test-menu", "--title",
 check( "a menu override takes {prompt} too", r.menuCommand( "vicinae", cfg, "My Apps" ).toList( "|" ) == "test-menu|--title|My Apps" );
 check( "argv validation: arrays of non-empty strings only", r.validArgv( [ "a", "b" ] ) && !r.validArgv( [] ) && !r.validArgv( "rofi -show drun" ) && !r.validArgv( [ "a", "" ] ) );
 check( "every provider with a package maps to a catalog app", r.catalogId( "rofi" ) == "rofi" && r.catalogId( "walker" ) == "walker" && r.catalogId( "vicinae" ) == "vicinae" && r.catalogId( "fuzzel" ) == "fuzzel" && r.catalogId( "wofi" ) == "wofi" && r.catalogId( "noctalia" ) == "" && r.catalogId( "system" ) == "" );
+// ---- the abstraction: one select() for every menu provider (a stub runner plays the launcher) ----
+reg = new bxcachy.RunnerProviders();
+check( "the registry lists every provider once, and the menu ones have a dmenu protocol", reg.ids().len() == 9 && reg.menuIds().toList( "," ) == "walker,rofi,fuzzel,wofi,vicinae" && reg.get( "rofi" ).menu.returns == "index" && reg.get( "wofi" ).menu.returns == "text" );
+check( "providers without a dmenu mode have an empty menu", structIsEmpty( reg.get( "noctalia" ).menu ) && structIsEmpty( reg.get( "krunner" ).menu ) );
+seen = { payload: "", argv: [] };
+function stub( answer ) {
+    return function( argv, timeout ) {
+        if ( argv[ 1 ] == "sh" && left( argv[ 3 ], 10 ) == "command -v" ) return { exitCode: 0, output: "", timeout: false };
+        seen.argv = argv; seen.payload = fileRead( argv[ 5 ] );
+        return { exitCode: answer == "CANCEL" ? 1 : 0, output: answer, timeout: false };
+    };
+}
+function sel( provider, answer, entries ) {
+    var cfg = new bxcachy.Runner().defaults( "Hyprland" ); cfg.menu_provider = provider;
+    return new bxcachy.Runner( "", stub( answer ) ).select( "Menu", entries, cfg );
+}
+entries = [ "Apps", { label: "Settings", icon: "gear" }, "Quit" ];
+check( "rofi: 0-based index in, 1-based position out; icon protocol sent", sel( "rofi", "1", entries ) == 2 && find( "Settings" & chr( 0 ) & "icon" & chr( 31 ) & "gear", seen.payload ) > 0 );
+check( "rofi gets the prompt and index format in its argv", seen.argv.toList( "|" ) contains "rofi|-dmenu|-i|-show-icons|-format|i|-p|Menu" );
+check( "fuzzel: index too, and it understands icons", sel( "fuzzel", "2", entries ) == 3 && find( chr( 31 ) & "gear", seen.payload ) > 0 );
+check( "wofi: the label comes back, no icon metadata is sent", sel( "wofi", "Quit", entries ) == 3 && find( chr( 0 ), seen.payload ) == 0 && find( "Settings", seen.payload ) > 0 );
+check( "walker: the label comes back", sel( "walker", "Apps", entries ) == 1 );
+check( "an unknown label or index is a cancel, not a wrong choice", sel( "wofi", "Nope", entries ) == 0 && sel( "rofi", "9", entries ) == 0 && sel( "rofi", "x", entries ) == 0 );
+check( "an empty answer or a non-zero exit is a cancel", sel( "rofi", "", entries ) == 0 && sel( "rofi", "CANCEL", entries ) == 0 );
+check( "the same call works on every provider (switching changes nothing for the caller)", sel( "rofi", "0", [ "A", "B" ] ) == 1 && sel( "fuzzel", "0", [ "A", "B" ] ) == 1 && sel( "wofi", "A", [ "A", "B" ] ) == 1 && sel( "walker", "A", [ "A", "B" ] ) == 1 );
+check( "a newline inside a label cannot split the entry", ( function() { sel( "wofi", "x", [ "Two" & chr( 10 ) & "lines" ] ); return listToArray( seen.payload, chr( 10 ) ).len() == 1; } )() );
+
 if ( failures > 0 ) { println( failures & " failed" ); exit( 1 ); }
 println( "all passed" );

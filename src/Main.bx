@@ -15,7 +15,7 @@ class {
         var config = new bxcachy.ConfigService();
         // One shared flag check for every command: unknown flags are usage errors and nothing runs.
         for ( var flag in args.options ) {
-            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo" ], flag ) ) {
+            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo" ], flag ) ) {
                 println( "Unknown option: --" & flag );
                 CLIExit( 2 );
             }
@@ -259,8 +259,8 @@ class {
           // set and menu-set are user settings that act at once (no --yes), like `tiling`.
           rnSub = p.len() >= 2 ? p[2] : "";
           rn = new bxcachy.Runner( cli );
-          rnUsage = "Usage: bxcachy runner list | show | doctor | launch | set PROVIDER | menu-set PROVIDER | launcher-command PROVIDER JSON_ARGV | menu-command PROVIDER JSON_ARGV [--json]";
-          rnArity = { list: 2, show: 2, doctor: 2, launch: 2, set: 3, "menu-set": 3, "launcher-command": 4, "menu-command": 4 };
+          rnUsage = "Usage: bxcachy runner list | show | doctor | launch | select JSON_ENTRIES [--prompt=TEXT] | set PROVIDER | menu-set PROVIDER | launcher-command PROVIDER JSON_ARGV | menu-command PROVIDER JSON_ARGV [--json]";
+          rnArity = { list: 2, show: 2, doctor: 2, launch: 2, select: 3, set: 3, "menu-set": 3, "launcher-command": 4, "menu-command": 4 };
           if ( !structKeyExists( rnArity, rnSub ) || p.len() != rnArity[ rnSub ] ) {
            println( rnUsage );
            CLIExit( 2 );
@@ -268,7 +268,7 @@ class {
           try {
            if ( rnSub == "list" ) {
             rnCfg = rn.load();
-            if ( asJson ) println( cli.envelope( "runner list", 0, { launchers: rn.launcherProviders().map( function( x ) { return { id: x, current: x == rnCfg.provider }; } ), menus: rn.menuProviders().map( function( x ) { return { id: x, current: x == rnCfg.menu_provider }; } ) } ) );
+            if ( asJson ) println( cli.envelope( "runner list", 0, { launchers: rn.launcherProviders().map( function( x ) { return { id: x, current: x == rnCfg.provider, title: rn.registry().get( x ).title, package: rn.registry().get( x ).package }; } ), menus: rn.menuProviders().map( function( x ) { var m = rn.registry().get( x ).menu; return { id: x, current: x == rnCfg.menu_provider, icons: m.icons, returns: m.returns }; } ) } ) );
             else {
              println( "launcher: " & rn.launcherProviders().map( function( x ) { return ( x == rnCfg.provider ? "*" : "" ) & x; } ).toList( " " ) );
              println( "menu: " & rn.menuProviders().map( function( x ) { return ( x == rnCfg.menu_provider ? "*" : "" ) & x; } ).toList( " " ) );
@@ -298,6 +298,21 @@ class {
             if ( asJson ) println( cli.envelope( "runner launch", rnLaunch.ok ? 0 : 4, rnLaunch ) );
             else if ( !rnLaunch.ok ) println( "error: " & rnLaunch.error );
             CLIExit( rnLaunch.ok ? 0 : 4 );
+           }
+           if ( rnSub == "select" ) {
+            // The menu abstraction: entries as a JSON array of labels or { label, icon }. Prints the 0-based index of the choice;
+            // exit 1 when cancelled, 4 when the menu cannot run or the entries are invalid.
+            try { rnEntries = jsonDeserialize( p[3] ); } catch ( any e ) { rnEntries = ""; }
+            rnOk = isArray( rnEntries ) && rnEntries.len() > 0;
+            if ( rnOk ) for ( rnE in rnEntries ) if ( !( isSimpleValue( rnE ) && len( rnE ) ) && !( isStruct( rnE ) && structKeyExists( rnE, "label" ) && len( rnE.label ) ) ) rnOk = false;
+            if ( !rnOk ) {
+             println( "error: entries must be a JSON array of labels or { label, icon } objects, for example [""Apps"",""Settings""]" );
+             CLIExit( 4 );
+            }
+            rnPick = rn.select( args.options.prompt ?: "BxCachy", rnEntries );
+            if ( rnPick == 0 ) CLIExit( 1 );
+            if ( asJson ) println( cli.envelope( "runner select", 0, { index: rnPick - 1 } ) ); else println( rnPick - 1 );
+            CLIExit( 0 );
            }
            rnArgv = [];
            if ( rnSub == "launcher-command" || rnSub == "menu-command" ) {
