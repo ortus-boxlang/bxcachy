@@ -15,7 +15,7 @@ class {
         var config = new bxcachy.ConfigService();
         // One shared flag check for every command: unknown flags are usage errors and nothing runs.
         for ( var flag in args.options ) {
-            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "pages", "out", "answers", "demo" ], flag ) ) {
+            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "terminal", "default", "also", "pages", "out", "answers", "demo" ], flag ) ) {
                 println( "Unknown option: --" & flag );
                 CLIExit( 2 );
             }
@@ -234,10 +234,16 @@ class {
            CLIExit( st.status( asJson ) );
           }
           if ( setupSub == "hyprland" && p.len() == 2 ) {
-           CLIExit( st.hyprland( {}, setupYes, setupDry, asJson ) );
+           CLIExit( st.hyprland( { terminal: args.options.terminal ?: "" }, setupYes, setupDry, asJson ) );
           }
           if ( setupSub == "undo" && p.len() == 3 && p[3] == "hyprland" ) {
            CLIExit( st.undoHyprland( setupYes, setupDry, asJson ) );
+          }
+          if ( setupSub == "terminal" && p.len() == 2 ) {
+           CLIExit( st.terminal( { default: args.options.default ?: "", also: args.options.also ?: "" }, setupYes, setupDry, asJson ) );
+          }
+          if ( setupSub == "shell" && p.len() == 2 ) {
+           CLIExit( st.shell( { shell: args.options.shell ?: "" }, setupYes, setupDry, asJson ) );
           }
           if ( setupSub == "xremap" && p.len() == 2 ) {
            CLIExit( st.xremap( { build: args.options.build ?: "" }, setupYes, setupDry, asJson ) );
@@ -245,7 +251,7 @@ class {
           if ( setupSub == "undo" && p.len() == 3 && p[3] == "xremap" ) {
            CLIExit( st.undoXremap( setupYes, setupDry, asJson ) );
           }
-          println( "Usage: bxcachy setup plasma [--keys | --undo-keys] | hyprland | xremap [--build=hypr|kde] | undo plasma|hyprland|xremap | status [--yes] [--dry-run] [--json]" );
+          println( "Usage: bxcachy setup plasma [--keys | --undo-keys] | hyprland [--terminal=ghostty|kitty|alacritty|foot|konsole] | terminal [--default=ghostty] [--also=a,b] | shell [--shell=zsh|fish|bash] | xremap [--build=hypr|kde] | undo plasma|hyprland|xremap | status [--yes] [--dry-run] [--json]" );
           CLIExit( 2 );
           break;
          case "wizard":

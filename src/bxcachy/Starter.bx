@@ -2,8 +2,9 @@
 // Everything goes through the config service (backup, journal). Files the user already has are never overwritten:
 // a changed Noctalia file is kept as it is, and hyprland.lua is written only when none exists.
 class Starter {
-    function init( quiet = false ) {
+    function init( quiet = false, terminal = "ghostty" ) {
         variables.config = new bxcachy.ConfigService().quiet( arguments.quiet );
+        variables.terminal = arguments.terminal;
         return this;
     }
 
@@ -12,7 +13,7 @@ class Starter {
         var cfg = variables.config.cfgHome();
         var home = getSystemSetting( "HOME", "" );
         var out = new bxcachy.NoctaliaConfig().entries( cfg, home );
-        out.append( { name: "hyprland", target: cfg & "/hypr/hyprland.lua", mode: "644", content: new bxcachy.TemplateData().text( "hyprland.lua" ) } );
+        out.append( { name: "hyprland", target: cfg & "/hypr/hyprland.lua", mode: "644", content: replace( new bxcachy.TemplateData().text( "hyprland.lua" ), 'local terminal    = "kitty"', 'local terminal    = "' & variables.terminal & '"' ) } );
         return out;
     }
 

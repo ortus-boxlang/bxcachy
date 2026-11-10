@@ -1,0 +1,87 @@
+# BxCachy starter Starship prompt. Written once by `bxcachy setup shell`; from here on it is yours.
+# Reference: https://starship.rs/config/   Needs a Nerd Font in the terminal (BxCachy installs JetBrains Mono Nerd).
+"$schema" = "https://starship.rs/config-schema.json"
+
+add_newline = true
+command_timeout = 800
+
+format = """
+[╭─](#51576d)$os$username$hostname$directory$git_branch$git_status$java$php$python$golang$rust$nodejs$cmd_duration
+[╰─](#51576d)$character"""
+
+[character]
+success_symbol = "[❯](bold #00ff78)"
+error_symbol = "[❯](bold #e78284)"
+vimcmd_symbol = "[❮](bold #00dbff)"
+
+[os]
+disabled = false
+style = "bold #00dbff"
+format = "[$symbol]($style) "
+
+[os.symbols]
+Arch = "󰣇"
+Linux = ""
+Macos = ""
+
+[username]
+show_always = false
+style_user = "bold #a5adce"
+style_root = "bold #e78284"
+format = "[$user]($style) "
+
+[hostname]
+ssh_only = true
+style = "bold #a5adce"
+format = "on [$hostname]($style) "
+
+[directory]
+style = "bold #00dbff"
+truncation_length = 3
+truncate_to_repo = true
+read_only = " 󰌾"
+format = "[$path]($style)[$read_only]($style) "
+
+[git_branch]
+symbol = " "
+style = "bold #00ff78"
+format = "[$symbol$branch]($style) "
+
+[git_status]
+style = "#e5c890"
+format = "([$all_status$ahead_behind]($style) )"
+
+[cmd_duration]
+min_time = 2000
+style = "#737994"
+format = "[took $duration]($style) "
+
+[java]
+symbol = " "
+style = "#e78284"
+format = "[$symbol($version)]($style) "
+
+[php]
+symbol = " "
+style = "#8caaee"
+format = "[$symbol($version)]($style) "
+
+[python]
+symbol = " "
+style = "#e5c890"
+format = "[$symbol($version)]($style) ($virtualenv )"
+
+[golang]
+symbol = " "
+style = "#00dbff"
+format = "[$symbol($version)]($style) "
+
+[rust]
+symbol = " "
+style = "#ef9f76"
+format = "[$symbol($version)]($style) "
+
+[nodejs]
+symbol = " "
+style = "#00ff78"
+format = "[$symbol($version)]($style) "

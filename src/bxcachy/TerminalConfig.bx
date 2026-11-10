@@ -1,0 +1,63 @@
+// Terminals BxCachy offers. Ghostty is the default; the others are optional (all official Arch packages).
+// Each terminal that has a config file gets a starter written once with the Nerd Font, so the Starship prompt shows its
+// symbols in whichever terminal is used. Files go through the config service (never overwritten once they exist).
+class TerminalConfig {
+    function init( quiet = false ) {
+        variables.config = new bxcachy.ConfigService().quiet( arguments.quiet );
+        return this;
+    }
+
+    function defaultTerminal() { return "ghostty"; }
+    function fontFamily() { return "JetBrainsMono Nerd Font"; }
+
+    // id, package, the command that starts it, and its config file relative to ~/.config ("" when it has none).
+    function terminals() {
+        return [
+            { id: "ghostty", pkg: "ghostty", cmd: "ghostty", config: "ghostty/config" },
+            { id: "kitty", pkg: "kitty", cmd: "kitty", config: "kitty/kitty.conf" },
+            { id: "alacritty", pkg: "alacritty", cmd: "alacritty", config: "alacritty/alacritty.toml" },
+            { id: "foot", pkg: "foot", cmd: "foot", config: "foot/foot.ini" },
+            { id: "konsole", pkg: "konsole", cmd: "konsole", config: "" }
+        ];
+    }
+
+    function ids() { return terminals().map( function( t ) { return t.id; } ); }
+
+    // The terminal struct for an id, or an empty struct.
+    function find( id ) {
+        for ( var t in terminals() ) if ( t.id == arguments.id ) return t;
+        return {};
+    }
+
+    // The starter config text for a terminal ("" when it has none).
+    function starter( id ) {
+        var f = fontFamily();
+        switch ( arguments.id ) {
+            case "ghostty":   return "# BxCachy starter. Written once; from here on it is yours." & chr( 10 ) & "font-family = " & f & chr( 10 );
+            case "kitty":     return "# BxCachy starter. Written once; from here on it is yours." & chr( 10 ) & "font_family " & f & chr( 10 );
+            case "alacritty": return "# BxCachy starter. Written once; from here on it is yours." & chr( 10 ) & "[font.normal]" & chr( 10 ) & 'family = "' & f & '"' & chr( 10 );
+            case "foot":      return "# BxCachy starter. Written once; from here on it is yours." & chr( 10 ) & "[main]" & chr( 10 ) & "font=" & f & ":size=11" & chr( 10 );
+        }
+        return "";
+    }
+
+    // Config entries (name, target, mode, content) for a list of terminal ids.
+    function entries( ids, cfgHome ) {
+        var out = [];
+        for ( var id in arguments.ids ) {
+            var t = find( id );
+            if ( structKeyExists( t, "id" ) && len( t.config ) ) out.append( { name: "terminal-" & id, target: arguments.cfgHome & "/" & t.config, mode: "644", content: starter( id ) } );
+        }
+        return out;
+    }
+
+    // Writes the missing starter files. Returns { written, kept, failed }.
+    function apply( ids ) {
+        var out = { written: [], kept: [], failed: [] };
+        for ( var e in entries( arguments.ids, variables.config.cfgHome() ) ) {
+            if ( variables.config.configState( e ) != "missing" ) { out.kept.append( e.name ); continue; }
+            if ( variables.config.configWrite( e, e.content, "apply", true, false ) == 0 ) out.written.append( e.name ); else out.failed.append( e.name );
+        }
+        return out;
+    }
+}

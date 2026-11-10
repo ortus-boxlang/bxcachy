@@ -97,9 +97,10 @@ class SetupPlan {
     // by CachyOS). Noctalia is the native `noctalia` package, the one CachyOS's own meta-package depends on. Not used: the Quickshell
     // variant `noctalia-shell` + `noctalia-qs` (the fork conflicts with `quickshell`) and `cachyos-hypr-noctalia`, which provides
     // and conflicts with `cachyos-desktop-settings` and could remove it from a KDE install.
-    function hyprlandPackages() {
+    function hyprlandPackages( terminal = "ghostty" ) {
+        var t = new bxcachy.TerminalConfig().find( arguments.terminal );
         return [ "hyprland", "noctalia", "uwsm", "hyprlock", "hypridle", "xdg-desktop-portal-hyprland", "hyprpolkitagent",
-                 "qt6ct", "nwg-look", "hyprpicker", "grim", "slurp", "wl-clipboard", "brightnessctl", "kitty",
+                 "qt6ct", "nwg-look", "hyprpicker", "grim", "slurp", "wl-clipboard", "brightnessctl", structKeyExists( t, "pkg" ) ? t.pkg : "ghostty",
                  "adw-gtk-theme", "noto-fonts", "noto-fonts-emoji" ];
     }
 
@@ -121,7 +122,9 @@ class SetupPlan {
         var out = { target: "hyprland", errors: [], warnings: [], notes: [], steps: [], added: [] };
         var pre = hyprlandPreflight( facts );
         out.errors = pre.errors; out.warnings = pre.warnings;
-        var missing = hyprlandPackages().filter( function( p ) { return !structKeyExists( facts.installed, p ); } );
+        var term = ( structKeyExists( arguments.opts, "terminal" ) && len( arguments.opts.terminal ) ) ? arguments.opts.terminal : new bxcachy.TerminalConfig().defaultTerminal();
+        if ( !arrayFind( new bxcachy.TerminalConfig().ids(), term ) ) out.errors.append( "Unknown terminal: " & term & " (use " & new bxcachy.TerminalConfig().ids().toList( ", " ) & ")" );
+        var missing = hyprlandPackages( term ).filter( function( p ) { return !structKeyExists( facts.installed, p ); } );
         if ( missing.len() && !facts.hasSudo ) out.errors.append( "sudo is required to install packages but was not found" );
         if ( out.errors.len() ) return out;
         if ( missing.len() ) {
@@ -131,9 +134,64 @@ class SetupPlan {
             out.added = missing;
         } else out.notes.append( "Hyprland and Noctalia are already installed." );
         out.steps.append( { id: "images", title: "write the BxCachy logo and wallpapers to ~/Pictures/BxCachy (missing ones only)", kind: "assets", commands: [] } );
-        out.steps.append( { id: "starter", title: "write the starter Noctalia config and palette, and hyprland.lua if you have none (existing files are kept)", kind: "starter", commands: [] } );
+        out.steps.append( { id: "starter", title: "write the starter Noctalia config and palette, and hyprland.lua (" & term & " on Super+Enter) if you have none (existing files are kept)", kind: "starter", terminal: term, commands: [] } );
         out.steps.append( { id: "keys", title: "write the shared shortcut files (xremap config and service unit, Hyprland module, Plasma Log Out)", kind: "keys", commands: [] } );
         out.notes.append( "Log out and pick Hyprland at the login screen. KDE Plasma is untouched. Run `bxcachy setup xremap` for the Cmd-style keys." );
+        return out;
+    }
+
+    // The steps for `setup shell`: the missing packages (one sudo pacman call), the config files, and the login shell.
+    // opts.shell: zsh (default), fish or bash. Starship is installed and configured for whichever shell is chosen.
+    function shell( facts, opts ) {
+        var sc = new bxcachy.ShellConfig();
+        var sh = ( structKeyExists( arguments.opts, "shell" ) && len( arguments.opts.shell ) ) ? arguments.opts.shell : sc.defaultShell();
+        var out = { target: "shell", errors: [], warnings: [], notes: [], steps: [], added: [] };
+        if ( !arrayFind( sc.shells(), sh ) ) out.errors.append( "Unknown shell: " & sh & " (use " & sc.shells().toList( ", " ) & ")" );
+        if ( arguments.facts.isRoot ) out.errors.append( "Run as a regular user; sudo is used only for the steps shown in the plan" );
+        if ( !arguments.facts.hasPacman ) out.errors.append( "BxCachy requires Arch Linux or CachyOS (pacman was not found)" );
+        else if ( !arrayFind( [ "cachyos", "arch" ], arguments.facts.os ) ) out.errors.append( "Unsupported OS: " & ( len( arguments.facts.os ) ? arguments.facts.os : "unknown" ) & " (CachyOS and Arch Linux only)" );
+        if ( out.errors.len() ) return out;
+        var missing = sc.packages( sh ).filter( function( p ) { return !structKeyExists( facts.installed, p ); } );
+        var loginPath = sc.shellPath( sh );
+        var needLogin = arguments.facts.loginShell != loginPath;
+        if ( ( missing.len() || needLogin ) && !arguments.facts.hasSudo ) out.errors.append( "sudo is required but was not found" );
+        if ( out.errors.len() ) return out;
+        if ( missing.len() ) {
+            var pac = [ "sudo", "pacman", "-S", "--needed", "--noconfirm" ];
+            for ( var m in missing ) pac.append( m );
+            out.steps.append( { id: "packages", title: "install " & missing.len() & " packages (" & missing.toList( " " ) & ")", kind: "pacman", commands: [ pac ] } );
+            out.added = missing;
+        } else out.notes.append( "The " & sh & " packages and Starship are already installed." );
+        out.steps.append( { id: "config", title: "write the Starship config (once) and the " & sh & " setup with Starship, fzf and zoxide" & ( sh == "zsh" ? ", autosuggestions and syntax highlighting" : "" ) & " (your rc file keeps its content, one block is added)", kind: "shell", shell: sh, commands: [] } );
+        if ( needLogin ) out.steps.append( { id: "login", title: "make " & sh & " your login shell", kind: "pacman", commands: [ [ "sudo", "chsh", "-s", loginPath, arguments.facts.user ] ] } );
+        out.notes.append( "Open a new terminal to see the prompt. It needs a Nerd Font in the terminal (BxCachy installs JetBrains Mono Nerd)." );
+        return out;
+    }
+
+    // The steps for `setup terminal`: installs the default terminal and any extras, writes their starter configs (font).
+    // opts.default (ghostty unless given) and opts.also (comma separated ids).
+    function terminal( facts, opts ) {
+        var tc = new bxcachy.TerminalConfig();
+        var def = ( structKeyExists( arguments.opts, "default" ) && len( arguments.opts.default ) ) ? arguments.opts.default : tc.defaultTerminal();
+        var also = ( structKeyExists( arguments.opts, "also" ) && len( arguments.opts.also ) ) ? listToArray( arguments.opts.also, "," ) : [];
+        var out = { target: "terminal", errors: [], warnings: [], notes: [], steps: [], added: [] };
+        var chosen = [ def ];
+        for ( var a in also ) if ( !arrayFind( chosen, a ) ) chosen.append( a );
+        for ( var c in chosen ) if ( !arrayFind( tc.ids(), c ) ) out.errors.append( "Unknown terminal: " & c & " (use " & tc.ids().toList( ", " ) & ")" );
+        if ( arguments.facts.isRoot ) out.errors.append( "Run as a regular user; sudo is used only for the pacman step shown in the plan" );
+        if ( !arguments.facts.hasPacman ) out.errors.append( "BxCachy requires Arch Linux or CachyOS (pacman was not found)" );
+        if ( out.errors.len() ) return out;
+        var missing = chosen.map( function( c ) { return tc.find( c ).pkg; } ).filter( function( p ) { return !structKeyExists( facts.installed, p ); } );
+        if ( missing.len() && !arguments.facts.hasSudo ) out.errors.append( "sudo is required to install packages but was not found" );
+        if ( out.errors.len() ) return out;
+        if ( missing.len() ) {
+            var pac = [ "sudo", "pacman", "-S", "--needed", "--noconfirm" ];
+            for ( var m in missing ) pac.append( m );
+            out.steps.append( { id: "packages", title: "install " & missing.len() & " packages (" & missing.toList( " " ) & ")", kind: "pacman", commands: [ pac ] } );
+            out.added = missing;
+        } else out.notes.append( "The chosen terminals are already installed." );
+        out.steps.append( { id: "config", title: "write a starter config with the Nerd Font for " & chosen.toList( ", " ) & " (existing files are kept)", kind: "terminal", terminals: chosen, commands: [] } );
+        out.notes.append( "Default terminal: " & def & ". Hyprland's Super+Enter and the Cmd-style keys use it; `setup hyprland --terminal=" & def & "` sets it in a new hyprland.lua." );
         return out;
     }
 

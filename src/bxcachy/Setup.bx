@@ -73,11 +73,25 @@ class Setup {
             installed: new bxcachy.Packages( variables.cli, {} ).installedNames(),
             hyprkwinInstalled: hyprkwinInstalled(),
             user: getSystemSetting( "USER", "" ),
+            loginShell: getSystemSetting( "SHELL", "" ),
             hasYay: variables.inst.hasCommand( "yay" ),
             groups: listToArray( trim( variables.inst.exec( [ "id", "-nG" ], 10 ).output ), " " ),
             udevRule: fileExists( new bxcachy.SetupPlan().udevRulePath() ),
             workDir: reReplace( getTempDirectory(), "/+$", "" ) & "/bxcachy-hyprkwin-" & left( createUUID(), 8 )
         };
+    }
+
+    // `setup terminal [--default=ghostty] [--also=kitty,foot]`
+    function terminal( opts, yes, dryRun, asJson ) {
+        var f = facts();
+        var plan = new bxcachy.SetupPlan().terminal( f, opts );
+        return execute( "setup terminal", plan, f, yes, dryRun, asJson );
+    }
+
+    // `setup shell [--shell=zsh|fish|bash]`
+    function shell( opts, yes, dryRun, asJson ) {
+        var f = facts();
+        return execute( "setup shell", new bxcachy.SetupPlan().shell( f, opts ), f, yes, dryRun, asJson );
     }
 
     // `setup plasma [--keys | --undo-keys]`
@@ -186,8 +200,18 @@ class Setup {
             if ( step.kind == "assets" ) {
                 try { new bxcachy.Assets( variables.cli, variables.inst.runner() ).writeMissing(); } catch ( any e ) { problem = "failed: " & e.message; }
             }
+            if ( step.kind == "shell" ) {
+                var sh = new bxcachy.ShellConfig( asJson ).apply( step.shell );
+                if ( sh.failed.len() ) problem = "failed (" & sh.failed.toList( ", " ) & ")";
+                else if ( !asJson ) println( "shell config: wrote " & ( sh.written.len() ? sh.written.toList( ", " ) : "nothing" ) & "; kept " & ( sh.kept.len() ? sh.kept.toList( ", " ) : "nothing" ) );
+            }
+            if ( step.kind == "terminal" ) {
+                var tr = new bxcachy.TerminalConfig( asJson ).apply( step.terminals );
+                if ( tr.failed.len() ) problem = "failed (" & tr.failed.toList( ", " ) & ")";
+                else if ( !asJson ) println( "terminal configs: wrote " & ( tr.written.len() ? tr.written.toList( ", " ) : "nothing" ) & "; kept " & ( tr.kept.len() ? tr.kept.toList( ", " ) : "nothing" ) );
+            }
             if ( step.kind == "starter" ) {
-                var st = new bxcachy.Starter( asJson ).apply();
+                var st = new bxcachy.Starter( asJson, structKeyExists( step, "terminal" ) ? step.terminal : "ghostty" ).apply();
                 if ( st.failed.len() ) problem = "failed (" & st.failed.toList( ", " ) & ")";
                 else if ( !asJson ) println( "starter configs: wrote " & ( st.written.len() ? st.written.toList( ", " ) : "nothing" ) & "; kept " & ( st.kept.len() ? st.kept.toList( ", " ) : "nothing" ) );
             }

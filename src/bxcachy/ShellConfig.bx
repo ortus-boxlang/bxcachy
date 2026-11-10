@@ -1,0 +1,77 @@
+// The shell setup `setup shell` puts in place: Starship (one prompt for every shell) and the init for the chosen shell.
+// zsh (the default) gets the packaged plugins (autosuggestions, syntax highlighting, completions) plus fzf and zoxide;
+// fish and bash get fzf, zoxide and Starship. Everything goes through the config service (backup, journal).
+//   ~/.config/starship.toml              starter, written once (yours afterwards)
+//   ~/.config/bxcachy/shell.<zsh|bash>   managed init, sourced from ~/.zshrc / ~/.bashrc by one marked block
+//   ~/.config/fish/conf.d/bxcachy.fish   managed init (fish loads conf.d on its own, no rc edit)
+// The rc file is never replaced: the block is appended once, and only when the marker is missing.
+class ShellConfig {
+    function init( quiet = false ) {
+        variables.config = new bxcachy.ConfigService().quiet( arguments.quiet );
+        return this;
+    }
+
+    function shells() { return [ "zsh", "fish", "bash" ]; }
+    function defaultShell() { return "zsh"; }
+
+    // The packages the shell setup needs for a shell (all official Arch packages).
+    function packages( shell ) {
+        var out = arguments.shell == "zsh" ? [ "zsh", "zsh-autosuggestions", "zsh-syntax-highlighting", "zsh-completions" ] : ( arguments.shell == "fish" ? [ "fish" ] : [] );
+        for ( var p in [ "starship", "fzf", "zoxide" ] ) out.append( p );
+        return out;
+    }
+
+    // The login shell program for chsh.
+    function shellPath( shell ) { return "/usr/bin/" & arguments.shell; }
+
+    function markStart() { return "# >>> bxcachy shell >>>"; }
+    function markEnd() { return "# <<< bxcachy shell <<<"; }
+
+    // The block that loads the managed init from an rc file (zsh, bash).
+    function rcBlock( shell, cfgHome ) {
+        return markStart() & chr( 10 )
+            & '[ -r "' & arguments.cfgHome & '/bxcachy/shell.' & arguments.shell & '" ] && source "' & arguments.cfgHome & '/bxcachy/shell.' & arguments.shell & '"' & chr( 10 )
+            & markEnd() & chr( 10 );
+    }
+
+    // rcText with the block appended when it is not there yet (unchanged when it is).
+    function withBlock( rcText, shell, cfgHome ) {
+        if ( find( markStart(), arguments.rcText ) ) return arguments.rcText;
+        var base = arguments.rcText;
+        if ( len( base ) && right( base, 1 ) != chr( 10 ) ) base &= chr( 10 );
+        return base & ( len( base ) ? chr( 10 ) : "" ) & rcBlock( arguments.shell, arguments.cfgHome );
+    }
+
+    // The files in the config service entry shape (name, target, mode, content). rcText is the current ~/.zshrc or
+    // ~/.bashrc ("" when there is none); pure, so it is unit tested.
+    function entries( shell, cfgHome, home, rcText = "" ) {
+        var td = new bxcachy.TemplateData();
+        var out = [ { name: "starship", target: arguments.cfgHome & "/starship.toml", mode: "644", content: td.text( "starship.toml" ), once: true } ];
+        if ( arguments.shell == "fish" ) {
+            out.append( { name: "shell-fish", target: arguments.cfgHome & "/fish/conf.d/bxcachy.fish", mode: "644", content: td.text( "shell.fish" ), once: false } );
+        } else {
+            out.append( { name: "shell-" & arguments.shell, target: arguments.cfgHome & "/bxcachy/shell." & arguments.shell, mode: "644", content: td.text( "shell." & arguments.shell ), once: false } );
+            var rc = arguments.shell == "zsh" ? ".zshrc" : ".bashrc";
+            out.append( { name: "rc-" & arguments.shell, target: arguments.home & "/" & rc, mode: "644", content: withBlock( arguments.rcText, arguments.shell, arguments.cfgHome ), once: false, rc: true } );
+        }
+        return out;
+    }
+
+    // Writes the files. Returns { written, kept, failed } (entry names). The starter is written only when missing; the
+    // managed init is rewritten when clean and kept when the user changed it; the rc file gets the block once.
+    function apply( shell ) {
+        var cfg = variables.config.cfgHome();
+        var home = getSystemSetting( "HOME", "" );
+        var rcFile = home & "/" & ( arguments.shell == "zsh" ? ".zshrc" : ".bashrc" );
+        var rcText = ( arguments.shell != "fish" && fileExists( rcFile ) ) ? fileRead( rcFile ) : "";
+        var out = { written: [], kept: [], failed: [] };
+        for ( var e in entries( arguments.shell, cfg, home, rcText ) ) {
+            var st = variables.config.configState( e );
+            if ( e.once && st != "missing" ) { out.kept.append( e.name ); continue; }
+            if ( structKeyExists( e, "rc" ) && rcText == e.content ) { out.kept.append( e.name ); continue; }
+            if ( !e.once && !structKeyExists( e, "rc" ) && ( st == "drifted" || st == "blocked" ) ) { out.kept.append( e.name ); continue; }
+            if ( variables.config.configWrite( e, e.content, "apply", true, false ) == 0 ) out.written.append( e.name ); else out.failed.append( e.name );
+        }
+        return out;
+    }
+}

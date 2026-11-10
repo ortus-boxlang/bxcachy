@@ -220,6 +220,134 @@ hl.window_rule({
 ------------------------
 -- Noctalia autostart and panel keys, the Alt+Tab switcher, logout. Managed by `bxcachy keys apply`.
 require("bxcachy")' & chr( 10 );
+            case "starship.toml":
+                return '## BxCachy starter Starship prompt. Written once by `bxcachy setup shell`; from here on it is yours.
+## Reference: https://starship.rs/config/   Needs a Nerd Font in the terminal (BxCachy installs JetBrains Mono Nerd).
+"$schema" = "https://starship.rs/config-schema.json"
+
+add_newline = true
+command_timeout = 800
+
+format = """
+[╭─](##51576d)$os$username$hostname$directory$git_branch$git_status$java$php$python$golang$rust$nodejs$cmd_duration
+[╰─](##51576d)$character"""
+
+[character]
+success_symbol = "[❯](bold ##00ff78)"
+error_symbol = "[❯](bold ##e78284)"
+vimcmd_symbol = "[❮](bold ##00dbff)"
+
+[os]
+disabled = false
+style = "bold ##00dbff"
+format = "[$symbol]($style) "
+
+[os.symbols]
+Arch = "󰣇"
+Linux = ""
+Macos = ""
+
+[username]
+show_always = false
+style_user = "bold ##a5adce"
+style_root = "bold ##e78284"
+format = "[$user]($style) "
+
+[hostname]
+ssh_only = true
+style = "bold ##a5adce"
+format = "on [$hostname]($style) "
+
+[directory]
+style = "bold ##00dbff"
+truncation_length = 3
+truncate_to_repo = true
+read_only = " 󰌾"
+format = "[$path]($style)[$read_only]($style) "
+
+[git_branch]
+symbol = " "
+style = "bold ##00ff78"
+format = "[$symbol$branch]($style) "
+
+[git_status]
+style = "##e5c890"
+format = "([$all_status$ahead_behind]($style) )"
+
+[cmd_duration]
+min_time = 2000
+style = "##737994"
+format = "[took $duration]($style) "
+
+[java]
+symbol = " "
+style = "##e78284"
+format = "[$symbol($version)]($style) "
+
+[php]
+symbol = " "
+style = "##8caaee"
+format = "[$symbol($version)]($style) "
+
+[python]
+symbol = " "
+style = "##e5c890"
+format = "[$symbol($version)]($style) ($virtualenv )"
+
+[golang]
+symbol = " "
+style = "##00dbff"
+format = "[$symbol($version)]($style) "
+
+[rust]
+symbol = " "
+style = "##ef9f76"
+format = "[$symbol($version)]($style) "
+
+[nodejs]
+symbol = " "
+style = "##00ff78"
+format = "[$symbol($version)]($style) "' & chr( 10 );
+            case "shell.zsh":
+                return '## BxCachy shell setup for zsh (managed by `bxcachy setup shell`; your own settings belong in ~/.zshrc).
+## Plugins come from pacman (zsh-autosuggestions, zsh-syntax-highlighting, zsh-completions), not from a plugin manager.
+HISTFILE="${HISTFILE:-$HOME/.zsh_history}"
+HISTSIZE=50000
+SAVEHIST=50000
+setopt HIST_IGNORE_ALL_DUPS HIST_REDUCE_BLANKS SHARE_HISTORY AUTO_CD INTERACTIVE_COMMENTS
+
+autoload -Uz compinit && compinit
+zstyle '':completion:*'' menu select
+zstyle '':completion:*'' matcher-list ''m:{a-z}={A-Za-z}''
+
+[[ -r /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh ]] && source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
+command -v fzf >/dev/null && source <(fzf --zsh)
+command -v zoxide >/dev/null && eval "$(zoxide init zsh)"
+## syntax highlighting must be loaded after everything that binds keys or widgets
+[[ -r /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]] && source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+## Starship prompt (the same prompt in every shell; config: ~/.config/starship.toml)
+command -v starship >/dev/null && eval "$(starship init zsh)"' & chr( 10 );
+            case "shell.bash":
+                return '## BxCachy shell setup for bash (managed by `bxcachy setup shell`; your own settings belong in ~/.bashrc).
+HISTSIZE=50000
+HISTFILESIZE=50000
+HISTCONTROL=ignoreboth:erasedups
+shopt -s histappend checkwinsize autocd 2>/dev/null
+
+[[ -r /usr/share/bash-completion/bash_completion ]] && source /usr/share/bash-completion/bash_completion
+command -v fzf >/dev/null && eval "$(fzf --bash)"
+command -v zoxide >/dev/null && eval "$(zoxide init bash)"
+## Starship prompt (the same prompt in every shell; config: ~/.config/starship.toml)
+command -v starship >/dev/null && eval "$(starship init bash)"' & chr( 10 );
+            case "shell.fish":
+                return '## BxCachy shell setup for fish (managed by `bxcachy setup shell`; your own settings belong in ~/.config/fish/config.fish).
+## Fish has autosuggestions, syntax highlighting and completions built in.
+if status is-interactive
+    command -q fzf; and fzf --fish | source
+    command -q zoxide; and zoxide init fish | source
+    ## Starship prompt (the same prompt in every shell; config: ~/.config/starship.toml)
+    command -q starship; and starship init fish | source
+end' & chr( 10 );
         }
         return "";
     }

@@ -224,6 +224,9 @@ Builds on sections 2 to 4 (mutation rules, exit codes, `--json`), the config ser
 bxcachy setup hyprland [--yes] [--dry-run] [--json]    packages, images, starter configs, shortcut files
 bxcachy setup plasma   [--yes] [--dry-run] [--json]    HyprKwin tiling on KDE Plasma
 bxcachy setup plasma --keys | --undo-keys              hand Plasma's clashing keys over / back
+bxcachy setup hyprland --terminal=ghostty|kitty|alacritty|foot|konsole   Super+Enter terminal (ghostty default)
+bxcachy setup terminal [--default=ghostty] [--also=kitty,foot,...]       install terminals, starter configs with the Nerd Font
+bxcachy setup shell [--shell=zsh|fish|bash]                              Starship + shell init, login shell (zsh default)
 bxcachy setup xremap [--build=hypr|kde] [--yes]        Cmd-style keys: AUR package, input access, user service
 bxcachy setup undo hyprland|plasma|xremap [--yes]      remove only what setup added
 bxcachy setup status [--json]
@@ -271,6 +274,13 @@ Ortus Brand Book 2025 palette (main `#00FF78`, second `#00DBFF`, accent `#FFF500
 - `~/.config/noctalia/config.toml` and `palettes/BxCachy.json` (`NoctaliaConfig.bx`): dark theme with the custom palette; a top bar with launcher, workspaces and active window on the left; the clock, four world clocks (LAX, NYC, LON, MAD, editable `clock` widgets with a `timezone`) and the media player in the centre; tray, network, bluetooth, volume, battery, notifications and control center on the right; the wallpaper folder.
 - `~/.config/hypr/hyprland.lua` from `templates/hyprland.lua` (embedded by `bootstrap/gen-templates.sh`), based on Hyprland's own example: brand-gradient borders, rounded corners, blur, Hyprland's default animations, two persistent workspaces, natural scrolling **off** [owner, "inverse"], Super+Q closes a window (Cmd+Q habit), Super+Return terminal, Super+B browser, Super+E files, Super+F fullscreen, Super+Shift+3/4 screenshots, Super+Ctrl+Q lock, media keys, and `require("bxcachy")`.
 
+### 13.5b Shell and terminal (decided 2026-11-10)
+
+- **Starship is the one prompt for every shell.** `setup shell` installs the shell's packages in one `sudo pacman` call, writes `~/.config/starship.toml` once (BoxLang green and cyan on Catppuccin Frappe, Nerd Font symbols; yours afterwards), and makes the chosen shell the login shell with `sudo chsh`. No Oh My Zsh and no plugin manager: plugins are pacman packages.
+- **zsh is the default** (`zsh`, `zsh-autosuggestions`, `zsh-syntax-highlighting`, `zsh-completions`), then `fish` and `bash`. All get `starship`, `fzf` and `zoxide`, wired into the shell. zsh and bash load a managed `~/.config/bxcachy/shell.<shell>` from one marked block appended to `~/.zshrc` / `~/.bashrc` (the rest of the file is never touched; the block is added once); fish gets `~/.config/fish/conf.d/bxcachy.fish` (fish loads `conf.d` itself). The managed init is rewritten while unchanged and kept once you edit it.
+- **Terminals:** `ghostty` (default), `kitty`, `alacritty`, `foot`, `konsole`. The default is the Super+Enter terminal in the starter `hyprland.lua` and the one `setup hyprland` installs (no longer Kitty); extras install with `setup terminal --also=`. Each terminal with a config file gets a starter written once that sets the Nerd Font (`JetBrainsMono Nerd Font`), so Starship's symbols render in any of them. The xremap terminal list already covers all five.
+- Wizard keys: `shell` (default `zsh`), `terminal` (default `ghostty`), `terminals_extra` (default none).
+
 ### 13.6 Brand assets
 
 `assets/` holds the sources (`build.py`, composed from the official BoxLang icon in `assets/brand/`, copied unchanged from Ortus-Solutions/ortus-artwork) and the rendered icon, logo and four wallpapers (box, grid, aurora, minimal). `bootstrap/gen-assets.sh` embeds them in `AssetData.bx`; `assets install` writes them to `~/Pictures/BxCachy` and `~/.local/share/bxcachy`, never overwriting a file the user changed. They are written as base64 text and decoded with `base64 -d` because MatchBox's `fileWrite` turns a binary value into a string (upstream gap).
@@ -310,7 +320,7 @@ Exits: as `setup` (0, 2, 4, 5, 6, 7, 8); 4 also for no terminal without `--answe
 | Desktop | `desktops` (`hyprland`, `plasma` or both), `window_style` (`tiled` or `floating`), `workspaces` (persistent count), `login_session` | `setup hyprland`, `setup plasma`, `tiling on|off`, `session set` |
 | Look | `theme` (`dark`, `light`, `auto`), `wallpaper`, `bar_position`, `world_clocks` (IANA zones with labels) | Noctalia config |
 | Input and languages | `keyboard_layouts` (e.g. `us` variant `intl`, `es`), `locale`, `natural_scroll`, `mac_keys` | Hyprland `kb_layout`, KDE keyboard config, locale, `setup xremap` |
-| Developer identity | `git_name`, `git_email`, `ssh_key`, `shell` (`bash`, `zsh`, `fish`), `prompt` (`starship` or none), `editor` | `git config`, `ssh-keygen`, shell packages and config |
+| Developer identity | `git_name`, `git_email`, `ssh_key`, `shell` (`zsh` default, `fish`, `bash`; Starship always), `terminal` (`ghostty` default), `terminals_extra`, `editor` | `git config`, `ssh-keygen`, `setup shell`, `setup terminal`, `setup hyprland --terminal` |
 | Toolchains | `toolchains` (`java` with gradle and maven, `php` with composer and laravel, `python`, `go`) | catalog profiles |
 | Containers | `container_engine` (`podman` default, `docker`) | package and service setup |
 | Databases | `databases` (PostgreSQL, Redis, Couchbase, pgvector, Chroma, Milvus; optional MySQL/MariaDB and MongoDB) | `bxcachy db` on the chosen engine |

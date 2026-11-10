@@ -237,22 +237,85 @@ class WizardData {
           "type": "choice",
           "id": "shell",
           "label": "Shell",
-          "default": "fish",
+          "help": "The Starship prompt, fzf and zoxide are set up for whichever you pick.",
+          "default": "zsh",
           "options": [
-            {
-              "value": "fish",
-              "label": "fish",
-              "description": "Friendly, with autosuggestions out of the box."
-            },
             {
               "value": "zsh",
               "label": "zsh",
-              "description": "Familiar from macOS, endlessly configurable."
+              "description": "Familiar from macOS. Comes with autosuggestions, syntax highlighting and completions."
+            },
+            {
+              "value": "fish",
+              "label": "fish",
+              "description": "Friendly, with autosuggestions and highlighting built in."
             },
             {
               "value": "bash",
               "label": "bash",
               "description": "The classic. Nothing to learn."
+            }
+          ]
+        },
+        {
+          "type": "choice",
+          "id": "terminal",
+          "label": "Default terminal",
+          "help": "Opens on Super+Enter. Every terminal gets the Nerd Font for the Starship prompt.",
+          "default": "ghostty",
+          "options": [
+            {
+              "value": "ghostty",
+              "label": "Ghostty",
+              "description": "Fast, native, GPU accelerated. The BxCachy default."
+            },
+            {
+              "value": "kitty",
+              "label": "Kitty",
+              "description": "GPU accelerated, scriptable, images in the terminal."
+            },
+            {
+              "value": "alacritty",
+              "label": "Alacritty",
+              "description": "Minimal and very fast."
+            },
+            {
+              "value": "foot",
+              "label": "Foot",
+              "description": "Lightweight Wayland terminal."
+            },
+            {
+              "value": "konsole",
+              "label": "Konsole",
+              "description": "KDE''s terminal, already there on Plasma."
+            }
+          ]
+        },
+        {
+          "type": "multi",
+          "id": "terminals_extra",
+          "label": "Also install these terminals",
+          "default": [],
+          "options": [
+            {
+              "value": "kitty",
+              "label": "Kitty",
+              "description": "GPU accelerated, scriptable, images in the terminal."
+            },
+            {
+              "value": "alacritty",
+              "label": "Alacritty",
+              "description": "Minimal and very fast."
+            },
+            {
+              "value": "foot",
+              "label": "Foot",
+              "description": "Lightweight Wayland terminal."
+            },
+            {
+              "value": "konsole",
+              "label": "Konsole",
+              "description": "KDE''s terminal, already there on Plasma."
             }
           ]
         },

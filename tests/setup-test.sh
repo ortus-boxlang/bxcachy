@@ -95,7 +95,7 @@ rm -rf "$tmp/home/.local"; [[ "$(code "$binary" setup undo plasma --yes)" == 4 ]
 [[ "$(code "$binary" setup nope)" == 2 ]] || fail 'unknown target is a usage error'
 
 # ---- hyprland: packages only
-ALL="hyprland noctalia uwsm hyprlock hypridle xdg-desktop-portal-hyprland hyprpolkitagent qt6ct nwg-look hyprpicker grim slurp wl-clipboard brightnessctl kitty adw-gtk-theme noto-fonts noto-fonts-emoji"
+ALL="hyprland noctalia uwsm hyprlock hypridle xdg-desktop-portal-hyprland hyprpolkitagent qt6ct nwg-look hyprpicker grim slurp wl-clipboard brightnessctl ghostty adw-gtk-theme noto-fonts noto-fonts-emoji"
 reset; [[ "$(code "$binary" setup hyprland)" == 2 ]] || fail 'hyprland without --yes exits 2'
 [[ "$(code "$binary" setup hyprland --dry-run)" == 0 ]] || fail 'hyprland --dry-run exits 0'
 run "$binary" setup hyprland --dry-run | grep -F 'sudo pacman -S --needed --noconfirm' >/dev/null || fail 'the plan shows the exact pacman command'
@@ -114,10 +114,10 @@ for bad in cachyos-hypr-noctalia noctalia-shell noctalia-qs; do grep -Fq "$bad" 
 reset; MOCK_INSTALLED="git $ALL" run "$binary" setup hyprland --yes | grep -F 'already installed' >/dev/null || fail 'already installed is reported'
 [[ ! -s "$SETUP_LOG" && ! -e "$tmp/state-home" ]] || fail 'nothing to do must change nothing'
 # some there: only the rest is installed and remembered
-reset; MOCK_INSTALLED="git hyprland kitty" run "$binary" setup hyprland --yes >/dev/null 2>&1 || fail 'partial install'
+reset; MOCK_INSTALLED="git hyprland ghostty" run "$binary" setup hyprland --yes >/dev/null 2>&1 || fail 'partial install'
 call="$(grep '^pacman -S' "$SETUP_LOG")"
 grep -Fq ' hyprland' <<<"$call" && fail 'an installed package is not reinstalled'
-jq -e '.packages|index("noctalia") and (index("kitty")|not)' "$tmp/state-home/bxcachy/setup-hyprland.json" >/dev/null || fail 'only added packages are remembered'
+jq -e '.packages|index("noctalia") and (index("ghostty")|not)' "$tmp/state-home/bxcachy/setup-hyprland.json" >/dev/null || fail 'only added packages are remembered'
 # pacman failing: exit 5 and nothing remembered
 reset; [[ "$(MOCK_PACMAN_FAIL=1 code "$binary" setup hyprland --yes)" == 5 ]] || fail 'pacman failing exits 5'
 [[ ! -e "$tmp/state-home" ]] || fail 'a failed install is not remembered'
