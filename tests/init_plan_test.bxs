@@ -36,6 +36,9 @@ check( "git identity is two argument arrays (no shell string)", ids( p ) == "git
 p = ip.plan( { launcher: "rofi", menu: "walker" } );
 check( "launcher and menu: install what is needed, then record the choice", ids( p ) == "apps,launcher,menu" && cmd( p, "apps" ) == "bxcachy install rofi walker" && cmd( p, "launcher" ) == "bxcachy runner set rofi" && cmd( p, "menu" ) == "bxcachy runner menu-set walker" );
 p = ip.plan( { launcher: "noctalia", menu: "rofi" } );
+p = ip.plan( { launcher: "fuzzel", menu: "wofi" } );
+check( "Fuzzel and Wofi are installed from the catalog", cmd( p, "apps" ) == "bxcachy install fuzzel wofi" );
+p = ip.plan( { launcher: "noctalia", menu: "rofi" } );
 check( "Noctalia needs no package of its own", cmd( p, "apps" ) == "bxcachy install rofi" && cmd( p, "launcher" ) == "bxcachy runner set noctalia" );
 
 p = ip.plan( { databases: [ "postgres" ], ssh_key: true, app_mode: "custom", natural_scroll: false, layouts: [] } );

@@ -296,10 +296,10 @@ Ortus Brand Book 2025 palette (main `#00FF78`, second `#00DBFF`, accent `#FFF500
 
 The launcher and the menu backend are chosen separately and recorded in `~/.config/bxcachy/runner.json` (written atomically). **Nothing here changes a keybinding or a desktop file**; `doctor` ends with `Shortcut ownership: unchanged`. `set` and `menu-set` are user settings that act at once (no `--yes`), like `tiling`.
 
-- Launcher providers: `system` (desktop-owned, nothing to run), `noctalia` (default on Hyprland: `noctalia msg panel-toggle launcher`), `rofi`, `walker`, `krunner`, `vicinae`, `hyprrunner`, `custom`. Menu providers: `rofi` (default), `walker`, `vicinae`, `hyprrunner`.
+- Launcher providers: `system` (desktop-owned, nothing to run), `noctalia` (default on Hyprland: `noctalia msg panel-toggle launcher`), `walker`, `rofi`, `fuzzel`, `wofi`, `krunner` (KDE), `vicinae`, `custom`. Menu providers (dmenu mode): `rofi` (default), `walker`, `fuzzel`, `wofi`, `vicinae`. The wizard offers the five popular ones: Noctalia, Walker, Rofi, Fuzzel, Wofi.
 - Commands are JSON argument arrays (`launcher-command rofi '["rofi","-show","run"]'`, `{prompt}` in menu commands); a shell string, an empty array or an empty part exits 4. `launcher-command custom ...` sets the `custom` command.
 - `doctor` shows the commands and whether each executable is on PATH (exit 0 either way, `--json` available); `launch` starts the launcher detached (exit 4 for `system` or a missing program). `list` marks the current choice with `*`.
-- Packages: Rofi (`rofi`, extra) and Vicinae (`vicinae-bin`, AUR) are catalog apps beside Walker; Noctalia and KRunner come with their desktops. No package for `hyprrunner` was found in Arch or the AUR on 2026-11-10, so it is accepted as a provider but not offered by the wizard. The legacy `menu-select` (stdin labels, index out) is not ported: nothing here uses it yet.
+- Packages (catalog, Launchers): Rofi, Fuzzel and Wofi (Arch `extra`), Walker (CachyOS repo), Vicinae (`vicinae-bin`, AUR). Noctalia and KRunner come with their desktops. `hyprrunner` was dropped (no package found, 2026-11-10). Fuzzel and Wofi menu commands use their documented dmenu flags (`fuzzel --dmenu --index --prompt`, `wofi --dmenu --insensitive --prompt`). The legacy `menu-select` (read labels on stdin, show them with the menu provider, print the chosen index; it served the legacy menu app) is not ported: nothing here uses it yet.
 
 ### 13.8 Tests and what is verified
 
@@ -344,7 +344,7 @@ Exits: as `setup` (0, 2, 4, 5, 6, 7, 8); 4 also for no terminal without `--answe
 | VPN | `vpn` (Tailscale, WireGuard, OpenVPN, Mullvad, Proton) | catalog and services |
 | Password manager | `password_manager` (Bitwarden, 1Password, KeePassXC) | catalog |
 | Gaming | `gaming` (`none`, `steam`, `bundle`) | catalog (CachyOS gaming bundle) |
-| Apps | `app_mode` (`defaults` or `custom`), `app_selection` per category, `default_browser`, `default_terminal`, `launcher` (`noctalia` default, `rofi`, `walker`, `vicinae`; asked for Hyprland and Both), `menu` (`rofi` default, `walker`) | `install` (the provider's package), `runner set`, `runner menu-set` |
+| Apps | `app_mode` (`defaults` or `custom`), `app_selection` per category, `default_browser`, `default_terminal`, `launcher` (`noctalia` default, `walker`, `rofi`, `fuzzel`, `wofi`; asked for Hyprland and Both), `menu` (`rofi` default, `walker`, `fuzzel`, `wofi`) | `install` (the provider's package), `runner set`, `runner menu-set` |
 | Backups and storage | `snapshots`, `backup_target` (restic or borg), `mounts`, `cache_cleanup` | snapper, timers |
 | Import | `dotfiles_repo`, `dotfiles_method` (`chezmoi`, `yadm`, `stow`, `links`) | dotfiles import (last step) |
 

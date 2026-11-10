@@ -582,22 +582,27 @@
             {
               "value": "noctalia",
               "label": "Noctalia launcher (recommended)",
-              "description": "Built into the Noctalia shell. Opens with Super+Space."
-            },
-            {
-              "value": "rofi",
-              "label": "Rofi",
-              "description": "The classic, themeable launcher and menu."
+              "description": "Built into the Noctalia shell, with app search and more. Opens with Super+Space."
             },
             {
               "value": "walker",
               "label": "Walker",
-              "description": "A fast Wayland launcher."
+              "description": "Modern, fast launcher, popular with Omarchy."
             },
             {
-              "value": "vicinae",
-              "label": "Vicinae",
-              "description": "A Raycast-style launcher."
+              "value": "rofi",
+              "label": "Rofi",
+              "description": "The traditional launcher, with menus and search."
+            },
+            {
+              "value": "fuzzel",
+              "label": "Fuzzel",
+              "description": "Lightweight, Wayland-native."
+            },
+            {
+              "value": "wofi",
+              "label": "Wofi",
+              "description": "A Wayland alternative to Rofi."
             }
           ]
         },
@@ -617,6 +622,16 @@
               "value": "walker",
               "label": "Walker",
               "description": "Walker's dmenu mode."
+            },
+            {
+              "value": "fuzzel",
+              "label": "Fuzzel",
+              "description": "Lightweight dmenu mode."
+            },
+            {
+              "value": "wofi",
+              "label": "Wofi",
+              "description": "Wofi's dmenu mode."
             }
           ]
         }

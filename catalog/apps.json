@@ -1,6 +1,6 @@
 {
   "schema": 3,
-  "catalog_version": "0.10.0-draft",
+  "catalog_version": "0.11.0-draft",
   "generated": "2026-11-09",
   "notes": [
     "Tier default = installed by a plain install; optional = offered in the picker; apps not listed are not part of the catalog.",
@@ -3584,6 +3584,27 @@
       "verified_on": "2026-11-09"
     },
     {
+      "id": "fuzzel",
+      "name": "Fuzzel",
+      "description": "Lightweight Wayland-native application launcher (also a BxCachy menu backend)",
+      "description_source": "curated",
+      "kind": "desktop",
+      "group": "desktop",
+      "category": "Launchers",
+      "tier": "optional",
+      "source": "pacman",
+      "targets": [
+        "fuzzel"
+      ],
+      "homepage": "https://codeberg.org/dnkl/fuzzel",
+      "macos": "Spotlight",
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-10",
+      "repo": "extra"
+    },
+    {
       "id": "rofi",
       "name": "Rofi",
       "description": "Window switcher, application launcher and dmenu replacement (also the BxCachy menu backend)",
@@ -3647,6 +3668,27 @@
       "shells": [
         "hyprland"
       ]
+    },
+    {
+      "id": "wofi",
+      "name": "Wofi",
+      "description": "Wayland application launcher, a Rofi alternative (also a BxCachy menu backend)",
+      "description_source": "curated",
+      "kind": "desktop",
+      "group": "desktop",
+      "category": "Launchers",
+      "tier": "optional",
+      "source": "pacman",
+      "targets": [
+        "wofi"
+      ],
+      "homepage": "https://hg.sr.ht/~scoopta/wofi",
+      "macos": "Spotlight",
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-10",
+      "repo": "extra"
     },
     {
       "id": "aether",

@@ -2,8 +2,8 @@
 failures = 0;
 function check( label, ok ) { if ( ok ) println( "ok   " & label ); else { println( "FAIL " & label ); failures++; } }
 r = new bxcachy.Runner();
-check( "legacy launcher providers are all there", r.launcherProviders().toList( "," ) == "system,noctalia,rofi,walker,krunner,vicinae,hyprrunner,custom" );
-check( "menu providers", r.menuProviders().toList( "," ) == "rofi,walker,vicinae,hyprrunner" );
+check( "legacy launcher providers are all there", r.launcherProviders().toList( "," ) == "system,noctalia,walker,rofi,fuzzel,wofi,krunner,vicinae,custom" );
+check( "menu providers", r.menuProviders().toList( "," ) == "rofi,walker,fuzzel,wofi,vicinae" );
 check( "default launcher on Hyprland is Noctalia", r.defaults( "Hyprland" ).provider == "noctalia" );
 check( "default launcher on KDE is the system runner", r.defaults( "KDE" ).provider == "system" && r.defaults( "KDE" ).menu_provider == "rofi" );
 cfg = r.defaults( "Hyprland" );
@@ -16,10 +16,12 @@ cfg.custom_command = [ "my-launcher", "--fast" ];
 check( "custom uses custom_command", r.resolve( "custom", cfg ).toList( " " ) == "my-launcher --fast" );
 threw = false; try { r.resolve( "custom", r.defaults( "KDE" ) ); } catch ( any e ) { threw = true; }
 check( "custom without a command is an error", threw );
+check( "fuzzel and wofi launch and menu commands", r.resolve( "fuzzel", r.defaults( "KDE" ) ).toList( " " ) == "fuzzel" && r.resolve( "wofi", r.defaults( "KDE" ) ).toList( " " ) == "wofi --show drun" && r.menuCommand( "fuzzel", r.defaults( "KDE" ), "Apps" ).toList( " " ) == "fuzzel --dmenu --index --prompt Apps" && r.menuCommand( "wofi", r.defaults( "KDE" ), "Apps" ).toList( " " ) == "wofi --dmenu --insensitive --prompt Apps" );
+check( "hyprrunner is gone", !arrayFind( r.launcherProviders(), "hyprrunner" ) );
 check( "menu command fills {prompt}", r.menuCommand( "rofi", r.defaults( "KDE" ), "Apps" ).toList( " " ) == "rofi -dmenu -i -show-icons -format i -p Apps" );
 cfg = r.defaults( "KDE" ); cfg.menu_commands.vicinae = [ "test-menu", "--title", "{prompt}" ];
 check( "a menu override takes {prompt} too", r.menuCommand( "vicinae", cfg, "My Apps" ).toList( "|" ) == "test-menu|--title|My Apps" );
 check( "argv validation: arrays of non-empty strings only", r.validArgv( [ "a", "b" ] ) && !r.validArgv( [] ) && !r.validArgv( "rofi -show drun" ) && !r.validArgv( [ "a", "" ] ) );
-check( "every provider with a package maps to a catalog app", r.catalogId( "rofi" ) == "rofi" && r.catalogId( "walker" ) == "walker" && r.catalogId( "vicinae" ) == "vicinae" && r.catalogId( "noctalia" ) == "" && r.catalogId( "system" ) == "" );
+check( "every provider with a package maps to a catalog app", r.catalogId( "rofi" ) == "rofi" && r.catalogId( "walker" ) == "walker" && r.catalogId( "vicinae" ) == "vicinae" && r.catalogId( "fuzzel" ) == "fuzzel" && r.catalogId( "wofi" ) == "wofi" && r.catalogId( "noctalia" ) == "" && r.catalogId( "system" ) == "" );
 if ( failures > 0 ) { println( failures & " failed" ); exit( 1 ); }
 println( "all passed" );

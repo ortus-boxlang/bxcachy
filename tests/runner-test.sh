@@ -17,10 +17,10 @@ hypr() { XDG_CURRENT_DESKTOP=Hyprland run "$@"; }
 kde() { XDG_CURRENT_DESKTOP=KDE run "$@"; }
 
 # defaults and listing
-hypr "$binary" runner list | grep -q '^launcher: system \*noctalia rofi' || fail 'Hyprland defaults to the Noctalia launcher'
+hypr "$binary" runner list | grep -q '^launcher: system \*noctalia walker rofi fuzzel wofi' || fail 'Hyprland defaults to the Noctalia launcher'
 kde "$binary" runner list | grep -q '^launcher: \*system noctalia' || fail 'KDE defaults to the system runner'
-hypr "$binary" runner list | grep -q '^menu: \*rofi walker' || fail 'Rofi is the default menu'
-hypr "$binary" runner list --json | jq -e '(.data.launchers | map(select(.current)) | .[0].id) == "noctalia" and (.data.menus | map(.id) == ["rofi","walker","vicinae","hyprrunner"])' >/dev/null || fail 'list --json'
+hypr "$binary" runner list | grep -q '^menu: \*rofi walker fuzzel wofi vicinae' || fail 'Rofi is the default menu'
+hypr "$binary" runner list --json | jq -e '(.data.launchers | map(select(.current)) | .[0].id) == "noctalia" and (.data.menus | map(.id) == ["rofi","walker","fuzzel","wofi","vicinae"])' >/dev/null || fail 'list --json'
 
 # choices are saved at once (no --yes) and shown back
 hypr "$binary" runner set rofi | grep -q 'Runner provider: rofi' || fail 'set'
@@ -29,6 +29,8 @@ hypr "$binary" runner show --json | jq -e '.data.provider == "rofi" and .data.me
 [[ "$(jq -r .provider "$tmp/cfg/bxcachy/runner.json")" == rofi ]] || fail 'runner.json written'
 [[ "$(code "$binary" runner set nope)" == 4 && "$(code "$binary" runner menu-set noctalia)" == 4 ]] || fail 'unknown providers exit 4'
 
+[[ "$(code "$binary" runner set hyprrunner)" == 4 ]] || fail 'hyprrunner is no longer a provider'
+hypr "$binary" runner menu-set fuzzel >/dev/null && hypr "$binary" runner menu-set wofi >/dev/null && hypr "$binary" runner menu-set walker >/dev/null || fail 'fuzzel and wofi are menu providers'
 # commands are JSON argument arrays, never shell strings
 hypr "$binary" runner launcher-command rofi '["rofi","-show","run"]' >/dev/null || fail 'launcher-command'
 hypr "$binary" runner menu-command walker '["walker","--dmenu","-p","{prompt}"]' >/dev/null || fail 'menu-command'

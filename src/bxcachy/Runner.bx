@@ -3,8 +3,8 @@
 // records the choice (~/.config/bxcachy/runner.json) and resolves the argument arrays to run. Commands are JSON argument
 // arrays, never shell strings.
 //
-// Launcher providers: system (desktop-owned, nothing to run), noctalia, rofi, walker, krunner, vicinae, hyprrunner, custom.
-// Menu providers: rofi, walker, vicinae, hyprrunner.
+// Launcher providers: system (desktop-owned, nothing to run), noctalia (default on Hyprland), walker, rofi, fuzzel, wofi, krunner, vicinae, custom.
+// Menu providers (dmenu mode): rofi, walker, fuzzel, wofi, vicinae.
 class Runner {
     function init( cli = "", runner = "" ) {
         variables.cli = arguments.cli;
@@ -13,22 +13,23 @@ class Runner {
         return this;
     }
 
-    function launcherProviders() { return [ "system", "noctalia", "rofi", "walker", "krunner", "vicinae", "hyprrunner", "custom" ]; }
-    function menuProviders() { return [ "rofi", "walker", "vicinae", "hyprrunner" ]; }
+    function launcherProviders() { return [ "system", "noctalia", "walker", "rofi", "fuzzel", "wofi", "krunner", "vicinae", "custom" ]; }
+    function menuProviders() { return [ "rofi", "walker", "fuzzel", "wofi", "vicinae" ]; }
 
     // Argument templates for each provider ({prompt} is replaced in menu commands).
     function launchCommands() {
-        return { noctalia: [ "noctalia", "msg", "panel-toggle", "launcher" ], rofi: [ "rofi", "-show", "drun" ], walker: [ "walker" ],
-                 vicinae: [ "vicinae", "toggle" ], hyprrunner: [ "hyprrunner" ], krunner: [ "krunner" ] };
+        return { noctalia: [ "noctalia", "msg", "panel-toggle", "launcher" ], walker: [ "walker" ], rofi: [ "rofi", "-show", "drun" ],
+                 fuzzel: [ "fuzzel" ], wofi: [ "wofi", "--show", "drun" ], vicinae: [ "vicinae", "toggle" ], krunner: [ "krunner" ] };
     }
     function menuCommands() {
         return { rofi: [ "rofi", "-dmenu", "-i", "-show-icons", "-format", "i", "-p", "{prompt}" ], walker: [ "walker", "--dmenu" ],
-                 vicinae: [ "vicinae", "dmenu", "--prompt", "{prompt}" ], hyprrunner: [ "hyprrunner", "--dmenu" ] };
+                 fuzzel: [ "fuzzel", "--dmenu", "--index", "--prompt", "{prompt}" ], wofi: [ "wofi", "--dmenu", "--insensitive", "--prompt", "{prompt}" ],
+                 vicinae: [ "vicinae", "dmenu", "--prompt", "{prompt}" ] };
     }
 
     // The catalog app that provides a provider ("" when none: system, custom, or no package found).
     function catalogId( provider ) {
-        var ids = { noctalia: "", rofi: "rofi", walker: "walker", krunner: "", vicinae: "vicinae", hyprrunner: "" };
+        var ids = { noctalia: "", rofi: "rofi", walker: "walker", fuzzel: "fuzzel", wofi: "wofi", krunner: "", vicinae: "vicinae" };
         return structKeyExists( ids, arguments.provider ) ? ids[ arguments.provider ] : "";
     }
 
