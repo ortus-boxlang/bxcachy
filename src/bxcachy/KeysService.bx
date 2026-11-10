@@ -4,10 +4,11 @@
 //
 // Exit codes: check 0 all in place, 1 something missing or drifted; apply 0 done, 2 no --yes, 4 precondition, 8 drift without --force, 9 write failed.
 class KeysService {
-    function init( cli, runner = "" ) {
+    function init( cli, runner = "", quiet = false ) {
         variables.cli = arguments.cli;
+        variables.quiet = arguments.quiet;
         variables.inst = new bxcachy.Installer( arguments.runner );
-        variables.config = new bxcachy.ConfigService();
+        variables.config = new bxcachy.ConfigService().quiet( arguments.quiet );
         variables.sc = new bxcachy.Shortcuts();
         return this;
     }
@@ -61,9 +62,10 @@ class KeysService {
     function apply( yes, dryRun, force, asJson ) {
         if ( variables.inst.isRoot() ) {
             if ( asJson ) println( variables.cli.envelope( "keys apply", 4, { errors: [ "Run as a regular user" ] } ) );
-            else println( "error: Run as a regular user" );
+            else say( "error: Run as a regular user" );
             return 4;
         }
+        if ( asJson ) { variables.quiet = true; variables.config.quiet( true ); }
         var worst = 0;
         for ( var e in variables.sc.entries( variables.config.cfgHome() ) ) {
             var c = variables.config.configApply( e, yes, dryRun, force );
@@ -71,17 +73,23 @@ class KeysService {
         }
         if ( variables.inst.hasCommand( "kwriteconfig6" ) ) {
             for ( var s in variables.sc.plasmaSettings() ) {
-                if ( plasmaValue( s ) == s.value ) { println( "plasma:" & s.key & ": unchanged" ); continue; }
-                println( "set plasma:" & s.key & " -> " & s.value );
+                if ( plasmaValue( s ) == s.value ) { say( "plasma:" & s.key & ": unchanged" ); continue; }
+                say( "set plasma:" & s.key & " -> " & s.value );
                 if ( !yes ) { worst = max( worst, 2 ); continue; }
                 if ( dryRun ) continue;
                 var r = variables.inst.exec( [ "kwriteconfig6", "--file", "kglobalshortcutsrc", "--group", s.group, "--key", s.key, s.value ], 15 );
-                if ( r.exitCode != 0 ) { println( "plasma:" & s.key & ": kwriteconfig6 failed" ); worst = max( worst, 9 ); }
+                if ( r.exitCode != 0 ) { say( "plasma:" & s.key & ": kwriteconfig6 failed" ); worst = max( worst, 9 ); }
             }
-        } else println( "plasma: kwriteconfig6 not found, skipped (not a Plasma machine)" );
-        if ( worst == 2 ) println( "Nothing changed. Pass --yes to proceed." );
-        if ( hyprlandLoad().state == "not-loaded" ) println( "Add this line to " & hyprlandLoad().target & ": " & variables.sc.hyprlandLoadLine() );
-        if ( worst == 0 && yes && !dryRun ) println( "Note: xremap and the desktop pick the new keys up at their next restart or login. Hyprland loads the module through the line in hyprland.lua." );
+        } else say( "plasma: kwriteconfig6 not found, skipped (not a Plasma machine)" );
+        if ( worst == 2 ) say( "Nothing changed. Pass --yes to proceed." );
+        if ( hyprlandLoad().state == "not-loaded" ) say( "Add this line to " & hyprlandLoad().target & ": " & variables.sc.hyprlandLoadLine() );
+        if ( worst == 0 && yes && !dryRun ) say( "Note: xremap and the desktop pick the new keys up at their next restart or login. Hyprland loads the module through the line in hyprland.lua." );
+        if ( asJson ) println( variables.cli.envelope( "keys apply", worst, { applied: worst == 0 }, dryRun ) );
         return worst;
+    }
+
+    // Prints one progress line unless the caller asked for quiet.
+    function say( text ) {
+        if ( !variables.quiet ) println( arguments.text );
     }
 }

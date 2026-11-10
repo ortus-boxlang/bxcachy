@@ -1,0 +1,30 @@
+// The starter desktop configuration `setup hyprland` puts in place: the Noctalia config and palette, and a first hyprland.lua.
+// Everything goes through the config service (backup, journal). Files the user already has are never overwritten:
+// a changed Noctalia file is kept as it is, and hyprland.lua is written only when none exists.
+class Starter {
+    function init( quiet = false ) {
+        variables.config = new bxcachy.ConfigService().quiet( arguments.quiet );
+        return this;
+    }
+
+    // The managed starter files in the config service entry shape (name, target, mode, content).
+    function entries() {
+        var cfg = variables.config.cfgHome();
+        var home = getSystemSetting( "HOME", "" );
+        var out = new bxcachy.NoctaliaConfig().entries( cfg, home );
+        out.append( { name: "hyprland", target: cfg & "/hypr/hyprland.lua", mode: "644", content: new bxcachy.TemplateData().text( "hyprland.lua" ) } );
+        return out;
+    }
+
+    // Writes what is missing. Returns { written, kept, failed }: names of entries. kept = already there (clean, or changed by the user).
+    function apply() {
+        var out = { written: [], kept: [], failed: [] };
+        for ( var e in entries() ) {
+            var st = variables.config.configState( e );
+            // hyprland.lua is the user's own file from the first start on: only a missing one is written
+            if ( st != "missing" && ( e.name == "hyprland" || st == "clean" || st == "drifted" || st == "blocked" ) ) { out.kept.append( e.name ); continue; }
+            if ( variables.config.configWrite( e, e.content, "apply", true, false ) == 0 ) out.written.append( e.name ); else out.failed.append( e.name );
+        }
+        return out;
+    }
+}

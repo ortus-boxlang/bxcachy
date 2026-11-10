@@ -47,4 +47,7 @@ grep -q 'pacman -Rs --noconfirm xremap-hypr-bin' "$LOG" || fail 'undo removes th
 grep -q 'gpasswd -d dev input' "$LOG" || fail 'undo removes the group it added'
 [[ ! -e "$tmp/state/bxcachy/setup-xremap.json" ]] || fail 'state forgotten after undo'
 [[ "$(code "$binary" setup undo xremap --yes)" == 4 ]] || fail 'second undo exits 4'
+# --json stays one clean envelope even though the config files are written in the same run
+: > "$LOG"; rm -rf "$tmp/cfg" "$tmp/state" "$LOG.installed"
+run "$binary" setup xremap --yes --json | jq -e '.ok and (.data.done | map(.id) | index("config") != null)' >/dev/null || fail 'setup xremap --yes --json is not one clean envelope'
 echo "xremap tests passed"

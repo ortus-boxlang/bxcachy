@@ -1,5 +1,18 @@
 // Safe config files: atomic replace, backups, journal, drift, lock (docs/architecture/COMMAND-CONTRACT.md section 6).
 class ConfigService {
+    function init() {
+     variables.silent = false;
+     return this;
+    }
+    // Silences the progress lines (used when a caller prints one --json envelope itself).
+    function quiet( flag ) {
+     variables.silent = arguments.flag;
+     return this;
+    }
+    // Prints one progress line unless quiet( true ) was set.
+    function say( text ) {
+     if ( !variables.silent ) println( arguments.text );
+    }
     function cfgHome() {
      return getSystemSetting( "BXCACHY_CONFIG_HOME", getSystemSetting( "HOME", "" ) & "/.config" );
     }
@@ -101,20 +114,20 @@ class ConfigService {
     function configWrite( entry, content, action, yes, dryRun ) {
      kind = pathKind( entry.target );
      if ( kind == "link" || kind == "other" ) {
-      println( entry.name & ": refusing to write, target is a symlink or special file: " & entry.target );
+      say( entry.name & ": refusing to write, target is a symlink or special file: " & entry.target );
       return 8;
      }
-     println( action & " " & entry.name & " -> " & entry.target );
+     say( action & " " & entry.name & " -> " & entry.target );
      if ( !yes ) {
-      println( "Nothing changed. Pass --yes to proceed." );
+      say( "Nothing changed. Pass --yes to proceed." );
       return 2;
      }
      if ( dryRun ) {
-      println( "Dry run, nothing changed." );
+      say( "Dry run, nothing changed." );
       return 0;
      }
      if ( !lockTake() ) {
-      println( "Another BxCachy run holds the lock: " & stateDir() & "/lock (a file; remove it if no run is active)" );
+      say( "Another BxCachy run holds the lock: " & stateDir() & "/lock (a file; remove it if no run is active)" );
       return 8;
      }
      code = 0;
@@ -124,16 +137,16 @@ class ConfigService {
       writeAtomic( entry.target, content, entry.mode );
       after = fileHashOf( entry.target );
       if ( after != hashOf( content ) ) {
-       println( entry.name & ": verification failed after write" );
+       say( entry.name & ": verification failed after write" );
        code = 9;
       } else {
-       if ( modeOf( entry.target ) != entry.mode ) println( "warning: mode is " & modeOf( entry.target ) & ", expected " & entry.mode );
+       if ( modeOf( entry.target ) != entry.mode ) say( "warning: mode is " & modeOf( entry.target ) & ", expected " & entry.mode );
        id = recordJournal( entry, action, before, backup, after );
        pruneHistory( entry.name );
-       println( entry.name & ": " & action & " done (journal " & id & ")" );
+       say( entry.name & ": " & action & " done (journal " & id & ")" );
       }
      } catch ( any e ) {
-      println( entry.name & ": failed: " & e.message );
+      say( entry.name & ": failed: " & e.message );
       code = 9;
      }
      lockDrop();
@@ -143,11 +156,11 @@ class ConfigService {
      st = configState( entry );
      if ( st == "blocked" ) return configWrite( entry, entry.content, "apply", yes, dryRun );
      if ( st == "clean" ) {
-      println( entry.name & ": unchanged" );
+      say( entry.name & ": unchanged" );
       return 0;
      }
      if ( st == "drifted" && !force ) {
-      println( entry.name & ": target was changed outside BxCachy. Run 'config diff " & entry.name & "', then --force to overwrite (a backup is kept)." );
+      say( entry.name & ": target was changed outside BxCachy. Run 'config diff " & entry.name & "', then --force to overwrite (a backup is kept)." );
       return 8;
      }
      return configWrite( entry, entry.content, "apply", yes, dryRun );
@@ -155,17 +168,17 @@ class ConfigService {
     function configRestore( entry, id, yes, dryRun ) {
      found = journalEntries( entry.name ).filter( function( e ) { return e.id == id; } );
      if ( !found.len() ) {
-      println( "Unknown journal id for " & entry.name & ": " & id );
+      say( "Unknown journal id for " & entry.name & ": " & id );
       return 3;
      }
      rec = found[1];
      if ( !len( rec.backup ) || !fileExists( rec.backup ) ) {
-      println( id & ": no backup to restore (the file did not exist before, or the backup was pruned)" );
+      say( id & ": no backup to restore (the file did not exist before, or the backup was pruned)" );
       return 3;
      }
      old = fileRead( rec.backup );
      if ( hashOf( old ) != rec.before ) {
-      println( id & ": backup does not match its recorded hash, refusing" );
+      say( id & ": backup does not match its recorded hash, refusing" );
       return 8;
      }
      return configWrite( entry, old, "restore", yes, dryRun );

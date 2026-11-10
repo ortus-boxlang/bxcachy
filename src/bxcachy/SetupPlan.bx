@@ -124,15 +124,16 @@ class SetupPlan {
         var missing = hyprlandPackages().filter( function( p ) { return !structKeyExists( facts.installed, p ); } );
         if ( missing.len() && !facts.hasSudo ) out.errors.append( "sudo is required to install packages but was not found" );
         if ( out.errors.len() ) return out;
-        if ( !missing.len() ) {
-            out.notes.append( "Hyprland and Noctalia are already installed; nothing to do." );
-            return out;
-        }
-        var pac = [ "sudo", "pacman", "-S", "--needed", "--noconfirm" ];
-        for ( var m in missing ) pac.append( m );
-        out.steps.append( { id: "packages", title: "install " & missing.len() & " packages (" & missing.toList( " " ) & ")", kind: "pacman", commands: [ pac ] } );
-        out.added = missing;
-        out.notes.append( "Log out and pick Hyprland at the login screen. KDE Plasma is untouched. Configs, keybindings and Noctalia settings come with the next setup slices." );
+        if ( missing.len() ) {
+            var pac = [ "sudo", "pacman", "-S", "--needed", "--noconfirm" ];
+            for ( var m in missing ) pac.append( m );
+            out.steps.append( { id: "packages", title: "install " & missing.len() & " packages (" & missing.toList( " " ) & ")", kind: "pacman", commands: [ pac ] } );
+            out.added = missing;
+        } else out.notes.append( "Hyprland and Noctalia are already installed." );
+        out.steps.append( { id: "images", title: "write the BxCachy logo and wallpapers to ~/Pictures/BxCachy (missing ones only)", kind: "assets", commands: [] } );
+        out.steps.append( { id: "starter", title: "write the starter Noctalia config and palette, and hyprland.lua if you have none (existing files are kept)", kind: "starter", commands: [] } );
+        out.steps.append( { id: "keys", title: "write the shared shortcut files (xremap config and service unit, Hyprland module, Plasma Log Out)", kind: "keys", commands: [] } );
+        out.notes.append( "Log out and pick Hyprland at the login screen. KDE Plasma is untouched. Run `bxcachy setup xremap` for the Cmd-style keys." );
         return out;
     }
 

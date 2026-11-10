@@ -10,5 +10,6 @@ mb="${MATCHBOX:-/home/user/matchbox/target/debug/matchbox}"
 mkdir -p "$root/dist"
 "$root/bootstrap/gen-catalog.sh" >/dev/null
 "$root/bootstrap/gen-assets.sh" >/dev/null
+"$root/bootstrap/gen-templates.sh" >/dev/null
 (cd "$root" && "$mb" --target native --output "$root/dist/bxcachy" src/Main.bx)
 echo "built $root/dist/bxcachy with $("$mb" --version 2>&1 | head -1)"

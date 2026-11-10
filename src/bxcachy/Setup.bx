@@ -182,7 +182,15 @@ class Setup {
         for ( var step in plan.steps ) {
             if ( stopped ) { data.skipped.append( { id: step.id, reason: "an earlier step failed" } ); continue; }
             var problem = "";
-            if ( step.kind == "keys" && new bxcachy.KeysService( variables.cli, variables.inst.runner() ).apply( true, false, false, false ) != 0 ) problem = "failed";
+            if ( step.kind == "keys" && new bxcachy.KeysService( variables.cli, variables.inst.runner(), asJson ).apply( true, false, false, false ) != 0 ) problem = "failed";
+            if ( step.kind == "assets" ) {
+                try { new bxcachy.Assets( variables.cli, variables.inst.runner() ).writeMissing(); } catch ( any e ) { problem = "failed: " & e.message; }
+            }
+            if ( step.kind == "starter" ) {
+                var st = new bxcachy.Starter( asJson ).apply();
+                if ( st.failed.len() ) problem = "failed (" & st.failed.toList( ", " ) & ")";
+                else if ( !asJson ) println( "starter configs: wrote " & ( st.written.len() ? st.written.toList( ", " ) : "nothing" ) & "; kept " & ( st.kept.len() ? st.kept.toList( ", " ) : "nothing" ) );
+            }
             for ( var cmd in step.commands ) {
                 if ( len( problem ) ) continue;
                 var r = variables.inst.exec( cmd, 1800 );
