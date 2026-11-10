@@ -53,4 +53,14 @@ l="$(lua --layout=master)"; grep -q 'layout           = "master"' <<<"$l" || fai
 l="$(lua --layout=scrolling)"; grep -q 'layout           = "scrolling"' <<<"$l" || fail 'scrolling layout'
 l="$(lua --layout=floating)"; grep -q 'layout           = "dwindle"' <<<"$l" && grep -q '^hl.window_rule({ name = "bxcachy-floating", match = { class = ".\*" }, float = true })' <<<"$l" || fail 'floating keeps dwindle underneath and floats new windows'
 [[ "$(code "$binary" setup hyprland --layout=carousel --yes)" == 4 ]] || fail 'an unknown layout exits 4'
+# the other starter choices: workspaces, natural scroll, keyboard layouts, theme, wallpaper
+l="$(lua)"; grep -q 'workspace = "2", persistent' <<<"$l" && ! grep -q 'workspace = "3", persistent' <<<"$l" || fail 'two workspaces by default'
+grep -q 'natural_scroll = false' <<<"$l" && grep -q 'kb_layout    = "us",' <<<"$l" && ! grep -q 'kb_options' <<<"$l" || fail 'defaults: traditional scroll, one US layout'
+grep -q 'mode = "dark"' "$tmp/cfg/noctalia/config.toml" && grep -q 'path = ".*/box.jpg"' "$tmp/cfg/noctalia/config.toml" || fail 'defaults: dark theme, box wallpaper'
+l="$(lua --workspaces=4 --natural-scroll --layouts=us-intl,es --theme=light --wallpaper=minimal)"
+grep -q 'workspace = "4", persistent' <<<"$l" && ! grep -q 'workspace = "5", persistent' <<<"$l" || fail '4 workspaces'
+grep -q 'natural_scroll = true' <<<"$l" || fail 'natural scroll on'
+grep -q 'kb_layout    = "us,es",' <<<"$l" && grep -q 'kb_variant   = "intl,",' <<<"$l" && grep -q 'kb_options   = "grp:alt_shift_toggle",' <<<"$l" || fail 'US international and Spanish layouts with Alt+Shift'
+grep -q 'mode = "light"' "$tmp/cfg/noctalia/config.toml" && grep -q 'path = ".*/minimal.png"' "$tmp/cfg/noctalia/config.toml" || fail 'light theme, minimal wallpaper'
+for bad in --workspaces=0 --workspaces=11 --layouts=xx --theme=pink --wallpaper=none; do [[ "$(code "$binary" setup hyprland "$bad" --yes)" == 4 ]] || fail "$bad should exit 4"; done
 echo "terminal setup tests passed"

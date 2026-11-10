@@ -48,14 +48,15 @@ class NoctaliaConfig {
     }
 
     // config.toml. home is the user's home directory (wallpaper paths are absolute).
-    function configToml( home ) {
+    function configToml( home, theme = "dark", wallpaper = "box" ) {
+        var wpFile = new bxcachy.StarterOptions().wallpapers()[ arguments.wallpaper ];
         var pics = arguments.home & "/Pictures/BxCachy";
         return [
             '# Written by bxcachy (starter). Noctalia reloads this file when it changes; edit it freely, then `bxcachy config diff noctalia`',
             '# shows how it differs from the starter. Changes made in the Noctalia settings window are stored separately and win over this file.',
             '',
             '[theme]',
-            'mode = "dark"                 # dark | light | auto',
+            'mode = "' & arguments.theme & '"                 # dark | light | auto',
             'shell_mode = "follow"',
             'source = "custom"',
             'custom_palette = "BxCachy"    # ~/.config/noctalia/palettes/BxCachy.json',
@@ -110,7 +111,7 @@ class NoctaliaConfig {
             'directory = "' & pics & '"',
             '',
             '[wallpaper.default]',
-            'path = "' & pics & '/box.jpg"',
+            'path = "' & pics & '/' & wpFile & '"',
             '',
             '[wallpaper.automation]',
             'enabled = false              # true rotates through the folder',
@@ -121,9 +122,9 @@ class NoctaliaConfig {
     }
 
     // The files bxcachy manages for Noctalia, in the config service entry shape (name, target, mode, content).
-    function entries( cfgHome, home ) {
+    function entries( cfgHome, home, theme = "dark", wallpaper = "box" ) {
         return [
-            { name: "noctalia", target: arguments.cfgHome & "/noctalia/config.toml", mode: "644", content: configToml( arguments.home ) },
+            { name: "noctalia", target: arguments.cfgHome & "/noctalia/config.toml", mode: "644", content: configToml( arguments.home, arguments.theme, arguments.wallpaper ) },
             { name: "noctalia-palette", target: arguments.cfgHome & "/noctalia/palettes/" & paletteName() & ".json", mode: "644", content: palette() }
         ];
     }

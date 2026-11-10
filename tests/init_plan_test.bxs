@@ -33,8 +33,12 @@ check( "no apps chosen, no install step", find( "apps", ids( ip.plan( { ai_orche
 p = ip.plan( { git_name: "Ada Lovelace", git_email: "ada@example.com" } );
 check( "git identity is two argument arrays (no shell string)", ids( p ) == "git-name,git-email" && p.steps[ 1 ].argv[ 5 ] == "Ada Lovelace" && p.steps[ 1 ].argv.len() == 5 );
 
-p = ip.plan( { databases: [ "postgres" ], ssh_key: true, theme: "dark", wallpaper: "box", workspaces: 2, natural_scroll: false, layouts: [] } );
-check( "answers without a command are listed as pending, not dropped, and not when empty or off", p.pending.toList( "," ) == "databases,ssh_key,theme,wallpaper,workspaces" && p.steps.len() == 0 );
+p = ip.plan( { databases: [ "postgres" ], ssh_key: true, app_mode: "custom", natural_scroll: false, layouts: [] } );
+check( "answers without a command are listed as pending, not dropped, and not when empty or off", p.pending.toList( "," ) == "databases,ssh_key,app_mode" && p.steps.len() == 0 );
+p = ip.plan( { desktops: "hyprland", workspaces: 4, natural_scroll: true, layouts: [ "us-intl", "es" ], theme: "light", wallpaper: "aurora" } );
+check( "the Hyprland starter takes workspaces, natural scroll, layouts, theme and wallpaper", cmd( p, "hyprland" ) == "bxcachy setup hyprland --workspaces=4 --natural-scroll --layouts=us-intl,es --theme=light --wallpaper=aurora" && p.pending.len() == 0 );
+p = ip.plan( { desktops: "plasma", workspaces: 4, theme: "light" } );
+check( "those answers are pending when Hyprland is not set up", p.pending.toList( "," ) == "workspaces,theme" );
 
 p = ip.plan( { toolchains: [ "java", "php", "go" ] } );
 check( "toolchains: a catalog profile each, Laravel after PHP", ids( p ) == "toolchain-java,toolchain-php,laravel,toolchain-go" && cmd( p, "toolchain-java" ) == "bxcachy profile-install jvm" && cmd( p, "laravel" ) == "composer global require laravel/installer" );

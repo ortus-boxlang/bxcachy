@@ -6,7 +6,12 @@
 class InitPlan {
     // Answer keys that are saved but have no command behind them yet.
     function pendingKeys() {
-        return [ "databases", "ssh_key", "theme", "wallpaper", "workspaces", "natural_scroll", "layouts", "app_mode" ];
+        return [ "databases", "ssh_key", "app_mode" ];
+    }
+
+    // Answers that shape the Hyprland starter (applied by `setup hyprland`; pending when Hyprland is not being set up).
+    function hyprlandKeys() {
+        return [ "workspaces", "natural_scroll", "layouts", "theme", "wallpaper" ];
     }
 
     // The value of an answer, or a fallback when it was not answered.
@@ -44,6 +49,11 @@ class InitPlan {
             var argv = [ "bxcachy", "setup", "hyprland" ];
             if ( len( terminal ) ) argv.append( "--terminal=" & terminal );
             if ( len( layout ) ) argv.append( "--layout=" & layout );
+            if ( structKeyExists( a, "workspaces" ) ) argv.append( "--workspaces=" & a.workspaces );
+            if ( isSet( pick( a, "natural_scroll", false ) ) ) argv.append( "--natural-scroll" );
+            if ( pick( a, "layouts", [] ).len() ) argv.append( "--layouts=" & a.layouts.toList( "," ) );
+            if ( len( pick( a, "theme" ) ) ) argv.append( "--theme=" & a.theme );
+            if ( len( pick( a, "wallpaper" ) ) ) argv.append( "--wallpaper=" & a.wallpaper );
             out.steps.append( { id: "hyprland", title: "set up Hyprland + Noctalia" & ( len( terminal ) ? " (" & terminal & " on Super+Enter" & ( len( layout ) ? ", " & layout & " layout" : "" ) & ")" : "" ), argv: argv } );
         }
         if ( wantsPlasma ) out.steps.append( { id: "plasma", title: "set up KDE Plasma tiling (HyprKwin)", argv: [ "bxcachy", "setup", "plasma" ] } );
@@ -95,6 +105,9 @@ class InitPlan {
         if ( len( gmail ) ) out.steps.append( { id: "git-email", title: "git user.email", argv: [ "git", "config", "--global", "user.email", gmail ] } );
         var sess = session( a );
         if ( len( sess ) ) out.steps.append( { id: "session", title: "start on " & ( sess == "hyprland" ? "Hyprland" : "KDE Plasma" ) & " at the login screen", argv: [ "bxcachy", "session", "set", sess ] } );
+        if ( !wantsHypr ) for ( var key in hyprlandKeys() ) {
+            if ( structKeyExists( a, key ) && isSet( a[ key ] ) ) out.pending.append( key );
+        }
         for ( var key in pendingKeys() ) {
             if ( structKeyExists( a, key ) && isSet( a[ key ] ) ) out.pending.append( key );
         }

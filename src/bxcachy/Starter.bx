@@ -2,10 +2,10 @@
 // Everything goes through the config service (backup, journal). Files the user already has are never overwritten:
 // a changed Noctalia file is kept as it is, and hyprland.lua is written only when none exists.
 class Starter {
-    function init( quiet = false, terminal = "ghostty", layout = "dwindle" ) {
+    // opts: the StarterOptions keys (terminal, layout, workspaces, naturalScroll, layouts, theme, wallpaper); missing ones use the defaults.
+    function init( quiet = false, opts = {} ) {
         variables.config = new bxcachy.ConfigService().quiet( arguments.quiet );
-        variables.terminal = arguments.terminal;
-        variables.layout = arguments.layout;
+        variables.opts = new bxcachy.StarterOptions().parse( arguments.opts ).value;
         return this;
     }
 
@@ -13,7 +13,7 @@ class Starter {
     function entries() {
         var cfg = variables.config.cfgHome();
         var home = getSystemSetting( "HOME", "" );
-        var out = new bxcachy.NoctaliaConfig().entries( cfg, home );
+        var out = new bxcachy.NoctaliaConfig().entries( cfg, home, variables.opts.theme, variables.opts.wallpaper );
         out.append( { name: "hyprland", target: cfg & "/hypr/hyprland.lua", mode: "644", content: hyprlandText() } );
         return out;
     }
@@ -21,14 +21,20 @@ class Starter {
     // The starter hyprland.lua with the chosen terminal and layout. dwindle, master and scrolling set general.layout;
     // floating keeps dwindle underneath (one keypress to tile) and floats every new window with a window rule.
     function hyprlandText() {
+        var o = variables.opts;
+        var so = new bxcachy.StarterOptions();
         var t = new bxcachy.TemplateData().text( "hyprland.lua" );
-        t = replace( t, 'local terminal    = "kitty"', 'local terminal    = "' & variables.terminal & '"' );
-        var base = variables.layout == "floating" ? "dwindle" : variables.layout;
+        t = replace( t, 'local terminal    = "kitty"', 'local terminal    = "' & o.terminal & '"' );
+        var base = o.layout == "floating" ? "dwindle" : o.layout;
         t = replace( t, 'layout           = "dwindle",', 'layout           = "' & base & '",' );
-        var rule = variables.layout == "floating"
+        var rule = o.layout == "floating"
             ? '-- Floating by default (layout: floating). Delete this rule, or press Super+V on a window, to tile.' & chr( 10 ) & 'hl.window_rule({ name = "bxcachy-floating", match = { class = ".*" }, float = true })'
             : '-- (Windows tile. To float every new window by default, add: hl.window_rule({ name = "floating", match = { class = ".*" }, float = true }))';
-        return replace( t, "-- BXCACHY-FLOATING-RULE", rule );
+        t = replace( t, "-- BXCACHY-FLOATING-RULE", rule );
+        t = replace( t, "-- BXCACHY-WORKSPACES", so.workspacesLua( o.workspaces ) );
+        t = replace( t, 'kb_layout    = "us",', so.keyboardLua( o.layouts ) );
+        t = replace( t, 'natural_scroll = false,   -- true gives the macOS direction', 'natural_scroll = ' & ( o.naturalScroll ? "true" : "false" ) & ',   -- true gives the macOS direction' );
+        return t;
     }
 
     // Writes what is missing. Returns { written, kept, failed }: names of entries. kept = already there (clean, or changed by the user).
