@@ -1,0 +1,109 @@
+// The starter Noctalia (v5) configuration: a custom palette and config.toml, rendered as text (pure, no I/O).
+// Formats are from the Noctalia docs: config is TOML in ~/.config/noctalia/*.toml (hot reloaded; GUI changes live in
+// ~/.local/state/noctalia/settings.toml and win over this file), a custom palette is JSON in ~/.config/noctalia/palettes/.
+//   https://docs.noctalia.dev/noctalia/configuration/   https://docs.noctalia.dev/noctalia/theming/palette/
+// Look: Ortus brand colours (#00FF78 main, #00DBFF second) on Catppuccin Frappe neutrals (Frappe's base is the brand dark #303446).
+class NoctaliaConfig {
+    function init() {
+        return this;
+    }
+
+    // The palette name used in config.toml `custom_palette` and as the file name.
+    function paletteName() {
+        return "BxCachy";
+    }
+
+    // One palette variant as JSON text lines (indented two levels deep).
+    function variant( name, c, t ) {
+        var q = function( k, v ) { return '    "' & k & '": "' & v & '"'; };
+        var role = [ q( "primary", c.primary ), q( "on_primary", c.on_primary ), q( "secondary", c.secondary ), q( "on_secondary", c.on_secondary ),
+                     q( "tertiary", c.tertiary ), q( "on_tertiary", c.on_primary ), q( "error", c.error ), q( "on_error", c.on_primary ),
+                     q( "surface", c.surface ), q( "on_surface", c.on_surface ), q( "surface_container", c.surface_container ),
+                     q( "on_surface_variant", c.on_surface_variant ), q( "outline_variant", c.outline_variant ), q( "shadow", c.shadow ),
+                     q( "hover", c.hover ), q( "on_hover", c.on_surface ) ];
+        var tq = function( k, v ) { return '      "' & k & '": "' & v & '"'; };
+        var norm = [ "black", "red", "green", "yellow", "blue", "magenta", "cyan", "white" ].map( function( k ) { return '        "' & k & '": "' & t.normal[k] & '"'; } );
+        var bright = [ "black", "red", "green", "yellow", "blue", "magenta", "cyan", "white" ].map( function( k ) { return '        "' & k & '": "' & t.bright[k] & '"'; } );
+        var term = [ '    "terminal": {',
+                     tq( "background", c.surface ) & ",", tq( "foreground", c.on_surface ) & ",", tq( "cursor", c.primary ) & ",", tq( "cursor_text", c.on_primary ) & ",",
+                     tq( "selection_bg", c.surface_container ) & ",", tq( "selection_fg", c.on_surface ) & ",",
+                     '      "normal": {', norm.toList( "," & chr( 10 ) ), '      },',
+                     '      "bright": {', bright.toList( "," & chr( 10 ) ), '      }', '    }' ];
+        return '  "' & name & '": {' & chr( 10 ) & role.toList( "," & chr( 10 ) ) & "," & chr( 10 ) & term.toList( chr( 10 ) ) & chr( 10 ) & "  }";
+    }
+
+    // The palette file: dark = Frappe neutrals with the brand greens, light = Latte neutrals with darker greens for contrast.
+    function palette() {
+        var dark = { primary: "#00FF78", on_primary: "#232634", secondary: "#00DBFF", on_secondary: "#232634", tertiary: "#ca9ee6", error: "#e78284",
+                     surface: "#303446", on_surface: "#c6d0f5", surface_container: "#414559", on_surface_variant: "#a5adce", outline_variant: "#626880",
+                     shadow: "#232634", hover: "#51576d" };
+        var darkTerm = { normal: { black: "#51576d", red: "#e78284", green: "#a6d189", yellow: "#e5c890", blue: "#8caaee", magenta: "#ca9ee6", cyan: "#81c8be", white: "#b5bfe2" },
+                         bright: { black: "#626880", red: "#e78284", green: "#00FF78", yellow: "#e5c890", blue: "#8caaee", magenta: "#ca9ee6", cyan: "#00DBFF", white: "#c6d0f5" } };
+        var light = { primary: "#00a34d", on_primary: "#eff1f5", secondary: "#0090ad", on_secondary: "#eff1f5", tertiary: "#8839ef", error: "#d20f39",
+                      surface: "#eff1f5", on_surface: "#4c4f69", surface_container: "#ccd0da", on_surface_variant: "#5c5f77", outline_variant: "#9ca0b0",
+                      shadow: "#dce0e8", hover: "#bcc0cc" };
+        var lightTerm = { normal: { black: "#5c5f77", red: "#d20f39", green: "#40a02b", yellow: "#df8e1d", blue: "#1e66f5", magenta: "#8839ef", cyan: "#179299", white: "#acb0be" },
+                          bright: { black: "#6c6f85", red: "#d20f39", green: "#00a34d", yellow: "#df8e1d", blue: "#1e66f5", magenta: "#8839ef", cyan: "#0090ad", white: "#bcc0cc" } };
+        return '{' & chr( 10 ) & '  "version": 2,' & chr( 10 ) & variant( "dark", dark, darkTerm ) & "," & chr( 10 ) & variant( "light", light, lightTerm ) & chr( 10 ) & '}' & chr( 10 );
+    }
+
+    // config.toml. home is the user's home directory (wallpaper paths are absolute).
+    function configToml( home ) {
+        var pics = arguments.home & "/Pictures/BxCachy";
+        return [
+            '# Written by bxcachy (starter). Noctalia reloads this file when it changes; edit it freely, then `bxcachy config diff noctalia`',
+            '# shows how it differs from the starter. Changes made in the Noctalia settings window are stored separately and win over this file.',
+            '',
+            '[theme]',
+            'mode = "dark"                 # dark | light | auto',
+            'shell_mode = "follow"',
+            'source = "custom"',
+            'custom_palette = "BxCachy"    # ~/.config/noctalia/palettes/BxCachy.json',
+            '',
+            '[bar]',
+            'order = ["main"]',
+            '',
+            '[bar.main]',
+            'position = "top"',
+            'thickness = 38',
+            'background_opacity = 0.85',
+            'compositor_blur = true',
+            'radius = 14',
+            'margin_ends = 12',
+            'margin_edge = 8',
+            'padding = 12',
+            'widget_spacing = 6',
+            'capsule = true',
+            'capsule_fill = "surface_container"',
+            'capsule_opacity = 0.9',
+            'capsule_border = "outline_variant"',
+            'start = ["launcher", "workspaces", "active_window"]',
+            'center = ["clock"]',
+            'end = ["media", "tray", "network", "bluetooth", "volume", "battery", "notifications", "control-center"]',
+            '',
+            '[wallpaper]',
+            'enabled = true',
+            'fill_mode = "crop"',
+            'transition = ["fade", "wipe", "zoom"]',
+            'transition_duration = 1200',
+            'directory = "' & pics & '"',
+            '',
+            '[wallpaper.default]',
+            'path = "' & pics & '/box.jpg"',
+            '',
+            '[wallpaper.automation]',
+            'enabled = false              # true rotates through the folder',
+            'interval_seconds = 1800',
+            'order = "random"',
+            ''
+        ].toList( chr( 10 ) );
+    }
+
+    // The files bxcachy manages for Noctalia, in the config service entry shape (name, target, mode, content).
+    function entries( cfgHome, home ) {
+        return [
+            { name: "noctalia", target: arguments.cfgHome & "/noctalia/config.toml", mode: "644", content: configToml( arguments.home ) },
+            { name: "noctalia-palette", target: arguments.cfgHome & "/noctalia/palettes/" & paletteName() & ".json", mode: "644", content: palette() }
+        ];
+    }
+}

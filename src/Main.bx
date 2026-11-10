@@ -174,6 +174,7 @@ class {
           nl = chr( 10 );
           var managed = { "bxcachy": { name: "bxcachy", target: config.cfgHome() & "/bxcachy/bxcachy.json", mode: "600", content: '{' & nl & '  "schema_version": 1,' & nl & '  "desktop": "auto"' & nl & '}' & nl } };
           for ( var se in new bxcachy.Shortcuts().entries( config.cfgHome() ) ) managed[se.name] = se;
+          for ( var ne in new bxcachy.NoctaliaConfig().entries( config.cfgHome(), getSystemSetting( "HOME", "" ) ) ) managed[ne.name] = ne;
           if ( cfgVerb == "list" || cfgVerb == "history" ) {
            rows = [];
            if ( cfgVerb == "list" ) {

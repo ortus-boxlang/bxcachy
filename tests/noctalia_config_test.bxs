@@ -1,0 +1,19 @@
+// NoctaliaConfig: palette JSON and config.toml. Run from src/: (cd src && matchbox ../tests/noctalia_config_test.bxs)
+failures = 0;
+function check( label, ok ) { if ( ok ) println( "ok   " & label ); else { println( "FAIL " & label ); failures++; } }
+nc = new bxcachy.NoctaliaConfig();
+p = jsonDeserialize( nc.palette() );
+check( "palette: version 2 with dark and light", p.version == 2 && structKeyExists( p, "dark" ) && structKeyExists( p, "light" ) );
+roles = [ "primary", "on_primary", "secondary", "on_secondary", "tertiary", "on_tertiary", "error", "on_error", "surface", "on_surface", "surface_container", "on_surface_variant", "outline_variant", "shadow", "hover", "on_hover" ];
+ok = true; for ( v in [ "dark", "light" ] ) for ( r in roles ) if ( !structKeyExists( p[v], r ) || !reFind( "^##[0-9a-fA-F]{6}$", p[v][r] ) ) ok = false;
+check( "palette: all 16 roles are hex colours in both variants", ok );
+check( "palette: brand green is the dark primary, brand cyan the secondary", lCase( p.dark.primary ) == "##00ff78" && lCase( p.dark.secondary ) == "##00dbff" );
+check( "palette: terminal has 8 normal and 8 bright colours", structCount( p.dark.terminal.normal ) == 8 && structCount( p.dark.terminal.bright ) == 8 );
+t = nc.configToml( "/home/dev" );
+check( "config: custom palette is selected by name", find( 'custom_palette = "BxCachy"', t ) > 0 && find( 'source = "custom"', t ) > 0 );
+check( "config: wallpaper paths are absolute under the home directory", find( 'directory = "/home/dev/Pictures/BxCachy"', t ) > 0 && find( 'path = "/home/dev/Pictures/BxCachy/box.jpg"', t ) > 0 );
+check( "config: bar lists real widget names", find( '"launcher"', t ) > 0 && find( '"control-center"', t ) > 0 && find( '"workspaces"', t ) > 0 );
+e = nc.entries( "/home/dev/.config", "/home/dev" );
+check( "entries: config.toml and the palette file", e.len() == 2 && e[1].target == "/home/dev/.config/noctalia/config.toml" && e[2].target == "/home/dev/.config/noctalia/palettes/BxCachy.json" );
+if ( failures > 0 ) { println( failures & " failed" ); exit( 1 ); }
+println( "all passed" );
