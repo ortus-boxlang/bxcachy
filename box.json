@@ -23,11 +23,11 @@
       "installer": "https://raw.githubusercontent.com/ortus-boxlang/matchbox-quick-installer/main/install/install.sh"
     },
     "matchbox": {
-      "version": "0.13.0",
+      "version": "0.14.0",
       "repo": "https://github.com/ortus-boxlang/matchbox",
       "ref": "bxcachy",
       "downloads": "https://downloads.ortussolutions.com/ortussolutions/bxcachy/matchbox",
-      "note": "MatchBox built by CI from the `bxcachy` branch (develop plus the open BxCachy pull requests #149-#155 and the VM fixes #156-#161 and #166: break in nested loops, closed stdout, variables.fn(), switch var slots and default jump, panic messages, struct built-ins on the variables scope, and the terminal UI canvas with native runner support, built with the bif-tui feature) and published to S3; switch back to a released version through mvm once those pull requests ship."
+      "note": "MatchBox 0.14.0 built by CI from the `bxcachy` branch (develop plus the open BxCachy pull requests #149-#155 and the VM fixes #156-#161 and #166: break in nested loops, closed stdout, variables.fn(), switch var slots and default jump, panic messages, struct built-ins on the variables scope, and the terminal UI canvas with native runner support, built with the bif-tui feature) and published to S3; switch back to a released version through mvm once those pull requests ship."
     },
     "rust": {
       "channel": "stable"
