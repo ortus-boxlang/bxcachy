@@ -28,12 +28,19 @@ code() { set +e; run "$@" >/dev/null 2>&1; local c=$?; set -e; echo "$c"; }
 [[ ! -e "$tmp/cfg/xremap/config.yml" && ! -s "$tmp/kg/Log Out" ]] || fail 'dry run changed something'
 [[ "$(code "$binary" keys apply --yes)" == 0 ]] || fail 'apply --yes exits 0'
 grep -q 'Super-c: Ctrl-Shift-c' "$tmp/cfg/xremap/config.yml" || fail 'xremap file written'
-grep -q 'uwsm stop' "$tmp/cfg/hypr/bxcachy-keys.conf" || fail 'hypr file written'
+grep -q 'uwsm stop' "$tmp/cfg/hypr/bxcachy.lua" || fail 'hypr file written'
 [[ "$(cat "$tmp/kg/Log Out")" == "Meta+Shift+Q,Ctrl+Alt+Del,Log Out" ]] || fail 'plasma shortcut set'
 [[ "$(code "$binary" keys check)" == 0 ]] || fail 'check after apply exits 0'
-run "$binary" keys check --json | jq -e '.ok and (.data.items | length) == 4' >/dev/null || fail 'check --json'
+run "$binary" keys check --json | jq -e '.ok and (.data.items | length) == 5' >/dev/null || fail 'check --json'
 run "$binary" config list | grep -q '^xremap: clean' || fail 'config list shows xremap'
 [[ "$(code "$binary" keys apply --yes)" == 0 ]] || fail 're-run exits 0'
+# hyprland.lua is never written; it is only checked for the load line
+mkdir -p "$tmp/cfg/hypr"; echo '-- mine' > "$tmp/cfg/hypr/hyprland.lua"
+[[ "$(code "$binary" keys check)" == 1 ]] || fail 'hyprland.lua without the load line exits 1'
+out="$(run "$binary" keys apply --yes)"; [[ "$out" == *'require("bxcachy")'* ]] || fail 'apply prints the load line'
+[[ "$(cat "$tmp/cfg/hypr/hyprland.lua")" == '-- mine' ]] || fail 'hyprland.lua was modified'
+echo 'require("bxcachy")' >> "$tmp/cfg/hypr/hyprland.lua"
+[[ "$(code "$binary" keys check)" == 0 ]] || fail 'load line present exits 0'
 # drift
 echo '# mine' >> "$tmp/cfg/xremap/config.yml"
 [[ "$(code "$binary" keys check)" == 1 ]] || fail 'drifted file exits 1'

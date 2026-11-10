@@ -22,7 +22,7 @@ class Shortcuts {
             { id: "paste", keys: "Super+V", action: "Paste", kind: "remap", to: "Ctrl-v", termTo: "Ctrl-Shift-v" },
             { id: "switch-windows", keys: "Super+Tab", action: "Switch windows", kind: "remap", to: "Alt-Tab" },
             { id: "logout", keys: "Super+Shift+Q", action: "Log out to the login screen", kind: "bind",
-              hyprland: "bind = SUPER SHIFT, Q, exec, uwsm stop",
+              hyprland: 'hl.bind(mainMod .. " + SHIFT + Q", hl.dsp.exec_cmd("uwsm stop"))',
               plasma: { group: "ksmserver", key: "Log Out", value: "Meta+Shift+Q,Ctrl+Alt+Del,Log Out" } }
         ];
     }
@@ -65,11 +65,39 @@ class Shortcuts {
         return out.toList( chr( 10 ) ) & chr( 10 );
     }
 
-    // Hyprland bind lines.
+    // The Hyprland Lua module (Hyprland 0.55+ reads hyprland.lua; Noctalia's docs use the same API).
+    // Written to ~/.config/hypr/bxcachy.lua; hyprland.lua loads it with `require("bxcachy")` (see hyprlandLoadLine).
+    // Lines come from the Noctalia v5 Hyprland docs: https://docs.noctalia.dev/noctalia/v5.4.0/compositor-settings/hyprland/
     function hyprland() {
-        var out = [ "# Written by bxcachy (keys)." ];
+        var out = [
+            '-- Written by bxcachy (keys). Edit with `bxcachy keys apply`, not by hand.',
+            'local mainMod = "SUPER"',
+            'local ipc = "noctalia msg "',
+            '',
+            '-- Noctalia starts with the session',
+            'hl.on("hyprland.start", function()',
+            '  hl.exec_cmd("noctalia")',
+            'end)',
+            '',
+            '-- Noctalia panels and the window switcher (Super+Tab is remapped to Alt+Tab by xremap)',
+            'hl.bind(mainMod .. "+Space", hl.dsp.exec_cmd(ipc .. "panel-toggle launcher"))',
+            'hl.bind(mainMod .. "+S", hl.dsp.exec_cmd(ipc .. "panel-toggle control-center"))',
+            'hl.bind(mainMod .. "+comma", hl.dsp.exec_cmd(ipc .. "settings-toggle"))',
+            'hl.bind("ALT + Tab", hl.dsp.exec_cmd(ipc .. "window-switcher hold"))',
+            '',
+            '-- Shared shortcuts from the bxcachy table'
+        ];
         for ( var r in table() ) if ( r.kind == "bind" ) out.append( r.hyprland );
+        out.append( '' );
+        out.append( '-- Noctalia settings window floats; its panels get blur and no layer animation' );
+        out.append( 'hl.window_rule({ match = { class = "dev.noctalia.Noctalia" }, float = true, size = { 1080, 920 } })' );
+        out.append( 'hl.layer_rule({ name = "noctalia", match = { namespace = "^noctalia-(bar-.+|notification|dock|panel|attached-panel|osd|window-switcher)$" }, no_anim = true, ignore_alpha = 0.5, blur = true, blur_popups = true })' );
         return out.toList( chr( 10 ) ) & chr( 10 );
+    }
+
+    // The one line hyprland.lua needs to load the module above.
+    function hyprlandLoadLine() {
+        return 'require("bxcachy")';
     }
 
     // kglobalshortcutsrc fragment for Plasma.
@@ -87,7 +115,7 @@ class Shortcuts {
     function entries( cfgHome ) {
         return [
             { name: "xremap", target: cfgHome & "/xremap/config.yml", mode: "644", content: xremap() },
-            { name: "hypr-keys", target: cfgHome & "/hypr/bxcachy-keys.conf", mode: "644", content: hyprland() },
+            { name: "hypr-keys", target: cfgHome & "/hypr/bxcachy.lua", mode: "644", content: hyprland() },
             { name: "xremap-service", target: cfgHome & "/systemd/user/xremap.service", mode: "644", content: xremapService() }
         ];
     }
