@@ -125,8 +125,8 @@ else
   step real-setup-hyprland-packages-exist 0 bash -c "pkgs=\$('$BIN' setup hyprland --dry-run --json | jq -r '.data.steps[0].commands[0][5:][]'); test -n \"\$pkgs\" && sudo pacman -Si \$pkgs >/dev/null"
   # --- Desktop setup on the real system: xremap plan (AUR build names exist), the whole `setup hyprland`, and what it wrote ---
   step real-install-yay                 0               sudo pacman -S --needed --noconfirm yay
-  step_grep real-setup-xremap-plan      0 "Dry run"     "$BIN" setup xremap --build hypr --dry-run
-  step real-setup-xremap-kde-package    0               bash -c "'$BIN' setup xremap --build kde --dry-run --json | jq -e '.data.steps[0].commands[0][4] == \"xremap-kde-bin\"'"
+  step_grep real-setup-xremap-plan      0 "Dry run"     "$BIN" setup xremap --build=hypr --dry-run
+  step real-setup-xremap-kde-package    0               bash -c "'$BIN' setup xremap --build=kde --dry-run --json | jq -e '.data.steps[0].commands[0][4] == \"xremap-kde-bin\"'"
   if [[ $NET == 1 ]]; then
     step real-aur-xremap-hypr-exists    0               yay -Si xremap-hypr-bin
     step real-aur-xremap-kde-exists     0               yay -Si xremap-kde-bin

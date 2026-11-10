@@ -224,7 +224,7 @@ Builds on sections 2 to 4 (mutation rules, exit codes, `--json`), the config ser
 bxcachy setup hyprland [--yes] [--dry-run] [--json]    packages, images, starter configs, shortcut files
 bxcachy setup plasma   [--yes] [--dry-run] [--json]    HyprKwin tiling on KDE Plasma
 bxcachy setup plasma --keys | --undo-keys              hand Plasma's clashing keys over / back
-bxcachy setup xremap [--build hypr|kde] [--yes]        Cmd-style keys: AUR package, input access, user service
+bxcachy setup xremap [--build=hypr|kde] [--yes]        Cmd-style keys: AUR package, input access, user service
 bxcachy setup undo hyprland|plasma|xremap [--yes]      remove only what setup added
 bxcachy setup status [--json]
 bxcachy tiling on|off|status                           HyprKwin inside Plasma, no logout

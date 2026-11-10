@@ -193,7 +193,7 @@ class SetupPlan {
         var out = { target: "xremap", errors: [], warnings: [], notes: [], steps: [], added: { package: "", group: false, udev: false } };
         var build = xremapBuild( facts, opts );
         if ( facts.isRoot ) out.errors.append( "Run as a regular user; sudo is used only for the steps shown in the plan" );
-        if ( !arrayFind( [ "hypr", "kde" ], build ) ) out.errors.append( "Cannot tell which xremap build to use (run inside Hyprland or Plasma, or pass --build hypr|kde)" );
+        if ( !arrayFind( [ "hypr", "kde" ], build ) ) out.errors.append( "Cannot tell which xremap build to use (run inside Hyprland or Plasma, or pass --build=hypr|kde)" );
         if ( !facts.hasSudo ) out.errors.append( "sudo is required (udev rule and input group) but was not found" );
         var pkg = len( build ) ? xremapPackage( build ) : "";
         var havePkg = len( pkg ) && structKeyExists( facts.installed, pkg );

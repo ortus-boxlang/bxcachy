@@ -118,7 +118,7 @@ class Setup {
         return new bxcachy.ConfigService().stateDir() & "/setup-xremap.json";
     }
 
-    // `setup xremap [--build hypr|kde]`
+    // `setup xremap [--build=hypr|kde]`
     function xremap( opts, yes, dryRun, asJson ) {
         var f = facts();
         var plan = new bxcachy.SetupPlan().xremap( f, opts );

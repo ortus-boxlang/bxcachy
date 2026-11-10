@@ -245,7 +245,7 @@ class {
           if ( setupSub == "undo" && p.len() == 3 && p[3] == "xremap" ) {
            CLIExit( st.undoXremap( setupYes, setupDry, asJson ) );
           }
-          println( "Usage: bxcachy setup plasma [--keys | --undo-keys] | hyprland | xremap [--build hypr|kde] | undo plasma|hyprland|xremap | status [--yes] [--dry-run] [--json]" );
+          println( "Usage: bxcachy setup plasma [--keys | --undo-keys] | hyprland | xremap [--build=hypr|kde] | undo plasma|hyprland|xremap | status [--yes] [--dry-run] [--json]" );
           CLIExit( 2 );
           break;
          case "keys":
