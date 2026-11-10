@@ -351,7 +351,7 @@ class WizardView {
                     var fieldBg = focused ? variables.SURFACE0 : variables.CRUST;
                     fillRect( ix + 2, ry, boxW, 1, fieldBg );
                     var shown = len( value ) ? value : ( qn.placeholder ?: "" );
-                    put( ix + 3, ry, left( shown, boxW - 3 ), len( value ) ? variables.TEXT : variables.OVERLAY, fieldBg );
+                    put( ix + 3 + ( len( value ) ? 0 : 1 ), ry, left( shown, boxW - 4 ), len( value ) ? variables.TEXT : variables.OVERLAY, fieldBg );
                     if ( focused && ( arguments.tick \ 6 ) mod 2 == 0 ) put( ix + 3 + min( len( value ), boxW - 3 ), ry, "▏", variables.GREEN, variables.SURFACE0 );
                     put( ix, ry, focused ? "▌" : " ", brand( 0.5 ), variables.MANTLE );
                 } else if ( qn.type == "number" ) {

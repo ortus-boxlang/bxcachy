@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
-# bxcachy-wizard end to end in a real pseudo-terminal: pages in, keys typed, answers out (and cancel writes nothing).
-# Usage: wizard-test.sh [wizard-binary]   (builds it when no path is given)
+# `bxcachy wizard` end to end in a real pseudo-terminal: pages in, keys typed, answers out (and cancel writes nothing).
+# Needs the native bxcachy built with MatchBox's TUI. Usage: wizard-test.sh BXCACHY_BINARY
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
-bin="${1:-}"
-if [[ -z "$bin" ]]; then cargo build --release --manifest-path "$root/wizard/Cargo.toml" >/dev/null; bin="$root/wizard/target/release/bxcachy-wizard"; fi
+bin="$(realpath "${1:?native bxcachy executable required}")"
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 fail() { echo "FAIL: $*" >&2; exit 1; }
 cat > "$tmp/pages.json" <<'JSON'
@@ -22,7 +21,7 @@ bin, pages, out, keys = sys.argv[1:5]
 keys = keys.encode().decode('unicode_escape').encode('latin-1')
 pid, fd = pty.fork()
 if pid == 0:
-    os.execv(bin, [bin, '--pages', pages, '--out', out])
+    os.execv(bin, [bin, 'wizard', '--pages=' + pages, '--out=' + out])
 fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack('HHHH', 36, 120, 0, 0))
 def pump(t):
     end = time.time() + t
@@ -32,7 +31,7 @@ def pump(t):
             try:
                 if not os.read(fd, 65536): return
             except OSError: return
-pump(0.6)
+pump(1.2)
 for k in keys.split(b'|'):
     os.write(fd, k); pump(0.25)
 pump(0.5)
@@ -51,6 +50,8 @@ rc=0; run_keys "$tmp/cancel.json" '\r|\x03' || rc=$?
 [[ ! -e "$tmp/cancel.json" ]] || fail "cancel wrote answers"
 # a bad pages file is a clean failure
 echo '{' > "$tmp/bad.json"
-if "$bin" --pages "$tmp/bad.json" --out "$tmp/x.json" 2>/dev/null; then fail "a bad pages file was accepted"; fi
-if "$bin" 2>/dev/null; then fail "no arguments were accepted"; fi
+rc=0; "$bin" wizard --pages="$tmp/bad.json" --out="$tmp/x.json" >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 4 ]] || fail "a bad pages file should exit 4, got $rc"
+rc=0; "$bin" wizard >/dev/null 2>&1 || rc=$?
+[[ "$rc" == 2 ]] || fail "no arguments should exit 2, got $rc"
 echo "wizard tests passed"

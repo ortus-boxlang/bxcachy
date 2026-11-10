@@ -1,0 +1,57 @@
+// WizardView: what each screen shows, read back with render_to_string (needs MatchBox built with bif-tui).
+// Run from src/: (cd src && matchbox ../tests/wizard_view_test.bxs)
+failures = 0;
+function check( label, ok ) { if ( ok ) println( "ok   " & label ); else { println( "FAIL " & label ); failures++; } }
+tui = createObject( "rust", "tui.TUI" );
+view = new bxcachy.WizardView( tui );
+app = new bxcachy.WizardApp( jsonDeserialize( new bxcachy.WizardData().demoPages() ) );
+function shot( w = 120, h = 36, tick = 100 ) { view.paint( app, tick, w, h ); return tui.render_to_string( w, h ); }
+
+s = shot();
+check( "welcome: powered by BoxLang and the address", find( "Powered by BoxLang", s ) > 0 && find( "www.boxlang.io", s ) > 0 );
+check( "welcome: wordmark art, tagline and prompt", find( "███", s ) > 0 && find( "set up in minutes", s ) > 0 && find( "press  enter  to begin", s ) > 0 );
+
+app.onKey( "Enter" );
+s = shot();
+check( "page: title, options, selected marker", find( "Desktop", s ) > 0 && find( "Hyprland + Noctalia", s ) > 0 && find( "●  Both", s ) > 0 );
+check( "page: the sidebar lists the steps and Powered by BoxLang", find( "Steps", s ) > 0 && find( "Review", s ) > 0 && find( "Powered by BoxLang", s ) > 0 && find( "step 1 of 9", s ) > 0 );
+check( "page: footer key hints", find( "ctrl-c", s ) > 0 && find( "space", s ) > 0 );
+check( "page: the focused option shows its description", find( "A fast tiling desktop", s ) > 0 );
+check( "page: number field shows its range", find( "1 to 10", s ) > 0 );
+
+app.onKey( "Down" ); app.onKey( " " );
+s = shot();
+check( "selecting moves the marker", find( "●  KDE Plasma with tiling", s ) > 0 );
+
+check( "a click on a sidebar row is a page action only once reached", view.hitAt( 6, 5 ).kind == "page" && view.hitAt( 6, 5 ).n == 1 );
+shot( 120, 36 );
+lines = listToArray( tui.render_to_string( 120, 36 ), chr( 10 ), true );
+optY = 0; for ( i = 1; i <= lines.len(); i++ ) if ( find( "KDE Plasma with tiling", lines[ i ] ) ) { optY = i - 1; break; }
+check( "a click on an option is a focus action", optY > 0 && view.hitAt( 40, optY ).kind == "focus" );
+check( "a click on nothing does nothing", view.hitAt( 0, 0 ).kind == "" );
+
+app.gotoPage( 4 );
+s = shot();
+check( "text fields show their placeholder", find( "Luis Majano", s ) > 0 );
+for ( c in [ "L", "u", "i", "s" ] ) app.onKey( c );
+s = shot();
+check( "and what is typed", find( "Luis", s ) > 0 );
+
+app.gotoPage( 3 );
+s = shot();
+check( "multi choice marks selected with a filled diamond", find( "◆", s ) > 0 && find( "◇", s ) > 0 );
+
+app.gotoReview();
+s = shot();
+check( "review: apply button and readable values", find( "Apply these choices", s ) > 0 && find( "Everything look right", s ) > 0 && find( "Both", s ) > 0 || find( "KDE Plasma with tiling", s ) > 0 );
+check( "review: Powered by BoxLang in the sidebar", find( "Powered by BoxLang", s ) > 0 );
+
+small = shot( 60, 20 );
+check( "a window that is too small asks for a bigger one", find( "Make the window a little bigger", small ) > 0 );
+
+app = new bxcachy.WizardApp( jsonDeserialize( new bxcachy.WizardData().demoPages() ) );
+a1 = shot( 120, 36, 100 ); app.onKey( "Enter" ); b1 = shot( 120, 36, 100 );
+check( "a new screen fades in (first frame is dimmer, same text)", find( "Desktop", b1 ) > 0 );
+
+if ( failures > 0 ) { println( failures & " failed" ); exit( 1 ); }
+println( "all passed" );

@@ -6,13 +6,13 @@ import argparse, codecs, os, pty, select, struct, fcntl, termios, time, subproce
 import pyte
 from PIL import Image, ImageDraw, ImageFont
 
-here = os.path.dirname(os.path.abspath(__file__))
+here = os.path.dirname(os.path.abspath(__file__))  # tools/
 ap = argparse.ArgumentParser()
-ap.add_argument('--out', default=os.path.join(here, 'recording'))
+ap.add_argument('--out', default=os.path.join(here, '..', 'recording'))
 ap.add_argument('--cols', type=int, default=120)
 ap.add_argument('--rows', type=int, default=36)
 ap.add_argument('--fps', type=int, default=12)
-ap.add_argument('--bin', default=os.path.join(here, 'target', 'release', 'bxcachy-wizard'))
+ap.add_argument('--bin', default='bxcachy')
 ap.add_argument('--pages')
 ap.add_argument('--shots', action='store_true', help='also save a PNG of the last frame of each step')
 args = ap.parse_args()
@@ -49,7 +49,7 @@ shutil.rmtree(frames_dir, ignore_errors=True); os.makedirs(frames_dir)
 pid, fd = pty.fork()
 if pid == 0:
     env = dict(os.environ, TERM='xterm-256color', COLORTERM='truecolor')
-    cmd = [args.bin, '--pages', args.pages, '--out', '/dev/null'] if args.pages else [args.bin, '--demo']
+    cmd = [args.bin, 'wizard', '--pages=' + args.pages, '--out=/dev/null'] if args.pages else [args.bin, 'wizard', '--demo']
     os.execvpe(cmd[0], cmd, env)
 fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack('HHHH', rows, cols, 0, 0))
 t0 = time.time(); chunks = []

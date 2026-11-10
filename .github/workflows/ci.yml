@@ -20,12 +20,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          bash -n bootstrap/install.sh scripts/package-manager.sh tests/package-manager-test.sh tests/bootstrap-test.sh tests/native-smoke.sh tests/native-package-integration.sh scripts/config.sh tests/config-test.sh tests/config-native-test.sh tests/cli-contract-test.sh tests/catalog-test.sh tests/packages-test.sh tests/setup-test.sh tests/tiling-test.sh tests/keys-test.sh tests/keys-apply-test.sh tests/xremap-test.sh tests/assets-test.sh tests/noctalia-config-test.sh tests/hyprland-setup-test.sh tests/session-test.sh tests/wizard-test.sh bootstrap/gen-catalog.sh bootstrap/gen-templates.sh bootstrap/gen-assets.sh scripts/get-matchbox.sh scripts/dev-build.sh
+          bash -n bootstrap/install.sh scripts/package-manager.sh tests/package-manager-test.sh tests/bootstrap-test.sh tests/native-smoke.sh tests/native-package-integration.sh scripts/config.sh tests/config-test.sh tests/config-native-test.sh tests/cli-contract-test.sh tests/catalog-test.sh tests/packages-test.sh tests/setup-test.sh tests/tiling-test.sh tests/keys-test.sh tests/keys-apply-test.sh tests/xremap-test.sh tests/assets-test.sh tests/noctalia-config-test.sh tests/hyprland-setup-test.sh tests/session-test.sh tests/wizard-test.sh bootstrap/gen-catalog.sh bootstrap/gen-templates.sh bootstrap/gen-assets.sh bootstrap/gen-wizard.sh scripts/get-matchbox.sh scripts/dev-build.sh
           test -s src/Main.bx -a -s src/Application.bx
           jq -e . catalog/apps.json >/dev/null
           bash bootstrap/gen-catalog.sh --check   # src/bxcachy/CatalogData.bx embeds the current catalog
           bash bootstrap/gen-assets.sh --check
           bash bootstrap/gen-templates.sh --check
+          bash bootstrap/gen-wizard.sh --check
           jq -e . box.json >/dev/null   # the manifest must be valid JSON
           for command in version doctor prerequisites desktop-list tui-list web-list optional-list optional-plan profile-list profile-plan plan apps-doctor dev-plan help; do
             grep -Fq "\"$command\"" src/Main.bx
@@ -39,22 +40,6 @@ jobs:
       - run: bash tests/package-manager-test.sh
       - run: bash tests/bootstrap-test.sh
       - run: bash tests/config-test.sh
-  wizard:
-    name: 2b - Setup wizard (Rust, ratatui)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Cache Cargo
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            wizard/target
-          key: wizard-cargo-${{ runner.os }}-${{ hashFiles('wizard/Cargo.toml') }}
-      - run: cargo test --release --manifest-path wizard/Cargo.toml
-      - run: bash tests/wizard-test.sh
-
   arch:
     name: 3 - Arch Linux prerequisites
     needs: package-tests
@@ -150,6 +135,9 @@ jobs:
           (cd src && matchbox ../tests/shortcuts_test.bxs)
           (cd src && matchbox ../tests/noctalia_config_test.bxs)
           (cd src && matchbox ../tests/catalog_check.bxs)
+          (cd src && matchbox ../tests/wizard_app_test.bxs)
+          (cd src && matchbox ../tests/wizard_view_test.bxs)
+          bash tests/wizard-test.sh "$candidate"
       - name: Publish verified native artifact
         uses: actions/upload-artifact@v4
         with:
