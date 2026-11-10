@@ -173,6 +173,7 @@ class {
           force = structKeyExists( args.options, "force" );
           nl = chr( 10 );
           var managed = { "bxcachy": { name: "bxcachy", target: config.cfgHome() & "/bxcachy/bxcachy.json", mode: "600", content: '{' & nl & '  "schema_version": 1,' & nl & '  "desktop": "auto"' & nl & '}' & nl } };
+          for ( var se in new bxcachy.Shortcuts().entries( config.cfgHome() ) ) managed[se.name] = se;
           if ( cfgVerb == "list" || cfgVerb == "history" ) {
            rows = [];
            if ( cfgVerb == "list" ) {
@@ -255,7 +256,13 @@ class {
            else print( sc.render( p[3] ) );
            CLIExit( 0 );
           }
-          println( "Usage: bxcachy keys show | render xremap|hyprland|plasma [--json]" );
+          if ( keysSub == "check" && p.len() == 2 ) {
+           CLIExit( new bxcachy.KeysService( cli ).check( asJson ) );
+          }
+          if ( keysSub == "apply" && p.len() == 2 ) {
+           CLIExit( new bxcachy.KeysService( cli ).apply( structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), structKeyExists( args.options, "force" ), asJson ) );
+          }
+          println( "Usage: bxcachy keys show | render xremap|hyprland|plasma | check | apply [--yes] [--dry-run] [--force] [--json]" );
           CLIExit( 2 );
           break;
          case "tiling":

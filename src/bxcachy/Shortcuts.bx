@@ -81,4 +81,18 @@ class Shortcuts {
         }
         return out.toList( chr( 10 ) ) & chr( 10 );
     }
+
+    // The files bxcachy manages for the shortcuts, in the config service entry shape (name, target, mode, content).
+    // They join `config list|diff|apply|restore`. The Hyprland file still has to be `source`d from hyprland.conf.
+    function entries( cfgHome ) {
+        return [
+            { name: "xremap", target: cfgHome & "/xremap/config.yml", mode: "644", content: xremap() },
+            { name: "hypr-keys", target: cfgHome & "/hypr/bxcachy-keys.conf", mode: "644", content: hyprland() }
+        ];
+    }
+
+    // Plasma settings written with kwriteconfig6 into kglobalshortcutsrc: [ { group, key, value } ].
+    function plasmaSettings() {
+        return table().filter( function( r ) { return r.kind == "bind"; } ).map( function( r ) { return r.plasma; } );
+    }
 }

@@ -1,0 +1,76 @@
+// `bxcachy keys check|apply`: puts the shared shortcut table on this machine.
+// Files (xremap config, Hyprland binds) go through the config service (backup, journal, drift).
+// Plasma's Log Out shortcut is a kglobalshortcutsrc setting, so it is read and written with kreadconfig6/kwriteconfig6.
+//
+// Exit codes: check 0 all in place, 1 something missing or drifted; apply 0 done, 2 no --yes, 4 precondition, 8 drift without --force, 9 write failed.
+class KeysService {
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.inst = new bxcachy.Installer( arguments.runner );
+        variables.config = new bxcachy.ConfigService();
+        variables.sc = new bxcachy.Shortcuts();
+        return this;
+    }
+
+    // Reads one kglobalshortcutsrc value, or "" when unset or the tool is missing.
+    function plasmaValue( s ) {
+        try {
+            var r = variables.inst.exec( [ "kreadconfig6", "--file", "kglobalshortcutsrc", "--group", s.group, "--key", s.key ], 15 );
+            return r.exitCode == 0 ? trim( r.output ) : "";
+        } catch ( any e ) {
+            return "";
+        }
+    }
+
+    // State of every managed piece: [ { name, target, state } ]. state: clean, missing, outdated, drifted, blocked; Plasma: clean|missing|drifted|skipped (no kwriteconfig6).
+    function states() {
+        var out = [];
+        for ( var e in variables.sc.entries( variables.config.cfgHome() ) ) out.append( { name: e.name, target: e.target, state: variables.config.configState( e ) } );
+        for ( var s in variables.sc.plasmaSettings() ) {
+            var st = "skipped";
+            if ( variables.inst.hasCommand( "kreadconfig6" ) ) {
+                var v = plasmaValue( s );
+                st = !len( v ) ? "missing" : ( v == s.value ? "clean" : "drifted" );
+            }
+            out.append( { name: "plasma:" & s.key, target: "kglobalshortcutsrc [" & s.group & "]", state: st } );
+        }
+        return out;
+    }
+
+    // `keys check`
+    function check( asJson ) {
+        var rows = states();
+        var bad = rows.filter( function( r ) { return r.state != "clean" && r.state != "skipped"; } );
+        var code = bad.len() ? 1 : 0;
+        if ( asJson ) { println( variables.cli.envelope( "keys check", code, { items: rows } ) ); return code; }
+        for ( var r in rows ) println( r.name & ": " & r.state & " (" & r.target & ")" );
+        return code;
+    }
+
+    // `keys apply`
+    function apply( yes, dryRun, force, asJson ) {
+        if ( variables.inst.isRoot() ) {
+            if ( asJson ) println( variables.cli.envelope( "keys apply", 4, { errors: [ "Run as a regular user" ] } ) );
+            else println( "error: Run as a regular user" );
+            return 4;
+        }
+        var worst = 0;
+        for ( var e in variables.sc.entries( variables.config.cfgHome() ) ) {
+            var c = variables.config.configApply( e, yes, dryRun, force );
+            if ( c != 0 ) worst = max( worst, c );
+        }
+        if ( variables.inst.hasCommand( "kwriteconfig6" ) ) {
+            for ( var s in variables.sc.plasmaSettings() ) {
+                if ( plasmaValue( s ) == s.value ) { println( "plasma:" & s.key & ": unchanged" ); continue; }
+                println( "set plasma:" & s.key & " -> " & s.value );
+                if ( !yes ) { worst = max( worst, 2 ); continue; }
+                if ( dryRun ) continue;
+                var r = variables.inst.exec( [ "kwriteconfig6", "--file", "kglobalshortcutsrc", "--group", s.group, "--key", s.key, s.value ], 15 );
+                if ( r.exitCode != 0 ) { println( "plasma:" & s.key & ": kwriteconfig6 failed" ); worst = max( worst, 9 ); }
+            }
+        } else println( "plasma: kwriteconfig6 not found, skipped (not a Plasma machine)" );
+        if ( worst == 2 ) println( "Nothing changed. Pass --yes to proceed." );
+        if ( worst == 0 && yes && !dryRun ) println( "Note: xremap and the desktop pick the new keys up at their next restart or login. Hyprland needs `source = ~/.config/hypr/bxcachy-keys.conf` in hyprland.conf." );
+        return worst;
+    }
+}
