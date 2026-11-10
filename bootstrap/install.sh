@@ -9,22 +9,31 @@ MIN_FREE_GB=5
 BOXLANG_LATEST_URL="https://downloads.ortussolutions.com/ortussolutions/boxlang/version-latest.properties"
 
 usage() {
-  echo "Usage: install.sh --check | --plan | --all --yes | --install --yes | --install-toolchains --yes | --install-binary --yes [--binary PATH] [--force]" >&2
+  cat >&2 <<'USAGE'
+Usage: install.sh [--yes] [--dry-run]     install everything: packages, toolchains, the bxcachy binary, the core apps
+       install.sh check                   read-only report of what is installed
+       install.sh packages|toolchains|binary|core --yes [--binary PATH --force]   re-run one stage
+USAGE
   exit 2
 }
-[[ $# -gt 0 ]] || usage
-mode="$1"; shift
+# Public words: no word = the whole install. Stage words re-run one stage. Internally the stages keep their old mode names.
+mode=full; yes=0; dry=0; force=0; binary_arg=""
+case "${1:-}" in
+  check) mode=--check; shift ;;
+  packages) mode=--install; shift ;;
+  toolchains) mode=--install-toolchains; shift ;;
+  binary) mode=--install-binary; shift ;;
+  core) mode=--core; shift ;;
+esac
 case "$mode" in
-  --check|--plan) [[ $# -eq 0 ]] || usage ;;
-  --install) [[ $# -eq 1 && "$1" == --yes ]] || usage ;;
-  --all|--install-toolchains)
-    yes=0
+  --check) [[ $# -eq 0 ]] || usage ;;
+  full)
     for arg in "$@"; do
-      case "$arg" in --yes) yes=1 ;; *) usage ;; esac
-    done
-    [[ $yes -eq 1 ]] || usage ;;
+      case "$arg" in --yes) yes=1 ;; --dry-run) dry=1 ;; *) usage ;; esac
+    done ;;
+  --install|--install-toolchains|--core)
+    [[ $# -eq 1 && "$1" == --yes ]] || usage; yes=1 ;;
   --install-binary)
-    yes=0; force=0; binary_arg=""
     while [[ $# -gt 0 ]]; do
       case "$1" in
         --yes) yes=1; shift ;;
@@ -34,20 +43,7 @@ case "$mode" in
       esac
     done
     [[ $yes -eq 1 ]] || usage ;;
-  *) usage ;;
 esac
-
-# ---- --all --yes: every stage in order (packages, toolchains, bxcachy binary). Each stage is re-runnable. ----
-# BXCACHY_ALL_SCRIPT replaces the script the stages are delegated to (tests only).
-if [[ "$mode" == --all ]]; then
-  [[ "$(id -u)" != 0 ]] || { echo "Run as a regular user; sudo is used only for pacman steps" >&2; exit 1; }
-  all_self="${BXCACHY_ALL_SCRIPT:-${BASH_SOURCE[0]}}"
-  echo "== 1/3 packages, yay and Rust =="; bash "$all_self" --install --yes || exit $?
-  echo "== 2/3 Java 21 check, mvm, MatchBox, bvm and BoxLang =="; bash "$all_self" --install-toolchains --yes || exit $?
-  echo "== 3/3 the bxcachy binary =="; bash "$all_self" --install-binary --yes || exit $?
-  echo "Everything is installed. Run: bxcachy doctor"
-  exit 0
-fi
 
 command -v pacman >/dev/null 2>&1 || {
   echo "BxCachy requires Arch Linux/CachyOS (pacman)" >&2
@@ -91,7 +87,7 @@ if load_manifest; then manifest_ok=1; else manifest_ok=0; fi
 need_manifest() {  # for modes that cannot work without it
   (( manifest_ok )) && return 0
   echo "$manifest_error" >&2
-  [[ "$manifest_error" == jq* ]] && echo "Run install.sh --install --yes first: it installs jq, then reads box.json." >&2
+  [[ "$manifest_error" == jq* ]] && echo "Run install.sh packages --yes first: it installs jq, then reads box.json." >&2
   exit 1
 }
 
@@ -215,7 +211,7 @@ build_steps() {
     steps+=("packages|sudo pacman -Syu --needed ${missing_pkgs[*]}|installs missing packages and also upgrades the system")
   fi
   if (( ! have_yay )); then
-    steps+=("yay|sudo pacman -S --needed yay|AUR helper, found in the cachyos repository; only runs if yay is absent (part of --install)")
+    steps+=("yay|sudo pacman -S --needed yay|AUR helper, found in the cachyos repository; only runs if yay is absent (part of the packages stage)")
   fi
   if (( ! have_mvm )); then
     steps+=("mvm|download and run $MVM_URL|external script, shown and run")
@@ -242,13 +238,13 @@ build_steps() {
     steps+=("node|nvm install $NODE_CHANNEL && nvm alias default $NODE_CHANNEL|Node.js ($NODE_CHANNEL) managed by nvm")
   fi
   if (( ! have_rustup )) || [[ -z "$rust_ver" ]]; then
-    steps+=("rust|rustup default $RUST_CHANNEL|activates Rust and Cargo for your user (part of --install)")
+    steps+=("rust|rustup default $RUST_CHANNEL|activates Rust and Cargo for your user (part of the packages stage)")
   fi
   if (( ! have_bxcachy )); then
-    steps+=("binary|install.sh --install-binary --yes|builds src/Main.bx with MatchBox (or use --binary PATH), verifies it, installs to $BIN_DIR/bxcachy, no sudo")
+    steps+=("binary|install.sh binary --yes|builds src/Main.bx with MatchBox (or use --binary PATH), verifies it, installs to $BIN_DIR/bxcachy, no sudo")
   fi
   if (( have_bxcachy && ! bin_on_path )); then
-    steps+=("path|add $BIN_DIR to PATH yourself|BxCachy does not edit shell startup files; the commands are printed by --install")
+    steps+=("path|add $BIN_DIR to PATH yourself|BxCachy does not edit shell startup files; the commands are printed by the packages stage")
   fi
 }
 
@@ -280,7 +276,7 @@ report_check() {
   printf 'bxcachy: %s\n' "$([[ $have_bxcachy == 1 ]] && echo "${bx_ver:-installed}" || echo missing)"
   echo "== path =="
   printf 'bin-dir: %s (%s)\n' "$BIN_DIR" "$([[ $bin_on_path == 1 ]] && echo on-PATH || echo not-on-PATH)"
-  if (( ${#steps[@]} )); then printf 'summary: %d step(s) needed, run install.sh --plan\n' "${#steps[@]}"; else echo "summary: ready"; fi
+  if (( ${#steps[@]} )); then printf 'summary: %d step(s) needed, run install.sh --dry-run\n' "${#steps[@]}"; else echo "summary: ready"; fi
 }
 
 report_plan() {
@@ -291,24 +287,54 @@ report_plan() {
     i=$((i+1)); IFS='|' read -r name cmd why <<<"$line"
     printf '%d. %s\n   run: %s\n   why: %s\n' "$i" "$name" "$cmd" "$why"
   done
-  echo "Everything at once: install.sh --all --yes. Or by stage: --install --yes (packages), --install-toolchains --yes, --install-binary --yes."
+  echo "Re-run one stage with: install.sh packages|toolchains|binary|core --yes"
 }
 
-if [[ "$mode" == --check || "$mode" == --plan ]] && (( ! manifest_ok )); then
+if [[ "$mode" == --check || "$mode" == full ]] && (( ! manifest_ok )); then
   if [[ "$manifest_error" == jq* ]]; then
     if [[ "$mode" == --check ]]; then
-      printf '== manifest ==\nbox.json: cannot be read (%s)\nsummary: 1 step(s) needed, run install.sh --plan\n' "$manifest_error"
+      printf '== manifest ==\nbox.json: cannot be read (%s)\nsummary: 1 step(s) needed, run install.sh --dry-run\n' "$manifest_error"
     else
-      printf 'Read-only plan. Nothing below has been run.\n1. jq\n   run: sudo pacman -S --needed jq\n   why: %s; the other steps depend on versions listed in box.json\nThen run install.sh --plan again for the full list. (install.sh --install --yes installs jq first.)\n' "$manifest_error"
+      printf 'Read-only plan. Nothing below has been run.\n1. jq\n   run: sudo pacman -S --needed jq\n   why: %s; the other steps depend on versions listed in box.json\nThen run install.sh again for the full list. (install.sh --install --yes installs jq first.)\n' "$manifest_error"
     fi
     exit 0
   fi
   echo "$manifest_error" >&2; exit 1
 fi
-if [[ "$mode" == --check || "$mode" == --plan ]]; then
+if [[ "$mode" == --check ]]; then
+  inspect; build_steps; report_check; exit 0
+fi
+if [[ "$mode" == full ]]; then
+  # The whole install: show the plan, ask once (a terminal) or need --yes, then run every stage in order.
+  # BXCACHY_ALL_SCRIPT replaces the script the stages are delegated to (tests only).
+  [[ "$(id -u)" != 0 ]] || { echo "Run as a regular user; sudo is used only for pacman steps" >&2; exit 1; }
   inspect; build_steps
-  if [[ "$mode" == --check ]]; then report_check; else report_plan; fi
+  report_plan
+  echo "Last: bxcachy profile-install core --yes installs the core apps with pacman (a re-run installs nothing that is already there)."
+  if (( dry )); then echo "Dry run: nothing was changed."; exit 0; fi
+  if (( ! yes )); then
+    if is_interactive; then
+      printf 'Proceed? [Y/n] '; read -r answer || answer=n
+      case "${answer:-Y}" in [Yy]*|"") ;; *) echo "Cancelled. Nothing was changed." >&2; exit 2 ;; esac
+    else
+      echo "Not running unattended without --yes. Nothing was changed." >&2; exit 2
+    fi
+  fi
+  all_self="${BXCACHY_ALL_SCRIPT:-${BASH_SOURCE[0]}}"
+  echo "== 1/4 packages, yay and Rust =="; bash "$all_self" packages --yes || exit $?
+  echo "== 2/4 Java 21 check, mvm, MatchBox, bvm, BoxLang, nvm and Node =="; bash "$all_self" toolchains --yes || exit $?
+  echo "== 3/4 the bxcachy binary =="; bash "$all_self" binary --yes || exit $?
+  echo "== 4/4 the core apps =="; bash "$all_self" core --yes || exit $?
+  echo "Everything is installed. Run: bxcachy doctor"
   exit 0
+fi
+
+if [[ "$mode" == --core ]]; then
+  # The core profile through the installed binary (it names the apps, installs them with pacman, and re-runs safely).
+  [[ "$(id -u)" != 0 ]] || { echo "Run as a regular user; sudo is used only for pacman steps" >&2; exit 1; }
+  core_bin="$BIN_DIR/bxcachy"
+  [[ -x "$core_bin" ]] || { echo "bxcachy is not installed at $core_bin (run install.sh binary --yes first)" >&2; exit 1; }
+  exec "$core_bin" profile-install core --yes
 fi
 
 if [[ "$mode" == --install-toolchains ]]; then
@@ -404,7 +430,7 @@ if [[ "$mode" == --install-binary ]]; then
     if (( ! force )) && [[ -x "$installed" && -n "$want" ]] && [[ "$(check_binary "$installed" 2>/dev/null || true)" == "$want" ]]; then
       echo "Nothing to do: $installed is already $want (use --force to rebuild)."; exit 0
     fi
-    [[ "$(tool_version matchbox)" == "$MATCHBOX_VERSION" ]] || { echo "MatchBox $MATCHBOX_VERSION is required (found: $(tool_version matchbox || true)). Run install.sh --install-toolchains --yes first." >&2; exit 1; }
+    [[ "$(tool_version matchbox)" == "$MATCHBOX_VERSION" ]] || { echo "MatchBox $MATCHBOX_VERSION is required (found: $(tool_version matchbox || true)). Run install.sh toolchains --yes first." >&2; exit 1; }
     cp -r "$root/src" "$work/src"; chmod -R u+rwX,go+rX "$work/src"
     echo "Building bxcachy with MatchBox $MATCHBOX_VERSION"
     if ! ( cd "$work" && PATH="$probe_path" matchbox --target native --output "$work/bxcachy" src/Main.bx ) > "$work/build.log" 2>&1; then
@@ -419,7 +445,7 @@ if [[ "$mode" == --install-binary ]]; then
   cp "$candidate" "$tmpdest"; chmod 755 "$tmpdest"; mv -f "$tmpdest" "$installed"
   final="$(check_binary "$installed")" || exit 1
   echo "Installed $installed ($final)"
-  case ":$PATH:" in *":$BIN_DIR:"*) ;; *) echo "Note: $BIN_DIR is not on your PATH (see --install for the line to add)." ;; esac
+  case ":$PATH:" in *":$BIN_DIR:"*) ;; *) echo "Note: $BIN_DIR is not on your PATH (see the packages stage for the line to add)." ;; esac
   exit 0
 fi
 
@@ -474,4 +500,4 @@ case ":$PATH:" in
      echo "  bash/zsh: export PATH=\"$BIN_DIR:\$PATH\""
      echo "  fish:     fish_add_path $BIN_DIR" ;;
 esac
-echo "Next: install.sh --install-toolchains --yes (or install.sh --all --yes does every stage)"
+echo "Next: install.sh toolchains --yes (or run install.sh with no word to do every stage)"

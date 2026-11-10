@@ -55,38 +55,38 @@ step cachyos-repos-present 0 bash -c 'for r in cachyos cachyos-v3 cachyos-core-v
 step cachyos-stack-resolves 0 bash -c 'for p in cachyos-hypr-noctalia noctalia noctalia-shell hyprland quickshell yay; do pacman -Si "$p" >/dev/null || { echo "unresolved: $p"; exit 1; }; done'
 
 # --- Bootstrap against the real system ---
-step bootstrap-check          0 bash bootstrap/install.sh --check
-step_grep bootstrap-check-report 0 'summary:' bash bootstrap/install.sh --check
-step_grep bootstrap-plan      0 'Read-only plan' bash bootstrap/install.sh --plan
-step bootstrap-plan-rejects-args 2 bash bootstrap/install.sh --plan extra
-step bootstrap-needs-confirm  2 bash bootstrap/install.sh --install
+step bootstrap-check          0 bash bootstrap/install.sh check
+step_grep bootstrap-check-report 0 'summary:' bash bootstrap/install.sh check
+step_grep bootstrap-plan      0 'Read-only plan' bash bootstrap/install.sh --dry-run
+step bootstrap-plan-rejects-args 2 bash bootstrap/install.sh --dry-run extra
+step bootstrap-needs-confirm  2 bash bootstrap/install.sh packages
 step bootstrap-remove-jq    0 sudo pacman -Rdd --noconfirm jq
-step_grep bootstrap-check-without-jq 0 'jq is required to read box.json' bash bootstrap/install.sh --check
-step bootstrap-toolchains-need-jq 1 bash bootstrap/install.sh --install-toolchains --yes
-step_grep bootstrap-install   0 'Installing jq first' bash bootstrap/install.sh --install --yes
-step_grep bootstrap-install-completes 0 'Next: install.sh --install-toolchains --yes' bash bootstrap/install.sh --install --yes
-step_grep bootstrap-install-rerun  0 'Nothing to do for packages, yay and Rust.' bash bootstrap/install.sh --install --yes
+step_grep bootstrap-check-without-jq 0 'jq is required to read box.json' bash bootstrap/install.sh check
+step bootstrap-toolchains-need-jq 1 bash bootstrap/install.sh toolchains --yes
+step_grep bootstrap-install   0 'Installing jq first' bash bootstrap/install.sh packages --yes
+step_grep bootstrap-install-completes 0 'Next: install.sh toolchains --yes' bash bootstrap/install.sh packages --yes
+step_grep bootstrap-install-rerun  0 'Nothing to do for packages, yay and Rust.' bash bootstrap/install.sh packages --yes
 step bootstrap-yay-present 0 bash -c 'command -v yay'
 step bootstrap-rust-active 0 bash -c 'rustc --version'
 step rust-default             0 rustup default stable
 if [[ $NET == 1 ]]; then
-  step bootstrap-toolchains       0 bash -c 'bash bootstrap/install.sh --install-toolchains --yes </dev/null'
-  step_grep bootstrap-toolchains-rerun 0 'Nothing to do' bash -c 'bash bootstrap/install.sh --install-toolchains --yes </dev/null'
+  step bootstrap-toolchains       0 bash -c 'bash bootstrap/install.sh toolchains --yes </dev/null'
+  step_grep bootstrap-toolchains-rerun 0 'Nothing to do' bash -c 'bash bootstrap/install.sh toolchains --yes </dev/null'
   # BoxLang follows the latest stable release: the installed version must equal what Ortus publishes as latest.
-  step bootstrap-boxlang-is-latest   0 bash -c 'want=$(curl -fsS -m 10 https://downloads.ortussolutions.com/ortussolutions/boxlang/version-latest.properties | sed -n "s/^version=\([0-9][0-9.]*\).*/\1/p" | head -1); [ -n "$want" ] && bash bootstrap/install.sh --check | grep -F "boxlang: $want (want latest = $want)"'
-  step_grep bootstrap-pins-matchbox  0 "matchbox: $(jq -r .toolchain.matchbox.version box.json)" bash bootstrap/install.sh --check
-  step_grep bootstrap-nvm-installed  0 "nvm: 0.41" bash bootstrap/install.sh --check
-  step bootstrap-node-installed 0 bash -c "bash bootstrap/install.sh --check | grep -E '^node: [0-9]'"
+  step bootstrap-boxlang-is-latest   0 bash -c 'want=$(curl -fsS -m 10 https://downloads.ortussolutions.com/ortussolutions/boxlang/version-latest.properties | sed -n "s/^version=\([0-9][0-9.]*\).*/\1/p" | head -1); [ -n "$want" ] && bash bootstrap/install.sh check | grep -F "boxlang: $want (want latest = $want)"'
+  step_grep bootstrap-pins-matchbox  0 "matchbox: $(jq -r .toolchain.matchbox.version box.json)" bash bootstrap/install.sh check
+  step_grep bootstrap-nvm-installed  0 "nvm: 0.41" bash bootstrap/install.sh check
+  step bootstrap-node-installed 0 bash -c "bash bootstrap/install.sh check | grep -E '^node: [0-9]'"
   # B5: build the real binary with MatchBox and install it for the user.
-  step_grep bootstrap-install-binary       0 'Installed '      bash bootstrap/install.sh --install-binary --yes
+  step_grep bootstrap-install-binary       0 'Installed '      bash bootstrap/install.sh binary --yes
   step_grep bootstrap-binary-runs          0 'BxCachy 0.'      "$HOME/.local/bin/bxcachy" version
-  step_grep bootstrap-install-binary-rerun 0 'Nothing to do'   bash bootstrap/install.sh --install-binary --yes
-  step_grep bootstrap-check-binary         0 'bxcachy: 0.'     bash bootstrap/install.sh --check
-  step bootstrap-binary-rejects-impostor   1 bash -c 'printf "#!/bin/sh\necho nope\n" > /tmp/impostor; chmod 755 /tmp/impostor; bash bootstrap/install.sh --install-binary --yes --binary /tmp/impostor'
+  step_grep bootstrap-install-binary-rerun 0 'Nothing to do'   bash bootstrap/install.sh binary --yes
+  step_grep bootstrap-check-binary         0 'bxcachy: 0.'     bash bootstrap/install.sh check
+  step bootstrap-binary-rejects-impostor   1 bash -c 'printf "#!/bin/sh\necho nope\n" > /tmp/impostor; chmod 755 /tmp/impostor; bash bootstrap/install.sh binary --yes --binary /tmp/impostor'
   # B7: the whole path on this clean machine is finished, and running it all again changes nothing.
-  step_grep bootstrap-fullpath-ready 0 'summary: ready' env PATH="$HOME/.local/bin:$PATH" bash bootstrap/install.sh --check
+  step_grep bootstrap-fullpath-ready 0 'summary: ready' env PATH="$HOME/.local/bin:$PATH" bash bootstrap/install.sh check
   snaplist > "$OUT/snap-before.txt"
-  step bootstrap-fullpath-rerun 0 bash -c 'bash bootstrap/install.sh --install --yes </dev/null && bash bootstrap/install.sh --install-toolchains --yes </dev/null && bash bootstrap/install.sh --install-binary --yes </dev/null'
+  step bootstrap-fullpath-rerun 0 bash -c 'bash bootstrap/install.sh packages --yes </dev/null && bash bootstrap/install.sh toolchains --yes </dev/null && bash bootstrap/install.sh binary --yes </dev/null'
   snaplist > "$OUT/snap-after.txt"
   step bootstrap-fullpath-no-changes 0 bash -c "if diff -u '$OUT/snap-before.txt' '$OUT/snap-after.txt' > '$OUT/snap.diff'; then exit 0; else echo 'the second run changed these:'; grep -E '^[-+][^-+]' '$OUT/snap.diff' | head -40; exit 1; fi"
 else
