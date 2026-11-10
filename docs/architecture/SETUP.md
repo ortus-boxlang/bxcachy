@@ -63,7 +63,7 @@ The keyboard shortcuts are the same on KDE Plasma and Hyprland. They are defined
 - **xremap, one shared YAML config** [owner]: Super+C / Super+V send Ctrl+C / Ctrl+V; for terminal apps they send Ctrl+Shift+C / Ctrl+Shift+V (plain Ctrl+C would interrupt the running program). The terminal list is part of the table. xremap comes from the AUR (`xremap-hypr-bin`, `xremap-kde-bin`), so `setup hyprland` installs the first and `setup plasma` the second, each as a user service. Both builds read the same config file, written through the config service.
 - It needs access to input devices (the `input` group or a udev rule); the plan shows this and it is undone by `setup undo`.
 - To verify on a real machine: that xremap's per-app rules match window classes the same way on both builds, and how Super+Tab should behave (window cycle vs Noctalia switcher on Hyprland, KWin's Walk Through Windows on Plasma).
-- `bxcachy keys show` prints the table with each target's rendering, and `bxcachy keys check` reports where a target's actual shortcut differs from it (drift).
+- Implemented (S6b, part 1): `Shortcuts.bx` holds the table; `bxcachy keys show` lists it and `bxcachy keys render xremap|hyprland|plasma` prints each target's text (pure, writes nothing). Writing the files and `keys check` come next. Original intent: `keys show` prints the table with each target's rendering, and `bxcachy keys check` reports where a target's actual shortcut differs from it (drift).
 
 ## 6. Tests
 

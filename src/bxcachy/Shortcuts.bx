@@ -1,0 +1,84 @@
+// The one shortcut table shared by Hyprland and KDE Plasma (docs/architecture/SETUP.md section 5b).
+// Pure: no I/O. `render( target )` turns the table into the text each target needs:
+//   xremap   YAML for the Cmd-style keys (one file, read by both xremap builds)
+//   hyprland Hyprland `bind` lines for the keys that are not remaps
+//   plasma   kglobalshortcutsrc lines for the keys that are not remaps
+class Shortcuts {
+    function init() {
+        return this;
+    }
+
+    // Terminal window classes: in these, Cmd+C/V send Ctrl+Shift+C/V because plain Ctrl+C interrupts the running program.
+    function terminals() {
+        return [ "kitty", "Alacritty", "foot", "org.wezfurlong.wezterm", "com.mitchellh.ghostty", "org.kde.konsole", "konsole" ];
+    }
+
+    // Rows: id, keys (what the user presses), action (words), kind remap|bind.
+    // remap rows: to (key sent), termTo (key sent in terminals, optional).
+    // bind rows: hyprland (full bind line), plasma (kglobalshortcutsrc group, key, value).
+    function table() {
+        return [
+            { id: "copy", keys: "Super+C", action: "Copy", kind: "remap", to: "Ctrl-c", termTo: "Ctrl-Shift-c" },
+            { id: "paste", keys: "Super+V", action: "Paste", kind: "remap", to: "Ctrl-v", termTo: "Ctrl-Shift-v" },
+            { id: "switch-windows", keys: "Super+Tab", action: "Switch windows", kind: "remap", to: "Alt-Tab" },
+            { id: "logout", keys: "Super+Shift+Q", action: "Log out to the login screen", kind: "bind",
+              hyprland: "bind = SUPER SHIFT, Q, exec, uwsm stop",
+              plasma: { group: "ksmserver", key: "Log Out", value: "Meta+Shift+Q,Ctrl+Alt+Del,Log Out" } }
+        ];
+    }
+
+    // The table as text lines for `keys show`.
+    function show() {
+        return table().map( function( r ) {
+            return { id: r.id, keys: r.keys, action: r.action, how: r.kind == "remap" ? "xremap" : "desktop binding" };
+        } );
+    }
+
+    // True for the render targets.
+    function targets() {
+        return [ "xremap", "hyprland", "plasma" ];
+    }
+
+    // Rendered text for one target.
+    function render( target ) {
+        if ( target == "xremap" ) return xremap();
+        if ( target == "hyprland" ) return hyprland();
+        if ( target == "plasma" ) return plasma();
+        throw( type = "Shortcuts.target", message = "Unknown target: " & target );
+    }
+
+    // xremap YAML: terminal rules first (only), then the general rules (not terminals).
+    function xremap() {
+        var remaps = table().filter( function( r ) { return r.kind == "remap"; } );
+        var termList = terminals().map( function( c ) { return "'" & c & "'"; } ).toList( ", " );
+        var out = [ "# Written by bxcachy (keys). Cmd-style keys, same on Hyprland and Plasma.", "keymap:" ];
+        out.append( "  - name: Cmd keys in terminals" );
+        out.append( "    application:" );
+        out.append( "      only: [" & termList & "]" );
+        out.append( "    remap:" );
+        for ( var r in remaps ) out.append( "      Super-" & lcase( listLast( r.keys, "+" ) ) & ": " & ( structKeyExists( r, "termTo" ) ? r.termTo : r.to ) );
+        out.append( "  - name: Cmd keys everywhere else" );
+        out.append( "    application:" );
+        out.append( "      not: [" & termList & "]" );
+        out.append( "    remap:" );
+        for ( var r in remaps ) out.append( "      Super-" & lcase( listLast( r.keys, "+" ) ) & ": " & r.to );
+        return out.toList( chr( 10 ) ) & chr( 10 );
+    }
+
+    // Hyprland bind lines.
+    function hyprland() {
+        var out = [ "# Written by bxcachy (keys)." ];
+        for ( var r in table() ) if ( r.kind == "bind" ) out.append( r.hyprland );
+        return out.toList( chr( 10 ) ) & chr( 10 );
+    }
+
+    // kglobalshortcutsrc fragment for Plasma.
+    function plasma() {
+        var out = [ "# Written by bxcachy (keys)." ];
+        for ( var r in table() ) if ( r.kind == "bind" ) {
+            out.append( "[" & r.plasma.group & "]" );
+            out.append( r.plasma.key & "=" & r.plasma.value );
+        }
+        return out.toList( chr( 10 ) ) & chr( 10 );
+    }
+}

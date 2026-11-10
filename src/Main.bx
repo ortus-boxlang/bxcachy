@@ -240,6 +240,24 @@ class {
           println( "Usage: bxcachy setup plasma [--keys | --undo-keys] | hyprland | undo plasma|hyprland | status [--yes] [--dry-run] [--json]" );
           CLIExit( 2 );
           break;
+         case "keys":
+          // The shared shortcut table: keys show | keys render xremap|hyprland|plasma (pure, writes nothing).
+          keysSub = p.len() >= 2 ? p[2] : "";
+          sc = new bxcachy.Shortcuts();
+          if ( keysSub == "show" && p.len() == 2 ) {
+           rows = sc.show();
+           if ( asJson ) println( cli.envelope( "keys show", 0, { shortcuts: rows } ) );
+           else for ( kr in rows ) println( kr.keys & "  " & kr.action & "  (" & kr.how & ")" );
+           CLIExit( 0 );
+          }
+          if ( keysSub == "render" && p.len() == 3 && arrayFind( sc.targets(), p[3] ) ) {
+           if ( asJson ) println( cli.envelope( "keys render", 0, { target: p[3], text: sc.render( p[3] ) } ) );
+           else print( sc.render( p[3] ) );
+           CLIExit( 0 );
+          }
+          println( "Usage: bxcachy keys show | render xremap|hyprland|plasma [--json]" );
+          CLIExit( 2 );
+          break;
          case "tiling":
           // HyprKwin on/off inside Plasma; on and off act at once (reversible user setting, see Tiling.bx).
           tilingSub = p.len() == 2 ? p[2] : "";
@@ -251,7 +269,7 @@ class {
           CLIExit( tilingSub == "status" ? tl.status( asJson ) : tl.set( tilingSub == "on", asJson ) );
           break;
          case "help":
-          println( "BxCachy commands: version, doctor, prerequisites, desktop-list, tui-list, web-list, optional-list, optional-plan, profile-list, profile-plan, profile-install-plan, install-plan, package-status, package-source, profile-install, optional-install, install, plan, apps-doctor, dev-plan, config, catalog, setup, tiling, help" );
+          println( "BxCachy commands: version, doctor, prerequisites, desktop-list, tui-list, web-list, optional-list, optional-plan, profile-list, profile-plan, profile-install-plan, install-plan, package-status, package-source, profile-install, optional-install, install, plan, apps-doctor, dev-plan, config, catalog, setup, tiling, keys, help" );
           break;
          default:
           println( "Unsupported command: " & cmd );
