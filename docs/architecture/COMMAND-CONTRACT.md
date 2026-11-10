@@ -214,10 +214,73 @@ Human output is the same lists, one app per line with its source.
 - Web apps install as launchers (see section 11 table). The 28 `pkgbuild` apps are pinned to one commit of `omacom/omarchy-pkgs` and install with `git clone`, `git checkout COMMIT`, `makepkg -si` as the normal user (root exits 4). All of them are optional, so a plain `bxcachy install` skips them.
 - Not on the catalog: `apps-doctor`, `dev-plan`.
 
-## 13. `setup` (first slice, 2026-11-10)
+## 13. Desktop setup (decided with the owner 2026-11-09 and 2026-11-10; all built)
 
-Plan and decisions: `docs/architecture/SETUP.md`. Implemented: `setup plasma [--keys | --undo-keys]`, `setup undo plasma`, `setup status`. HyprKwin is taken from a pinned full commit (v1.2.0) and installed with its own `tools/install.sh` as the normal user; Plasma's keys are left alone unless `--keys`. Exits: 0, 2 (no `--yes`), 4 (precondition: root, no Plasma, unsupported Plasma, X11, nothing to undo), 5 (the pacman step failed), 6 (another step failed with nothing done), 7 (a step failed after earlier ones were done; later steps are skipped). `setup hyprland` exits 3 until it is built.
+Builds on sections 2 to 4 (mutation rules, exit codes, `--json`), the config service (section 6) and the `Installer` (argument arrays, `done` / `failed` / `skipped`). Hyprland with Noctalia is installed beside KDE Plasma; KDE is never removed or reconfigured except what `--keys` hands over, which is backed up first.
 
-`tiling on|off|status` (2026-11-10): switches the HyprKwin KWin script inside a running Plasma, no logout. It sets `hyprkwinEnabled` in `kwinrc` `[Plugins]` and asks KWin to reconfigure over D-Bus (`off` also unloads the script so windows are released at once), the same calls HyprKwin's own install and uninstall scripts make. **Exception to the `--yes` rule:** it is a reversible user setting meant to sit behind a shortcut, so `on` and `off` act immediately. Exits: `on`/`off` 0, 4 (root, HyprKwin not installed, `kwriteconfig6` missing); `status` 0 on, 1 off, 4 not installed. Without a running KWin only the flag changes and the output says it takes effect at the next Plasma login.
+### 13.1 Commands
 
-`setup hyprland` / `setup undo hyprland` (2026-11-10, packages only): installs the missing ones of 18 official packages (Hyprland, native Noctalia, uwsm, hyprlock, hypridle, portals, polkit agent, qt6ct, nwg-look, grim/slurp/wl-clipboard, brightnessctl, kitty, theme and fonts) in one `sudo pacman -S --needed` call and remembers which ones it added (`$XDG_STATE/bxcachy/setup-hyprland.json`, mode 600). `undo` runs `sudo pacman -Rs` on exactly those. Preconditions (exit 4): not root, pacman present, OS is CachyOS or Arch, x86_64, sudo. KDE Plasma is never touched. Configs, keybindings and the session entry come with the next slices.
+```
+bxcachy setup hyprland [--yes] [--dry-run] [--json]    packages, images, starter configs, shortcut files
+bxcachy setup plasma   [--yes] [--dry-run] [--json]    HyprKwin tiling on KDE Plasma
+bxcachy setup plasma --keys | --undo-keys              hand Plasma's clashing keys over / back
+bxcachy setup xremap [--build hypr|kde] [--yes]        Cmd-style keys: AUR package, input access, user service
+bxcachy setup undo hyprland|plasma|xremap [--yes]      remove only what setup added
+bxcachy setup status [--json]
+bxcachy tiling on|off|status                           HyprKwin inside Plasma, no logout
+bxcachy keys show | render xremap|hyprland|plasma | check | apply [--yes] [--dry-run] [--force]
+bxcachy assets list | install [--yes] [--dry-run]
+bxcachy session show | set hyprland|plasma [--yes] [--dry-run]
+```
+
+- Every target runs, re-runs and undoes on its own; a re-run changes nothing when everything is in place. No `--yes` prints the plan (exit 2); `--dry-run` exits 0. Results as `install`: `done` / `failed` / `skipped`, exits 0, 2, 4 (precondition: root, wrong OS or CPU, no sudo, no Plasma, unsupported Plasma, X11, nothing to undo, session not installed), 5 (the pacman step failed), 6 (another step failed with nothing done), 7 (a step failed after earlier ones were done; later steps are skipped), 8 (config drift or lock). Never run as root: sudo is used only for the steps shown in the plan. `--json` is always one envelope on stdout (the config service has a quiet mode for that).
+- **Exception to `--yes`:** `tiling on|off` acts at once (a reversible user setting meant to sit behind a shortcut). `status` exits 0 on, 1 off, 4 not installed.
+
+### 13.2 `setup plasma` (HyprKwin)
+
+HyprKwin (`DGBooth/HyprKwin`) is a KWin script with Hyprland-style layouts and keys. It needs Plasma 6.6 or 6.8 on Wayland (6.7 warns, older or X11 exit 4). It is fetched **pinned to a full commit** (v1.2.0, `31abb63`, same rule as PKGBUILDs) into a temp directory and installed with its own `tools/install.sh` as the normal user, which backs up every global shortcut first. Plasma's keys stay Plasma's unless `--keys` (runs `tools/hyprkwin-shortcuts.py apply`; `--undo-keys` restores). The animations effect needs one logout. `setup undo plasma` runs HyprKwin's uninstall. `tiling on|off` sets `hyprkwinEnabled` in `kwinrc` `[Plugins]` and asks KWin to reconfigure over D-Bus (`off` also unloads the script).
+
+### 13.3 `setup hyprland`
+
+Preconditions (exit 4): not root, pacman, CachyOS or Arch, x86_64, sudo. Steps, in order:
+
+1. `packages`: the missing ones of 18 official packages in one `sudo pacman -S --needed` call: `hyprland`, native `noctalia`, `uwsm`, `hyprlock`, `hypridle`, `xdg-desktop-portal-hyprland`, `hyprpolkitagent`, `qt6ct`, `nwg-look`, `hyprpicker`, `grim`, `slurp`, `wl-clipboard`, `brightnessctl`, `kitty`, `adw-gtk-theme`, `noto-fonts`, `noto-fonts-emoji`. Individual packages, never the CachyOS meta-package `cachyos-hypr-noctalia` (it conflicts with `cachyos-desktop-settings`, which the KDE session may rely on). Noctalia is the native `noctalia` package; `noctalia-shell` + `noctalia-qs` are a different Quickshell-based variant that conflicts with `quickshell` (a warning, not an error, if installed). The packages added are remembered (`$XDG_STATE/bxcachy/setup-hyprland.json`, mode 600) so `setup undo hyprland` runs `sudo pacman -Rs` on exactly those.
+2. `images`: the logo and wallpapers (13.6), missing ones only.
+3. `starter`: the Noctalia config and palette, and a first `hyprland.lua` (13.5).
+4. `keys`: the shared shortcut files (13.4).
+
+### 13.4 Shortcuts, `keys` and `setup xremap`
+
+One embedded table (`Shortcuts.bx`) holds the shortcuts and is rendered per target. The same keys work on Hyprland and Plasma [owner]:
+
+| Part | Hyprland | Plasma |
+|---|---|---|
+| Tiling and workspace keys | Hyprland's own keys | HyprKwin (same defaults) |
+| Cmd-style keys: Super+C, Super+V, Super+Tab | xremap | xremap |
+| Logout to the login screen, Super+Shift+Q | `hl.bind(... "uwsm stop")` | `kglobalshortcutsrc` `[ksmserver] Log Out` via kwriteconfig6 |
+
+- xremap, one shared YAML: Super+C/V send Ctrl+C/V, and Ctrl+Shift+C/V in terminals (a class list in the table); Super+Tab is a plain Alt+Tab remap [owner], answered on Hyprland by Noctalia's window switcher (`noctalia msg window-switcher hold`).
+- `keys render` prints a target's text (pure). `keys apply` writes `~/.config/xremap/config.yml`, `~/.config/hypr/bxcachy.lua` and `~/.config/systemd/user/xremap.service` through the config service (backup, journal; `config list|diff|apply|restore` cover them) and sets Plasma's Log Out with kwriteconfig6 when present. `keys check` reports clean / missing / outdated / drifted per piece (exit 0 or 1); a changed file is never overwritten without `--force`.
+- Hyprland 0.55+ (Arch has 0.57) reads `hyprland.lua`; hyprlang `.conf` is deprecated, so bxcachy targets **Lua only** [owner]. `bxcachy.lua` holds the Noctalia autostart and panel binds, the Alt+Tab switcher, the logout bind and the window and layer rules, taken from Noctalia's v5 Hyprland docs. bxcachy **never edits the user's `hyprland.lua`**: `keys check` reports `not-loaded` and `keys apply` prints the `require("bxcachy")` line to add (the starter file already has it).
+- `setup xremap` installs `xremap-hypr-bin` or `xremap-kde-bin` with `yay` (build from `--build`, else the running desktop), adds the udev rule for `/dev/uinput` and the user to the `input` group (both remembered in `setup-xremap.json`, mode 600), writes the shortcut files and enables the user service; `setup undo xremap` reverses only what it added. It needs one logout.
+
+### 13.5 Look and starter configs
+
+Ortus Brand Book 2025 palette (main `#00FF78`, second `#00DBFF`, accent `#FFF500`, dark `#303446`, which is also Catppuccin Frappé's base) on Frappé neutrals [owner]. `Starter.bx` writes, through the config service and only what is missing (a Noctalia file the user changed is kept; `hyprland.lua` is written only when none exists):
+
+- `~/.config/noctalia/config.toml` and `palettes/BxCachy.json` (`NoctaliaConfig.bx`): dark theme with the custom palette; a top bar with launcher, workspaces and active window on the left; the clock, three world clocks (NYC, LON, MAD, editable `clock` widgets with a `timezone`) and the media player in the centre; tray, network, bluetooth, volume, battery, notifications and control center on the right; the wallpaper folder.
+- `~/.config/hypr/hyprland.lua` from `templates/hyprland.lua` (embedded by `bootstrap/gen-templates.sh`), based on Hyprland's own example: brand-gradient borders, rounded corners, blur, Hyprland's default animations, two persistent workspaces, natural scrolling **off** [owner, "inverse"], Super+Q closes a window (Cmd+Q habit), Super+Return terminal, Super+B browser, Super+E files, Super+F fullscreen, Super+Shift+3/4 screenshots, Super+Ctrl+Q lock, media keys, and `require("bxcachy")`.
+
+### 13.6 Brand assets
+
+`assets/` holds the sources (`build.py`, composed from the official BoxLang icon in `assets/brand/`, copied unchanged from Ortus-Solutions/ortus-artwork) and the rendered icon, logo and four wallpapers (box, grid, aurora, minimal). `bootstrap/gen-assets.sh` embeds them in `AssetData.bx`; `assets install` writes them to `~/Pictures/BxCachy` and `~/.local/share/bxcachy`, never overwriting a file the user changed. They are written as base64 text and decoded with `base64 -d` because MatchBox's `fileWrite` turns a binary value into a string (upstream gap).
+
+### 13.7 `session`
+
+`session show` lists the installed sessions, the one the login screen preselects, and any automatic login. `session set hyprland|plasma` makes that session the one SDDM preselects by rewriting `Session=` under `[Last]` in `/var/lib/sddm/state.conf` with sudo (a backup `state.conf.bxcachy.bak` is kept; the other lines stay). Hyprland prefers `hyprland-uwsm.desktop`. It never turns on automatic login (a warning if one is set, since it wins). There is no `ask` value: SDDM always remembers the last session. Log out with Super+Shift+Q to see the change.
+
+### 13.8 Tests and what is verified
+
+- Pure `SetupPlan`, `Shortcuts`, `NoctaliaConfig` classes with script tests; native tests with fake `pacman`, `yay`, `git`, `qdbus6`, `kwriteconfig6`, `sudo`, `systemctl` (plan output, `--yes` gating, root refusal, partial failure, re-run, undo, drift, one clean `--json` envelope); the starter TOML and JSON are parsed.
+- The real Arch container (`tests/arch/suite.sh`) runs the xremap plan, checks the AUR package names, runs the whole `setup hyprland`, checks the written files, byte-identical wallpapers, `keys check`, and has Hyprland verify the starter config.
+- Not verifiable in CI: HyprKwin's installer (needs a running KWin), xremap's per-app rules on both builds, Noctalia accepting every config key, and the exact Hyprland bind strings on a running session. These are covered by the owner's acceptance run on a real CachyOS KDE machine.

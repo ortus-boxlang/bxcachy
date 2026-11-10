@@ -1,4 +1,4 @@
-// The one shortcut table shared by Hyprland and KDE Plasma (docs/architecture/SETUP.md section 5b).
+// The one shortcut table shared by Hyprland and KDE Plasma (docs/architecture/COMMAND-CONTRACT.md section 13.4).
 // Pure: no I/O. `render( target )` turns the table into the text each target needs:
 //   xremap   YAML for the Cmd-style keys (one file, read by both xremap builds)
 //   hyprland Hyprland `bind` lines for the keys that are not remaps
