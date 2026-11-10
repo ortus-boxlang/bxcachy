@@ -123,6 +123,25 @@ else
   # setup hyprland: the plan, and every package it names must exist in the real repos (stock Arch plus CachyOS)
   step_grep real-setup-hyprland-plan    0 "Dry run"     "$BIN" setup hyprland --dry-run
   step real-setup-hyprland-packages-exist 0 bash -c "pkgs=\$('$BIN' setup hyprland --dry-run --json | jq -r '.data.steps[0].commands[0][5:][]'); test -n \"\$pkgs\" && sudo pacman -Si \$pkgs >/dev/null"
+  # --- Desktop setup on the real system: xremap plan (AUR build names exist), the whole `setup hyprland`, and what it wrote ---
+  step real-install-yay                 0               sudo pacman -S --needed --noconfirm yay
+  step_grep real-setup-xremap-plan      0 "Dry run"     "$BIN" setup xremap --build hypr --dry-run
+  step real-setup-xremap-kde-package    0               bash -c "'$BIN' setup xremap --build kde --dry-run --json | jq -e '.data.steps[0].commands[0][4] == \"xremap-kde-bin\"'"
+  if [[ $NET == 1 ]]; then
+    step real-aur-xremap-hypr-exists    0               yay -Si xremap-hypr-bin
+    step real-aur-xremap-kde-exists     0               yay -Si xremap-kde-bin
+  fi
+  step real-keys-render-all             0               bash -c "for t in xremap hyprland plasma; do '$BIN' keys render \$t | grep -q . || exit 1; done"
+  step real-setup-hyprland              0               "$BIN" setup hyprland --yes
+  step real-hyprland-noctalia-installed 0               pacman -Q hyprland noctalia uwsm hyprlock
+  step real-starter-files-written       0               bash -c 'for f in .config/hypr/hyprland.lua .config/hypr/bxcachy.lua .config/noctalia/config.toml .config/noctalia/palettes/BxCachy.json .config/xremap/config.yml Pictures/BxCachy/box.jpg; do test -s "$HOME/$f" || { echo "missing $f"; exit 1; }; done'
+  step real-wallpapers-byte-identical   0               bash -c 'for w in box.jpg grid.jpg aurora.jpg minimal.png; do cmp "$HOME/Pictures/BxCachy/$w" "assets/wallpapers/$w" || exit 1; done'
+  step real-noctalia-config-valid-toml  0               python3 -c "import sys,tomllib; tomllib.load(open(sys.argv[1],'rb'))" "$HOME/.config/noctalia/config.toml"
+  step real-keys-check-clean            0               "$BIN" keys check
+  step real-setup-hyprland-rerun        0               "$BIN" setup hyprland --yes
+  # Hyprland itself judges the starter config (Lua) and the managed module; Noctalia has no offline check, so its binary is only run for its version
+  step real-hyprland-verify-config      0               bash -c 'XDG_RUNTIME_DIR=$(mktemp -d) Hyprland --verify-config --config "$HOME/.config/hypr/hyprland.lua"'
+  step real-noctalia-runs               0               bash -c 'noctalia --version || noctalia --help'
   step real-install-no-yes              2               "$BIN" profile-install core
   step real-install-profile-core        0               "$BIN" profile-install core --yes
   step real-install-profile-core-rerun  0               "$BIN" profile-install core --yes
