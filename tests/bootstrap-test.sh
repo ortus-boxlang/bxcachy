@@ -162,12 +162,7 @@ case "$url" in
 esac'
 trun() { env -i HOME="$home" MOCK_LATEST="${MOCK_LATEST:-1.19.0}" PATH="$bin:$sys" BXCACHY_SKIP_NETWORK=1 BXCACHY_OS_RELEASE="$tmp/os-arch" MOCK_INSTALLED="$MOCK_INSTALLED" CURL_LOG="$tmp/curl.log" MVM_FAKE="$MVM_FAKE" BVM_FAKE="$BVM_FAKE" NVM_FAKE="$NVM_FAKE" "$@"; }
 
-# 1. No gate: unattended runs the installers (there is no flag and no typed confirmation any more); the old flag is a usage error.
-fresh_home
-if trun bash "$repo/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null >/dev/null 2>&1; then echo 'FAIL: the removed --allow-external-scripts flag was accepted' >&2; exit 1; fi
-[[ ! -e "$home/ran.log" ]] || { echo 'FAIL: something ran for a rejected command line' >&2; exit 1; }
-
-# 2. Runs unattended; end state is at the pins; each script shows its url and sha256.
+# 1. Runs unattended; end state is at the pins; each script shows its url and sha256.
 fresh_home
 out="$(trun bash "$repo/bootstrap/install.sh" --install-toolchains --yes </dev/null 2>&1)"
 for x in 'External script: mvm' 'External script: bvm' 'External script: nvm' 'Node.js 22.11.0 installed with nvm and verified.' 'sha256: ' 'MatchBox 0.12.0 installed and verified.' 'BoxLang 1.19.0 installed and verified.'; do need "$out" "$x"; done
@@ -193,7 +188,6 @@ if out="$(trun bash "$repo/bootstrap/install.sh" --install-toolchains --yes </de
 mock java 'echo "openjdk version \"21.0.13\" 2026-04-21" >&2'
 if out="$(trun env MOCK_UID=0 bash "$repo/bootstrap/install.sh" --install-toolchains --yes </dev/null 2>&1)"; then echo 'FAIL: root accepted' >&2; exit 1; fi; need "$out" 'regular user'
 if trun bash "$repo/bootstrap/install.sh" --install-toolchains --yes --bogus >/dev/null 2>&1; then echo 'FAIL: unknown flag accepted' >&2; exit 1; fi
-if trun bash "$repo/bootstrap/install.sh" --install --yes --allow-external-scripts >/dev/null 2>&1; then echo 'FAIL: --install accepted the external-scripts flag' >&2; exit 1; fi
 echo 'bootstrap toolchain tests passed'
 
 # ---- B4: --install installs missing packages, yay only if absent, and Rust; reruns change nothing ----

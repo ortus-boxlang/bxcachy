@@ -69,8 +69,6 @@ step_grep bootstrap-install-rerun  0 'Nothing to do for packages, yay and Rust.'
 step bootstrap-yay-present 0 bash -c 'command -v yay'
 step bootstrap-rust-active 0 bash -c 'rustc --version'
 step rust-default             0 rustup default stable
-# There is no approval gate for the external installers; the old flag is rejected.
-step bootstrap-toolchains-old-flag-rejected 2 bash bootstrap/install.sh --install-toolchains --yes --allow-external-scripts
 if [[ $NET == 1 ]]; then
   step bootstrap-toolchains       0 bash -c 'bash bootstrap/install.sh --install-toolchains --yes </dev/null'
   step_grep bootstrap-toolchains-rerun 0 'Nothing to do' bash -c 'bash bootstrap/install.sh --install-toolchains --yes </dev/null'
