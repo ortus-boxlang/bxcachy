@@ -1,6 +1,6 @@
 {
   "schema": 3,
-  "catalog_version": "0.7.0-draft",
+  "catalog_version": "0.8.0-draft",
   "generated": "2026-11-09",
   "notes": [
     "Tier default = installed by a plain install; optional = offered in the picker; apps not listed are not part of the catalog.",
@@ -149,6 +149,24 @@
       "title": "Files",
       "blurb": "File manager, archives and thumbnails",
       "order": 12
+    },
+    {
+      "id": "php",
+      "title": "PHP",
+      "blurb": "PHP, Composer and the SQLite extension (Laravel installer added by init)",
+      "order": 13
+    },
+    {
+      "id": "python",
+      "title": "Python",
+      "blurb": "pip and uv (Python itself is part of the base system)",
+      "order": 14
+    },
+    {
+      "id": "go",
+      "title": "Go",
+      "blurb": "The Go toolchain",
+      "order": 15
     }
   ],
   "categories": [
@@ -752,6 +770,54 @@
       }
     },
     {
+      "id": "composer",
+      "name": "Composer",
+      "description": "Dependency manager for PHP",
+      "description_source": "curated",
+      "kind": "tui",
+      "group": "development",
+      "category": "Language tooling",
+      "tier": "optional",
+      "source": "pacman",
+      "targets": [
+        "composer"
+      ],
+      "homepage": "https://getcomposer.org/",
+      "macos": "composer via Homebrew",
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-10",
+      "repo": "extra",
+      "profiles": {
+        "php": "default"
+      }
+    },
+    {
+      "id": "go",
+      "name": "Go",
+      "description": "The Go programming language",
+      "description_source": "curated",
+      "kind": "tui",
+      "group": "development",
+      "category": "Language tooling",
+      "tier": "optional",
+      "source": "pacman",
+      "targets": [
+        "go"
+      ],
+      "homepage": "https://go.dev/",
+      "macos": "go via Homebrew",
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-10",
+      "repo": "extra",
+      "profiles": {
+        "go": "default"
+      }
+    },
+    {
       "id": "gradle",
       "name": "Gradle",
       "description": "Powerful build system for the JVM",
@@ -795,6 +861,102 @@
         "omarchy-shell-tool"
       ],
       "verified_on": "2026-11-09"
+    },
+    {
+      "id": "php",
+      "name": "PHP",
+      "description": "General purpose scripting language for web development",
+      "description_source": "curated",
+      "kind": "tui",
+      "group": "development",
+      "category": "Language tooling",
+      "tier": "optional",
+      "source": "pacman",
+      "targets": [
+        "php"
+      ],
+      "homepage": "https://www.php.net/",
+      "macos": "php via Homebrew",
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-10",
+      "repo": "extra",
+      "profiles": {
+        "php": "default"
+      }
+    },
+    {
+      "id": "php-sqlite",
+      "name": "PHP SQLite extension",
+      "description": "SQLite driver for PHP (Laravel uses it by default)",
+      "description_source": "curated",
+      "kind": "tui",
+      "group": "development",
+      "category": "Language tooling",
+      "tier": "optional",
+      "source": "pacman",
+      "targets": [
+        "php-sqlite"
+      ],
+      "homepage": "https://www.php.net/",
+      "macos": null,
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-10",
+      "repo": "extra",
+      "profiles": {
+        "php": "default"
+      }
+    },
+    {
+      "id": "python-pip",
+      "name": "pip",
+      "description": "The Python package installer",
+      "description_source": "curated",
+      "kind": "tui",
+      "group": "development",
+      "category": "Language tooling",
+      "tier": "optional",
+      "source": "pacman",
+      "targets": [
+        "python-pip"
+      ],
+      "homepage": "https://pip.pypa.io/",
+      "macos": "pip (same)",
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-10",
+      "repo": "extra",
+      "profiles": {
+        "python": "default"
+      }
+    },
+    {
+      "id": "uv",
+      "name": "uv",
+      "description": "Extremely fast Python package and project manager",
+      "description_source": "curated",
+      "kind": "tui",
+      "group": "development",
+      "category": "Language tooling",
+      "tier": "optional",
+      "source": "pacman",
+      "targets": [
+        "uv"
+      ],
+      "homepage": "https://docs.astral.sh/uv/",
+      "macos": "uv (same)",
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-10",
+      "repo": "extra",
+      "profiles": {
+        "python": "default"
+      }
     },
     {
       "id": "starship",
@@ -2260,6 +2422,27 @@
       }
     },
     {
+      "id": "mullvad",
+      "name": "Mullvad VPN",
+      "description": "Mullvad VPN app",
+      "description_source": "curated",
+      "kind": "desktop",
+      "group": "network",
+      "category": "Networking",
+      "tier": "optional",
+      "source": "pacman",
+      "targets": [
+        "mullvad-vpn"
+      ],
+      "homepage": "https://mullvad.net/",
+      "macos": "Mullvad VPN (same)",
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-10",
+      "repo": "extra"
+    },
+    {
       "id": "nordvpn",
       "name": "NordVPN",
       "description": "NordVPN CLI tool for Linux",
@@ -2278,6 +2461,48 @@
       "profiles": {
         "networking": "optional"
       }
+    },
+    {
+      "id": "openvpn",
+      "name": "OpenVPN",
+      "description": "Open source VPN client and server",
+      "description_source": "curated",
+      "kind": "tui",
+      "group": "network",
+      "category": "Networking",
+      "tier": "optional",
+      "source": "pacman",
+      "targets": [
+        "openvpn"
+      ],
+      "homepage": "https://openvpn.net/",
+      "macos": "Tunnelblick / OpenVPN Connect",
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-10",
+      "repo": "extra"
+    },
+    {
+      "id": "proton-vpn",
+      "name": "Proton VPN",
+      "description": "Proton VPN app",
+      "description_source": "curated",
+      "kind": "desktop",
+      "group": "network",
+      "category": "Networking",
+      "tier": "optional",
+      "source": "pacman",
+      "targets": [
+        "proton-vpn-gtk-app"
+      ],
+      "homepage": "https://protonvpn.com/",
+      "macos": "Proton VPN (same)",
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-10",
+      "repo": "extra"
     },
     {
       "id": "speedtest",
@@ -2307,6 +2532,27 @@
       "profiles": {
         "networking": "optional"
       }
+    },
+    {
+      "id": "wireguard",
+      "name": "WireGuard",
+      "description": "Fast, simple VPN tunnels (wg and wg-quick tools)",
+      "description_source": "curated",
+      "kind": "tui",
+      "group": "network",
+      "category": "Networking",
+      "tier": "optional",
+      "source": "pacman",
+      "targets": [
+        "wireguard-tools"
+      ],
+      "homepage": "https://www.wireguard.com/",
+      "macos": "WireGuard",
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-10",
+      "repo": "extra"
     },
     {
       "id": "remmina",
@@ -2516,6 +2762,27 @@
       "verified_on": "2026-11-09"
     },
     {
+      "id": "borg",
+      "name": "BorgBackup",
+      "description": "Deduplicating backup program with compression and encryption",
+      "description_source": "curated",
+      "kind": "tui",
+      "group": "system",
+      "category": "Disk",
+      "tier": "optional",
+      "source": "pacman",
+      "targets": [
+        "borg"
+      ],
+      "homepage": "https://www.borgbackup.org/",
+      "macos": "borgbackup (same)",
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-10",
+      "repo": "extra"
+    },
+    {
       "id": "gnome-disk-utility",
       "name": "Disks",
       "description": "Disk Management Utility for GNOME",
@@ -2535,6 +2802,69 @@
         "omarchy-desktop"
       ],
       "verified_on": "2026-11-09"
+    },
+    {
+      "id": "restic",
+      "name": "restic",
+      "description": "Fast, encrypted, deduplicated backups",
+      "description_source": "curated",
+      "kind": "tui",
+      "group": "system",
+      "category": "Disk",
+      "tier": "optional",
+      "source": "pacman",
+      "targets": [
+        "restic"
+      ],
+      "homepage": "https://restic.net/",
+      "macos": "restic (same)",
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-10",
+      "repo": "extra"
+    },
+    {
+      "id": "snap-pac",
+      "name": "snap-pac",
+      "description": "Takes a snapshot before and after every pacman transaction",
+      "description_source": "curated",
+      "kind": "tui",
+      "group": "system",
+      "category": "Disk",
+      "tier": "optional",
+      "source": "pacman",
+      "targets": [
+        "snap-pac"
+      ],
+      "homepage": "https://github.com/wesbarnett/snap-pac",
+      "macos": null,
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-10",
+      "repo": "extra"
+    },
+    {
+      "id": "snapper",
+      "name": "Snapper",
+      "description": "Btrfs and LVM snapshots with a timeline",
+      "description_source": "curated",
+      "kind": "tui",
+      "group": "system",
+      "category": "Disk",
+      "tier": "optional",
+      "source": "pacman",
+      "targets": [
+        "snapper"
+      ],
+      "homepage": "https://github.com/openSUSE/snapper",
+      "macos": "Time Machine",
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-10",
+      "repo": "extra"
     },
     {
       "id": "btop",
@@ -3964,6 +4294,48 @@
       "profiles": {
         "productivity": "optional"
       }
+    },
+    {
+      "id": "bitwarden",
+      "name": "Bitwarden",
+      "description": "Open source password manager, synced across devices",
+      "description_source": "curated",
+      "kind": "desktop",
+      "group": "everyday",
+      "category": "Security",
+      "tier": "optional",
+      "source": "pacman",
+      "targets": [
+        "bitwarden"
+      ],
+      "homepage": "https://bitwarden.com/",
+      "macos": "Bitwarden (same)",
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-10",
+      "repo": "extra"
+    },
+    {
+      "id": "keepassxc",
+      "name": "KeePassXC",
+      "description": "Local password manager, no account needed",
+      "description_source": "curated",
+      "kind": "desktop",
+      "group": "everyday",
+      "category": "Security",
+      "tier": "optional",
+      "source": "pacman",
+      "targets": [
+        "keepassxc"
+      ],
+      "homepage": "https://keepassxc.org/",
+      "macos": "KeePassXC (same)",
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-10",
+      "repo": "extra"
     },
     {
       "id": "maps",

@@ -33,8 +33,21 @@ check( "no apps chosen, no install step", find( "apps", ids( ip.plan( { ai_orche
 p = ip.plan( { git_name: "Ada Lovelace", git_email: "ada@example.com" } );
 check( "git identity is two argument arrays (no shell string)", ids( p ) == "git-name,git-email" && p.steps[ 1 ].argv[ 5 ] == "Ada Lovelace" && p.steps[ 1 ].argv.len() == 5 );
 
-p = ip.plan( { vpn: "tailscale", gaming: "none", databases: [], toolchains: [ "java" ], ssh_key: false, natural_scroll: false } );
-check( "answers without a command are listed as pending, not dropped, and not when empty", p.pending.toList( "," ) == "toolchains,vpn" );
+p = ip.plan( { databases: [ "postgres" ], ssh_key: true, theme: "dark", wallpaper: "box", workspaces: 2, natural_scroll: false, layouts: [] } );
+check( "answers without a command are listed as pending, not dropped, and not when empty or off", p.pending.toList( "," ) == "databases,ssh_key,theme,wallpaper,workspaces" && p.steps.len() == 0 );
+
+p = ip.plan( { toolchains: [ "java", "php", "go" ] } );
+check( "toolchains: a catalog profile each, Laravel after PHP", ids( p ) == "toolchain-java,toolchain-php,laravel,toolchain-go" && cmd( p, "toolchain-java" ) == "bxcachy profile-install jvm" && cmd( p, "laravel" ) == "composer global require laravel/installer" );
+check( "python is the python profile", cmd( ip.plan( { toolchains: [ "python" ] } ), "toolchain-python" ) == "bxcachy profile-install python" );
+check( "no toolchains, no steps", ip.plan( { toolchains: [] } ).steps.len() == 0 );
+
+check( "Podman is the containers profile", cmd( ip.plan( { container_engine: "podman" } ), "containers" ) == "bxcachy profile-install containers" );
+check( "Docker is one extra package", cmd( ip.plan( { container_engine: "docker" } ), "apps" ) == "bxcachy install docker" && find( "containers", ids( ip.plan( { container_engine: "docker" } ) ) ) == 0 );
+
+p = ip.plan( { vpn: "proton", password_manager: "keepassxc", gaming: "steam", backups: [ "snapper", "restic" ] } );
+check( "VPN, password manager, Steam and backups share one install", cmd( p, "apps" ) == "bxcachy install proton-vpn keepassxc steam snapper snap-pac restic" );
+check( "VPN none and gaming none add nothing", ip.plan( { vpn: "none", gaming: "none", password_manager: "none" } ).steps.len() == 0 );
+check( "the gaming bundle is the gaming profile", cmd( ip.plan( { gaming: "bundle" } ), "gaming" ) == "bxcachy profile-install gaming" );
 
 p = ip.plan( { desktops: "gnome" } );
 check( "an unknown desktop is an error", p.errors.len() == 1 && p.steps.len() == 0 );

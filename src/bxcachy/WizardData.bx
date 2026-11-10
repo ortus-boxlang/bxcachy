@@ -580,6 +580,21 @@ class WizardData {
               "value": "wireguard",
               "label": "WireGuard",
               "description": "Fast, simple VPN tunnels."
+            },
+            {
+              "value": "openvpn",
+              "label": "OpenVPN",
+              "description": "The long-standing open source VPN client."
+            },
+            {
+              "value": "mullvad",
+              "label": "Mullvad",
+              "description": "Privacy-focused VPN with its own app."
+            },
+            {
+              "value": "proton",
+              "label": "Proton VPN",
+              "description": "Proton''s VPN app."
             }
           ]
         },
@@ -626,6 +641,30 @@ class WizardData {
               "value": "bundle",
               "label": "Full CachyOS gaming bundle",
               "description": "Steam, Lutris, Heroic, Proton tools, MangoHud and more."
+            }
+          ]
+        },
+        {
+          "type": "multi",
+          "id": "backups",
+          "label": "Backups and snapshots",
+          "help": "Tools only; BxCachy does not schedule anything yet.",
+          "default": [],
+          "options": [
+            {
+              "value": "snapper",
+              "label": "Snapper + snap-pac",
+              "description": "Btrfs snapshots, one before and after every pacman update."
+            },
+            {
+              "value": "restic",
+              "label": "restic",
+              "description": "Fast encrypted backups to local disks or the cloud."
+            },
+            {
+              "value": "borg",
+              "label": "BorgBackup",
+              "description": "Deduplicating backups with compression."
             }
           ]
         }

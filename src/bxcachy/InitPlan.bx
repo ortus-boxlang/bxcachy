@@ -6,7 +6,7 @@
 class InitPlan {
     // Answer keys that are saved but have no command behind them yet.
     function pendingKeys() {
-        return [ "toolchains", "container_engine", "databases", "vpn", "password_manager", "gaming", "ssh_key", "theme", "wallpaper", "workspaces", "natural_scroll", "layouts", "app_mode" ];
+        return [ "databases", "ssh_key", "theme", "wallpaper", "workspaces", "natural_scroll", "layouts", "app_mode" ];
     }
 
     // The value of an answer, or a fallback when it was not answered.
@@ -60,9 +60,30 @@ class InitPlan {
             var build = desktops == "plasma" ? "kde" : "hypr";
             out.steps.append( { id: "xremap", title: "Cmd-style keys (xremap, " & build & ")", argv: [ "bxcachy", "setup", "xremap", "--build=" & build ] } );
         }
+        // toolchains: one catalog profile each (java is the jvm profile: JDK 21, Maven, Gradle); Laravel's installer comes from Composer
+        var profiles = { java: "jvm", php: "php", python: "python", go: "go" };
+        var chosen = pick( a, "toolchains", [] );
+        for ( var tc in [ "java", "php", "python", "go" ] ) {
+            if ( !arrayFind( chosen, tc ) ) continue;
+            out.steps.append( { id: "toolchain-" & tc, title: "install the " & tc & " toolchain", argv: [ "bxcachy", "profile-install", profiles[ tc ] ] } );
+            if ( tc == "php" ) out.steps.append( { id: "laravel", title: "install the Laravel installer (composer global)", argv: [ "composer", "global", "require", "laravel/installer" ] } );
+        }
+        // containers: Podman is the engine the containers profile is built around; Docker is one extra package
+        var engine = pick( a, "container_engine" );
+        if ( engine == "podman" ) out.steps.append( { id: "containers", title: "install Podman and its tools", argv: [ "bxcachy", "profile-install", "containers" ] } );
+        if ( pick( a, "gaming" ) == "bundle" ) out.steps.append( { id: "gaming", title: "install the CachyOS gaming bundle", argv: [ "bxcachy", "profile-install", "gaming" ] } );
+        // everything else that is one package each goes in a single install
         var apps = [];
         for ( var id in pick( a, "ai_orchestrators", [] ) ) apps.append( id );
         for ( var id in pick( a, "ai_agents", [] ) ) apps.append( id );
+        if ( engine == "docker" ) apps.append( "docker" );
+        var vpnIds = { tailscale: "tailscale", wireguard: "wireguard", openvpn: "openvpn", mullvad: "mullvad", proton: "proton-vpn" };
+        var vpn = pick( a, "vpn" );
+        if ( structKeyExists( vpnIds, vpn ) ) apps.append( vpnIds[ vpn ] );
+        var pm = pick( a, "password_manager" );
+        if ( len( pm ) && pm != "none" ) apps.append( pm );
+        if ( pick( a, "gaming" ) == "steam" ) apps.append( "steam" );
+        for ( var id in pick( a, "backups", [] ) ) { apps.append( id ); if ( id == "snapper" ) apps.append( "snap-pac" ); }
         if ( apps.len() ) {
             var iargv = [ "bxcachy", "install" ];
             for ( var id in apps ) iargv.append( id );
