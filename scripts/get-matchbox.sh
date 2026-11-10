@@ -56,5 +56,5 @@ fi
 command -v cargo >/dev/null || { echo "cargo is required to build MatchBox from source" >&2; exit 4; }
 git clone --quiet --depth 1 --branch "$ref" "$repo" "$work/src"
 commit="$(git -C "$work/src" rev-parse --short HEAD)"
-( cd "$work/src" && cargo build --release --locked 2>&1 | tail -n 5 )
+( cd "$work/src" && cargo build --release --locked --features bif-tui 2>&1 | tail -n 5 )
 finish "$work/src/target/release/matchbox" "built from $ref" "$commit"
