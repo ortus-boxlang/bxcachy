@@ -236,6 +236,7 @@ bxcachy tiling on|off|status                           HyprKwin inside Plasma, n
 bxcachy keys show | render xremap|hyprland|plasma | check | apply [--yes] [--dry-run] [--force]
 bxcachy assets list | install [--yes] [--dry-run]
 bxcachy session show | set hyprland|plasma [--yes] [--dry-run]
+bxcachy runner list | show | doctor | launch | set P | menu-set P | launcher-command P JSON | menu-command P JSON   launcher and menu providers (13.9)
 ```
 
 - Every target runs, re-runs and undoes on its own; a re-run changes nothing when everything is in place. No `--yes` prints the plan (exit 2); `--dry-run` exits 0. Results as `install`: `done` / `failed` / `skipped`, exits 0, 2, 4 (precondition: root, wrong OS or CPU, no sudo, no Plasma, unsupported Plasma, X11, nothing to undo, session not installed), 5 (the pacman step failed), 6 (another step failed with nothing done), 7 (a step failed after earlier ones were done; later steps are skipped), 8 (config drift or lock). Never run as root: sudo is used only for the steps shown in the plan. `--json` is always one envelope on stdout (the config service has a quiet mode for that).
@@ -291,6 +292,15 @@ Ortus Brand Book 2025 palette (main `#00FF78`, second `#00DBFF`, accent `#FFF500
 
 `session show` lists the installed sessions, the one the login screen preselects, and any automatic login. `session set hyprland|plasma` makes that session the one SDDM preselects by rewriting `Session=` under `[Last]` in `/var/lib/sddm/state.conf` with sudo (a backup `state.conf.bxcachy.bak` is kept; the other lines stay). Hyprland prefers `hyprland-uwsm.desktop`. It never turns on automatic login (a warning if one is set, since it wins). There is no `ask` value: SDDM always remembers the last session. Log out with Super+Shift+Q to see the change.
 
+### 13.9 `runner` (port of the legacy `bxcachy-runner`)
+
+The launcher and the menu backend are chosen separately and recorded in `~/.config/bxcachy/runner.json` (written atomically). **Nothing here changes a keybinding or a desktop file**; `doctor` ends with `Shortcut ownership: unchanged`. `set` and `menu-set` are user settings that act at once (no `--yes`), like `tiling`.
+
+- Launcher providers: `system` (desktop-owned, nothing to run), `noctalia` (default on Hyprland: `noctalia msg panel-toggle launcher`), `rofi`, `walker`, `krunner`, `vicinae`, `hyprrunner`, `custom`. Menu providers: `rofi` (default), `walker`, `vicinae`, `hyprrunner`.
+- Commands are JSON argument arrays (`launcher-command rofi '["rofi","-show","run"]'`, `{prompt}` in menu commands); a shell string, an empty array or an empty part exits 4. `launcher-command custom ...` sets the `custom` command.
+- `doctor` shows the commands and whether each executable is on PATH (exit 0 either way, `--json` available); `launch` starts the launcher detached (exit 4 for `system` or a missing program). `list` marks the current choice with `*`.
+- Packages: Rofi (`rofi`, extra) and Vicinae (`vicinae-bin`, AUR) are catalog apps beside Walker; Noctalia and KRunner come with their desktops. No package for `hyprrunner` was found in Arch or the AUR on 2026-11-10, so it is accepted as a provider but not offered by the wizard. The legacy `menu-select` (stdin labels, index out) is not ported: nothing here uses it yet.
+
 ### 13.8 Tests and what is verified
 
 - Pure `SetupPlan`, `Shortcuts`, `NoctaliaConfig` classes with script tests; native tests with fake `pacman`, `yay`, `git`, `qdbus6`, `kwriteconfig6`, `sudo`, `systemctl` (plan output, `--yes` gating, root refusal, partial failure, re-run, undo, drift, one clean `--json` envelope); the starter TOML and JSON are parsed.
@@ -334,7 +344,7 @@ Exits: as `setup` (0, 2, 4, 5, 6, 7, 8); 4 also for no terminal without `--answe
 | VPN | `vpn` (Tailscale, WireGuard, OpenVPN, Mullvad, Proton) | catalog and services |
 | Password manager | `password_manager` (Bitwarden, 1Password, KeePassXC) | catalog |
 | Gaming | `gaming` (`none`, `steam`, `bundle`) | catalog (CachyOS gaming bundle) |
-| Apps | `app_mode` (`defaults` or `custom`), `app_selection` per category, `default_browser`, `default_terminal`, `launcher`, `menu` | `install`, `runner set`, `runner menu-set` |
+| Apps | `app_mode` (`defaults` or `custom`), `app_selection` per category, `default_browser`, `default_terminal`, `launcher` (`noctalia` default, `rofi`, `walker`, `vicinae`; asked for Hyprland and Both), `menu` (`rofi` default, `walker`) | `install` (the provider's package), `runner set`, `runner menu-set` |
 | Backups and storage | `snapshots`, `backup_target` (restic or borg), `mounts`, `cache_cleanup` | snapper, timers |
 | Import | `dotfiles_repo`, `dotfiles_method` (`chezmoi`, `yadm`, `stow`, `links`) | dotfiles import (last step) |
 

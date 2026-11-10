@@ -1,6 +1,6 @@
 {
   "schema": 3,
-  "catalog_version": "0.9.0-draft",
+  "catalog_version": "0.10.0-draft",
   "generated": "2026-11-09",
   "notes": [
     "Tier default = installed by a plain install; optional = offered in the picker; apps not listed are not part of the catalog.",
@@ -3582,6 +3582,47 @@
       ],
       "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
       "verified_on": "2026-11-09"
+    },
+    {
+      "id": "rofi",
+      "name": "Rofi",
+      "description": "Window switcher, application launcher and dmenu replacement (also the BxCachy menu backend)",
+      "description_source": "curated",
+      "kind": "desktop",
+      "group": "desktop",
+      "category": "Launchers",
+      "tier": "optional",
+      "source": "pacman",
+      "targets": [
+        "rofi"
+      ],
+      "homepage": "https://github.com/davatorium/rofi",
+      "macos": "Spotlight / Alfred",
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-10",
+      "repo": "extra"
+    },
+    {
+      "id": "vicinae",
+      "name": "Vicinae",
+      "description": "A focused, extensible launcher for your desktop",
+      "description_source": "curated",
+      "kind": "desktop",
+      "group": "desktop",
+      "category": "Launchers",
+      "tier": "optional",
+      "source": "aur",
+      "targets": [
+        "vicinae-bin"
+      ],
+      "homepage": "https://github.com/vicinaehq/vicinae",
+      "macos": "Raycast",
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-10"
     },
     {
       "id": "walker",

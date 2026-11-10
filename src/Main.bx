@@ -254,6 +254,70 @@ class {
           println( "Usage: bxcachy setup plasma [--keys | --undo-keys] | hyprland [--terminal=ghostty|kitty|alacritty|foot|konsole] [--layout=dwindle|master|scrolling|floating] [--workspaces=N] [--natural-scroll] [--layouts=us-intl,es] [--theme=dark|light|auto] [--wallpaper=box|grid|aurora|minimal] | terminal [--default=ghostty] [--also=a,b] | shell [--shell=zsh|fish|bash] | xremap [--build=hypr|kde] | undo plasma|hyprland|xremap | status [--yes] [--dry-run] [--json]" );
           CLIExit( 2 );
           break;
+         case "runner":
+          // Launcher and menu providers. Records the choice (~/.config/bxcachy/runner.json); never changes a keybinding.
+          // set and menu-set are user settings that act at once (no --yes), like `tiling`.
+          rnSub = p.len() >= 2 ? p[2] : "";
+          rn = new bxcachy.Runner( cli );
+          rnUsage = "Usage: bxcachy runner list | show | doctor | launch | set PROVIDER | menu-set PROVIDER | launcher-command PROVIDER JSON_ARGV | menu-command PROVIDER JSON_ARGV [--json]";
+          rnArity = { list: 2, show: 2, doctor: 2, launch: 2, set: 3, "menu-set": 3, "launcher-command": 4, "menu-command": 4 };
+          if ( !structKeyExists( rnArity, rnSub ) || p.len() != rnArity[ rnSub ] ) {
+           println( rnUsage );
+           CLIExit( 2 );
+          }
+          try {
+           if ( rnSub == "list" ) {
+            rnCfg = rn.load();
+            if ( asJson ) println( cli.envelope( "runner list", 0, { launchers: rn.launcherProviders().map( function( x ) { return { id: x, current: x == rnCfg.provider }; } ), menus: rn.menuProviders().map( function( x ) { return { id: x, current: x == rnCfg.menu_provider }; } ) } ) );
+            else {
+             println( "launcher: " & rn.launcherProviders().map( function( x ) { return ( x == rnCfg.provider ? "*" : "" ) & x; } ).toList( " " ) );
+             println( "menu: " & rn.menuProviders().map( function( x ) { return ( x == rnCfg.menu_provider ? "*" : "" ) & x; } ).toList( " " ) );
+            }
+            CLIExit( 0 );
+           }
+           if ( rnSub == "show" ) {
+            rnCfg = rn.load();
+            if ( asJson ) println( cli.envelope( "runner show", 0, rnCfg ) ); else println( jsonSerialize( rnCfg ) );
+            CLIExit( 0 );
+           }
+           if ( rnSub == "doctor" ) {
+            rnDoc = rn.doctor();
+            if ( asJson ) println( cli.envelope( "runner doctor", 0, rnDoc ) );
+            else {
+             println( "Desktop: " & rnDoc.desktop );
+             println( "Launcher: " & rnDoc.launcher.provider & " | command: " & ( rnDoc.launcher.owned_by_desktop ? "(desktop-owned)" : rnDoc.launcher.command.toList( " " ) ) );
+             println( "Menu: " & rnDoc.menu.provider & " | command: " & rnDoc.menu.command.toList( " " ) );
+             if ( !rnDoc.launcher.owned_by_desktop ) println( "launcher executable: " & ( rnDoc.launcher.found ? "found" : "NOT FOUND" ) );
+             println( "menu executable: " & ( rnDoc.menu.found ? "found" : "NOT FOUND" ) );
+             println( "Shortcut ownership: unchanged" );
+            }
+            CLIExit( 0 );
+           }
+           if ( rnSub == "launch" ) {
+            rnLaunch = rn.launch();
+            if ( asJson ) println( cli.envelope( "runner launch", rnLaunch.ok ? 0 : 4, rnLaunch ) );
+            else if ( !rnLaunch.ok ) println( "error: " & rnLaunch.error );
+            CLIExit( rnLaunch.ok ? 0 : 4 );
+           }
+           rnArgv = [];
+           if ( rnSub == "launcher-command" || rnSub == "menu-command" ) {
+            try { rnArgv = jsonDeserialize( p[4] ); } catch ( any e ) { rnArgv = []; }
+            if ( !isArray( rnArgv ) ) rnArgv = [];
+           }
+           rnErr = rn.set( rnSub == "set" ? "provider" : ( rnSub == "menu-set" ? "menu" : rnSub ), p[3], rnArgv );
+           if ( len( rnErr ) ) {
+            if ( asJson ) println( cli.envelope( "runner " & rnSub, 4, { error: rnErr } ) ); else println( "error: " & rnErr );
+            CLIExit( 4 );
+           }
+           if ( asJson ) println( cli.envelope( "runner " & rnSub, 0, { provider: p[3] } ) );
+           else println( ( rnSub == "set" ? "Runner provider: " : ( rnSub == "menu-set" ? "Menu provider: " : "Configured " ) ) & p[3] );
+           CLIExit( 0 );
+          } catch ( any e ) {
+           if ( e.message contains "CLIExit" ) rethrow;
+           println( "error: " & e.message );
+           CLIExit( 4 );
+          }
+          break;
          case "toolchain":
           // Optional language toolchains. `toolchain node` installs nvm (pinned official installer) and Node.js LTS. Bun and Deno are
           // catalog apps: bxcachy install bun deno.

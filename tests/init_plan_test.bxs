@@ -33,6 +33,11 @@ check( "no apps chosen, no install step", find( "apps", ids( ip.plan( { ai_orche
 p = ip.plan( { git_name: "Ada Lovelace", git_email: "ada@example.com" } );
 check( "git identity is two argument arrays (no shell string)", ids( p ) == "git-name,git-email" && p.steps[ 1 ].argv[ 5 ] == "Ada Lovelace" && p.steps[ 1 ].argv.len() == 5 );
 
+p = ip.plan( { launcher: "rofi", menu: "walker" } );
+check( "launcher and menu: install what is needed, then record the choice", ids( p ) == "apps,launcher,menu" && cmd( p, "apps" ) == "bxcachy install rofi walker" && cmd( p, "launcher" ) == "bxcachy runner set rofi" && cmd( p, "menu" ) == "bxcachy runner menu-set walker" );
+p = ip.plan( { launcher: "noctalia", menu: "rofi" } );
+check( "Noctalia needs no package of its own", cmd( p, "apps" ) == "bxcachy install rofi" && cmd( p, "launcher" ) == "bxcachy runner set noctalia" );
+
 p = ip.plan( { databases: [ "postgres" ], ssh_key: true, app_mode: "custom", natural_scroll: false, layouts: [] } );
 check( "answers without a command are listed as pending, not dropped, and not when empty or off", p.pending.toList( "," ) == "databases,ssh_key,app_mode" && p.steps.len() == 0 );
 p = ip.plan( { desktops: "hyprland", workspaces: 4, natural_scroll: true, layouts: [ "us-intl", "es" ], theme: "light", wallpaper: "aurora" } );

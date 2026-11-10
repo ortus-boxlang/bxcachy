@@ -93,5 +93,8 @@ a = mk( { toolchains: [ "java", "javascript" ] } );
 check( "and asked once it is", a.finalAnswers().keyExists( "js_runtimes" ) );
 check( "the toolchains page says BoxLang is always installed", find( "BoxLang", a.spec().pages[ 5 ].intro ) > 0 && a.spec().pages[ 5 ].questions[ 1 ].type == "info" );
 
+a = mk();
+check( "the launcher defaults to Noctalia and the menu to Rofi; the launcher is for Hyprland only", a.answerString( "launcher" ) == "noctalia" && a.answerString( "menu" ) == "rofi" && a.finalAnswers().keyExists( "launcher" ) && !mk( { desktops: "plasma" } ).finalAnswers().keyExists( "launcher" ) );
+
 if ( failures > 0 ) { println( failures & " failed" ); exit( 1 ); }
 println( "all passed" );

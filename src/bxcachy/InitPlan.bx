@@ -103,12 +103,20 @@ class InitPlan {
         var pm = pick( a, "password_manager" );
         if ( len( pm ) && pm != "none" ) apps.append( pm );
         if ( pick( a, "gaming" ) == "steam" ) apps.append( "steam" );
+        // launcher and menu providers: install the one that needs a package; the choice itself is recorded by `runner`
+        var rn = new bxcachy.Runner();
+        for ( var pv in [ pick( a, "launcher" ), pick( a, "menu" ) ] ) {
+            var rid = len( pv ) ? rn.catalogId( pv ) : "";
+            if ( len( rid ) && !arrayFind( apps, rid ) ) apps.append( rid );
+        }
         for ( var id in pick( a, "backups", [] ) ) { apps.append( id ); if ( id == "snapper" ) apps.append( "snap-pac" ); }
         if ( apps.len() ) {
             var iargv = [ "bxcachy", "install" ];
             for ( var id in apps ) iargv.append( id );
             out.steps.append( { id: "apps", title: "install " & apps.toList( ", " ), argv: iargv } );
         }
+        if ( len( pick( a, "launcher" ) ) ) out.steps.append( { id: "launcher", title: "use " & a.launcher & " as the app launcher (no shortcut is changed)", argv: [ "bxcachy", "runner", "set", a.launcher ] } );
+        if ( len( pick( a, "menu" ) ) ) out.steps.append( { id: "menu", title: "use " & a.menu & " for BxCachy menus", argv: [ "bxcachy", "runner", "menu-set", a.menu ] } );
         var gname = pick( a, "git_name" );
         var gmail = pick( a, "git_email" );
         if ( len( gname ) ) out.steps.append( { id: "git-name", title: "git user.name", argv: [ "git", "config", "--global", "user.name", gname ] } );

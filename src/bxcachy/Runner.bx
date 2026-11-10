@@ -1,0 +1,138 @@
+// The runner integration (ported from the legacy bxcachy-runner): which launcher Super+Space style shortcuts open, and which
+// menu backend BxCachy's own menus use. The two are independent. It NEVER changes a keybinding or a desktop file: it only
+// records the choice (~/.config/bxcachy/runner.json) and resolves the argument arrays to run. Commands are JSON argument
+// arrays, never shell strings.
+//
+// Launcher providers: system (desktop-owned, nothing to run), noctalia, rofi, walker, krunner, vicinae, hyprrunner, custom.
+// Menu providers: rofi, walker, vicinae, hyprrunner.
+class Runner {
+    function init( cli = "", runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.inst = new bxcachy.Installer( arguments.runner );
+        variables.config = new bxcachy.ConfigService();
+        return this;
+    }
+
+    function launcherProviders() { return [ "system", "noctalia", "rofi", "walker", "krunner", "vicinae", "hyprrunner", "custom" ]; }
+    function menuProviders() { return [ "rofi", "walker", "vicinae", "hyprrunner" ]; }
+
+    // Argument templates for each provider ({prompt} is replaced in menu commands).
+    function launchCommands() {
+        return { noctalia: [ "noctalia", "msg", "panel-toggle", "launcher" ], rofi: [ "rofi", "-show", "drun" ], walker: [ "walker" ],
+                 vicinae: [ "vicinae", "toggle" ], hyprrunner: [ "hyprrunner" ], krunner: [ "krunner" ] };
+    }
+    function menuCommands() {
+        return { rofi: [ "rofi", "-dmenu", "-i", "-show-icons", "-format", "i", "-p", "{prompt}" ], walker: [ "walker", "--dmenu" ],
+                 vicinae: [ "vicinae", "dmenu", "--prompt", "{prompt}" ], hyprrunner: [ "hyprrunner", "--dmenu" ] };
+    }
+
+    // The catalog app that provides a provider ("" when none: system, custom, or no package found).
+    function catalogId( provider ) {
+        var ids = { noctalia: "", rofi: "rofi", walker: "walker", krunner: "", vicinae: "vicinae", hyprrunner: "" };
+        return structKeyExists( ids, arguments.provider ) ? ids[ arguments.provider ] : "";
+    }
+
+    function file() { return variables.config.cfgHome() & "/bxcachy/runner.json"; }
+
+    // The defaults: Noctalia's launcher on Hyprland, the desktop's own runner elsewhere; Rofi for menus.
+    function defaults( desktop = "" ) {
+        var d = len( arguments.desktop ) ? arguments.desktop : getSystemSetting( "XDG_CURRENT_DESKTOP", "" );
+        return { provider: findNoCase( "hyprland", d ) ? "noctalia" : "system", menu_provider: "rofi", launcher_commands: {}, menu_commands: {}, custom_command: [] };
+    }
+
+    // A non-empty array of non-empty strings.
+    function validArgv( value ) {
+        if ( !isArray( arguments.value ) || !arguments.value.len() ) return false;
+        for ( var part in arguments.value ) if ( !isSimpleValue( part ) || !len( part ) ) return false;
+        return true;
+    }
+
+    // The effective config: the defaults overlaid with runner.json. Throws a message when the file is unusable.
+    function load() {
+        var cfg = defaults();
+        if ( !fileExists( file() ) ) return cfg;
+        var saved = "";
+        try { saved = jsonDeserialize( fileRead( file() ) ); } catch ( any e ) { throw( message = "runner.json is not valid JSON: " & file() ); }
+        if ( !isStruct( saved ) ) throw( message = "runner.json must be an object: " & file() );
+        for ( var key in structKeyArray( saved ) ) cfg[ key ] = saved[ key ];
+        if ( !arrayFind( launcherProviders(), cfg.provider ) ) throw( message = "Unsupported runner provider in runner.json: " & cfg.provider );
+        if ( !arrayFind( menuProviders(), cfg.menu_provider ) ) throw( message = "Unsupported menu provider in runner.json: " & cfg.menu_provider );
+        return cfg;
+    }
+
+    function save( cfg ) {
+        variables.config.writeAtomic( file(), jsonSerialize( arguments.cfg ) & chr( 10 ), "644" );
+    }
+
+    // The launcher argv for a provider ([] for system, which the desktop owns). Throws when the command is invalid.
+    function resolve( provider, cfg ) {
+        if ( arguments.provider == "system" ) return [];
+        var cmd = arguments.provider == "custom" ? arguments.cfg.custom_command
+            : ( structKeyExists( arguments.cfg.launcher_commands, arguments.provider ) ? arguments.cfg.launcher_commands[ arguments.provider ] : ( structKeyExists( launchCommands(), arguments.provider ) ? launchCommands()[ arguments.provider ] : [] ) );
+        if ( !validArgv( cmd ) ) throw( message = "Invalid launcher command for " & arguments.provider );
+        return cmd;
+    }
+
+    // The menu argv for a provider with {prompt} filled in.
+    function menuCommand( provider, cfg, prompt = "BxCachy" ) {
+        var cmd = structKeyExists( arguments.cfg.menu_commands, arguments.provider ) ? arguments.cfg.menu_commands[ arguments.provider ] : ( structKeyExists( menuCommands(), arguments.provider ) ? menuCommands()[ arguments.provider ] : [] );
+        if ( !validArgv( cmd ) ) throw( message = "Invalid menu command for " & arguments.provider );
+        var out = [];
+        for ( var part in cmd ) out.append( replace( part, "{prompt}", arguments.prompt, "all" ) );
+        return out;
+    }
+
+    // Whether a program is on PATH (no shell string: `sh -c 'command -v "$1"'`).
+    function found( program ) {
+        try { return variables.inst.exec( [ "sh", "-c", 'command -v "$1"', "_", arguments.program ], 10 ).exitCode == 0; } catch ( any e ) { return false; }
+    }
+
+    // `runner doctor`: what is configured and whether it can run. Changes nothing.
+    function doctor() {
+        var cfg = load();
+        var launcher = resolve( cfg.provider, cfg );
+        var menu = menuCommand( cfg.menu_provider, cfg );
+        return {
+            desktop: getSystemSetting( "XDG_CURRENT_DESKTOP", "unknown" ),
+            launcher: { provider: cfg.provider, command: launcher, owned_by_desktop: !launcher.len(), found: launcher.len() ? found( launcher[ 1 ] ) : true },
+            menu: { provider: cfg.menu_provider, command: menu, found: found( menu[ 1 ] ) },
+            shortcuts: "unchanged"
+        };
+    }
+
+    // `runner launch`: start the launcher detached. Returns { ok, error }.
+    function launch() {
+        var cfg = load();
+        var cmd = resolve( cfg.provider, cfg );
+        if ( !cmd.len() ) return { ok: false, error: "The system runner is desktop-owned; the existing shortcut is kept." };
+        if ( !found( cmd[ 1 ] ) ) return { ok: false, error: "Runner command not found: " & cmd[ 1 ] };
+        var argv = [ "sh", "-c", 'setsid "$@" >/dev/null 2>&1 &', "_" ];
+        for ( var part in cmd ) argv.append( part );
+        variables.inst.exec( argv, 10 );
+        return { ok: true, error: "" };
+    }
+
+    // Records a choice. kind: provider | menu | launcher-command | menu-command. Returns "" or an error message.
+    function set( kind, provider, argv = [] ) {
+        var cfg = load();
+        if ( arguments.kind == "provider" ) {
+            if ( !arrayFind( launcherProviders(), arguments.provider ) ) return "Unsupported runner provider: " & arguments.provider & " (use " & launcherProviders().toList( ", " ) & ")";
+            cfg.provider = arguments.provider;
+        } else if ( arguments.kind == "menu" ) {
+            if ( !arrayFind( menuProviders(), arguments.provider ) ) return "Unsupported menu provider: " & arguments.provider & " (use " & menuProviders().toList( ", " ) & ")";
+            cfg.menu_provider = arguments.provider;
+        } else {
+            if ( !validArgv( arguments.argv ) ) return "The command must be a JSON array of non-empty strings, for example [""rofi"",""-show"",""drun""]";
+            if ( arguments.kind == "launcher-command" ) {
+                if ( arguments.provider == "system" ) return "The system runner has no command";
+                if ( !arrayFind( launcherProviders(), arguments.provider ) ) return "Unsupported runner provider: " & arguments.provider;
+                if ( arguments.provider == "custom" ) cfg.custom_command = arguments.argv; else cfg.launcher_commands[ arguments.provider ] = arguments.argv;
+            } else {
+                if ( !arrayFind( menuProviders(), arguments.provider ) ) return "Unsupported menu provider: " & arguments.provider;
+                cfg.menu_commands[ arguments.provider ] = arguments.argv;
+            }
+        }
+        save( cfg );
+        return "";
+    }
+}

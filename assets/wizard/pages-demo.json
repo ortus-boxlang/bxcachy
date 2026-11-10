@@ -564,6 +564,61 @@
               "description": "Terminal workspace manager with live status for each agent."
             }
           ]
+        },
+        {
+          "type": "choice",
+          "id": "launcher",
+          "label": "App launcher",
+          "help": "What opens your apps and commands. BxCachy never changes your shortcuts.",
+          "default": "noctalia",
+          "when": {
+            "id": "desktops",
+            "in": [
+              "hyprland",
+              "both"
+            ]
+          },
+          "options": [
+            {
+              "value": "noctalia",
+              "label": "Noctalia launcher (recommended)",
+              "description": "Built into the Noctalia shell. Opens with Super+Space."
+            },
+            {
+              "value": "rofi",
+              "label": "Rofi",
+              "description": "The classic, themeable launcher and menu."
+            },
+            {
+              "value": "walker",
+              "label": "Walker",
+              "description": "A fast Wayland launcher."
+            },
+            {
+              "value": "vicinae",
+              "label": "Vicinae",
+              "description": "A Raycast-style launcher."
+            }
+          ]
+        },
+        {
+          "type": "choice",
+          "id": "menu",
+          "label": "Menu style",
+          "help": "What BxCachy's own menus use.",
+          "default": "rofi",
+          "options": [
+            {
+              "value": "rofi",
+              "label": "Rofi (recommended)",
+              "description": "Icons and fast search."
+            },
+            {
+              "value": "walker",
+              "label": "Walker",
+              "description": "Walker's dmenu mode."
+            }
+          ]
         }
       ]
     },
