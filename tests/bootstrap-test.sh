@@ -68,7 +68,7 @@ reset_mocks; MOCK_INSTALLED=""
 out="$(run bash "$repo/bootstrap/install.sh" --check)"
 for s in 'os: cachyos (supported)' 'user: normal' 'sudo: available' 'network: skipped' 'missing: jdk21-openjdk' 'missing: base-devel' 'missing: yay' 'missing: jq' 'java: missing (want 21)' 'matchbox: missing (want 0.12.0)' 'boxlang: missing (want latest, version lookup unavailable)' 'bxcachy: missing' 'step(s) needed'; do need "$out" "$s"; done
 plan="$(run bash "$repo/bootstrap/install.sh" --plan)"
-for s in 'Nothing below has been run' '1. packages' 'sudo pacman -Syu --needed jdk21-openjdk git curl unzip rustup base-devel' 'upgrades the system' 'sudo pacman -S --needed yay' 'download and run https://install-bvm.boxlang.io' 'mvm install 0.12.0' 'bvm install latest' 'rustup default stable' 'install.sh --install-binary --yes' 'typed EXECUTE or --allow-external-scripts'; do need "$plan" "$s"; done
+for s in 'Nothing below has been run' '1. packages' 'sudo pacman -Syu --needed jdk21-openjdk git curl unzip rustup base-devel' 'upgrades the system' 'sudo pacman -S --needed yay' 'download and run https://install-bvm.boxlang.io' 'mvm install 0.12.0' 'bvm install latest' 'rustup default stable' 'install.sh --install-binary --yes' 'external script, shown and run'; do need "$plan" "$s"; done
 
 # 2. Everything present at the pinned versions: nothing to do.
 reset_mocks; MOCK_INSTALLED="jdk21-openjdk git curl unzip rustup base-devel jq"
@@ -109,7 +109,7 @@ if run bash "$repo/bootstrap/install.sh" --plan extra >/dev/null 2>&1; then echo
 if run bash "$repo/bootstrap/install.sh" --check --yes >/dev/null 2>&1; then echo 'FAIL: --check accepted --yes' >&2; exit 1; fi
 echo 'bootstrap check/plan tests passed'
 
-# ---- B3: toolchain install behind the EXECUTE gate (all downloads are mocked) ----
+# ---- B3: toolchain install, external installers run without a gate (all downloads are mocked) ----
 MVM_FAKE='mkdir -p "$HOME/.mvm/bin"
 cat > "$HOME/.mvm/bin/mvm" <<"M"
 #!/usr/bin/env bash
@@ -162,42 +162,34 @@ case "$url" in
 esac'
 trun() { env -i HOME="$home" MOCK_LATEST="${MOCK_LATEST:-1.19.0}" PATH="$bin:$sys" BXCACHY_SKIP_NETWORK=1 BXCACHY_OS_RELEASE="$tmp/os-arch" MOCK_INSTALLED="$MOCK_INSTALLED" CURL_LOG="$tmp/curl.log" MVM_FAKE="$MVM_FAKE" BVM_FAKE="$BVM_FAKE" NVM_FAKE="$NVM_FAKE" "$@"; }
 
-# 1. Unattended without the flag: refuses, runs nothing.
+# 1. No gate: unattended runs the installers (there is no flag and no typed confirmation any more); the old flag is a usage error.
 fresh_home
-if out="$(trun bash "$repo/bootstrap/install.sh" --install-toolchains --yes </dev/null 2>&1)"; then echo 'FAIL: unattended run without --allow-external-scripts succeeded' >&2; exit 1; fi
-need "$out" 'Re-run with --allow-external-scripts'
-[[ ! -e "$home/.mvm" && ! -e "$home/.bvm" && ! -e "$home/ran.log" ]] || { echo 'FAIL: something ran without approval' >&2; exit 1; }
+if trun bash "$repo/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null >/dev/null 2>&1; then echo 'FAIL: the removed --allow-external-scripts flag was accepted' >&2; exit 1; fi
+[[ ! -e "$home/ran.log" ]] || { echo 'FAIL: something ran for a rejected command line' >&2; exit 1; }
 
-# 2. Interactive: wrong answer cancels, typed EXECUTE proceeds.
+# 2. Runs unattended; end state is at the pins; each script shows its url and sha256.
 fresh_home
-if out="$(echo no | trun env BXCACHY_INTERACTIVE=1 bash "$repo/bootstrap/install.sh" --install-toolchains --yes 2>&1)"; then echo 'FAIL: cancelled run succeeded' >&2; exit 1; fi
-need "$out" 'Cancelled. Nothing was run.'; [[ ! -e "$home/ran.log" ]] || { echo 'FAIL: script ran after cancel' >&2; exit 1; }
-out="$(printf 'EXECUTE\nEXECUTE\nEXECUTE\n' | trun env BXCACHY_INTERACTIVE=1 bash "$repo/bootstrap/install.sh" --install-toolchains --yes 2>&1)" || { echo "FAIL: typed EXECUTE did not proceed: $(printf '%s' "$out" | tail -n 6)" >&2; exit 1; }
-grep -q MARK-MVM-RAN "$home/ran.log" && grep -q MARK-BVM-RAN "$home/ran.log" && grep -q MARK-NVM-RAN "$home/ran.log" || { echo 'FAIL: installers did not run after EXECUTE' >&2; exit 1; }
-
-# 3. Flag approves; end state is at the pins; the script shows url, sha256 and its first lines.
-fresh_home
-out="$(trun bash "$repo/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null 2>&1)"
-for x in 'External script: mvm' 'External script: bvm' 'External script: nvm' 'Node.js 22.11.0 installed with nvm and verified.' 'sha256: ' 'first lines:' 'approved by --allow-external-scripts' 'MatchBox 0.12.0 installed and verified.' 'BoxLang 1.19.0 installed and verified.'; do need "$out" "$x"; done
+out="$(trun bash "$repo/bootstrap/install.sh" --install-toolchains --yes </dev/null 2>&1)"
+for x in 'External script: mvm' 'External script: bvm' 'External script: nvm' 'Node.js 22.11.0 installed with nvm and verified.' 'sha256: ' 'MatchBox 0.12.0 installed and verified.' 'BoxLang 1.19.0 installed and verified.'; do need "$out" "$x"; done
 chk="$(trun env PATH="$home/.local/bin:$bin:$sys" bash "$repo/bootstrap/install.sh" --check)"; need "$chk" 'matchbox: 0.12.0'; need "$chk" 'boxlang: 1.19.0'
 [[ "$(stat -c %a "$home/.cache/bxcachy/external")" == 700 ]] || { echo 'FAIL: cache dir not private' >&2; exit 1; }
 
 # 4. Second run: nothing to do, nothing downloaded.
 : > "$tmp/curl.log"
-out="$(trun bash "$repo/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null 2>&1)"
+out="$(trun bash "$repo/bootstrap/install.sh" --install-toolchains --yes </dev/null 2>&1)"
 need "$out" 'Nothing to do'; [[ ! -s "$tmp/curl.log" ]] || { echo 'FAIL: rerun downloaded something' >&2; exit 1; }
 
 # 5. Partial state: MVM+MatchBox present, BVM missing -> only the BVM script is fetched.
 rm -rf "$home/.bvm"; : > "$tmp/curl.log"
-trun bash "$repo/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null >/dev/null 2>&1
+trun bash "$repo/bootstrap/install.sh" --install-toolchains --yes </dev/null >/dev/null 2>&1
 [[ "$(wc -l < "$tmp/curl.log")" == 1 ]] && grep -q install-bvm "$tmp/curl.log" || { echo 'FAIL: partial recovery fetched the wrong scripts' >&2; cat "$tmp/curl.log" >&2; exit 1; }
 
 # 6. Failures: download error, wrong Java, root, unknown flag.
 fresh_home
-if out="$(trun env MOCK_CURL_FAIL=1 bash "$repo/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null 2>&1)"; then echo 'FAIL: download failure ignored' >&2; exit 1; fi
+if out="$(trun env MOCK_CURL_FAIL=1 bash "$repo/bootstrap/install.sh" --install-toolchains --yes </dev/null 2>&1)"; then echo 'FAIL: download failure ignored' >&2; exit 1; fi
 need "$out" 'Download failed'
 mock java 'echo "openjdk version \"17.0.9\" 2024-01-01" >&2'
-if out="$(trun bash "$repo/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null 2>&1)"; then echo 'FAIL: wrong Java accepted' >&2; exit 1; fi; need "$out" 'Java 21 is required'
+if out="$(trun bash "$repo/bootstrap/install.sh" --install-toolchains --yes </dev/null 2>&1)"; then echo 'FAIL: wrong Java accepted' >&2; exit 1; fi; need "$out" 'Java 21 is required'
 mock java 'echo "openjdk version \"21.0.13\" 2026-04-21" >&2'
 if out="$(trun env MOCK_UID=0 bash "$repo/bootstrap/install.sh" --install-toolchains --yes </dev/null 2>&1)"; then echo 'FAIL: root accepted' >&2; exit 1; fi; need "$out" 'regular user'
 if trun bash "$repo/bootstrap/install.sh" --install-toolchains --yes --bogus >/dev/null 2>&1; then echo 'FAIL: unknown flag accepted' >&2; exit 1; fi
@@ -309,7 +301,7 @@ out="$(env -i HOME="$home" PATH="$bin:$sys" BXCACHY_OS_RELEASE="$tmp/os-arch" MO
 
 # Unsupported OS and too little disk stop every installing mode before anything runs.
 install_mocks; fresh_home; mock curl 'exit 22'
-for m in "--install --yes" "--install-toolchains --yes --allow-external-scripts"; do
+for m in "--install --yes" "--install-toolchains --yes"; do
   if out="$(OSREL="$tmp/os-ubuntu" env -i HOME="$home" PATH="$bin:$sys" BXCACHY_SKIP_NETWORK=1 BXCACHY_OS_RELEASE="$tmp/os-ubuntu" STATE="$tmp/state" PLOG="$tmp/pacman.log" BINDIR="$bin" bash "$repo/bootstrap/install.sh" $m 2>&1 </dev/null)"; then echo "FAIL: '$m' ran on an unsupported OS" >&2; exit 1; fi
   need "$out" 'Unsupported OS: ubuntu'
 done
@@ -336,15 +328,15 @@ mock curl 'url=""; out=""; while [[ $# -gt 0 ]]; do case "$1" in -o) out="$2"; s
 case "$url" in *matchbox-quick-installer*) printf "%s\n" "$MVM_FAKE" > "$out" ;; *install-bvm*) printf "%s\n" "$BVM_FAKE" > "$out" ;; *nvm-sh/nvm*) printf "%s\n" "$NVM_FAKE" > "$out" ;; *version-latest.properties*) printf "version=%s+1\nbuildDate=x\n" "${MOCK_LATEST:-1.19.0}" ;; *) exit 22 ;; esac'
 fresh_home
 GOOD_MVM="$MVM_FAKE"
-if out="$(MVM_FAKE='echo half-done; exit 1' trun bash "$repo/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null 2>&1)"; then echo 'FAIL: dying installer treated as success' >&2; exit 1; fi
+if out="$(MVM_FAKE='echo half-done; exit 1' trun bash "$repo/bootstrap/install.sh" --install-toolchains --yes </dev/null 2>&1)"; then echo 'FAIL: dying installer treated as success' >&2; exit 1; fi
 need "$out" 'mvm installer failed (script kept at'
 [[ ! -e "$home/.bvm" ]] || { echo 'FAIL: later steps ran after a failed one' >&2; exit 1; }
-out="$(MVM_FAKE="$GOOD_MVM" trun bash "$repo/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null 2>&1)"
+out="$(MVM_FAKE="$GOOD_MVM" trun bash "$repo/bootstrap/install.sh" --install-toolchains --yes </dev/null 2>&1)"
 need "$out" 'BoxLang 1.19.0 installed and verified.'
 # A failing "bvm install" is named, not silent.
 fresh_home; rm -rf "$home/.bvm"; : > "$tmp/curl.log"
 BAD_BVM="${BVM_FAKE/install) : ;;/install) exit 1 ;;}"
-if out="$(BVM_FAKE="$BAD_BVM" trun bash "$repo/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null 2>&1)"; then echo 'FAIL: bvm install failure ignored' >&2; exit 1; fi
+if out="$(BVM_FAKE="$BAD_BVM" trun bash "$repo/bootstrap/install.sh" --install-toolchains --yes </dev/null 2>&1)"; then echo 'FAIL: bvm install failure ignored' >&2; exit 1; fi
 need "$out" 'Failed: bvm install latest'
 echo 'bootstrap failure-path tests passed'
 
@@ -367,7 +359,7 @@ mock curl 'url=""; out=""; while [[ $# -gt 0 ]]; do case "$1" in -o) out="$2"; s
 [[ -n "$out" ]] && echo "$url" >> "$CURL_LOG"
 case "$url" in *matchbox-quick-installer*) printf "%s\n" "$MVM_FAKE" > "$out" ;; *install-bvm*) printf "%s\n" "$BVM_FAKE" > "$out" ;; *nvm-sh/nvm*) printf "%s\n" "$NVM_FAKE" > "$out" ;; *version-latest.properties*) printf "version=%s+1\nbuildDate=x\n" "${MOCK_LATEST:-1.19.0}" ;; *) exit 22 ;; esac'
 fresh_home
-out="$(trun bash "$repo/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null 2>&1)"; need "$out" 'BoxLang 1.19.0 installed and verified.'
+out="$(trun bash "$repo/bootstrap/install.sh" --install-toolchains --yes </dev/null 2>&1)"; need "$out" 'BoxLang 1.19.0 installed and verified.'
 chk="$(trun env PATH="$home/.local/bin:$bin:$sys" bash "$repo/bootstrap/install.sh" --check)"; need "$chk" 'boxlang: 1.19.0 (want latest = 1.19.0)'
 # Upstream ships a newer BoxLang: the next run updates it with `bvm`, downloads no installer script.
 : > "$tmp/curl.log"
@@ -432,10 +424,10 @@ esac
 M
 chmod +x "$HOME/.mvm/bin/mvm"'
 fresh_home
-out="$(MVM_FAKE="$FLAKY_MVM" trun env BXCACHY_RETRY_WAITS="0 0 0" MVM_FAIL_TIMES=2 bash "$repo/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null 2>&1)"
+out="$(MVM_FAKE="$FLAKY_MVM" trun env BXCACHY_RETRY_WAITS="0 0 0" MVM_FAIL_TIMES=2 bash "$repo/bootstrap/install.sh" --install-toolchains --yes </dev/null 2>&1)"
 need "$out" 'MatchBox 0.12.0 installed and verified.'; [[ "$(cat "$home/mvm-tries")" == 3 ]] || { echo 'FAIL: expected exactly 3 install attempts' >&2; exit 1; }
 fresh_home
-if out="$(MVM_FAKE="$FLAKY_MVM" trun env BXCACHY_RETRY_WAITS="0 0 0" MVM_FAIL_TIMES=9 bash "$repo/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null 2>&1)"; then echo 'FAIL: persistent failure treated as success' >&2; exit 1; fi
+if out="$(MVM_FAKE="$FLAKY_MVM" trun env BXCACHY_RETRY_WAITS="0 0 0" MVM_FAIL_TIMES=9 bash "$repo/bootstrap/install.sh" --install-toolchains --yes </dev/null 2>&1)"; then echo 'FAIL: persistent failure treated as success' >&2; exit 1; fi
 need "$out" 'Failed after 3 attempts'; need "$out" 'HTTP 403'
 echo 'bootstrap retry tests passed'
 
@@ -464,13 +456,13 @@ plan="$(drun bash "$repo/bootstrap/install.sh" --plan)"
 need "$plan" 'download https://downloads.example.test/bxcachy/matchbox/matchbox-linux-x86_64 and check its sha256'; refuse "$plan" 'mvm install'
 need "$plan" 'download and run https://raw.githubusercontent.com/ortus-boxlang/matchbox-quick-installer'   # mvm is always installed
 # install: downloaded, verified, kept under ~/.local/share/bxcachy/matchbox; mvm is installed too but does not manage this MatchBox
-out="$(drun bash "$repo/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null 2>&1)"
+out="$(drun bash "$repo/bootstrap/install.sh" --install-toolchains --yes </dev/null 2>&1)"
 need "$out" 'MatchBox 0.13.0 installed and verified.'
 [[ -x "$home/.local/share/bxcachy/matchbox/bin/matchbox" && -x "$home/.mvm/bin/mvm" ]] || { echo 'FAIL: MatchBox not under the bxcachy home, or mvm missing' >&2; exit 1; }
 [[ ! -e "$home/.mvm/bin/matchbox" ]] || { echo 'FAIL: mvm installed a MatchBox of its own' >&2; exit 1; }
 need "$(cat "$tmp/curl.log")" 'bxcachy/matchbox/matchbox-linux-x86_64.sha256'; need "$(cat "$tmp/curl.log")" 'matchbox-quick-installer'
 # a second run changes nothing
-: > "$tmp/curl.log"; drun bash "$repo/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null >/dev/null 2>&1
+: > "$tmp/curl.log"; drun bash "$repo/bootstrap/install.sh" --install-toolchains --yes </dev/null >/dev/null 2>&1
 refuse "$(cat "$tmp/curl.log")" 'matchbox-linux-x86_64'
 chk="$(drun bash "$repo/bootstrap/install.sh" --check)"; need "$chk" 'matchbox: 0.13.0'
 # the immutable per-build folder named in version-latest.properties is preferred over the (CDN-cached) evergreen file
@@ -487,7 +479,7 @@ case "$url" in
   *) exit 22 ;;
 esac'
 fresh_home; : > "$tmp/curl.log"
-out="$(drun bash "$repo/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null 2>&1)" || { echo "FAIL: versioned folder download: $out" >&2; exit 1; }
+out="$(drun bash "$repo/bootstrap/install.sh" --install-toolchains --yes </dev/null 2>&1)" || { echo "FAIL: versioned folder download: $out" >&2; exit 1; }
 need "$out" 'MatchBox 0.13.0 installed and verified.'; need "$(cat "$tmp/curl.log")" '0.13.0-abc1234/matchbox-linux-x86_64'; refuse "$(cat "$tmp/curl.log")" 'bxcachy/matchbox/matchbox-linux-x86_64'
 # restore the evergreen-only mock for the tests below
 mock curl 'url=""; out=""; while [[ $# -gt 0 ]]; do case "$1" in -o) out="$2"; shift 2 ;; http*) url="$1"; shift ;; *) shift ;; esac; done
@@ -503,15 +495,15 @@ case "$url" in
 esac'
 # a checksum mismatch installs nothing
 fresh_home; : > "$tmp/curl.log"
-if out="$(MB_SUM=deadbeef drun bash "$repo/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null 2>&1)"; then echo 'FAIL: checksum mismatch accepted' >&2; exit 1; fi
+if out="$(MB_SUM=deadbeef drun bash "$repo/bootstrap/install.sh" --install-toolchains --yes </dev/null 2>&1)"; then echo 'FAIL: checksum mismatch accepted' >&2; exit 1; fi
 need "$out" 'checksum mismatch'; [[ ! -e "$home/.local/share/bxcachy/matchbox/bin/matchbox" ]] || { echo 'FAIL: unverified MatchBox was installed' >&2; exit 1; }
 # a download that does not run installs nothing
 printf '#!/usr/bin/env bash\nexit 3\n' > "$tmp/mb-broken"; chmod 755 "$tmp/mb-broken"; fresh_home
-if out="$(MB_SUM="$(sha256sum "$tmp/mb-broken" | awk '{print $1}')" drun env MB_FILE="$tmp/mb-broken" bash "$repo/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null 2>&1)"; then echo 'FAIL: broken MatchBox accepted' >&2; exit 1; fi
+if out="$(MB_SUM="$(sha256sum "$tmp/mb-broken" | awk '{print $1}')" drun env MB_FILE="$tmp/mb-broken" bash "$repo/bootstrap/install.sh" --install-toolchains --yes </dev/null 2>&1)"; then echo 'FAIL: broken MatchBox accepted' >&2; exit 1; fi
 need "$out" 'does not run'
 # a local build (CI) is installed without any download
 fresh_home; : > "$tmp/curl.log"
-out="$(drun env BXCACHY_MATCHBOX_FILE="$tmp/mb-good" bash "$repo/bootstrap/install.sh" --install-toolchains --yes --allow-external-scripts </dev/null 2>&1)"
+out="$(drun env BXCACHY_MATCHBOX_FILE="$tmp/mb-good" bash "$repo/bootstrap/install.sh" --install-toolchains --yes </dev/null 2>&1)"
 need "$out" 'MatchBox 0.13.0 installed and verified.'; refuse "$(cat "$tmp/curl.log")" 'matchbox-linux-x86_64'
 echo 'bootstrap matchbox download tests passed'
 
@@ -525,11 +517,8 @@ echo "$*" >> "$ALL_LOG"
 exit 0
 STAGE
 : > "$tmp/all/log"
-out="$(env PATH="$tmp/all/bin:$PATH" ALL_LOG="$tmp/all/log" BXCACHY_ALL_SCRIPT="$tmp/all/stage.sh" bash "$root/bootstrap/install.sh" --all --yes --allow-external-scripts 2>&1)"
-[[ "$(paste -sd'|' "$tmp/all/log")" == '--install --yes|--install-toolchains --yes --allow-external-scripts|--install-binary --yes' ]] || { echo "FAIL: --all stage order or flags: $(paste -sd'|' "$tmp/all/log")" >&2; exit 1; }
-: > "$tmp/all/log"
-env PATH="$tmp/all/bin:$PATH" ALL_LOG="$tmp/all/log" BXCACHY_ALL_SCRIPT="$tmp/all/stage.sh" bash "$root/bootstrap/install.sh" --all --yes >/dev/null 2>&1
-[[ "$(sed -n 2p "$tmp/all/log")" == '--install-toolchains --yes' ]] || { echo 'FAIL: --all forwarded --allow-external-scripts without being given it' >&2; exit 1; }
+out="$(env PATH="$tmp/all/bin:$PATH" ALL_LOG="$tmp/all/log" BXCACHY_ALL_SCRIPT="$tmp/all/stage.sh" bash "$root/bootstrap/install.sh" --all --yes 2>&1)"
+[[ "$(paste -sd'|' "$tmp/all/log")" == '--install --yes|--install-toolchains --yes|--install-binary --yes' ]] || { echo "FAIL: --all stage order or flags: $(paste -sd'|' "$tmp/all/log")" >&2; exit 1; }
 : > "$tmp/all/log"
 if env PATH="$tmp/all/bin:$PATH" ALL_FAIL=--install-toolchains ALL_LOG="$tmp/all/log" BXCACHY_ALL_SCRIPT="$tmp/all/stage.sh" bash "$root/bootstrap/install.sh" --all --yes >/dev/null 2>&1; then echo 'FAIL: --all ignored a failing stage' >&2; exit 1; fi
 [[ "$(wc -l < "$tmp/all/log")" == 2 ]] || { echo 'FAIL: --all went on after a failing stage' >&2; exit 1; }

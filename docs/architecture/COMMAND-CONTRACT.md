@@ -26,7 +26,7 @@ bxcachy <group> <verb> [args...] [--yes] [--dry-run] [--json] [--quiet]
 5. Never run AUR builds as root (exit 4).
 6. Every config file touched goes through the config service (backup, atomic replace, journal). No direct writes.
 7. Output lists succeeded and failed items separately. No rollback is promised across pacman and yay.
-8. External scripts (catalog `source: script`) are downloaded to a temp file, shown to the user, and run as the normal user (never root) only after a typed `EXECUTE` confirmation. No curl-to-shell. Decision 2026-11-09: no checksum pinning for these scripts.
+8. External installer scripts (bvm, mvm, nvm, catalog `source: script`) are downloaded to a temp file, their url and sha256 are printed, and they run as the normal user (never root) with no confirmation gate and no flag: the typed `EXECUTE` and `--allow-external-scripts` were removed on 2026-11-10 (owner: running them is the point of the command). Decision 2026-11-09: no checksum pinning for these scripts.
 9. Subprocesses are launched with argument arrays, never through a shell string.
 
 ## 3. Exit codes

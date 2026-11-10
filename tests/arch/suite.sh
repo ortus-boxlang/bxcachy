@@ -62,18 +62,18 @@ step bootstrap-plan-rejects-args 2 bash bootstrap/install.sh --plan extra
 step bootstrap-needs-confirm  2 bash bootstrap/install.sh --install
 step bootstrap-remove-jq    0 sudo pacman -Rdd --noconfirm jq
 step_grep bootstrap-check-without-jq 0 'jq is required to read box.json' bash bootstrap/install.sh --check
-step bootstrap-toolchains-need-jq 1 bash bootstrap/install.sh --install-toolchains --yes --allow-external-scripts
+step bootstrap-toolchains-need-jq 1 bash bootstrap/install.sh --install-toolchains --yes
 step_grep bootstrap-install   0 'Installing jq first' bash bootstrap/install.sh --install --yes
 step_grep bootstrap-install-completes 0 'Next: install.sh --install-toolchains --yes' bash bootstrap/install.sh --install --yes
 step_grep bootstrap-install-rerun  0 'Nothing to do for packages, yay and Rust.' bash bootstrap/install.sh --install --yes
 step bootstrap-yay-present 0 bash -c 'command -v yay'
 step bootstrap-rust-active 0 bash -c 'rustc --version'
 step rust-default             0 rustup default stable
-# Unattended runs must refuse to execute external installers without the flag (nothing is installed yet here).
-step_grep bootstrap-toolchains-refuses-unattended 2 'allow-external-scripts' bash -c 'bash bootstrap/install.sh --install-toolchains --yes </dev/null 2>&1'
+# There is no approval gate for the external installers; the old flag is rejected.
+step bootstrap-toolchains-old-flag-rejected 2 bash bootstrap/install.sh --install-toolchains --yes --allow-external-scripts
 if [[ $NET == 1 ]]; then
-  step bootstrap-toolchains       0 bash -c 'bash bootstrap/install.sh --install-toolchains --yes --allow-external-scripts </dev/null'
-  step_grep bootstrap-toolchains-rerun 0 'Nothing to do' bash -c 'bash bootstrap/install.sh --install-toolchains --yes --allow-external-scripts </dev/null'
+  step bootstrap-toolchains       0 bash -c 'bash bootstrap/install.sh --install-toolchains --yes </dev/null'
+  step_grep bootstrap-toolchains-rerun 0 'Nothing to do' bash -c 'bash bootstrap/install.sh --install-toolchains --yes </dev/null'
   # BoxLang follows the latest stable release: the installed version must equal what Ortus publishes as latest.
   step bootstrap-boxlang-is-latest   0 bash -c 'want=$(curl -fsS -m 10 https://downloads.ortussolutions.com/ortussolutions/boxlang/version-latest.properties | sed -n "s/^version=\([0-9][0-9.]*\).*/\1/p" | head -1); [ -n "$want" ] && bash bootstrap/install.sh --check | grep -F "boxlang: $want (want latest = $want)"'
   step_grep bootstrap-pins-matchbox  0 "matchbox: $(jq -r .toolchain.matchbox.version box.json)" bash bootstrap/install.sh --check
@@ -88,7 +88,7 @@ if [[ $NET == 1 ]]; then
   # B7: the whole path on this clean machine is finished, and running it all again changes nothing.
   step_grep bootstrap-fullpath-ready 0 'summary: ready' env PATH="$HOME/.local/bin:$PATH" bash bootstrap/install.sh --check
   snaplist > "$OUT/snap-before.txt"
-  step bootstrap-fullpath-rerun 0 bash -c 'bash bootstrap/install.sh --install --yes </dev/null && bash bootstrap/install.sh --install-toolchains --yes --allow-external-scripts </dev/null && bash bootstrap/install.sh --install-binary --yes </dev/null'
+  step bootstrap-fullpath-rerun 0 bash -c 'bash bootstrap/install.sh --install --yes </dev/null && bash bootstrap/install.sh --install-toolchains --yes </dev/null && bash bootstrap/install.sh --install-binary --yes </dev/null'
   snaplist > "$OUT/snap-after.txt"
   step bootstrap-fullpath-no-changes 0 bash -c "if diff -u '$OUT/snap-before.txt' '$OUT/snap-after.txt' > '$OUT/snap.diff'; then exit 0; else echo 'the second run changed these:'; grep -E '^[-+][^-+]' '$OUT/snap.diff' | head -40; exit 1; fi"
 else

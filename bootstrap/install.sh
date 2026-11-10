@@ -9,7 +9,7 @@ MIN_FREE_GB=5
 BOXLANG_LATEST_URL="https://downloads.ortussolutions.com/ortussolutions/boxlang/version-latest.properties"
 
 usage() {
-  echo "Usage: install.sh --check | --plan | --all --yes [--allow-external-scripts] | --install --yes | --install-toolchains --yes [--allow-external-scripts] | --install-binary --yes [--binary PATH] [--force]" >&2
+  echo "Usage: install.sh --check | --plan | --all --yes | --install --yes | --install-toolchains --yes | --install-binary --yes [--binary PATH] [--force]" >&2
   exit 2
 }
 [[ $# -gt 0 ]] || usage
@@ -18,9 +18,9 @@ case "$mode" in
   --check|--plan) [[ $# -eq 0 ]] || usage ;;
   --install) [[ $# -eq 1 && "$1" == --yes ]] || usage ;;
   --all|--install-toolchains)
-    yes=0; allow_external=0
+    yes=0
     for arg in "$@"; do
-      case "$arg" in --yes) yes=1 ;; --allow-external-scripts) allow_external=1 ;; *) usage ;; esac
+      case "$arg" in --yes) yes=1 ;; *) usage ;; esac
     done
     [[ $yes -eq 1 ]] || usage ;;
   --install-binary)
@@ -36,16 +36,14 @@ case "$mode" in
     [[ $yes -eq 1 ]] || usage ;;
   *) usage ;;
 esac
-allow_external="${allow_external:-0}"
 
 # ---- --all --yes: every stage in order (packages, toolchains, bxcachy binary). Each stage is re-runnable. ----
 # BXCACHY_ALL_SCRIPT replaces the script the stages are delegated to (tests only).
 if [[ "$mode" == --all ]]; then
   [[ "$(id -u)" != 0 ]] || { echo "Run as a regular user; sudo is used only for pacman steps" >&2; exit 1; }
   all_self="${BXCACHY_ALL_SCRIPT:-${BASH_SOURCE[0]}}"
-  all_ext=(); (( allow_external )) && all_ext=(--allow-external-scripts)
   echo "== 1/3 packages, yay and Rust =="; bash "$all_self" --install --yes || exit $?
-  echo "== 2/3 Java 21 check, mvm, MatchBox, bvm and BoxLang =="; bash "$all_self" --install-toolchains --yes ${all_ext[@]+"${all_ext[@]}"} || exit $?
+  echo "== 2/3 Java 21 check, mvm, MatchBox, bvm and BoxLang =="; bash "$all_self" --install-toolchains --yes || exit $?
   echo "== 3/3 the bxcachy binary =="; bash "$all_self" --install-binary --yes || exit $?
   echo "Everything is installed. Run: bxcachy doctor"
   exit 0
@@ -220,7 +218,7 @@ build_steps() {
     steps+=("yay|sudo pacman -S --needed yay|AUR helper, found in the cachyos repository; only runs if yay is absent (part of --install)")
   fi
   if (( ! have_mvm )); then
-    steps+=("mvm|download and run $MVM_URL|external script, shown first; typed EXECUTE or --allow-external-scripts")
+    steps+=("mvm|download and run $MVM_URL|external script, shown and run")
   fi
   if [[ "$mb_ver" != "$MATCHBOX_VERSION" ]]; then
     if [[ -n "$MATCHBOX_DOWNLOADS" ]]; then
@@ -230,7 +228,7 @@ build_steps() {
     fi
   fi
   if (( ! have_bvm )); then
-    steps+=("bvm|download and run $BVM_URL|external script, shown first; typed EXECUTE or --allow-external-scripts; it may add BVM to your shell startup files")
+    steps+=("bvm|download and run $BVM_URL|external script, shown and run; it may add BVM to your shell startup files")
   fi
   if [[ -z "$bl_ver" ]]; then
     steps+=("boxlang|bvm install $BOXLANG_VERSION && bvm use $BOXLANG_VERSION|BoxLang runtime ($([[ $BOXLANG_VERSION == latest ]] && echo "latest stable${bl_want:+, $bl_want}" || echo "pinned"))")
@@ -238,7 +236,7 @@ build_steps() {
     steps+=("boxlang|bvm install $BOXLANG_VERSION && bvm use $BOXLANG_VERSION|update BoxLang $bl_ver to $bl_want")
   fi
   if (( ! have_nvm )); then
-    steps+=("nvm|download and run $NVM_URL|external script, shown first; typed EXECUTE or --allow-external-scripts; it adds nvm to your shell startup files")
+    steps+=("nvm|download and run $NVM_URL|external script, shown and run; it adds nvm to your shell startup files")
   fi
   if [[ -z "$node_ver" ]]; then
     steps+=("node|nvm install $NODE_CHANNEL && nvm alias default $NODE_CHANNEL|Node.js ($NODE_CHANNEL) managed by nvm")
@@ -293,7 +291,7 @@ report_plan() {
     i=$((i+1)); IFS='|' read -r name cmd why <<<"$line"
     printf '%d. %s\n   run: %s\n   why: %s\n' "$i" "$name" "$cmd" "$why"
   done
-  echo "Everything at once: install.sh --all --yes [--allow-external-scripts]. Or by stage: --install --yes (packages), --install-toolchains --yes, --install-binary --yes."
+  echo "Everything at once: install.sh --all --yes. Or by stage: --install --yes (packages), --install-toolchains --yes, --install-binary --yes."
 }
 
 if [[ "$mode" == --check || "$mode" == --plan ]] && (( ! manifest_ok )); then
@@ -324,28 +322,17 @@ if [[ "$mode" == --install-toolchains ]]; then
   export PATH="$probe_path"
   cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/bxcachy/external"
 
-  # Download an external installer, show what it is, and run it only after approval:
-  # typed EXECUTE when interactive, or --allow-external-scripts when unattended.
+  # Download an external installer, show what it is (url, saved copy, sha256), and run it as the normal user.
+  # There is no confirmation gate: installing the toolchain is what the command is for (owner decision 2026-11-10).
   run_external() {  # NAME URL [VAR=VALUE ...]  (extra assignments are passed to the script)
-    local name="$1" url="$2" file hash lines answer; shift 2
+    local name="$1" url="$2" file hash lines; shift 2
     mkdir -p "$cache_dir"; chmod 700 "$cache_dir"
     file="$(mktemp "$cache_dir/$name.XXXXXX.sh")"
     if ! curl -fsSL --retry 3 --retry-delay 2 "$url" -o "$file"; then echo "Download failed: $url" >&2; rm -f "$file"; exit 1; fi
     [[ -s "$file" ]] || { echo "Empty download: $url" >&2; rm -f "$file"; exit 1; }
     chmod 600 "$file"
     hash="$(sha256sum "$file" | cut -d' ' -f1)"; lines="$(wc -l < "$file")"
-    printf 'External script: %s\n  url:    %s\n  saved:  %s (%s lines)\n  sha256: %s\n  first lines:\n' "$name" "$url" "$file" "$lines" "$hash"
-    head -n 15 "$file" | sed 's/^/    | /'
-    if (( allow_external )); then
-      echo "  approved by --allow-external-scripts"
-    elif is_interactive; then
-      printf 'Type EXECUTE to run this script as %s (read it first: %s), anything else cancels: ' "$(id -un)" "$file"
-      read -r answer || answer=""
-      [[ "$answer" == EXECUTE ]] || { echo "Cancelled. Nothing was run." >&2; exit 2; }
-    else
-      echo "Not running $name unattended. Re-run with --allow-external-scripts to approve external scripts." >&2
-      exit 2
-    fi
+    printf 'External script: %s\n  url:    %s\n  saved:  %s (%s lines)\n  sha256: %s\n' "$name" "$url" "$file" "$lines" "$hash"
     if ! env "$@" bash "$file"; then echo "$name installer failed (script kept at $file)" >&2; exit 1; fi
   }
 
