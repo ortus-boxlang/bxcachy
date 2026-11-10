@@ -1,6 +1,6 @@
 {
   "schema": 3,
-  "catalog_version": "0.6.0-draft",
+  "catalog_version": "0.7.0-draft",
   "generated": "2026-11-09",
   "notes": [
     "Tier default = installed by a plain install; optional = offered in the picker; apps not listed are not part of the catalog.",
@@ -25,7 +25,7 @@
     {
       "id": "ai",
       "title": "AI",
-      "blurb": "Assistants, coding agents and local models",
+      "blurb": "Assistants, coding agents, agent orchestration and local models",
       "order": 3
     },
     {
@@ -219,8 +219,13 @@
     },
     {
       "group": "ai",
-      "title": "Local models",
+      "title": "Coding orchestration",
       "order": 4
+    },
+    {
+      "group": "ai",
+      "title": "Local models",
+      "order": 5
     },
     {
       "group": "infra",
@@ -1145,26 +1150,6 @@
       "verified_on": "2026-11-09"
     },
     {
-      "id": "herdr",
-      "name": "Herdr",
-      "description": "Terminal workspace manager for AI coding agents",
-      "description_source": "aur",
-      "kind": "desktop",
-      "group": "terminal",
-      "category": "Multiplexers",
-      "tier": "default",
-      "source": "aur",
-      "targets": [
-        "herdr"
-      ],
-      "homepage": "https://herdr.dev",
-      "macos": null,
-      "origin": [
-        "owner-pick"
-      ],
-      "verified_on": "2026-11-09"
-    },
-    {
       "id": "tmux",
       "name": "tmux",
       "description": "Terminal multiplexer",
@@ -1835,6 +1820,66 @@
         "omarchy-desktop"
       ],
       "verified_on": "2026-11-09"
+    },
+    {
+      "id": "pane",
+      "name": "Pane",
+      "description": "Run many AI coding agents side by side, each in its own git worktree, with a diff viewer and git workflow",
+      "description_source": "curated",
+      "kind": "desktop",
+      "group": "ai",
+      "category": "Coding orchestration",
+      "tier": "default",
+      "source": "aur",
+      "targets": [
+        "pane-bin"
+      ],
+      "homepage": "https://github.com/dcouple/Pane",
+      "macos": "Pane (same)",
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-10"
+    },
+    {
+      "id": "herdr",
+      "name": "Herdr",
+      "description": "Terminal workspace manager for AI coding agents: live status per agent, sessions that keep running",
+      "description_source": "curated",
+      "kind": "tui",
+      "group": "ai",
+      "category": "Coding orchestration",
+      "tier": "optional",
+      "source": "aur",
+      "targets": [
+        "herdr"
+      ],
+      "homepage": "https://herdr.dev",
+      "macos": null,
+      "origin": [
+        "owner-pick"
+      ],
+      "verified_on": "2026-11-09"
+    },
+    {
+      "id": "orca",
+      "name": "Orca",
+      "description": "Agentic coding IDE: several coding agents in parallel across repos, one git worktree each (Stably Orca)",
+      "description_source": "curated",
+      "kind": "desktop",
+      "group": "ai",
+      "category": "Coding orchestration",
+      "tier": "optional",
+      "source": "aur",
+      "targets": [
+        "stably-orca-bin"
+      ],
+      "homepage": "https://github.com/stablyai/orca",
+      "macos": "Orca (same)",
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-10"
     },
     {
       "id": "lm-studio",

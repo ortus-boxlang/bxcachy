@@ -67,5 +67,7 @@ check( "and work for visited ones", a.pageIndex() == 3 );
 a = mk();
 check( "the shell defaults to zsh and the terminal to Ghostty, no extra terminals", a.answerString( "shell" ) == "zsh" && a.answerString( "terminal" ) == "ghostty" && a.answerList( "terminals_extra" ).len() == 0 );
 
+check( "AI orchestration defaults to Pane", a.answerList( "ai_orchestrators" ).toList() == "pane" );
+
 if ( failures > 0 ) { println( failures & " failed" ); exit( 1 ); }
 println( "all passed" );

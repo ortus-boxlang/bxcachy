@@ -455,6 +455,32 @@
               "description": "Google's coding agent."
             }
           ]
+        },
+        {
+          "type": "multi",
+          "id": "ai_orchestrators",
+          "label": "AI coding orchestration",
+          "help": "Run several coding agents at once, each in its own git worktree.",
+          "default": [
+            "pane"
+          ],
+          "options": [
+            {
+              "value": "pane",
+              "label": "Pane",
+              "description": "Desktop app for parallel agents with a diff viewer and git workflow. The BxCachy default."
+            },
+            {
+              "value": "orca",
+              "label": "Orca",
+              "description": "Agentic coding IDE from Stably: parallel agents across repos."
+            },
+            {
+              "value": "herdr",
+              "label": "Herdr",
+              "description": "Terminal workspace manager with live status for each agent."
+            }
+          ]
         }
       ]
     },

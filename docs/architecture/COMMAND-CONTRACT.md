@@ -324,7 +324,7 @@ Exits: as `setup` (0, 2, 4, 5, 6, 7, 8); 4 also for no terminal without `--answe
 | Toolchains | `toolchains` (`java` with gradle and maven, `php` with composer and laravel, `python`, `go`) | catalog profiles |
 | Containers | `container_engine` (`podman` default, `docker`) | package and service setup |
 | Databases | `databases` (PostgreSQL, Redis, Couchbase, pgvector, Chroma, Milvus; optional MySQL/MariaDB and MongoDB) | `bxcachy db` on the chosen engine |
-| AI agents | `ai_default`, `ai_install` | catalog |
+| AI agents | `ai_default`, `ai_install`, `ai_orchestrators` (`pane` default, `orca`, `herdr`) | catalog (category Coding orchestration: AUR `pane-bin`, `stably-orca-bin`, `herdr-bin`) |
 | VPN | `vpn` (Tailscale, WireGuard, OpenVPN, Mullvad, Proton) | catalog and services |
 | Password manager | `password_manager` (Bitwarden, 1Password, KeePassXC) | catalog |
 | Gaming | `gaming` (`none`, `steam`, `bundle`) | catalog (CachyOS gaming bundle) |
