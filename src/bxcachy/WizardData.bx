@@ -374,8 +374,13 @@ class WizardData {
     {
       "id": "tools",
       "title": "Toolchains",
-      "intro": "Languages and build tools. Java 21, BoxLang and Node are always installed.",
+      "intro": "Languages and build tools. BoxLang is always installed, because BxCachy is built on it.",
       "questions": [
+        {
+          "type": "info",
+          "label": "Always installed: BoxLang",
+          "help": "BoxLang with Java 21, its version managers (bvm, mvm) and MatchBox, so BxCachy and your BoxLang tools always work."
+        },
         {
           "type": "multi",
           "id": "toolchains",
@@ -403,6 +408,41 @@ class WizardData {
               "value": "go",
               "label": "Go",
               "description": "The Go toolchain."
+            },
+            {
+              "value": "javascript",
+              "label": "JavaScript",
+              "description": "Node.js (with nvm), Bun or Deno. You pick the runtimes next."
+            }
+          ],
+          "help": "Pick as many as you use."
+        },
+        {
+          "type": "multi",
+          "id": "js_runtimes",
+          "label": "JavaScript runtimes",
+          "default": [
+            "node"
+          ],
+          "when": {
+            "id": "toolchains",
+            "has": "javascript"
+          },
+          "options": [
+            {
+              "value": "node",
+              "label": "Node.js with nvm",
+              "description": "The standard runtime. nvm installs and switches Node versions; the latest LTS becomes the default."
+            },
+            {
+              "value": "bun",
+              "label": "Bun",
+              "description": "A fast runtime, bundler and package manager in one."
+            },
+            {
+              "value": "deno",
+              "label": "Deno",
+              "description": "Secure TypeScript and JavaScript runtime."
             }
           ]
         }

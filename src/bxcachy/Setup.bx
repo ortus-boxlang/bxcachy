@@ -58,9 +58,25 @@ class Setup {
         }
     }
 
+    // Node.js through nvm: nvm is a shell function, so it is probed by sourcing nvm.sh in a bash subshell ("" when none).
+    function nodeVersion( nvmDir ) {
+        if ( !fileExists( arguments.nvmDir & "/nvm.sh" ) ) return "";
+        try {
+            var r = variables.inst.exec( [ "env", "NVM_DIR=" & arguments.nvmDir, "bash", "-c", '. "$NVM_DIR/nvm.sh" >/dev/null 2>&1; node --version' ], 30 );
+            return r.exitCode == 0 ? trim( r.output ) : "";
+        } catch ( any e ) {
+            return "";
+        }
+    }
+
     // Everything SetupPlan needs to know about this machine.
     function facts() {
+        var nvmDir = getSystemSetting( "NVM_DIR", getSystemSetting( "HOME", "" ) & "/.nvm" );
         return {
+            nvmDir: nvmDir,
+            hasNvm: fileExists( nvmDir & "/nvm.sh" ),
+            nodeVersion: nodeVersion( nvmDir ),
+            hasCurl: variables.inst.hasCommand( "curl" ),
             os: osId(),
             arch: trim( variables.inst.exec( [ "uname", "-m" ], 10 ).output ),
             hasPacman: variables.inst.hasCommand( "pacman" ),
@@ -86,6 +102,12 @@ class Setup {
         var f = facts();
         var plan = new bxcachy.SetupPlan().terminal( f, opts );
         return execute( "setup terminal", plan, f, yes, dryRun, asJson );
+    }
+
+    // `toolchain node`: nvm (the pinned official installer) and Node.js LTS.
+    function node( yes, dryRun, asJson ) {
+        var f = facts();
+        return execute( "toolchain node", new bxcachy.SetupPlan().node( f ), f, yes, dryRun, asJson );
     }
 
     // `setup shell [--shell=zsh|fish|bash]`

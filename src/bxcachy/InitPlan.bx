@@ -73,8 +73,17 @@ class InitPlan {
         // toolchains: one catalog profile each (java is the jvm profile: JDK 21, Maven, Gradle); Laravel's installer comes from Composer
         var profiles = { java: "jvm", php: "php", python: "python", go: "go" };
         var chosen = pick( a, "toolchains", [] );
-        for ( var tc in [ "java", "php", "python", "go" ] ) {
+        var jsApps = [];
+        for ( var tc in [ "java", "php", "python", "go", "javascript" ] ) {
             if ( !arrayFind( chosen, tc ) ) continue;
+            if ( tc == "javascript" ) {
+                // runtimes: Node comes through nvm (`toolchain node`); Bun and Deno are catalog apps
+                for ( var rt in pick( a, "js_runtimes", [ "node" ] ) ) {
+                    if ( rt == "node" ) out.steps.append( { id: "toolchain-node", title: "install Node.js with nvm", argv: [ "bxcachy", "toolchain", "node" ] } );
+                    else if ( rt == "bun" || rt == "deno" ) jsApps.append( rt );
+                }
+                continue;
+            }
             out.steps.append( { id: "toolchain-" & tc, title: "install the " & tc & " toolchain", argv: [ "bxcachy", "profile-install", profiles[ tc ] ] } );
             if ( tc == "php" ) out.steps.append( { id: "laravel", title: "install the Laravel installer (composer global)", argv: [ "composer", "global", "require", "laravel/installer" ] } );
         }
@@ -84,6 +93,7 @@ class InitPlan {
         if ( pick( a, "gaming" ) == "bundle" ) out.steps.append( { id: "gaming", title: "install the CachyOS gaming bundle", argv: [ "bxcachy", "profile-install", "gaming" ] } );
         // everything else that is one package each goes in a single install
         var apps = [];
+        for ( var id in jsApps ) apps.append( id );
         for ( var id in pick( a, "ai_orchestrators", [] ) ) apps.append( id );
         for ( var id in pick( a, "ai_agents", [] ) ) apps.append( id );
         if ( engine == "docker" ) apps.append( "docker" );

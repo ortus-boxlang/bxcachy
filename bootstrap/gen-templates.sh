@@ -19,6 +19,12 @@ files=(hyprland.lua starship.toml shell.zsh shell.bash shell.fish)
     echo "            case \"$f\":"
     printf "                return '%s' & chr( 10 );\n" "$lit"
   done
+  # the nvm pin comes from box.json (the one place that names tool versions)
+  nvm="$(jq -c .toolchain.nvm "$root/box.json")"
+  [[ "$nvm" != *\\* ]] || { echo "box.json toolchain.nvm contains a backslash" >&2; exit 4; }
+  lit="${nvm//\'/\'\'}"; lit="${lit//#/##}"
+  echo '            case "nvm.json":'
+  printf "                return '%s';\n" "$lit"
   echo '        }'
   echo '        return "";'
   echo '    }'

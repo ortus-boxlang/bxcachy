@@ -42,6 +42,10 @@ check( "those answers are pending when Hyprland is not set up", p.pending.toList
 
 p = ip.plan( { toolchains: [ "java", "php", "go" ] } );
 check( "toolchains: a catalog profile each, Laravel after PHP", ids( p ) == "toolchain-java,toolchain-php,laravel,toolchain-go" && cmd( p, "toolchain-java" ) == "bxcachy profile-install jvm" && cmd( p, "laravel" ) == "composer global require laravel/installer" );
+p = ip.plan( { toolchains: [ "javascript" ], js_runtimes: [ "node", "bun", "deno" ] } );
+check( "JavaScript: Node through nvm, Bun and Deno as catalog apps", ids( p ) == "toolchain-node,apps" && cmd( p, "toolchain-node" ) == "bxcachy toolchain node" && cmd( p, "apps" ) == "bxcachy install bun deno" );
+check( "JavaScript without a runtime answer means Node", cmd( ip.plan( { toolchains: [ "javascript" ] } ), "toolchain-node" ) == "bxcachy toolchain node" );
+check( "Bun only is just the catalog app", ids( ip.plan( { toolchains: [ "javascript" ], js_runtimes: [ "bun" ] } ) ) == "apps" );
 check( "python is the python profile", cmd( ip.plan( { toolchains: [ "python" ] } ), "toolchain-python" ) == "bxcachy profile-install python" );
 check( "no toolchains, no steps", ip.plan( { toolchains: [] } ).steps.len() == 0 );
 

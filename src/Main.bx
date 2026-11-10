@@ -254,6 +254,15 @@ class {
           println( "Usage: bxcachy setup plasma [--keys | --undo-keys] | hyprland [--terminal=ghostty|kitty|alacritty|foot|konsole] [--layout=dwindle|master|scrolling|floating] [--workspaces=N] [--natural-scroll] [--layouts=us-intl,es] [--theme=dark|light|auto] [--wallpaper=box|grid|aurora|minimal] | terminal [--default=ghostty] [--also=a,b] | shell [--shell=zsh|fish|bash] | xremap [--build=hypr|kde] | undo plasma|hyprland|xremap | status [--yes] [--dry-run] [--json]" );
           CLIExit( 2 );
           break;
+         case "toolchain":
+          // Optional language toolchains. `toolchain node` installs nvm (pinned official installer) and Node.js LTS. Bun and Deno are
+          // catalog apps: bxcachy install bun deno.
+          if ( p.len() != 2 || p[2] != "node" ) {
+           println( "Usage: bxcachy toolchain node [--yes] [--dry-run] [--json]   (Bun and Deno: bxcachy install bun deno)" );
+           CLIExit( 2 );
+          }
+          CLIExit( new bxcachy.Setup( cli ).node( structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
+          break;
          case "init":
           // The setup wizard and what it runs. init (needs a terminal) | init --answers=FILE [--yes] [--dry-run] [--json] | init --print-answers.
           if ( p.len() != 1 ) {

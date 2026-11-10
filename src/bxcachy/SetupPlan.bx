@@ -200,6 +200,29 @@ class SetupPlan {
         return out;
     }
 
+    // The steps for `toolchain node`: nvm from its pinned official installer (box.json toolchain.nvm; an external script, shown and
+    // run, that adds nvm to your shell startup files), then Node.js through nvm and made the default. Skips what is already there.
+    function node( facts ) {
+        var pin = jsonDeserialize( new bxcachy.TemplateData().text( "nvm.json" ) );
+        var out = { target: "node", errors: [], warnings: [], notes: [], steps: [] };
+        if ( arguments.facts.isRoot ) out.errors.append( "Run as a regular user; nvm installs into your home directory" );
+        if ( !arguments.facts.hasCurl && !arguments.facts.hasNvm ) out.errors.append( "curl is required to download nvm but was not found" );
+        if ( out.errors.len() ) return out;
+        if ( !arguments.facts.hasNvm ) {
+            var script = arguments.facts.workDir & "/nvm-install.sh";
+            out.steps.append( { id: "nvm", title: "download and run " & pin.installer & " (external script, shown and run; it adds nvm " & pin.version & " to your shell startup files)", kind: "script", commands: [
+                [ "mkdir", "-p", arguments.facts.workDir ],
+                [ "curl", "-fsSL", "-m", "120", "-o", script, pin.installer ],
+                [ "env", "NVM_DIR=" & arguments.facts.nvmDir, "bash", script ] ] } );
+        }
+        if ( !len( arguments.facts.nodeVersion ) ) {
+            out.steps.append( { id: "node", title: "nvm install " & pin.node & " and make it the default (Node.js managed by nvm)", kind: "script", commands: [
+                [ "env", "NVM_DIR=" & arguments.facts.nvmDir, "bash", "-c", '. "$NVM_DIR/nvm.sh" && nvm install "$1" && nvm alias default "$1"', "_", pin.node ] ] } );
+        } else out.notes.append( "Node.js " & arguments.facts.nodeVersion & " is already installed with nvm." );
+        if ( out.steps.len() ) out.notes.append( "Open a new terminal so nvm is on your PATH." );
+        return out;
+    }
+
     // The steps for `setup undo hyprland`: removes only the packages a previous `setup hyprland` installed (never ones that were already there).
     function undoHyprland( facts ) {
         var out = { target: "hyprland", errors: [], warnings: [], notes: [], steps: [] };

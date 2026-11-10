@@ -347,6 +347,8 @@ if status is-interactive
     ## Starship prompt (the same prompt in every shell; config: ~/.config/starship.toml)
     command -q starship; and starship init fish | source
 end' & chr( 10 );
+            case "nvm.json":
+                return '{"version":"v0.41.0","installer":"https://raw.githubusercontent.com/nvm-sh/nvm/v0.41.0/install.sh","node":"lts/*"}';
         }
         return "";
     }

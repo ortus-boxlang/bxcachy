@@ -88,7 +88,7 @@ mkdir -p "$home/.nvm/bin"
 printf '%s\n' 'nvm() { case "$1" in --version) echo 0.41.0 ;; esac; }' '[ -x "$NVM_DIR/bin/node" ] && export PATH="$NVM_DIR/bin:$PATH"' 'true' > "$home/.nvm/nvm.sh"
 printf '#!/usr/bin/env bash\necho v22.11.0\n' > "$home/.nvm/bin/node"; chmod +x "$home/.nvm/bin/node"
 out="$(run bash "$repo/bootstrap/install.sh" check)"
-for s in 'installed: yay' 'java: 21.0.13' 'matchbox: 0.12.0' 'boxlang: 1.19.0' 'nvm: 0.41.0' 'node: 22.11.0' 'rust: 1.90.0' 'bxcachy: 0.11.0' 'bin-dir: '; do need "$out" "$s"; done
+for s in 'installed: yay' 'java: 21.0.13' 'matchbox: 0.12.0' 'boxlang: 1.19.0' 'rust: 1.90.0' 'bxcachy: 0.11.0' 'bin-dir: '; do need "$out" "$s"; done
 need "$out" 'not-on-PATH'; need "$out" '1 step(s) needed'   # only the PATH step remains
 plan="$(run bash "$repo/bootstrap/install.sh" --dry-run)"; need "$plan" 'add '; need "$plan" '/.local/bin to PATH'
 out="$(env -i HOME="$home" PATH="$home/.local/bin:$bin:$sys" BXCACHY_SKIP_NETWORK=1 BXCACHY_OS_RELEASE="$tmp/os-arch" MOCK_INSTALLED="$MOCK_INSTALLED" bash "$repo/bootstrap/install.sh" check)"
@@ -165,7 +165,7 @@ trun() { env -i HOME="$home" MOCK_LATEST="${MOCK_LATEST:-1.19.0}" PATH="$bin:$sy
 # 1. Runs unattended; end state is at the pins; each script shows its url and sha256.
 fresh_home
 out="$(trun bash "$repo/bootstrap/install.sh" toolchains --yes </dev/null 2>&1)"
-for x in 'External script: mvm' 'External script: bvm' 'External script: nvm' 'Node.js 22.11.0 installed with nvm and verified.' 'sha256: ' 'MatchBox 0.12.0 installed and verified.' 'BoxLang 1.19.0 installed and verified.'; do need "$out" "$x"; done
+for x in 'External script: mvm' 'External script: bvm' 'sha256: ' 'MatchBox 0.12.0 installed and verified.' 'BoxLang 1.19.0 installed and verified.'; do need "$out" "$x"; done
 chk="$(trun env PATH="$home/.local/bin:$bin:$sys" bash "$repo/bootstrap/install.sh" check)"; need "$chk" 'matchbox: 0.12.0'; need "$chk" 'boxlang: 1.19.0'
 [[ "$(stat -c %a "$home/.cache/bxcachy/external")" == 700 ]] || { echo 'FAIL: cache dir not private' >&2; exit 1; }
 
@@ -526,7 +526,7 @@ printf 'y\n' | env BXCACHY_INTERACTIVE=1 PATH="$tmp/all/bin:$PATH" ALL_LOG="$tmp
 [[ "$(paste -sd'|' "$tmp/all/log")" == 'packages --yes|toolchains --yes|binary --yes|core --yes|wizard' ]] || { echo "FAIL: stages after answering y (the wizard follows at a terminal): $(paste -sd'|' "$tmp/all/log")" >&2; exit 1; }
 echo 'bootstrap whole-install tests passed'
 
-# ---- nvm and Node.js are toolchain steps: nvm missing, then Node missing ----
+# ---- nvm and Node.js are not part of the required install (they are the optional JavaScript toolchain: `bxcachy toolchain node`) ----
 reset_mocks; MOCK_INSTALLED="jdk21-openjdk git curl unzip rustup base-devel jq"
 mock java 'echo "openjdk version \"21.0.13\" 2026-04-21" >&2'; mock mvm 'echo "MVM version: 2.0.1"'; mock matchbox 'echo "MatchBox 0.12.0"'
 mock bvm 'echo "bvm 1.40.0"'; mock boxlang 'echo "Ortus BoxLang v1.19.0+67"'; mock rustc 'echo "rustc 1.90.0"'; mock rustup 'exit 0'; mock yay 'exit 0'
@@ -534,9 +534,5 @@ mock bxcachy '[[ "$1" == version ]] && echo "BxCachy 0.11.0-dev"'
 rm -rf "$home"; mkdir -p "$home/.local/bin"; cp "$bin/bxcachy" "$home/.local/bin/bxcachy"; rm "$bin/bxcachy"
 nplan() { env -i HOME="$home" PATH="$home/.local/bin:$bin:$sys" BXCACHY_SKIP_NETWORK=1 BXCACHY_OS_RELEASE="$tmp/os-arch" MOCK_INSTALLED="$MOCK_INSTALLED" bash "$repo/bootstrap/install.sh" "$@"; }
 plan="$(nplan --dry-run)"
-need "$plan" 'download and run https://raw.githubusercontent.com/nvm-sh/nvm/v0.41.0/install.sh'; need "$plan" 'nvm install lts/*'
-need "$(nplan check)" 'nvm: missing'
-mkdir -p "$home/.nvm"; printf '%s\n' 'nvm() { case "$1" in --version) echo 0.41.0 ;; esac; }' 'true' > "$home/.nvm/nvm.sh"
-plan="$(nplan --dry-run)"; refuse "$plan" 'nvm-sh/nvm'; need "$plan" 'nvm install lts/*'
-need "$(nplan check)" 'node: missing'
-echo 'bootstrap nvm tests passed'
+refuse "$plan" 'nvm'; refuse "$plan" 'Node.js'; refuse "$(nplan check)" 'nvm:'; refuse "$(nplan check)" 'node:'
+echo 'bootstrap required-toolchain tests passed'

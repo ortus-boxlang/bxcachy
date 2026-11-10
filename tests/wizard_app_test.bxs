@@ -87,5 +87,11 @@ check( "the window layout defaults to tiling (dwindle) and is asked for Hyprland
 a = mk( { desktops: "plasma" } );
 check( "KDE only is not asked for a Hyprland layout", !a.finalAnswers().keyExists( "layout" ) );
 
+a = mk();
+check( "JavaScript runtimes are hidden until JavaScript is chosen, and default to Node", !a.finalAnswers().keyExists( "js_runtimes" ) && a.answerList( "js_runtimes" ).toList() == "node" );
+a = mk( { toolchains: [ "java", "javascript" ] } );
+check( "and asked once it is", a.finalAnswers().keyExists( "js_runtimes" ) );
+check( "the toolchains page says BoxLang is always installed", find( "BoxLang", a.spec().pages[ 5 ].intro ) > 0 && a.spec().pages[ 5 ].questions[ 1 ].type == "info" );
+
 if ( failures > 0 ) { println( failures & " failed" ); exit( 1 ); }
 println( "all passed" );

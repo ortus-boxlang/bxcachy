@@ -1,6 +1,6 @@
 {
   "schema": 3,
-  "catalog_version": "0.8.0-draft",
+  "catalog_version": "0.9.0-draft",
   "generated": "2026-11-09",
   "notes": [
     "Tier default = installed by a plain install; optional = offered in the picker; apps not listed are not part of the catalog.",
@@ -770,6 +770,27 @@
       }
     },
     {
+      "id": "bun",
+      "name": "Bun",
+      "description": "Fast all-in-one JavaScript runtime, bundler, test runner and package manager",
+      "description_source": "curated",
+      "kind": "tui",
+      "group": "development",
+      "category": "Language tooling",
+      "tier": "optional",
+      "source": "pacman",
+      "targets": [
+        "bun"
+      ],
+      "repo": "extra",
+      "homepage": "https://bun.sh/",
+      "macos": "bun (same)",
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-10"
+    },
+    {
       "id": "composer",
       "name": "Composer",
       "description": "Dependency manager for PHP",
@@ -792,6 +813,27 @@
       "profiles": {
         "php": "default"
       }
+    },
+    {
+      "id": "deno",
+      "name": "Deno",
+      "description": "Secure JavaScript and TypeScript runtime",
+      "description_source": "curated",
+      "kind": "tui",
+      "group": "development",
+      "category": "Language tooling",
+      "tier": "optional",
+      "source": "pacman",
+      "targets": [
+        "deno"
+      ],
+      "repo": "extra",
+      "homepage": "https://deno.com/",
+      "macos": "deno (same)",
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-10"
     },
     {
       "id": "go",

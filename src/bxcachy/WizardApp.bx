@@ -27,12 +27,13 @@ class WizardApp {
         return this;
     }
 
-    // Whether a question is shown: no `when`, or the answer to when.id is one of when.in (or equals when.equals).
+    // Whether a question is shown: no `when`, or the answer to when.id is one of when.in, equals when.equals, or (a list answer) contains when.has.
     // Hidden questions have no rows, are left out of the review and out of finalAnswers().
     function isVisible( q ) {
         if ( !structKeyExists( arguments.q, "when" ) ) return true;
         var w = arguments.q.when;
         var current = answerString( w.id );
+        if ( structKeyExists( w, "has" ) ) return arrayFind( answerList( w.id ), w.has ) > 0;
         if ( structKeyExists( w, "in" ) ) return arrayFind( w.in, current ) > 0;
         if ( structKeyExists( w, "equals" ) ) return current == w.equals;
         return true;
