@@ -103,6 +103,10 @@ hl.animation({ leaf = "workspacesIn",  enabled = true,  speed = 1.21, bezier = "
 hl.animation({ leaf = "workspacesOut", enabled = true,  speed = 1.94, bezier = "almostLinear", style = "fade" })
 hl.animation({ leaf = "zoomFactor",    enabled = true,  speed = 7,    bezier = "quick" })
 
+-- Two workspaces always exist, so Noctalia's workspace indicator shows them even when empty
+hl.workspace_rule({ workspace = "1", persistent = true })
+hl.workspace_rule({ workspace = "2", persistent = true })
+
 hl.config({ dwindle   = { preserve_split = true } })
 hl.config({ master    = { new_status = "master" } })
 hl.config({ scrolling = { fullscreen_on_one_column = true } })

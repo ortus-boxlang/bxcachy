@@ -18,6 +18,9 @@ c = tomllib.load(open(sys.argv[1], 'rb'))
 assert c['theme']['custom_palette'] == 'BxCachy' and c['theme']['source'] == 'custom'
 assert c['bar']['order'] == ['main'] and c['bar']['main']['position'] == 'top'
 assert 'launcher' in c['bar']['main']['start'] and 'clock' in c['bar']['main']['center']
+assert 'media' in c['bar']['main']['center'] and 'media' not in c['bar']['main']['end']
+for name in ('clock-nyc', 'clock-lon', 'clock-mad'):
+    assert name in c['bar']['main']['center'] and c['widget'][name]['type'] == 'clock' and c['widget'][name]['timezone']
 assert c['wallpaper']['directory'] == sys.argv[2] + '/Pictures/BxCachy'
 assert c['wallpaper']['default']['path'].endswith('/box.jpg')
 PY

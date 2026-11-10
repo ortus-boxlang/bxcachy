@@ -46,6 +46,7 @@ rm -rf "$tmp/cfg" "$tmp/home/Pictures" "$tmp/state"
 [[ "$(code "$binary" setup hyprland --yes)" == 0 ]] || fail 'fresh setup exits 0'
 grep -q 'require("bxcachy")' "$tmp/cfg/hypr/hyprland.lua" || fail 'starter hyprland.lua loads the bxcachy module'
 grep -q 'hl.dsp.window.close()' "$tmp/cfg/hypr/hyprland.lua" || fail 'starter has Super+Q close'
+grep -q 'workspace = "2", persistent = true' "$tmp/cfg/hypr/hyprland.lua" || fail 'two persistent workspaces'
 grep -q 'natural_scroll = false' "$tmp/cfg/hypr/hyprland.lua" || fail 'natural scrolling is off'
 echo '# mine' >> "$tmp/cfg/noctalia/config.toml"; echo '-- also mine' >> "$tmp/cfg/hypr/hyprland.lua"
 [[ "$(code "$binary" setup hyprland --yes)" == 0 ]] || fail 're-run exits 0'
