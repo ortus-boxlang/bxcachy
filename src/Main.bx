@@ -15,7 +15,7 @@ class {
         var config = new bxcachy.ConfigService();
         // One shared flag check for every command: unknown flags are usage errors and nothing runs.
         for ( var flag in args.options ) {
-            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build" ], flag ) ) {
+            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "pages", "out", "answers", "demo" ], flag ) ) {
                 println( "Unknown option: --" & flag );
                 CLIExit( 2 );
             }
@@ -247,6 +247,26 @@ class {
           }
           println( "Usage: bxcachy setup plasma [--keys | --undo-keys] | hyprland | xremap [--build=hypr|kde] | undo plasma|hyprland|xremap | status [--yes] [--dry-run] [--json]" );
           CLIExit( 2 );
+          break;
+         case "wizard":
+          // The full-screen setup wizard on MatchBox's terminal canvas. It shows pages from a JSON file (--pages) or the
+          // built-in ones (--demo), optionally starting from earlier answers (--answers FILE), and writes the answers as
+          // JSON to --out FILE. It changes nothing on the machine. Exit: 0 answers written, 130 cancelled, 2 usage, 4 bad file.
+          if ( p.len() != 1 || ( !structKeyExists( args.options, "demo" ) && !structKeyExists( args.options, "pages" ) ) ) {
+           println( "Usage: bxcachy wizard --demo [--out=FILE] | --pages=FILE [--out=FILE] [--answers=FILE]" );
+           CLIExit( 2 );
+          }
+          try {
+           wzSpec = jsonDeserialize( structKeyExists( args.options, "demo" ) ? new bxcachy.WizardData().demoPages() : fileRead( args.options.pages ) );
+           wzPreset = structKeyExists( args.options, "answers" ) ? jsonDeserialize( fileRead( args.options.answers ) ) : {};
+          } catch ( any e ) {
+           println( "bxcachy wizard: cannot read the pages or answers: " & e.message );
+           CLIExit( 4 );
+          }
+          wzResult = new bxcachy.Wizard( wzSpec, wzPreset ).run();
+          if ( wzResult.outcome != "done" ) CLIExit( 130 );
+          if ( structKeyExists( args.options, "out" ) ) fileWrite( args.options.out, jsonSerialize( wzResult.answers ) & chr( 10 ) );
+          CLIExit( 0 );
           break;
          case "keys":
           // The shared shortcut table: keys show | keys render xremap|hyprland|plasma (pure, writes nothing).

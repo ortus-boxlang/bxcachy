@@ -1,0 +1,68 @@
+// WizardApp: state and key handling, no terminal. Run from src/: (cd src && matchbox ../tests/wizard_app_test.bxs)
+failures = 0;
+function check( label, ok ) { if ( ok ) println( "ok   " & label ); else { println( "FAIL " & label ); failures++; } }
+function mk( preset = {} ) { return new bxcachy.WizardApp( jsonDeserialize( new bxcachy.WizardData().demoPages() ), preset ); }
+function started() { var a = mk(); a.onKey( "Enter" ); return a; }
+
+a = mk();
+check( "defaults come from the pages", a.answerString( "desktops" ) == "both" && a.answerNumber( "workspaces" ) == 2 && !a.answerBool( "natural_scroll" ) && a.answerList( "layouts" ).toList() == "us-intl,es" );
+b = mk( { desktops: "plasma", not_a_question: "x" } );
+check( "presets override defaults, unknown ids are ignored", b.answerString( "desktops" ) == "plasma" && !b.answers().keyExists( "not_a_question" ) );
+
+a = started();
+check( "enter leaves the welcome screen and focuses the first option", a.screen() == "page" && a.pageIndex() == 1 && a.isFocusable( a.rows()[ a.focus() ] ) );
+
+a = started();
+a.onKey( "Down" ); a.onKey( " " );
+check( "space selects a choice", a.answerString( "desktops" ) == "plasma" );
+before = a.focus();
+a.onKey( "Enter" );
+check( "enter moves to the next question", a.focus() > before && a.rows()[ a.focus() ].q == 2 );
+
+a = started(); a.gotoPage( 3 );
+a.onKey( "Down" ); a.onKey( " " );
+check( "a multi choice toggles on", arrayFind( a.answerList( "layouts" ), "us" ) > 0 );
+a.onKey( " " );
+check( "and off again", arrayFind( a.answerList( "layouts" ), "us" ) == 0 );
+
+a = started();
+for ( i = 1; i <= a.rows().len(); i++ ) if ( a.rows()[ i ].kind == "field" ) { a.gotoPage( 1 ); break; }
+idx = 0; rs = a.rows(); for ( i = 1; i <= rs.len(); i++ ) if ( rs[ i ].kind == "field" ) { idx = i; break; }
+a.act( { kind: "focus", n: idx } );
+for ( i = 1; i <= 30; i++ ) a.onKey( "Right" );
+check( "numbers stop at their maximum", a.answerNumber( "workspaces" ) == 10 );
+for ( i = 1; i <= 30; i++ ) a.onKey( "Left" );
+check( "and at their minimum", a.answerNumber( "workspaces" ) == 1 );
+
+a = started(); a.gotoPage( 4 );
+for ( c in [ "L", "u", "i", "s" ] ) a.onKey( c );
+check( "text fields take typing", a.answerString( "git_name" ) == "Luis" );
+a.onKey( "Backspace" );
+check( "backspace deletes", a.answerString( "git_name" ) == "Lui" );
+a.onKey( "j" );
+check( "j is typed, not a move", a.answerString( "git_name" ) == "Luij" );
+a.onKey( "Ctrl+u" );
+check( "ctrl-u clears", a.answerString( "git_name" ) == "" );
+
+a = started(); a.gotoPage( a.pageCount() ); a.nextPage();
+check( "the last page leads to review", a.screen() == "review" && a.furthest() == a.pageCount() + 1 );
+a.onKey( "Enter" );
+check( "enter on review finishes with answers as JSON", a.outcome() == "done" && jsonDeserialize( a.answersJson() ).desktops == "both" );
+
+a = started(); a.onKey( "Ctrl+c" );
+check( "ctrl-c cancels", a.outcome() == "cancelled" );
+a = mk(); a.onKey( "q" );
+check( "q cancels on the welcome screen", a.outcome() == "cancelled" );
+a = started(); a.onKey( "Escape" );
+check( "escape on the first page returns to the welcome screen", a.screen() == "welcome" );
+
+a = started();
+check( "review shows readable values", a.display( a.spec().pages[ 1 ].questions[ 1 ] ) == "Both" );
+
+a = started(); a.act( { kind: "page", n: 5 } );
+check( "sidebar clicks only reach pages already visited", a.pageIndex() == 1 );
+a.gotoPage( 3 ); a.gotoPage( 1 ); a.act( { kind: "page", n: 3 } );
+check( "and work for visited ones", a.pageIndex() == 3 );
+
+if ( failures > 0 ) { println( failures & " failed" ); exit( 1 ); }
+println( "all passed" );

@@ -1,0 +1,417 @@
+// Draws the setup wizard on MatchBox's terminal canvas (docs/tui.md in the MatchBox repo): the welcome splash, the pages
+// with a step sidebar, and the review. Catppuccin Frappe neutrals with the Ortus brand gradient (cyan #00DBFF to green
+// #00FF78). Every screen shows "Powered by BoxLang / www.boxlang.io".
+//
+// paint( app, tick, width, height ) records the frame's drawing commands without painting the terminal, so a test can read
+// it back with tui.render_to_string( width, height ); the run loop calls tui.end_frame() afterwards. paint() also records
+// what a click on each region does, read with hitAt( x, y ).
+class WizardView {
+    function init( tui ) {
+        variables.tui = arguments.tui;
+        variables.data = new bxcachy.WizardData();
+        variables.icon = listToArray( variables.data.icon(), chr( 10 ), true );
+        variables.wordmark = listToArray( variables.data.wordmark(), chr( 10 ), true );
+        variables.BASE = "##303446";    variables.MANTLE = "##292c3c";   variables.CRUST = "##232634";
+        variables.SURFACE0 = "##414559"; variables.SURFACE1 = "##51576d"; variables.OVERLAY = "##737994";
+        variables.TEXT = "##c6d0f5";    variables.SUB = "##a5adce";
+        variables.GREEN = "##00ff78";   variables.CYAN = "##00dbff";
+        variables.YELLOW = "##e5c890";  variables.RED = "##e78284";
+        variables.hits = [];
+        variables.fade = 1;
+        variables.shownKey = "";
+        variables.changedAt = 0;
+        variables.stars = [];
+        variables.starsFor = "";
+        return this;
+    }
+
+    // ---------------------------------------------------------------- colour helpers
+
+    function rgb( hex ) {
+        var h = replace( arguments.hex, "#", "", "all" );
+        return [ inputBaseN( mid( h, 1, 2 ), 16 ), inputBaseN( mid( h, 3, 2 ), 16 ), inputBaseN( mid( h, 5, 2 ), 16 ) ];
+    }
+
+    function toHex( r, g, b ) {
+        var out = "##";
+        for ( var v in [ arguments.r, arguments.g, arguments.b ] ) out &= right( "0" & formatBaseN( int( min( 255, max( 0, v ) ) ), 16 ), 2 );
+        return out;
+    }
+
+    // A blend of two colours, t from 0 to 1.
+    function mix( a, b, t ) {
+        var x = rgb( arguments.a );
+        var y = rgb( arguments.b );
+        var k = min( 1, max( 0, arguments.t ) );
+        return toHex( x[ 1 ] + ( y[ 1 ] - x[ 1 ] ) * k, x[ 2 ] + ( y[ 2 ] - x[ 2 ] ) * k, x[ 3 ] + ( y[ 3 ] - x[ 3 ] ) * k );
+    }
+
+    // The brand gradient at t (cyan to green).
+    function brand( t ) { return mix( variables.CYAN, variables.GREEN, arguments.t ); }
+
+    // The gradient with a soft highlight at `phase` (a moving shimmer): position x of width w.
+    function shimmer( x, w, phase ) {
+        var pos = min( 1, max( 0, arguments.x / max( 1, arguments.w ) ) );
+        var band = min( 1, max( 0, 1 - abs( pos - arguments.phase ) * 4 ) );
+        return mix( brand( pos ), "##ffffff", band * 0.45 );
+    }
+
+    // A colour as it should be drawn now: faded towards the background while a new screen fades in.
+    function c( hex ) {
+        return variables.fade >= 1 ? arguments.hex : mix( variables.BASE, arguments.hex, variables.fade );
+    }
+
+    // ---------------------------------------------------------------- drawing helpers
+
+    // Text at x, y. Colours are hex strings; bg "" keeps the cell's background.
+    function put( x, y, s, col, bg = "", bold = false ) {
+        var style = { fg: c( arguments.col ), bold: arguments.bold };
+        if ( len( arguments.bg ) ) style.bg = c( arguments.bg );
+        variables.tui.text( arguments.x, arguments.y, arguments.s, style );
+        return arguments.x + len( arguments.s );
+    }
+
+    function fillRect( x, y, w, h, bg ) {
+        if ( arguments.w > 0 && arguments.h > 0 ) variables.tui.fill( arguments.x, arguments.y, arguments.w, arguments.h, { bg: c( arguments.bg ) } );
+    }
+
+    // Text in the brand gradient, drawn in short pieces so the shimmer can travel along it.
+    function gtext( x, y, s, bold, phase, bg = "" ) {
+        var n = len( arguments.s );
+        var pos = 0;
+        while ( pos < n ) {
+            var piece = mid( arguments.s, pos + 1, 8 );
+            var style = { bold: arguments.bold };
+            if ( len( arguments.bg ) ) style.bg = c( arguments.bg );
+            variables.tui.gradient( arguments.x + pos, arguments.y, piece, c( shimmer( pos, n, arguments.phase ) ), c( shimmer( pos + len( piece ), n, arguments.phase ) ), style );
+            pos += len( piece );
+        }
+    }
+
+    // Wraps text to lines of at most `width` characters.
+    function wrap( text, width ) {
+        var lines = [];
+        var cur = "";
+        for ( var word in listToArray( trim( arguments.text ), " " ) ) {
+            if ( len( cur ) && len( cur ) + 1 + len( word ) > arguments.width ) { lines.append( cur ); cur = ""; }
+            cur = len( cur ) ? cur & " " & word : word;
+        }
+        if ( len( cur ) ) lines.append( cur );
+        return lines;
+    }
+
+    // A rounded panel; `accent` draws the border in the brand gradient.
+    function panel( x, y, w, h, title, accent, phase ) {
+        variables.tui.border( arguments.x, arguments.y, arguments.w, arguments.h, { border: "rounded", fg: c( variables.SURFACE1 ), bg: c( variables.MANTLE ) } );
+        if ( arguments.accent ) {
+            var line = repeatString( "─", arguments.w - 2 );
+            gtext( arguments.x + 1, arguments.y, line, false, arguments.phase, variables.MANTLE );
+            gtext( arguments.x + 1, arguments.y + arguments.h - 1, line, false, arguments.phase, variables.MANTLE );
+            put( arguments.x, arguments.y, "╭", shimmer( 0, arguments.w, arguments.phase ), variables.MANTLE );
+            put( arguments.x + arguments.w - 1, arguments.y, "╮", shimmer( arguments.w, arguments.w, arguments.phase ), variables.MANTLE );
+            put( arguments.x, arguments.y + arguments.h - 1, "╰", shimmer( 0, arguments.w, arguments.phase ), variables.MANTLE );
+            put( arguments.x + arguments.w - 1, arguments.y + arguments.h - 1, "╯", shimmer( arguments.w, arguments.w, arguments.phase ), variables.MANTLE );
+            for ( var yy = arguments.y + 1; yy < arguments.y + arguments.h - 1; yy++ ) {
+                put( arguments.x, yy, "│", shimmer( 0, arguments.w, arguments.phase ), variables.MANTLE );
+                put( arguments.x + arguments.w - 1, yy, "│", shimmer( arguments.w, arguments.w, arguments.phase ), variables.MANTLE );
+            }
+        }
+        if ( len( arguments.title ) ) {
+            put( arguments.x + 2, arguments.y, " " & arguments.title & " ", variables.TEXT, variables.MANTLE, true );
+            gtext( arguments.x + 3, arguments.y, arguments.title, true, arguments.phase, variables.MANTLE );
+        }
+    }
+
+    // Pixel art (an array of rows) in the brand gradient with a shimmer, one gradient per few cells.
+    function artBlock( x, y, lines, phase ) {
+        var w = 1;
+        for ( var l in arguments.lines ) w = max( w, len( l ) );
+        var h = arguments.lines.len();
+        var dy = 0;
+        for ( var line in arguments.lines ) {
+            var pos = 0;
+            while ( pos < len( line ) ) {
+                var piece = mid( line, pos + 1, 6 );
+                if ( len( trim( piece ) ) ) {
+                    var t0 = ( pos + dy * 0.6 ) / ( w + h * 0.6 );
+                    var t1 = ( pos + len( piece ) + dy * 0.6 ) / ( w + h * 0.6 );
+                    variables.tui.gradient( arguments.x + pos, arguments.y + dy, piece, c( shimmer( t0 * w, w, arguments.phase ) ), c( shimmer( t1 * w, w, arguments.phase ) ), { bg: c( variables.BASE ) } );
+                }
+                pos += len( piece );
+            }
+            dy++;
+        }
+    }
+
+    // "Powered by BoxLang" with the address under it, centred on column cx.
+    function poweredBy( cx, y, phase, bg, dim, faint ) {
+        var line = "Powered by ";
+        var x = arguments.cx - int( ( len( line ) + 7 ) / 2 );
+        put( x, arguments.y, line, arguments.dim, arguments.bg );
+        gtext( x + len( line ), arguments.y, "BoxLang", true, arguments.phase, arguments.bg );
+        put( arguments.cx - 7, arguments.y + 1, "www.boxlang.io", arguments.faint, arguments.bg );
+    }
+
+    // ---------------------------------------------------------------- the frame
+
+    // What a click at x, y does: a { kind, n } struct, kind "" when it hits nothing.
+    function hitAt( x, y ) {
+        for ( var i = variables.hits.len(); i >= 1; i-- ) {
+            var h = variables.hits[ i ];
+            if ( arguments.x >= h.x && arguments.x < h.x + h.w && arguments.y >= h.y && arguments.y < h.y + h.h ) return { kind: h.kind, n: h.n };
+        }
+        return { kind: "", n: 0 };
+    }
+
+    function paint( app, tick, width, height ) {
+        variables.hits = [];
+        var key = app.screen() & ":" & app.pageIndex();
+        if ( key != variables.shownKey ) { variables.shownKey = key; variables.changedAt = arguments.tick; }
+        var age = ( arguments.tick - variables.changedAt ) / 7;
+        variables.fade = age >= 1 ? 1 : age * age * ( 3 - 2 * age );
+        variables.tui.begin_frame();
+        variables.tui.fill( 0, 0, arguments.width, arguments.height, { bg: variables.BASE } );
+        if ( arguments.width < 76 || arguments.height < 24 ) {
+            var msg = "Make the window a little bigger (76 x 24)";
+            put( int( ( arguments.width - len( msg ) ) / 2 ), int( arguments.height / 2 ), msg, variables.YELLOW, variables.BASE );
+            return this;
+        }
+        var phase = ( arguments.tick mod 90 ) / 90 * 1.4 - 0.2;
+        if ( app.screen() == "welcome" ) welcome( app, arguments.tick, arguments.width, arguments.height, phase );
+        else pages( app, arguments.tick, arguments.width, arguments.height, phase );
+        return this;
+    }
+
+    // Twinkling dots behind the welcome art. Positions come from a small fixed generator and are cached per size.
+    function starfield( width, height, avoid, tick ) {
+        var sizeKey = arguments.width & "x" & arguments.height;
+        if ( sizeKey != variables.starsFor ) {
+            variables.starsFor = sizeKey;
+            variables.stars = [];
+            var seed = 2654435769;
+            for ( var i = 0; i < 46; i++ ) {
+                seed = ( seed * 1664525 + 1013904223 ) mod 4294967296;
+                var x = int( seed / 256 ) mod arguments.width;
+                seed = ( seed * 1664525 + 1013904223 ) mod 4294967296;
+                var y = int( seed / 256 ) mod arguments.height;
+                if ( x >= arguments.avoid.x && x < arguments.avoid.x + arguments.avoid.w && y >= arguments.avoid.y && y < arguments.avoid.y + arguments.avoid.h ) continue;
+                variables.stars.append( { x: x, y: y, i: i } );
+            }
+        }
+        for ( var s in variables.stars ) {
+            var tw = ( sin( arguments.tick / 14 + s.i * 1.7 ) * 0.5 + 0.5 ) * 0.85;
+            put( s.x, s.y, s.i mod 7 == 0 ? "+" : "·", mix( variables.BASE, s.i mod 3 == 0 ? variables.CYAN : variables.SUB, tw * 0.8 ), variables.BASE );
+        }
+    }
+
+    function welcome( app, tick, width, height, phase ) {
+        var iconW = 0; for ( var l in variables.icon ) iconW = max( iconW, len( l ) );
+        var markW = 0; for ( var l in variables.wordmark ) markW = max( markW, len( l ) );
+        var totalH = variables.icon.len() + 1 + variables.wordmark.len() + 4;
+        var top = max( 1, int( ( arguments.height - totalH ) / 2 ) );
+        var cx = int( arguments.width / 2 );
+        starfield( arguments.width, arguments.height, { x: max( 0, cx - int( markW / 2 ) - 1 ), y: top, w: markW + 2, h: totalH + 1 }, arguments.tick );
+        artBlock( cx - int( iconW / 2 ), top, variables.icon, arguments.phase );
+        var y = top + variables.icon.len() + 1;
+        if ( markW < arguments.width - 2 ) artBlock( cx - int( markW / 2 ), y, variables.wordmark, arguments.phase );
+        else gtext( cx - 3, y, "BxCachy", true, arguments.phase, variables.BASE );
+        y += variables.wordmark.len() + 1;
+        var tag = len( app.spec().tagline ) ? app.spec().tagline : "Your developer machine, set up in minutes.";
+        put( cx - int( len( tag ) / 2 ), y, tag, variables.SUB, variables.BASE );
+        var prompt = "press  enter  to begin";
+        var pulse = ( sin( arguments.tick / 8 ) * 0.5 + 0.5 ) * 0.7 + 0.3;
+        put( cx - int( len( prompt ) / 2 ), y + 2, prompt, mix( variables.OVERLAY, variables.GREEN, pulse ), variables.BASE );
+        poweredBy( cx, arguments.height - 4, arguments.phase, variables.BASE, variables.SUB, variables.OVERLAY );
+        if ( len( app.spec().version ) ) {
+            var v = "v" & app.spec().version;
+            put( cx - int( len( v ) / 2 ), arguments.height - 2, v, variables.OVERLAY, variables.BASE );
+        }
+    }
+
+    function pages( app, tick, width, height, phase ) {
+        var n = app.pageCount();
+        var step = app.screen() == "page" ? app.pageIndex() : n + 1;
+        gtext( 3, 1, "◆ BxCachy", true, arguments.phase, variables.BASE );
+        put( 13, 1, "setup", variables.SUB, variables.BASE );
+        if ( arguments.width < 92 ) put( 20, 1, "· Powered by BoxLang · www.boxlang.io", variables.OVERLAY, variables.BASE );
+        var label = "step " & step & " of " & ( n + 1 );
+        var barW = 24;
+        var barX = arguments.width - barW - 3;
+        put( barX - len( label ) - 2, 1, label, variables.SUB, variables.BASE );
+        for ( var i = 0; i < barW; i++ ) {
+            var filled = ( i + 1 ) / barW <= step / ( n + 1 );
+            put( barX + i, 1, filled ? "━" : "─", filled ? brand( i / barW ) : variables.SURFACE0, variables.BASE );
+        }
+        for ( var x = 2; x < arguments.width - 2; x++ ) put( x, 2, "─", mix( variables.SURFACE1, shimmer( x, arguments.width, arguments.phase ), 0.25 ), variables.BASE );
+        var hints = [ [ "↑↓", "move" ], [ "space", "select" ], [ "enter", "next" ], [ "tab", "next page" ], [ "esc", "back" ], [ "ctrl-c", "cancel" ] ];
+        var hx = 3;
+        for ( var hint in hints ) {
+            hx = put( hx, arguments.height - 1, hint[ 1 ], variables.CYAN, variables.BASE ) + 1;
+            hx = put( hx, arguments.height - 1, hint[ 2 ], variables.OVERLAY, variables.BASE ) + 3;
+        }
+        var bx = 2; var by = 3; var bw = arguments.width - 4; var bh = arguments.height - 4;
+        var sideW = arguments.width >= 92 ? 28 : 0;
+        if ( sideW > 0 ) sidebar( app, bx, by, sideW, bh, arguments.phase );
+        var mx = bx + sideW + ( sideW > 0 ? 1 : 0 );
+        var mw = bw - sideW - ( sideW > 0 ? 1 : 0 );
+        if ( app.screen() == "review" ) review( app, arguments.tick, mx, by, mw, bh, arguments.phase );
+        else page( app, arguments.tick, mx, by, mw, bh, arguments.phase );
+    }
+
+    function sidebar( app, x, y, w, h, phase ) {
+        panel( arguments.x, arguments.y, arguments.w, arguments.h, "Steps", false, arguments.phase );
+        var cx = arguments.x + int( arguments.w / 2 );
+        poweredBy( cx, arguments.y + arguments.h - 4, arguments.phase, variables.MANTLE, variables.OVERLAY, variables.SURFACE1 );
+        var n = app.pageCount();
+        var current = app.screen() == "page" ? app.pageIndex() : 0;
+        for ( var i = 1; i <= n + 1; i++ ) {
+            var ry = arguments.y + 1 + i;
+            if ( ry >= arguments.y + arguments.h - 4 ) break;
+            var isReview = i == n + 1;
+            var title = isReview ? "Review" : app.spec().pages[ i ].title;
+            var here = isReview ? app.screen() == "review" : current == i;
+            var reached = i <= app.furthest();
+            var done = i < app.furthest() && !here;
+            var bg = here ? variables.SURFACE0 : variables.MANTLE;
+            if ( here ) {
+                fillRect( arguments.x + 1, ry, arguments.w - 2, 1, variables.SURFACE0 );
+                put( arguments.x + 1, ry, "▌", variables.GREEN, variables.SURFACE0 );
+            }
+            var mark = ( done || here || reached ) ? "●" : "○";
+            var col = done ? variables.GREEN : ( here ? variables.CYAN : ( reached ? variables.SUB : variables.OVERLAY ) );
+            put( arguments.x + 3, ry, mark, col, bg );
+            if ( here ) gtext( arguments.x + 6, ry, title, true, arguments.phase, bg );
+            else put( arguments.x + 6, ry, title, reached ? variables.TEXT : variables.OVERLAY, bg );
+            if ( reached ) variables.hits.append( { x: arguments.x + 1, y: ry, w: arguments.w - 2, h: 1, kind: isReview ? "review" : "page", n: i } );
+        }
+    }
+
+    // Lines a row takes on the page.
+    function rowHeight( pg, row, width ) {
+        if ( row.kind == "heading" ) return 1 + ( len( pg.questions[ row.q ].help ?: "" ) ? 1 : 0 );
+        if ( row.kind == "info" ) return 1 + wrap( pg.questions[ row.q ].help ?: "", width ).len();
+        return 1;
+    }
+
+    function page( app, tick, x, y, w, h, phase ) {
+        var pg = app.spec().pages[ app.pageIndex() ];
+        var rws = app.rows();
+        panel( arguments.x, arguments.y, arguments.w, arguments.h, pg.title, true, arguments.phase );
+        var ix = arguments.x + 3; var iy = arguments.y + 1; var iw = arguments.w - 6; var ih = arguments.h - 2;
+        var cy = iy + 1;
+        if ( len( pg.intro ?: "" ) ) {
+            for ( var line in wrap( pg.intro, iw ) ) { put( ix, cy, line, variables.SUB, variables.MANTLE ); cy++; }
+            cy++;
+        }
+        var listTop = cy;
+        var listBottom = iy + ih - 4;
+        var tops = [];
+        var total = 0;
+        for ( var row in rws ) { tops.append( total ); total += rowHeight( pg, row, iw ); }
+        var avail = max( 1, listBottom - listTop );
+        var f = app.focus();
+        var fTop = f <= tops.len() ? tops[ f ] : 0;
+        var fH = f <= rws.len() ? rowHeight( pg, rws[ f ], iw ) : 1;
+        var scroll = fTop + fH > avail ? fTop + fH - avail : 0;
+        for ( var idx = 1; idx <= rws.len(); idx++ ) {
+            var row = rws[ idx ];
+            var ry = listTop + tops[ idx ] - scroll;
+            if ( ry < listTop || ry + rowHeight( pg, row, iw ) > listBottom ) continue;
+            var focused = idx == f;
+            var bg = focused ? variables.SURFACE0 : variables.MANTLE;
+            if ( row.kind == "heading" ) {
+                var qn = pg.questions[ row.q ];
+                put( ix, ry, qn.label, variables.TEXT, variables.MANTLE, true );
+                if ( len( qn.help ?: "" ) ) put( ix, ry + 1, qn.help, variables.OVERLAY, variables.MANTLE );
+            } else if ( row.kind == "group" ) {
+                put( ix + 2, ry, ucase( row.group ), variables.OVERLAY, variables.MANTLE, true );
+            } else if ( row.kind == "info" ) {
+                var qn = pg.questions[ row.q ];
+                put( ix, ry, qn.label, variables.TEXT, variables.MANTLE, true );
+                var k = 0;
+                for ( var line in wrap( qn.help ?: "", iw ) ) { put( ix, ry + 1 + k, line, variables.SUB, variables.MANTLE ); k++; }
+            } else if ( row.kind == "opt" ) {
+                var qn = pg.questions[ row.q ];
+                var opt = qn.options[ row.i ];
+                var multi = qn.type == "multi";
+                var selected = multi ? arrayFind( app.answerList( qn.id ), opt.value ) > 0 : app.answerString( qn.id ) == opt.value;
+                if ( focused ) {
+                    fillRect( ix, ry, iw, 1, variables.SURFACE0 );
+                    put( ix, ry, "▌", brand( 0.5 ), variables.SURFACE0 );
+                }
+                var mark = multi ? ( selected ? "◆" : "◇" ) : ( selected ? "●" : "○" );
+                put( ix + 2, ry, mark, selected ? variables.GREEN : variables.OVERLAY, bg );
+                put( ix + 5, ry, opt.label, selected ? variables.GREEN : variables.TEXT, bg, selected );
+                variables.hits.append( { x: ix, y: ry, w: iw, h: 1, kind: "focus", n: idx } );
+            } else if ( row.kind == "field" ) {
+                var qn = pg.questions[ row.q ];
+                if ( qn.type == "text" ) {
+                    var value = app.answerString( qn.id );
+                    var boxW = min( iw - 4, 52 );
+                    var fieldBg = focused ? variables.SURFACE0 : variables.CRUST;
+                    fillRect( ix + 2, ry, boxW, 1, fieldBg );
+                    var shown = len( value ) ? value : ( qn.placeholder ?: "" );
+                    put( ix + 3, ry, left( shown, boxW - 3 ), len( value ) ? variables.TEXT : variables.OVERLAY, fieldBg );
+                    if ( focused && ( arguments.tick \ 6 ) mod 2 == 0 ) put( ix + 3 + min( len( value ), boxW - 3 ), ry, "▏", variables.GREEN, variables.SURFACE0 );
+                    put( ix, ry, focused ? "▌" : " ", brand( 0.5 ), variables.MANTLE );
+                } else if ( qn.type == "number" ) {
+                    var v = app.answerNumber( qn.id );
+                    if ( focused ) { fillRect( ix, ry, iw, 1, variables.SURFACE0 ); put( ix, ry, "▌", brand( 0.5 ), variables.SURFACE0 ); }
+                    put( ix + 2, ry, "◀", v > qn.min ? variables.CYAN : variables.SURFACE1, bg );
+                    put( ix + 5, ry, toString( v ), variables.GREEN, bg, true );
+                    put( ix + 9, ry, "▶", v < qn.max ? variables.CYAN : variables.SURFACE1, bg );
+                    put( ix + 12, ry, qn.min & " to " & qn.max, variables.OVERLAY, bg );
+                } else if ( qn.type == "confirm" ) {
+                    var on = app.answerBool( qn.id );
+                    if ( focused ) { fillRect( ix, ry, iw, 1, variables.SURFACE0 ); put( ix, ry, "▌", brand( 0.5 ), variables.SURFACE0 ); }
+                    put( ix + 2, ry, " Yes ", on ? variables.CRUST : variables.SUB, on ? variables.GREEN : variables.SURFACE1, true );
+                    put( ix + 8, ry, " No ", !on ? variables.CRUST : variables.SUB, !on ? variables.RED : variables.SURFACE1, true );
+                }
+                variables.hits.append( { x: ix, y: ry, w: iw, h: 1, kind: "focus", n: idx } );
+            }
+        }
+        if ( scroll > 0 ) put( ix + iw - 2, listTop, "▲", variables.OVERLAY, variables.MANTLE );
+        if ( total - scroll > avail ) put( ix + iw - 2, listBottom - 1, "▼", variables.OVERLAY, variables.MANTLE );
+        // detail strip: what the focused option means
+        put( ix, listBottom, repeatString( "┄", iw ), variables.SURFACE1, variables.MANTLE );
+        var detail = "";
+        if ( f <= rws.len() ) {
+            var fr = rws[ f ];
+            if ( fr.kind == "opt" ) detail = pg.questions[ fr.q ].options[ fr.i ].description ?: "";
+            else if ( fr.kind == "field" ) detail = pg.questions[ fr.q ].help ?: "";
+        }
+        var k = 0;
+        for ( var line in wrap( detail, iw - 4 ) ) {
+            if ( k >= 2 ) break;
+            if ( k == 0 ) put( ix, listBottom + 1, "▸", variables.CYAN, variables.MANTLE );
+            put( ix + 3, listBottom + 1 + k, line, variables.SUB, variables.MANTLE );
+            k++;
+        }
+    }
+
+    function review( app, tick, x, y, w, h, phase ) {
+        panel( arguments.x, arguments.y, arguments.w, arguments.h, "Review", true, arguments.phase );
+        var ix = arguments.x + 3; var iy = arguments.y + 1; var iw = arguments.w - 6; var ih = arguments.h - 2;
+        put( ix, iy + 1, "Everything look right? Nothing has been changed yet.", variables.SUB, variables.MANTLE );
+        var cy = iy + 3;
+        var labelW = 20;
+        for ( var pg in app.spec().pages ) for ( var q in pg.questions ) if ( q.type != "info" ) labelW = max( labelW, len( q.label ) + 3 );
+        var maxY = iy + ih - 3;
+        var stop = false;
+        for ( var pg in app.spec().pages ) {
+            for ( var q in pg.questions ) {
+                if ( q.type == "info" ) continue;
+                if ( cy > maxY ) { put( ix, cy, "…", variables.OVERLAY, variables.MANTLE ); stop = true; break; }
+                put( ix, cy, q.label, variables.SUB, variables.MANTLE );
+                put( ix + labelW, cy, left( app.display( q ), max( 1, iw - labelW - 2 ) ), variables.GREEN, variables.MANTLE );
+                cy++;
+            }
+            if ( stop ) break;
+        }
+        var pulse = ( sin( arguments.tick / 8 ) * 0.5 + 0.5 ) * 0.6 + 0.4;
+        var msg = "  Apply these choices  ";
+        var by = iy + ih - 1;
+        put( ix, by, msg, variables.CRUST, mix( variables.CYAN, variables.GREEN, pulse ), true );
+        put( ix + len( msg ) + 2, by, "press enter    esc to go back", variables.OVERLAY, variables.MANTLE );
+    }
+}
