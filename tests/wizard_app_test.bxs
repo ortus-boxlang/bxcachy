@@ -81,5 +81,11 @@ check( "KDE only does not ask either", !a.finalAnswers().keyExists( "login_sessi
 a = started(); a.onKey( "Down" ); a.onKey( " " ); a.gotoReview();
 check( "answers JSON for Both includes the login session", jsonDeserialize( a.answersJson() ).login_session == "hyprland" );
 
+a = started();
+hasLayout = function( app ) { for ( var r in app.rows() ) if ( r.kind == "heading" && app.spec().pages[ 1 ].questions[ r.q ].id == "layout" ) return true; return false; };
+check( "the window layout defaults to tiling (dwindle) and is asked for Hyprland", a.answerString( "layout" ) == "dwindle" && hasLayout( a ) );
+a = mk( { desktops: "plasma" } );
+check( "KDE only is not asked for a Hyprland layout", !a.finalAnswers().keyExists( "layout" ) );
+
 if ( failures > 0 ) { println( failures & " failed" ); exit( 1 ); }
 println( "all passed" );

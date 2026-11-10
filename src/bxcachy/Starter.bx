@@ -2,9 +2,10 @@
 // Everything goes through the config service (backup, journal). Files the user already has are never overwritten:
 // a changed Noctalia file is kept as it is, and hyprland.lua is written only when none exists.
 class Starter {
-    function init( quiet = false, terminal = "ghostty" ) {
+    function init( quiet = false, terminal = "ghostty", layout = "dwindle" ) {
         variables.config = new bxcachy.ConfigService().quiet( arguments.quiet );
         variables.terminal = arguments.terminal;
+        variables.layout = arguments.layout;
         return this;
     }
 
@@ -13,8 +14,21 @@ class Starter {
         var cfg = variables.config.cfgHome();
         var home = getSystemSetting( "HOME", "" );
         var out = new bxcachy.NoctaliaConfig().entries( cfg, home );
-        out.append( { name: "hyprland", target: cfg & "/hypr/hyprland.lua", mode: "644", content: replace( new bxcachy.TemplateData().text( "hyprland.lua" ), 'local terminal    = "kitty"', 'local terminal    = "' & variables.terminal & '"' ) } );
+        out.append( { name: "hyprland", target: cfg & "/hypr/hyprland.lua", mode: "644", content: hyprlandText() } );
         return out;
+    }
+
+    // The starter hyprland.lua with the chosen terminal and layout. dwindle, master and scrolling set general.layout;
+    // floating keeps dwindle underneath (one keypress to tile) and floats every new window with a window rule.
+    function hyprlandText() {
+        var t = new bxcachy.TemplateData().text( "hyprland.lua" );
+        t = replace( t, 'local terminal    = "kitty"', 'local terminal    = "' & variables.terminal & '"' );
+        var base = variables.layout == "floating" ? "dwindle" : variables.layout;
+        t = replace( t, 'layout           = "dwindle",', 'layout           = "' & base & '",' );
+        var rule = variables.layout == "floating"
+            ? '-- Floating by default (layout: floating). Delete this rule, or press Super+V on a window, to tile.' & chr( 10 ) & 'hl.window_rule({ name = "bxcachy-floating", match = { class = ".*" }, float = true })'
+            : '-- (Windows tile. To float every new window by default, add: hl.window_rule({ name = "floating", match = { class = ".*" }, float = true }))';
+        return replace( t, "-- BXCACHY-FLOATING-RULE", rule );
     }
 
     // Writes what is missing. Returns { written, kept, failed }: names of entries. kept = already there (clean, or changed by the user).

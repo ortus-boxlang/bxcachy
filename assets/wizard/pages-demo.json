@@ -59,19 +59,37 @@
         },
         {
           "type": "choice",
-          "id": "window_style",
-          "label": "How should windows behave?",
-          "default": "tiled",
+          "id": "layout",
+          "label": "How should windows behave in Hyprland?",
+          "help": "The default layout. You can change it later in hyprland.lua.",
+          "default": "dwindle",
+          "when": {
+            "id": "desktops",
+            "in": [
+              "hyprland",
+              "both"
+            ]
+          },
           "options": [
             {
-              "value": "tiled",
-              "label": "Tiled",
-              "description": "Windows split the screen automatically. Great for focus and big monitors."
+              "value": "dwindle",
+              "label": "Tiling (recommended)",
+              "description": "Windows split the screen on their own, no overlapping. Hyprland's default layout, called dwindle."
+            },
+            {
+              "value": "master",
+              "label": "Tiling with a master window",
+              "description": "One big window on the left, the others stacked beside it."
+            },
+            {
+              "value": "scrolling",
+              "label": "Scrolling (carousel)",
+              "description": "Windows sit in columns on a strip you scroll sideways, like niri."
             },
             {
               "value": "floating",
-              "label": "Floating",
-              "description": "Windows sit where you drop them, like macOS and Windows."
+              "label": "Floating windows",
+              "description": "Normal overlapping windows you move and resize, like macOS. Tiling stays one keypress away."
             }
           ]
         },

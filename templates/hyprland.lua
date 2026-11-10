@@ -198,6 +198,7 @@ hl.bind("XF86MonBrightnessDown",hl.dsp.exec_cmd("brightnessctl -e4 -n2 set 5%-")
 --------------------------------
 ---- WINDOWS AND WORKSPACES ----
 --------------------------------
+-- BXCACHY-FLOATING-RULE
 hl.window_rule({
     name  = "suppress-maximize-events",
     match = { class = ".*" },

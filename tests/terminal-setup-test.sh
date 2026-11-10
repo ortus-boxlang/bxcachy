@@ -46,4 +46,11 @@ grep -q 'pacman -S --needed --noconfirm .*alacritty' "$LOG" || fail 'chosen term
 rm -rf "$tmp/cfg"; run "$binary" setup hyprland --yes >/dev/null || fail 'setup hyprland'
 grep -q 'local terminal    = "ghostty"' "$tmp/cfg/hypr/hyprland.lua" || fail 'ghostty is the default on Super+Enter'
 [[ "$(code "$binary" setup hyprland --terminal=putty --yes)" == 4 ]] || fail 'an unknown terminal exits 4'
+# window layout in the starter hyprland.lua
+lua() { rm -rf "$tmp/cfg"; run "$binary" setup hyprland "$@" --yes >/dev/null || fail "setup hyprland $*"; cat "$tmp/cfg/hypr/hyprland.lua"; }
+l="$(lua)"; grep -q 'layout           = "dwindle"' <<<"$l" || fail 'dwindle is the default layout'; ! grep -q '^hl.window_rule({ name = "bxcachy-floating"' <<<"$l" || fail 'tiling must not float windows'
+l="$(lua --layout=master)"; grep -q 'layout           = "master"' <<<"$l" || fail 'master layout'
+l="$(lua --layout=scrolling)"; grep -q 'layout           = "scrolling"' <<<"$l" || fail 'scrolling layout'
+l="$(lua --layout=floating)"; grep -q 'layout           = "dwindle"' <<<"$l" && grep -q '^hl.window_rule({ name = "bxcachy-floating", match = { class = ".\*" }, float = true })' <<<"$l" || fail 'floating keeps dwindle underneath and floats new windows'
+[[ "$(code "$binary" setup hyprland --layout=carousel --yes)" == 4 ]] || fail 'an unknown layout exits 4'
 echo "terminal setup tests passed"

@@ -211,7 +211,7 @@ class Setup {
                 else if ( !asJson ) println( "terminal configs: wrote " & ( tr.written.len() ? tr.written.toList( ", " ) : "nothing" ) & "; kept " & ( tr.kept.len() ? tr.kept.toList( ", " ) : "nothing" ) );
             }
             if ( step.kind == "starter" ) {
-                var st = new bxcachy.Starter( asJson, structKeyExists( step, "terminal" ) ? step.terminal : "ghostty" ).apply();
+                var st = new bxcachy.Starter( asJson, structKeyExists( step, "terminal" ) ? step.terminal : "ghostty", structKeyExists( step, "layout" ) ? step.layout : "dwindle" ).apply();
                 if ( st.failed.len() ) problem = "failed (" & st.failed.toList( ", " ) & ")";
                 else if ( !asJson ) println( "starter configs: wrote " & ( st.written.len() ? st.written.toList( ", " ) : "nothing" ) & "; kept " & ( st.kept.len() ? st.kept.toList( ", " ) : "nothing" ) );
             }

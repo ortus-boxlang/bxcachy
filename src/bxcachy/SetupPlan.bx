@@ -104,6 +104,9 @@ class SetupPlan {
                  "adw-gtk-theme", "noto-fonts", "noto-fonts-emoji" ];
     }
 
+    // The default window layouts `setup hyprland --layout` offers: Hyprland's tiling layouts, scrolling (a carousel of columns), and floating.
+    function layouts() { return [ "dwindle", "master", "scrolling", "floating" ]; }
+
     // Preconditions for `setup hyprland`. Returns { errors, warnings }.
     function hyprlandPreflight( facts ) {
         var out = { errors: [], warnings: [] };
@@ -124,6 +127,8 @@ class SetupPlan {
         out.errors = pre.errors; out.warnings = pre.warnings;
         var term = ( structKeyExists( arguments.opts, "terminal" ) && len( arguments.opts.terminal ) ) ? arguments.opts.terminal : new bxcachy.TerminalConfig().defaultTerminal();
         if ( !arrayFind( new bxcachy.TerminalConfig().ids(), term ) ) out.errors.append( "Unknown terminal: " & term & " (use " & new bxcachy.TerminalConfig().ids().toList( ", " ) & ")" );
+        var lay = ( structKeyExists( arguments.opts, "layout" ) && len( arguments.opts.layout ) ) ? arguments.opts.layout : "dwindle";
+        if ( !arrayFind( layouts(), lay ) ) out.errors.append( "Unknown layout: " & lay & " (use " & layouts().toList( ", " ) & ")" );
         var missing = hyprlandPackages( term ).filter( function( p ) { return !structKeyExists( facts.installed, p ); } );
         if ( missing.len() && !facts.hasSudo ) out.errors.append( "sudo is required to install packages but was not found" );
         if ( out.errors.len() ) return out;
@@ -134,7 +139,7 @@ class SetupPlan {
             out.added = missing;
         } else out.notes.append( "Hyprland and Noctalia are already installed." );
         out.steps.append( { id: "images", title: "write the BxCachy logo and wallpapers to ~/Pictures/BxCachy (missing ones only)", kind: "assets", commands: [] } );
-        out.steps.append( { id: "starter", title: "write the starter Noctalia config and palette, and hyprland.lua (" & term & " on Super+Enter) if you have none (existing files are kept)", kind: "starter", terminal: term, commands: [] } );
+        out.steps.append( { id: "starter", title: "write the starter Noctalia config and palette, and hyprland.lua (" & term & " on Super+Enter, " & lay & " layout) if you have none (existing files are kept)", kind: "starter", terminal: term, layout: lay, commands: [] } );
         out.steps.append( { id: "keys", title: "write the shared shortcut files (xremap config and service unit, Hyprland module, Plasma Log Out)", kind: "keys", commands: [] } );
         out.notes.append( "Log out and pick Hyprland at the login screen. KDE Plasma is untouched. Run `bxcachy setup xremap` for the Cmd-style keys." );
         return out;
