@@ -284,3 +284,55 @@ Ortus Brand Book 2025 palette (main `#00FF78`, second `#00DBFF`, accent `#FFF500
 - Pure `SetupPlan`, `Shortcuts`, `NoctaliaConfig` classes with script tests; native tests with fake `pacman`, `yay`, `git`, `qdbus6`, `kwriteconfig6`, `sudo`, `systemctl` (plan output, `--yes` gating, root refusal, partial failure, re-run, undo, drift, one clean `--json` envelope); the starter TOML and JSON are parsed.
 - The real Arch container (`tests/arch/suite.sh`) runs the xremap plan, checks the AUR package names, runs the whole `setup hyprland`, checks the written files, byte-identical wallpapers, `keys check`, and has Hyprland verify the starter config.
 - Not verifiable in CI: HyprKwin's installer (needs a running KWin), xremap's per-app rules on both builds, Noctalia accepting every config key, and the exact Hyprland bind strings on a running session. These are covered by the owner's acceptance run on a real CachyOS KDE machine.
+
+## 14. Install and the setup wizard (decided with the owner 2026-11-10; plan, not built yet)
+
+### 14.1 Install
+
+`bootstrap/install.sh [--yes] [--dry-run]` is the one install command. It prints the plan, asks one `Proceed? [Y/n]` at a terminal (without a terminal it needs `--yes`, else exit 2; `--dry-run` exits 0), then runs, in order: packages with yay and Rust, toolchains (mvm, bvm, BoxLang, nvm and Node, MatchBox), the bxcachy binary, and the core apps (`bxcachy profile-install core --yes`). External installer scripts run without a gate (section 2, rule 8). `install.sh check` is the read-only report; `packages|toolchains|binary|core --yes` re-run one stage. When the wizard exists the install ends by starting it at a terminal.
+
+### 14.2 `bxcachy init`
+
+A full-screen terminal wizard that asks the questions below, shows a review screen, then runs the matching commands. Answers are saved to `~/.config/bxcachy/answers.json` (mode 600, written atomically); a re-run starts from the saved answers.
+
+```
+bxcachy init                          the wizard (needs a terminal)
+bxcachy init --answers FILE [--yes] [--dry-run] [--json]    headless: no TUI, the plan from FILE; same --yes / --dry-run rules as every mutating verb
+bxcachy init --print-answers          the saved answers
+```
+
+Exits: as `setup` (0, 2, 4, 5, 6, 7, 8); 4 also for no terminal without `--answers`. The wizard is only a front end: every answer becomes an ordinary command, so anything it does can be run by hand.
+
+### 14.3 Pages, answers and what they run
+
+| Page | Answers (keys in `answers.json`) | Runs or writes |
+|---|---|---|
+| Desktop | `desktops` (`hyprland`, `plasma` or both), `window_style` (`tiled` or `floating`), `workspaces` (persistent count), `login_session` | `setup hyprland`, `setup plasma`, `tiling on|off`, `session set` |
+| Look | `theme` (`dark`, `light`, `auto`), `wallpaper`, `bar_position`, `world_clocks` (IANA zones with labels) | Noctalia config |
+| Input and languages | `keyboard_layouts` (e.g. `us` variant `intl`, `es`), `locale`, `natural_scroll`, `mac_keys` | Hyprland `kb_layout`, KDE keyboard config, locale, `setup xremap` |
+| Developer identity | `git_name`, `git_email`, `ssh_key`, `shell` (`bash`, `zsh`, `fish`), `prompt` (`starship` or none), `editor` | `git config`, `ssh-keygen`, shell packages and config |
+| Toolchains | `toolchains` (`java` with gradle and maven, `php` with composer and laravel, `python`, `go`) | catalog profiles |
+| Containers | `container_engine` (`podman` default, `docker`) | package and service setup |
+| Databases | `databases` (PostgreSQL, Redis, Couchbase, pgvector, Chroma, Milvus; optional MySQL/MariaDB and MongoDB) | `bxcachy db` on the chosen engine |
+| AI agents | `ai_default`, `ai_install` | catalog |
+| VPN | `vpn` (Tailscale, WireGuard, OpenVPN, Mullvad, Proton) | catalog and services |
+| Password manager | `password_manager` (Bitwarden, 1Password, KeePassXC) | catalog |
+| Gaming | `gaming` (`none`, `steam`, `bundle`) | catalog (CachyOS gaming bundle) |
+| Apps | `app_mode` (`defaults` or `custom`), `app_selection` per category, `default_browser`, `default_terminal`, `launcher`, `menu` | `install`, `runner set`, `runner menu-set` |
+| Backups and storage | `snapshots`, `backup_target` (restic or borg), `mounts`, `cache_cleanup` | snapper, timers |
+| Import | `dotfiles_repo`, `dotfiles_method` (`chezmoi`, `yadm`, `stow`, `links`) | dotfiles import (last step) |
+
+Fonts are not a question: the install always adds JetBrains Mono, JetBrains Mono Nerd, the Powerline fonts and the Nerd Fonts symbols (with the Noto fonts `setup hyprland` already installs).
+
+### 14.4 Rules
+
+- Every answer is optional; an unanswered page does nothing. The review screen lists exactly the commands that will run.
+- `init` never runs a step the user did not choose, and never overwrites a file the user changed (the config service rules of section 6 apply).
+- Starter configs are parametrized by the answers (workspaces, window style, layouts, theme, wallpaper, bar position, world clocks, natural scroll); the defaults are the current starters.
+- Databases follow the earlier plan (`plan.md` section 7): Podman is the default engine and Docker is an explicit choice; services run as containers with start, stop, status and logs, persistent volumes and generated passwords kept in a mode-600 file.
+- Runner integration (legacy `bxcachy-runner`): launcher providers `system`, `noctalia`, `rofi`, `walker`, `krunner`, `vicinae`, `hyprrunner`, `custom`; menu providers `rofi`, `walker`, `vicinae`, `hyprrunner`; commands are JSON argument arrays, never shell strings; keybindings are never changed. Default on Hyprland is Noctalia (Super+Space).
+- The TUI needs MatchBox's `bif-tui` in the native runner (task W2). Until then `init --answers` is the only form.
+
+### 14.5 Tasks
+
+W1 this section; W2 native TUI in MatchBox; W3 `install.sh` (done); W4 init engine (planner and headless run); W5 catalog additions; W6 parametrized starters; W7 TUI pages; W8 CI and docs; W9 `bxcachy db`; W10 dotfiles import; W11 `bxcachy runner`.
