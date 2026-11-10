@@ -2,10 +2,13 @@
 //
 //   plasma( facts, opts )      -> { target, errors: [ text ], warnings: [ text ], notes: [ text ], steps: [ step ] }
 //   undoPlasma( facts )        -> same shape
+//   hyprland( facts, opts )    -> same shape (packages only for now; configs and keys are the next slices)
+//   undoHyprland( facts )      -> same shape
 //   step = { id, title, kind: "pacman"|"git"|"hyprkwin", commands: [ argv... ] }
 //
 // facts: { isRoot, hasSudo, kwinVersion ("6.6.2" or ""), desktop (XDG_CURRENT_DESKTOP), sessionType (XDG_SESSION_TYPE),
-//          installed (set of pacman package names), hyprkwinInstalled, workDir (temp dir for the HyprKwin checkout) }
+//          installed (set of pacman package names), hyprkwinInstalled, workDir (temp dir for the HyprKwin checkout),
+//          os ("cachyos"/"arch"/...), arch ("x86_64"), hasPacman, hyprlandAdded (packages a previous `setup hyprland` installed) }
 // opts:  { keys: bool, undoKeys: bool }
 //
 // Errors are preconditions (exit 4): nothing runs when there is one. HyprKwin is taken from a pinned full commit.
@@ -87,6 +90,65 @@ class SetupPlan {
             out.notes.append( "Plasma keeps its own shortcuts. Run `bxcachy setup plasma --keys` to hand the clashing ones to HyprKwin (backed up; --undo-keys restores them)." );
         }
         if ( !facts.hyprkwinInstalled ) out.notes.append( "Log out and back in once so KWin picks up the animations effect." );
+        return out;
+    }
+
+    // The packages `setup hyprland` installs, one `pacman -S --needed` call. All are in the official Arch `extra` repo (and mirrored
+    // by CachyOS). Noctalia is the native `noctalia` package, the one CachyOS's own meta-package depends on. Not used: the Quickshell
+    // variant `noctalia-shell` + `noctalia-qs` (the fork conflicts with `quickshell`) and `cachyos-hypr-noctalia`, which provides
+    // and conflicts with `cachyos-desktop-settings` and could remove it from a KDE install.
+    function hyprlandPackages() {
+        return [ "hyprland", "noctalia", "uwsm", "hyprlock", "hypridle", "xdg-desktop-portal-hyprland", "hyprpolkitagent",
+                 "qt6ct", "nwg-look", "hyprpicker", "grim", "slurp", "wl-clipboard", "brightnessctl", "kitty",
+                 "adw-gtk-theme", "noto-fonts", "noto-fonts-emoji" ];
+    }
+
+    // Preconditions for `setup hyprland`. Returns { errors, warnings }.
+    function hyprlandPreflight( facts ) {
+        var out = { errors: [], warnings: [] };
+        if ( facts.isRoot ) out.errors.append( "Run as a regular user; sudo is used only for the pacman step shown in the plan" );
+        if ( !facts.hasPacman ) out.errors.append( "BxCachy requires Arch Linux or CachyOS (pacman was not found)" );
+        else if ( !arrayFind( [ "cachyos", "arch" ], facts.os ) ) out.errors.append( "Unsupported OS: " & ( len( facts.os ) ? facts.os : "unknown" ) & " (CachyOS and Arch Linux only)" );
+        if ( facts.arch != "x86_64" ) out.errors.append( "Unsupported CPU: " & facts.arch & " (x86_64 only)" );
+        if ( structKeyExists( facts.installed, "noctalia-shell" ) || structKeyExists( facts.installed, "noctalia-qs" ) ) {
+            out.warnings.append( "noctalia-shell or noctalia-qs (the Quickshell variant of Noctalia) is installed; setup installs the native `noctalia` package and does not touch it" );
+        }
+        return out;
+    }
+
+    // The steps for `setup hyprland`: the missing packages in one sudo pacman call.
+    function hyprland( facts, opts ) {
+        var out = { target: "hyprland", errors: [], warnings: [], notes: [], steps: [], added: [] };
+        var pre = hyprlandPreflight( facts );
+        out.errors = pre.errors; out.warnings = pre.warnings;
+        var missing = hyprlandPackages().filter( function( p ) { return !structKeyExists( facts.installed, p ); } );
+        if ( missing.len() && !facts.hasSudo ) out.errors.append( "sudo is required to install packages but was not found" );
+        if ( out.errors.len() ) return out;
+        if ( !missing.len() ) {
+            out.notes.append( "Hyprland and Noctalia are already installed; nothing to do." );
+            return out;
+        }
+        var pac = [ "sudo", "pacman", "-S", "--needed", "--noconfirm" ];
+        for ( var m in missing ) pac.append( m );
+        out.steps.append( { id: "packages", title: "install " & missing.len() & " packages (" & missing.toList( " " ) & ")", kind: "pacman", commands: [ pac ] } );
+        out.added = missing;
+        out.notes.append( "Log out and pick Hyprland at the login screen. KDE Plasma is untouched. Configs, keybindings and Noctalia settings come with the next setup slices." );
+        return out;
+    }
+
+    // The steps for `setup undo hyprland`: removes only the packages a previous `setup hyprland` installed (never ones that were already there).
+    function undoHyprland( facts ) {
+        var out = { target: "hyprland", errors: [], warnings: [], notes: [], steps: [] };
+        if ( facts.isRoot ) out.errors.append( "Run as a regular user" );
+        var still = facts.hyprlandAdded.filter( function( p ) { return structKeyExists( facts.installed, p ); } );
+        if ( !facts.hyprlandAdded.len() ) out.errors.append( "setup hyprland has not installed anything on this machine, nothing to undo" );
+        else if ( !still.len() ) out.errors.append( "The packages setup installed are already gone" );
+        if ( still.len() && !facts.hasSudo ) out.errors.append( "sudo is required to remove packages but was not found" );
+        if ( out.errors.len() ) return out;
+        var rm = [ "sudo", "pacman", "-Rs", "--noconfirm" ];
+        for ( var m in still ) rm.append( m );
+        out.steps.append( { id: "remove", title: "remove " & still.len() & " packages that setup installed (" & still.toList( " " ) & ")", kind: "pacman", commands: [ rm ] } );
+        out.notes.append( "pacman refuses to remove a package another package still needs; if that happens nothing is removed and its message is shown. KDE Plasma is untouched." );
         return out;
     }
 

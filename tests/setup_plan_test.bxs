@@ -3,7 +3,7 @@ failures = 0;
 function check( label, ok ) { if ( ok ) println( "ok   " & label ); else { println( "FAIL " & label ); failures++; } }
 plan = new bxcachy.SetupPlan();
 function facts( over = {} ) {
- f = { isRoot: false, hasSudo: true, kwinVersion: "6.6.2", desktop: "KDE", sessionType: "wayland", installed: { git: true, "python-dbus": true, "python-gobject": true, "qt6-tools": true }, hyprkwinInstalled: false, workDir: "/tmp/hk" };
+ f = { isRoot: false, hasSudo: true, kwinVersion: "6.6.2", desktop: "KDE", sessionType: "wayland", installed: { git: true, "python-dbus": true, "python-gobject": true, "qt6-tools": true }, hyprkwinInstalled: false, workDir: "/tmp/hk", os: "cachyos", arch: "x86_64", hasPacman: true, hyprlandAdded: [] };
  for ( k in over ) f[k] = over[k];
  return f;
 }
@@ -51,6 +51,27 @@ p = plan.undoPlasma( facts( { hyprkwinInstalled: true } ) );
 check( "undo: fetch then uninstall", ids( p ) == "fetch,uninstall" && p.steps[2].commands[1].toList( " " ) == "env -C /tmp/hk tools/uninstall.sh" );
 p = plan.undoPlasma( facts() );
 check( "undo without HyprKwin is an error", p.errors.len() == 1 );
+
+// ---- hyprland
+pk = plan.hyprlandPackages();
+check( "hyprland packages: native noctalia, no meta-package, no quickshell variant", arrayFind( pk, "noctalia" ) > 0 && !arrayFind( pk, "cachyos-hypr-noctalia" ) && !arrayFind( pk, "noctalia-shell" ) && !arrayFind( pk, "noctalia-qs" ) && arrayFind( pk, "hyprland" ) > 0 && arrayFind( pk, "uwsm" ) > 0 );
+p = plan.hyprland( facts( { installed: {} } ), {} );
+check( "hyprland: one sudo pacman call with every package", p.errors.len() == 0 && p.steps.len() == 1 && p.steps[1].commands[1].len() == 5 + pk.len() && p.steps[1].commands[1][1] == "sudo" && p.steps[1].commands[1][2] == "pacman" && p.added.len() == pk.len() );
+have = {}; for ( x in pk ) have[x] = true;
+p = plan.hyprland( facts( { installed: have } ), {} );
+check( "hyprland: everything installed means no steps and a note", p.steps.len() == 0 && p.errors.len() == 0 && find( "already installed", p.notes[1] ) > 0 );
+part = {}; part["hyprland"] = true; part["kitty"] = true;
+p = plan.hyprland( facts( { installed: part } ), {} );
+check( "hyprland: only the missing packages are installed", p.added.len() == pk.len() - 2 && !arrayFind( p.added, "hyprland" ) && !arrayFind( p.added, "kitty" ) && arrayFind( p.added, "noctalia" ) > 0 );
+check( "hyprland: root, no pacman, other OS, other CPU and no sudo are refused", plan.hyprland( facts( { isRoot: true } ), {} ).errors.len() == 1 && plan.hyprland( facts( { hasPacman: false } ), {} ).errors.len() == 1 && find( "Unsupported OS", plan.hyprland( facts( { os: "ubuntu" } ), {} ).errors[1] ) > 0 && find( "x86_64", plan.hyprland( facts( { arch: "aarch64" } ), {} ).errors[1] ) > 0 && plan.hyprland( facts( { hasSudo: false, installed: {} } ), {} ).errors.len() == 1 );
+check( "hyprland: Arch is accepted like CachyOS", plan.hyprland( facts( { os: "arch", installed: {} } ), {} ).errors.len() == 0 );
+w = {}; w["noctalia-qs"] = true;
+check( "hyprland: the Quickshell variant installed gives a warning, not an error", plan.hyprland( facts( { installed: w } ), {} ).warnings.len() == 1 && plan.hyprland( facts( { installed: w } ), {} ).errors.len() == 0 );
+added = [ "noctalia", "kitty" ]; haveAdded = { noctalia: true, kitty: true, hyprland: true };
+p = plan.undoHyprland( facts( { hyprlandAdded: added, installed: haveAdded } ) );
+check( "undo hyprland: removes only what setup installed", p.steps.len() == 1 && p.steps[1].commands[1].toList( " " ) == "sudo pacman -Rs --noconfirm noctalia kitty" );
+check( "undo hyprland: nothing recorded is an error", plan.undoHyprland( facts( { hyprlandAdded: [] } ) ).errors.len() == 1 );
+check( "undo hyprland: already removed is an error", plan.undoHyprland( facts( { hyprlandAdded: added, installed: {} } ) ).errors.len() == 1 );
 
 if ( failures > 0 ) { println( failures & " failed" ); CLIExit( 1 ); }
 println( "setup plan tests passed" );

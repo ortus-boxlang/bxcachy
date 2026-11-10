@@ -1,6 +1,6 @@
 # `bxcachy setup` (plan, 2026-11-09)
 
-Status: **plan, decisions made, no code yet.** Decided with the owner on 2026-11-09 (answers marked [owner]). Builds on COMMAND-CONTRACT.md (mutation rules, exit codes, `--json`), the config service (backup, drift, restore) and the `Installer` (argument arrays, done/failed/skipped, exit 5/6/7).
+Status: **plan, decisions made. Built: `setup plasma`, `setup undo plasma`, `tiling`, `setup hyprland` (packages only), `setup undo hyprland`, `setup status`.** Decided with the owner on 2026-11-09 (answers marked [owner]). Builds on COMMAND-CONTRACT.md (mutation rules, exit codes, `--json`), the config service (backup, drift, restore) and the `Installer` (argument arrays, done/failed/skipped, exit 5/6/7).
 
 ## 1. Shape
 
@@ -33,7 +33,7 @@ HyprKwin (`DGBooth/HyprKwin`) is a KWin script with Hyprland-style dwindle, mast
 ## 3. `setup hyprland`
 
 1. Preflight: CachyOS or Arch, x86_64, free disk, not root, `sudo` present, KDE detected (kept as is).
-2. Packages, from the CachyOS and Arch repos, one `pacman -S --needed` call (plan lists them): `hyprland`, Noctalia (`noctalia` / `noctalia-shell` + `noctalia-qs`), `uwsm`, `hyprlock`, `hypridle`, `xdg-desktop-portal-hyprland`, `hyprpolkitagent`, `qt6ct`, `nwg-look`, fonts, and the terminal/file manager already chosen in the catalog. Individual packages, not the CachyOS meta-package (section 5).
+2. Packages, from the CachyOS and Arch repos, one `pacman -S --needed` call (plan lists them): `hyprland`, Noctalia (the native `noctalia` package from `extra`; verified 2026-11-10 in a CachyOS-enabled container that `noctalia-shell` + `noctalia-qs` are a different, Quickshell-based variant whose fork conflicts with `quickshell`, and that CachyOS's meta-package depends on `noctalia`), `uwsm`, `hyprlock`, `hypridle`, `xdg-desktop-portal-hyprland`, `hyprpolkitagent`, `qt6ct`, `nwg-look`, fonts, and the terminal/file manager already chosen in the catalog. Individual packages, not the CachyOS meta-package (section 5).
 3. Session entry: make sure a Hyprland (uwsm) session exists at the login screen. The default session is not changed by `setup`.
 4. Configs, written through the config service (backup, atomic replace, journal, drift states): `~/.config/hypr/hyprland.conf` as a BxCachy-managed file that sources a user-owned `hyprland.local.conf`; Noctalia settings and theme; keybindings (Super-based, macOS-friendly: Super acts as Cmd for copy/paste/quit/tab-switch where the apps allow it).
 5. A keybinding that logs out to the login screen so KDE can be picked [owner].

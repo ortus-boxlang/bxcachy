@@ -120,6 +120,9 @@ else
   step_grep real-pkg-source-aur         0 "aur"         "$BIN" package-source vscode
   step real-pkg-source-unknown-id       3               "$BIN" package-source bxcachy-no-such-app
   step_grep real-plan-core              0 "to install"  "$BIN" plan --profile=core
+  # setup hyprland: the plan, and every package it names must exist in the real repos (stock Arch plus CachyOS)
+  step_grep real-setup-hyprland-plan    0 "Dry run"     "$BIN" setup hyprland --dry-run
+  step real-setup-hyprland-packages-exist 0 bash -c "pkgs=\$('$BIN' setup hyprland --dry-run --json | jq -r '.data.steps[0].commands[0][5:][]'); test -n \"\$pkgs\" && sudo pacman -Si \$pkgs >/dev/null"
   step real-install-no-yes              2               "$BIN" profile-install core
   step real-install-profile-core        0               "$BIN" profile-install core --yes
   step real-install-profile-core-rerun  0               "$BIN" profile-install core --yes

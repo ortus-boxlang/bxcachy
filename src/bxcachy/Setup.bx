@@ -31,9 +31,40 @@ class Setup {
         return false;
     }
 
+    // The OS id from os-release (BXCACHY_OS_RELEASE overrides the file for tests): "cachyos", "arch" or whatever the file says.
+    function osId() {
+        var file = getSystemSetting( "BXCACHY_OS_RELEASE", "/etc/os-release" );
+        if ( !fileExists( file ) ) return "";
+        for ( var line in listToArray( fileRead( file ), chr( 10 ) ) ) {
+            if ( left( line, 3 ) == "ID=" ) return lCase( replace( replace( mid( line, 4, len( line ) ), '"', "", "all" ), "'", "", "all" ) );
+        }
+        return "";
+    }
+
+    // Where `setup hyprland` remembers which packages it installed (so undo removes only those).
+    function hyprlandStateFile() {
+        return new bxcachy.ConfigService().stateDir() & "/setup-hyprland.json";
+    }
+
+    // The packages a previous `setup hyprland` installed ([] when none).
+    function hyprlandAdded() {
+        var file = hyprlandStateFile();
+        if ( !fileExists( file ) ) return [];
+        try {
+            var data = jsonDeserialize( fileRead( file ) );
+            return data.packages;
+        } catch ( any e ) {
+            return [];
+        }
+    }
+
     // Everything SetupPlan needs to know about this machine.
     function facts() {
         return {
+            os: osId(),
+            arch: trim( variables.inst.exec( [ "uname", "-m" ], 10 ).output ),
+            hasPacman: variables.inst.hasCommand( "pacman" ),
+            hyprlandAdded: hyprlandAdded(),
             isRoot: variables.inst.isRoot(),
             hasSudo: variables.inst.hasCommand( "sudo" ),
             kwinVersion: kwinVersion(),
@@ -57,13 +88,38 @@ class Setup {
         return execute( "setup undo plasma", new bxcachy.SetupPlan().undoPlasma( f ), f, yes, dryRun, asJson );
     }
 
+    // `setup hyprland`: the missing packages, then the list of what was installed is remembered for undo.
+    function hyprland( opts, yes, dryRun, asJson ) {
+        var f = facts();
+        var plan = new bxcachy.SetupPlan().hyprland( f, opts );
+        var exit = execute( "setup hyprland", plan, f, yes, dryRun, asJson );
+        if ( exit == 0 && yes && !dryRun && plan.added.len() ) {
+            var merged = hyprlandAdded();
+            for ( var p in plan.added ) if ( !arrayFind( merged, p ) ) merged.append( p );
+            new bxcachy.ConfigService().writeAtomic( hyprlandStateFile(), jsonSerialize( { packages: merged, time: now() & "" } ), "600" );
+        }
+        return exit;
+    }
+
+    // `setup undo hyprland`: removes only the packages setup installed, then forgets them.
+    function undoHyprland( yes, dryRun, asJson ) {
+        var f = facts();
+        var exit = execute( "setup undo hyprland", new bxcachy.SetupPlan().undoHyprland( f ), f, yes, dryRun, asJson );
+        if ( exit == 0 && yes && !dryRun && fileExists( hyprlandStateFile() ) ) fileDelete( hyprlandStateFile() );
+        return exit;
+    }
+
     // `setup status`
     function status( asJson ) {
-        var data = { plasma: { kwin: kwinVersion(), hyprkwin: hyprkwinInstalled() } };
+        var have = new bxcachy.Packages( variables.cli, {} ).installedNames();
+        var wanted = new bxcachy.SetupPlan().hyprlandPackages();
+        var present = wanted.filter( function( p ) { return structKeyExists( have, p ); } );
+        var data = { plasma: { kwin: kwinVersion(), hyprkwin: hyprkwinInstalled() }, hyprland: { installed: present.len(), wanted: wanted.len(), complete: present.len() == wanted.len() } };
         if ( asJson ) println( variables.cli.envelope( "setup status", 0, data ) );
         else {
             println( "plasma: kwin " & ( len( data.plasma.kwin ) ? data.plasma.kwin : "not installed" ) );
             println( "plasma: HyprKwin " & ( data.plasma.hyprkwin ? "installed" : "not installed" ) );
+            println( "hyprland: " & data.hyprland.installed & " of " & data.hyprland.wanted & " packages installed" );
         }
         return 0;
     }

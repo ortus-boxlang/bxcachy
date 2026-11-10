@@ -217,7 +217,7 @@ class {
           CLIExit( config.configRestore( entry, p[4], yes, dryRun ) );
           break;
          case "setup":
-          // Targets: plasma (HyprKwin tiling on KDE), undo plasma, status. hyprland follows.
+          // Targets: plasma (HyprKwin tiling on KDE), hyprland (packages), undo plasma|hyprland, status.
           setupSub = p.len() >= 2 ? p[2] : "";
           setupYes = structKeyExists( args.options, "yes" );
           setupDry = structKeyExists( args.options, "dry-run" );
@@ -231,11 +231,13 @@ class {
           if ( setupSub == "status" && p.len() == 2 ) {
            CLIExit( st.status( asJson ) );
           }
-          if ( setupSub == "hyprland" ) {
-           println( "setup hyprland is not available yet" );
-           CLIExit( 3 );
+          if ( setupSub == "hyprland" && p.len() == 2 ) {
+           CLIExit( st.hyprland( {}, setupYes, setupDry, asJson ) );
           }
-          println( "Usage: bxcachy setup plasma [--keys | --undo-keys] | undo plasma | status [--yes] [--dry-run] [--json]" );
+          if ( setupSub == "undo" && p.len() == 3 && p[3] == "hyprland" ) {
+           CLIExit( st.undoHyprland( setupYes, setupDry, asJson ) );
+          }
+          println( "Usage: bxcachy setup plasma [--keys | --undo-keys] | hyprland | undo plasma|hyprland | status [--yes] [--dry-run] [--json]" );
           CLIExit( 2 );
           break;
          case "tiling":
