@@ -173,7 +173,8 @@ class Db {
         directoryCreate( dir, true, true );
         var envFile = "";
         if ( !structIsEmpty( e.secret ) ) {
-            var pw = newSecret() & ( e.secret.suffix ?: "" );
+            // reuse the password of an earlier container with this name: its data volume (kept by `remove`) still has that password
+            var pw = fileExists( dir & "/password" ) ? trim( fileRead( dir & "/password" ) ) : newSecret() & ( e.secret.suffix ?: "" );
             if ( len( pw ) < 16 ) return say( cmd, 4, { error: "Could not generate a password" }, arguments.asJson, [ "error: could not generate a password" ] );
             envFile = dir & "/database.env";
             var envText = "";

@@ -115,6 +115,10 @@ run "$binary" db remove postgres --delete-data --dry-run | grep -q 'AND delete i
 run "$binary" db remove postgres --yes | grep -q 'were kept' || fail 'remove'
 [[ ! -d "$FAKE/containers/$c-postgres-default" && -f "$dir/password" ]] || fail 'remove keeps the password file (and the data volume)'
 ! grep -q '^volume rm' "$FAKE/podman.log" || fail 'plain remove must not delete a volume'
+# starting the same name again reuses the kept volume, so it must reuse the kept password
+run "$binary" db start postgres --yes >/dev/null || fail 'start again after remove'
+[[ "$(tr -d '\n' < "$dir/password")" == "$pw" ]] || fail 'the password changed although the data volume was kept'
+[[ "$(cat "$dir/database.env")" == "POSTGRES_PASSWORD=$pw" ]] || fail 'the env file lost the old password'
 run "$binary" db remove postgres --delete-data --yes >/dev/null || fail 'remove --delete-data'
 grep -q "^volume rm $c-postgres-default" "$FAKE/podman.log" && [[ ! -d "$dir" ]] || fail '--delete-data removes the volume and the files'
 
