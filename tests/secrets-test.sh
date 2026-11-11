@@ -130,6 +130,28 @@ s import "$tmp/in.env" --overwrite --yes >/dev/null; [[ "$(s get ANTHROPIC_API_K
 [[ "$(s get NEW_ONE --show)" == 'plain' ]] || fail 'a plain .env line imports'
 [[ "$(rc "$binary" secrets import "$tmp/nope")" == 4 ]] || fail 'a missing file exits 4'
 
+# setup: no keyring on the machine -> install libsecret, age and a keyring (KWallet on Plasma, GNOME Keyring otherwise); never without --yes
+mkdir -p "$tmp/sbin"; : > "$tmp/pacman.log"
+printf '#!/bin/sh\necho "pacman $*" >> "$PACLOG"\n' > "$tmp/sbin/pacman"
+printf '#!/bin/sh\nexec "$@"\n' > "$tmp/sbin/sudo"
+printf '#!/bin/sh\nexit 1\n' > "$tmp/sbin/busctl"
+chmod +x "$tmp/sbin"/*
+for c in sh grep cat; do ln -sf "$(command -v $c)" "$tmp/sbin/$c"; done
+su() { env XDG_CURRENT_DESKTOP="${DESK:-}" HOME="$tmp/home" BXCACHY_CONFIG_HOME="$tmp/cfg3" BXCACHY_DATA_HOME="$tmp/data3" PACLOG="$tmp/pacman.log" PATH="$tmp/sbin" "$@"; }
+{ su "$binary" secrets setup --json || true; } | jq -e '.data.keyring_install == "gnome-keyring" and (.data.packages | index("libsecret")) and (.data.packages | index("age"))' >/dev/null || fail 'setup plan: gnome-keyring off Plasma'
+[[ ! -s "$tmp/pacman.log" ]] || fail 'the setup plan ran pacman'
+{ DESK=KDE su "$binary" secrets setup --json || true; } | jq -e '.data.keyring_install == "kwallet"' >/dev/null || fail 'setup plan: kwallet on Plasma'
+{ su "$binary" secrets setup --keyring=none --json || true; } | jq -e '.data.file_backend == true and .data.keyring_install == ""' >/dev/null || fail 'setup --keyring=none'
+rc2=0; su "$binary" secrets setup >/dev/null 2>&1 || rc2=$?; [[ "$rc2" == 2 ]] || fail "setup without --yes exits 2 (got $rc2)"
+su "$binary" secrets setup --yes | grep -q 'Done' || fail 'setup --yes'
+grep -q 'pacman -S --needed --noconfirm libsecret age gnome-keyring' "$tmp/pacman.log" || fail "setup installs: $(cat "$tmp/pacman.log")"
+su "$binary" secrets setup --keyring=none --yes >/dev/null; [[ "$(jq -r .backend "$tmp/cfg3/bxcachy/secrets.json")" == file ]] || fail '--keyring=none saves the file backend'
+rc3=0; su "$binary" secrets setup --keyring=bogus >/dev/null 2>&1 || rc3=$?; [[ "$rc3" == 4 ]] || fail 'an unknown keyring exits 4'
+# a keyring that is already there is kept, nothing but missing tools is installed
+: > "$tmp/pacman.log"; printf '#!/bin/sh\necho "org.freedesktop.secrets 1 kwalletd6"\n' > "$tmp/sbin/busctl"; printf '#!/bin/sh\n' > "$tmp/sbin/secret-tool"; printf '#!/bin/sh\n' > "$tmp/sbin/age"; chmod +x "$tmp/sbin"/*
+su "$binary" secrets setup --yes --json | jq -e '.data.keyring_found == true and (.data.packages | length) == 0' >/dev/null || fail 'an existing keyring and tools need no install'
+[[ ! -s "$tmp/pacman.log" ]] || fail 'pacman ran although nothing was missing'
+
 # unset: plan, then apply
 [[ "$(code env -u GEMINI_API_KEY -u OPENAI_API_KEY -u ANTHROPIC_API_KEY HOME="$tmp/home" BXCACHY_CONFIG_HOME="$tmp/cfg" FAKE_KEYRING="$FAKE_KEYRING" PATH="$tmp/bin:$PATH" "$binary" secrets unset QUOTE_TEST)" == 2 ]] || fail 'unset without --yes exits 2'
 [[ -f "$tmp/kr/QUOTE_TEST" ]] || fail 'the plan deleted the secret'
