@@ -31,6 +31,18 @@ class Init {
         return 0;
     }
 
+    // Catalog app id -> its shells (only for apps that name some), so Customize never installs a Hyprland-only app on Plasma.
+    function shellMap() {
+        var out = {};
+        for ( var a in new bxcachy.Catalog().load().apps ) if ( structKeyExists( a, "shells" ) && a.shells.len() ) out[ a.id ] = a.shells;
+        return out;
+    }
+
+    // The wizard's pages: the built-in ones plus the Customize pages generated from the catalog.
+    function wizardSpec() {
+        return new bxcachy.AppPages().inject( jsonDeserialize( new bxcachy.WizardData().demoPages() ), new bxcachy.Catalog().load() );
+    }
+
     // This program, to run the plan's own commands: BXCACHY_SELF (tests, odd installs), else `bxcachy` on PATH.
     function selfPath() { return getSystemSetting( "BXCACHY_SELF", "bxcachy" ); }
 
@@ -44,7 +56,7 @@ class Init {
 
     // Runs the plan for these answers. yes/dryRun as every mutating command: no --yes prints it (exit 2), --dry-run exits 0.
     function run( answers, yes, dryRun, asJson ) {
-        var plan = new bxcachy.InitPlan().plan( arguments.answers );
+        var plan = new bxcachy.InitPlan().plan( arguments.answers, shellMap() );
         var data = { steps: plan.steps, pending: plan.pending, errors: plan.errors, done: [], failed: [], skipped: [] };
         if ( plan.errors.len() ) {
             if ( arguments.asJson ) println( variables.cli.envelope( "init", 4, data ) );
@@ -86,7 +98,7 @@ class Init {
     // The wizard, then the plan. The review screen is the confirmation, so the steps run without a second prompt
     // (unless --dry-run). Needs a terminal.
     function wizard( dryRun, asJson ) {
-        var spec = jsonDeserialize( new bxcachy.WizardData().demoPages() );
+        var spec = wizardSpec();
         var result = "";
         try {
             result = new bxcachy.Wizard( spec, loadSaved() ).run();

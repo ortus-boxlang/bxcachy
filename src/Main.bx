@@ -254,6 +254,18 @@ class {
           println( "Usage: bxcachy setup plasma [--keys | --undo-keys] | hyprland [--terminal=ghostty|kitty|alacritty|foot|konsole] [--layout=dwindle|master|scrolling|floating] [--workspaces=N] [--natural-scroll] [--layouts=us-intl,es] [--theme=dark|light|auto] [--wallpaper=box|grid|aurora|minimal] | terminal [--default=ghostty] [--also=a,b] | shell [--shell=zsh|fish|bash] | xremap [--build=hypr|kde] | undo plasma|hyprland|xremap | status [--yes] [--dry-run] [--json]" );
           CLIExit( 2 );
           break;
+         case "default":
+          // Make an installed app your default browser or terminal. See COMMAND-CONTRACT.md 13.12.
+          dfltSub = p.len() >= 2 ? p[2] : "";
+          dflt = new bxcachy.Defaults( cli );
+          dfltYes = structKeyExists( args.options, "yes" );
+          dfltDry = structKeyExists( args.options, "dry-run" );
+          if ( dfltSub == "show" && p.len() == 2 ) CLIExit( dflt.show( asJson ) );
+          if ( dfltSub == "browser" && p.len() == 3 ) CLIExit( dflt.browser( p[3], dfltYes, dfltDry, asJson ) );
+          if ( dfltSub == "terminal" && p.len() == 3 ) CLIExit( dflt.terminal( p[3], dfltYes, dfltDry, asJson ) );
+          println( "Usage: bxcachy default show | browser ID | terminal ID [--yes] [--dry-run] [--json]" );
+          CLIExit( 2 );
+          break;
          case "dotfiles":
           // Apply your own dotfiles repository (method detected: chezmoi, yadm, stow or links). See COMMAND-CONTRACT.md 13.11.
           dfSub = p.len() >= 2 ? p[2] : "";

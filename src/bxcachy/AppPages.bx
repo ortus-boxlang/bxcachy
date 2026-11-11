@@ -1,0 +1,76 @@
+// The "customize" pages of the setup wizard, generated from the catalog: one page per catalog group, one multi-choice list per
+// category, with the catalog's default apps ticked. The pages carry `when: { id: "app_mode", equals: "custom" }`, so they only
+// appear when the user picks Customize on the Apps page (Basic installs the catalog's default apps without asking).
+//
+// Categories that the wizard already asks about on their own are left out, so two questions never disagree:
+// AI "Coding orchestration" (the orchestrators question), Desktop "Launchers" (the launcher question), Terminal "Terminal"
+// (the terminal question) and Development "Shell" (the shell question).
+class AppPages {
+    function skipped() {
+        return [ "ai/Coding orchestration", "desktop/Launchers", "terminal/Terminal", "development/Shell" ];
+    }
+
+    // A category's answer key: apps_<group>_<category as a plain slug>.
+    function questionId( group, category ) {
+        return "apps_" & arguments.group & "_" & reReplace( lcase( arguments.category ), "[^a-z0-9]+", "_", "all" );
+    }
+
+    function option( a ) {
+        var desc = a.description & ( structKeyExists( a, "macos" ) && !isNull( a.macos ) && len( a.macos ) ? " (macOS: " & a.macos & ")" : "" );
+        if ( structKeyExists( a, "shells" ) && a.shells.len() ) desc = "[" & a.shells.toList( "/" ) & " only] " & desc;
+        return { value: a.id, label: a.name, description: desc };
+    }
+
+    // The pages, one per group that has anything to choose.
+    function pages( cat ) {
+        var out = [];
+        var skip = skipped();
+        var groups = arguments.cat.groups.sort( function( a, b ) { return a.order - b.order; } );
+        var cats = arguments.cat.categories.sort( function( a, b ) { return a.order - b.order; } );
+        for ( var g in groups ) {
+            var qs = [];
+            for ( var c in cats ) {
+                if ( c.group != g.id || arrayFind( skip, g.id & "/" & c.title ) ) continue;
+                var apps = arguments.cat.apps.filter( function( a ) { return a.group == g.id && a.category == c.title; } );
+                if ( !apps.len() ) continue;
+                var defaults = apps.filter( function( a ) { return a.tier == "default"; } ).map( function( a ) { return a.id; } );
+                qs.append( { type: "multi", id: questionId( g.id, c.title ), label: c.title, default: defaults, options: apps.map( function( a ) { return option( a ); } ) } );
+            }
+            if ( qs.len() ) out.append( { id: "apps-" & g.id, title: g.title, intro: g.blurb, when: { id: "app_mode", equals: "custom" }, questions: qs } );
+        }
+        return out;
+    }
+
+    // The browsers of the catalog as options for the default-browser question.
+    function browserOptions( cat ) {
+        return arguments.cat.apps.filter( function( a ) { return a.category == "Browsers"; } ).map( function( a ) { return option( a ); } );
+    }
+
+    // The wizard spec with the generated pages inserted after the Apps page, and the default-browser options from the catalog.
+    function inject( spec, cat ) {
+        var out = arguments.spec;
+        var built = [];
+        for ( var pg in out.pages ) {
+            if ( pg.id == "apps" ) for ( var q in pg.questions ) if ( q.type == "choice" && q.id == "default_browser" ) {
+                q.options = browserOptions( arguments.cat );
+                var ids = q.options.map( function( o ) { return o.value; } );
+                if ( !arrayFind( ids, q.default ) && ids.len() ) q.default = ids[ 1 ];
+            }
+            built.append( pg );
+            if ( pg.id == "apps" ) for ( var gp in pages( arguments.cat ) ) built.append( gp );
+        }
+        out.pages = built;
+        return out;
+    }
+
+    // All app ids chosen on the generated pages, from the answers ([] in Basic mode).
+    function selected( answers ) {
+        var out = [];
+        if ( !structKeyExists( arguments.answers, "app_mode" ) || arguments.answers.app_mode != "custom" ) return out;
+        for ( var k in structKeyArray( arguments.answers ) ) {
+            if ( left( k, 5 ) != "apps_" || !isArray( arguments.answers[ k ] ) ) continue;
+            for ( var id in arguments.answers[ k ] ) if ( !arrayFind( out, id ) ) out.append( id );
+        }
+        return out;
+    }
+}

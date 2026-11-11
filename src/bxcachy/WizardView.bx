@@ -229,8 +229,8 @@ class WizardView {
     }
 
     function pages( app, tick, width, height, phase ) {
-        var n = app.pageCount();
-        var step = app.screen() == "page" ? app.pageIndex() : n + 1;
+        var n = app.stepCount() - 1;
+        var step = app.screen() == "page" ? app.stepOf( app.pageIndex() ) : n + 1;
         gtext( 3, 1, "◆ BxCachy", true, arguments.phase, variables.BASE );
         put( 13, 1, "setup", variables.SUB, variables.BASE );
         if ( arguments.width < 92 ) put( 20, 1, "· Powered by BoxLang · www.boxlang.io", variables.OVERLAY, variables.BASE );
@@ -262,10 +262,16 @@ class WizardView {
         panel( arguments.x, arguments.y, arguments.w, arguments.h, "Steps", false, arguments.phase );
         var cx = arguments.x + int( arguments.w / 2 );
         poweredBy( cx, arguments.y + arguments.h - 4, arguments.phase, variables.MANTLE, variables.OVERLAY, variables.SURFACE1 );
+        var vis = app.visiblePages();
         var n = app.pageCount();
         var current = app.screen() == "page" ? app.pageIndex() : 0;
-        for ( var i = 1; i <= n + 1; i++ ) {
-            var ry = arguments.y + 1 + i;
+        var steps = [];
+        for ( var vp in vis ) steps.append( vp );
+        steps.append( n + 1 );
+        var row = 0;
+        for ( var i in steps ) {
+            row++;
+            var ry = arguments.y + 1 + row;
             if ( ry >= arguments.y + arguments.h - 4 ) break;
             var isReview = i == n + 1;
             var title = isReview ? "Review" : app.spec().pages[ i ].title;
@@ -280,8 +286,8 @@ class WizardView {
             var mark = ( done || here || reached ) ? "●" : "○";
             var col = done ? variables.GREEN : ( here ? variables.CYAN : ( reached ? variables.SUB : variables.OVERLAY ) );
             put( arguments.x + 3, ry, mark, col, bg );
-            if ( here ) gtext( arguments.x + 6, ry, title, true, arguments.phase, bg );
-            else put( arguments.x + 6, ry, title, reached ? variables.TEXT : variables.OVERLAY, bg );
+            if ( here ) gtext( arguments.x + 6, ry, left( title, arguments.w - 9 ), true, arguments.phase, bg );
+            else put( arguments.x + 6, ry, left( title, arguments.w - 9 ), reached ? variables.TEXT : variables.OVERLAY, bg );
             if ( reached ) variables.hits.append( { x: arguments.x + 1, y: ry, w: arguments.w - 2, h: 1, kind: isReview ? "review" : "page", n: i } );
         }
     }

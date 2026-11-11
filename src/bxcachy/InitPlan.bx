@@ -6,7 +6,7 @@
 class InitPlan {
     // Answer keys that are saved but have no command behind them yet.
     function pendingKeys() {
-        return [ "ssh_key", "app_mode" ];
+        return [ "ssh_key" ];
     }
 
     // Answers that shape the Hyprland starter (applied by `setup hyprland`; pending when Hyprland is not being set up).
@@ -35,8 +35,18 @@ class InitPlan {
         return "";
     }
 
-    // The plan: { steps, pending, errors }.
-    function plan( answers ) {
+    // Whether an app may be installed for the chosen desktop(s): apps with a `shells` list are for those desktops only. shellMap is
+    // id -> shells array (from the catalog); an unknown id or empty list means any desktop.
+    function shellOk( id, desktops, shellMap ) {
+        if ( !structKeyExists( arguments.shellMap, arguments.id ) || !arguments.shellMap[ arguments.id ].len() ) return true;
+        if ( arguments.desktops == "hyprland" ) return arrayFind( arguments.shellMap[ arguments.id ], "hyprland" ) > 0;
+        if ( arguments.desktops == "plasma" ) return arrayFind( arguments.shellMap[ arguments.id ], "plasma" ) > 0;
+        return true;
+    }
+
+    // The plan: { steps, pending, errors }. shellMap (optional): catalog app id -> its shells, to keep desktop-specific apps off
+    // the other desktop when "customize" picked them.
+    function plan( answers, shellMap = {} ) {
         var a = arguments.answers;
         var out = { steps: [], pending: [], errors: [] };
         var desktops = pick( a, "desktops" );
@@ -91,8 +101,22 @@ class InitPlan {
         var engine = pick( a, "container_engine" );
         if ( engine == "podman" ) out.steps.append( { id: "containers", title: "install Podman and its tools", argv: [ "bxcachy", "profile-install", "containers" ] } );
         if ( pick( a, "gaming" ) == "bundle" ) out.steps.append( { id: "gaming", title: "install the CachyOS gaming bundle", argv: [ "bxcachy", "profile-install", "gaming" ] } );
+        // apps: Basic installs the catalog's recommended set for the chosen desktop(s); Customize installs what was ticked
+        var mode = pick( a, "app_mode" );
+        var chosenApps = [];
+        if ( mode == "defaults" ) {
+            var shellFlag = desktops == "hyprland" ? "--shell=hyprland" : ( desktops == "plasma" ? "--shell=plasma" : ( desktops == "both" ? "--shell=all" : "" ) );
+            var bargv = [ "bxcachy", "install" ];
+            if ( len( shellFlag ) ) bargv.append( shellFlag );
+            out.steps.append( { id: "apps-basic", title: "install the recommended apps (the catalog's default set)", argv: bargv } );
+        } else if ( mode == "custom" ) {
+            for ( var cid in new bxcachy.AppPages().selected( a ) ) if ( shellOk( cid, desktops, arguments.shellMap ) ) chosenApps.append( cid );
+        }
+        var browser = pick( a, "default_browser" );
+        if ( len( browser ) && !arrayFind( chosenApps, browser ) ) chosenApps.append( browser );
         // everything else that is one package each goes in a single install
         var apps = [];
+        for ( var ca in chosenApps ) apps.append( ca );
         for ( var id in jsApps ) apps.append( id );
         for ( var id in pick( a, "ai_orchestrators", [] ) ) apps.append( id );
         for ( var id in pick( a, "ai_agents", [] ) ) apps.append( id );
@@ -115,6 +139,9 @@ class InitPlan {
             for ( var id in apps ) iargv.append( id );
             out.steps.append( { id: "apps", title: "install " & apps.toList( ", " ), argv: iargv } );
         }
+        // defaults: the browser and the terminal you picked (both are installed by now)
+        if ( len( browser ) ) out.steps.append( { id: "default-browser", title: "make " & browser & " your default browser", argv: [ "bxcachy", "default", "browser", browser ] } );
+        if ( len( terminal ) ) out.steps.append( { id: "default-terminal", title: "make " & terminal & " your default terminal", argv: [ "bxcachy", "default", "terminal", terminal ] } );
         // databases: remember the container engine, then start each chosen service (nothing is started unless it was picked)
         var dbs = pick( a, "databases", [] );
         if ( dbs.len() || pick( a, "container_engine" ) == "docker" ) {

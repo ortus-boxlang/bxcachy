@@ -9,7 +9,7 @@ p = ip.plan( {} );
 check( "no answers, no steps (an unanswered page does nothing)", p.steps.len() == 0 && p.pending.len() == 0 && p.errors.len() == 0 );
 
 p = ip.plan( { desktops: "hyprland", layout: "master", terminal: "ghostty", shell: "zsh" } );
-check( "Hyprland only: hyprland, terminal, shell, then the session", ids( p ) == "hyprland,terminal,shell,session" );
+check( "Hyprland only: hyprland, terminal, shell, then the session", ids( p ) == "hyprland,terminal,shell,default-terminal,session" );
 check( "hyprland step carries the terminal and the layout", cmd( p, "hyprland" ) == "bxcachy setup hyprland --terminal=ghostty --layout=master" );
 check( "KDE is not configured when only Hyprland is chosen", find( "plasma", ids( p ) ) == 0 || !find( "setup plasma", p.steps.map( function( s ) { return s.argv.toList( " " ); } ).toList( "|" ) ) );
 check( "the session follows the desktop", cmd( p, "session" ) == "bxcachy session set hyprland" );
@@ -41,8 +41,8 @@ check( "Fuzzel and Wofi are installed from the catalog", cmd( p, "apps" ) == "bx
 p = ip.plan( { launcher: "noctalia", menu: "rofi" } );
 check( "Noctalia needs no package of its own", cmd( p, "apps" ) == "bxcachy install rofi" && cmd( p, "launcher" ) == "bxcachy runner set noctalia" );
 
-p = ip.plan( { ssh_key: true, app_mode: "custom", natural_scroll: false, layouts: [] } );
-check( "answers without a command are listed as pending, not dropped, and not when empty or off", p.pending.toList( "," ) == "ssh_key,app_mode" && p.steps.len() == 0 );
+p = ip.plan( { ssh_key: true, natural_scroll: false, layouts: [] } );
+check( "answers without a command are listed as pending, not dropped, and not when empty or off", p.pending.toList( "," ) == "ssh_key" && p.steps.len() == 0 );
 p = ip.plan( { container_engine: "docker", databases: [ "postgres", "meilisearch" ] } );
 check( "databases: docker is remembered, then each service starts", ids( p ) == "apps,db-engine,db-postgres,db-meilisearch" && cmd( p, "db-engine" ) == "bxcachy db engine docker" && cmd( p, "db-postgres" ) == "bxcachy db start postgres" && cmd( p, "db-meilisearch" ) == "bxcachy db start meilisearch" );
 p = ip.plan( { databases: [ "postgres", "redis" ], database_passwords: "ask" } );
@@ -78,6 +78,22 @@ check( "the gaming bundle is the gaming profile", cmd( ip.plan( { gaming: "bundl
 
 p = ip.plan( { desktops: "gnome" } );
 check( "an unknown desktop is an error", p.errors.len() == 1 && p.steps.len() == 0 );
+
+// ---- apps: Basic or Customize, the default browser and terminal ----
+check( "Basic installs the recommended set for the chosen desktop", cmd( ip.plan( { desktops: "hyprland", app_mode: "defaults" } ), "apps-basic" ) == "bxcachy install --shell=hyprland" && cmd( ip.plan( { desktops: "plasma", app_mode: "defaults" } ), "apps-basic" ) == "bxcachy install --shell=plasma" && cmd( ip.plan( { desktops: "both", app_mode: "defaults" } ), "apps-basic" ) == "bxcachy install --shell=all" );
+check( "Basic without a desktop answer uses the running desktop", cmd( ip.plan( { app_mode: "defaults" } ), "apps-basic" ) == "bxcachy install" );
+check( "no app_mode answer, no app step", find( "apps-basic", ids( ip.plan( { desktops: "hyprland" } ) ) ) == 0 );
+sm = { "hypr-tool": [ "hyprland" ], "kde-tool": [ "plasma" ] };
+c = { app_mode: "custom", apps_everyday_browsers: [ "firefox" ], apps_media_video: [ "mpv", "hypr-tool", "kde-tool" ] };
+c.desktops = "plasma"; p = ip.plan( c, sm );
+check( "Customize installs what was ticked, dropping apps for the other desktop", cmd( p, "apps" ) == "bxcachy install firefox mpv kde-tool" && find( "apps-basic", ids( p ) ) == 0 );
+c.desktops = "hyprland"; check( "and the reverse on Hyprland", cmd( ip.plan( c, sm ), "apps" ) == "bxcachy install firefox mpv hypr-tool" );
+c.desktops = "both"; check( "Both keeps everything", cmd( ip.plan( c, sm ), "apps" ) == "bxcachy install firefox mpv hypr-tool kde-tool" );
+p = ip.plan( { app_mode: "custom", default_browser: "brave", apps_everyday_browsers: [ "firefox" ] } );
+check( "the default browser is installed too (even when not ticked) and set as default, after the install", cmd( p, "apps" ) == "bxcachy install firefox brave" && cmd( p, "default-browser" ) == "bxcachy default browser brave" && ids( p ) == "apps,default-browser" );
+p = ip.plan( { app_mode: "defaults", default_browser: "firefox" } );
+check( "in Basic mode a different default browser is added to the install", ids( p ) == "apps-basic,apps,default-browser" && cmd( p, "apps" ) == "bxcachy install firefox" );
+check( "the default terminal follows the terminal answer", cmd( ip.plan( { terminal: "kitty" } ), "default-terminal" ) == "bxcachy default terminal kitty" );
 
 if ( failures > 0 ) { println( failures & " failed" ); exit( 1 ); }
 println( "all passed" );

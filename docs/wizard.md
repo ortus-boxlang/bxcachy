@@ -28,6 +28,8 @@ Exit codes: 0 answers written, 130 cancelled (nothing written), 2 usage, 4 unrea
 
 Any question may carry `"when": { "id": "other_question", "in": ["a", "b"] }` (or `"equals": "a"`): it is shown only while that answer matches, and a hidden question is left out of the review and the answers file.
 
+A whole page may carry `when` too: it is then skipped by Next and Back and left out of the sidebar, the step count, the review and the result. `bxcachy init` adds one page per catalog group after the Apps page this way (see `AppPages`), shown only for "Customize".
+
 Answers are a flat JSON object keyed by question id: a string (choice, text), an array of strings (multi), a number, or a bool.
 
 ## Keys and mouse

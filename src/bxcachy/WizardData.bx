@@ -583,13 +583,38 @@ class WizardData {
           "options": [
             {
               "value": "defaults",
-              "label": "Use the defaults",
-              "description": "The recommended app for each category."
+              "label": "Basic: the recommended set (recommended)",
+              "description": "An opinionated selection of apps for developers, from the BxCachy catalog. Nothing to pick."
             },
             {
               "value": "custom",
-              "label": "Let me choose",
-              "description": "Go through each category and pick."
+              "label": "Customize",
+              "description": "Go through each category on the next pages and tick what you want."
+            }
+          ],
+          "help": "Basic installs the recommended apps. Customize lets you choose per category on the next pages."
+        },
+        {
+          "type": "choice",
+          "id": "default_browser",
+          "label": "Default browser",
+          "help": "It is installed if needed and set as your default.",
+          "default": "brave",
+          "options": [
+            {
+              "value": "brave",
+              "label": "Brave",
+              "description": "Chromium-based, privacy-minded."
+            },
+            {
+              "value": "firefox",
+              "label": "Firefox",
+              "description": "Independent engine."
+            },
+            {
+              "value": "chromium",
+              "label": "Chromium",
+              "description": "The open source base of Chrome."
             }
           ]
         },

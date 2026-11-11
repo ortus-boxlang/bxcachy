@@ -53,5 +53,17 @@ app = new bxcachy.WizardApp( jsonDeserialize( new bxcachy.WizardData().demoPages
 a1 = shot( 120, 36, 100 ); app.onKey( "Enter" ); b1 = shot( 120, 36, 100 );
 check( "a new screen fades in (first frame is dimmer, same text)", find( "Desktop", b1 ) > 0 );
 
+// ---- the Customize pages: hidden in Basic mode, shown (and counted) in Customize mode ----
+spec2 = new bxcachy.AppPages().inject( jsonDeserialize( new bxcachy.WizardData().demoPages() ), new bxcachy.Catalog().load() );
+app = new bxcachy.WizardApp( spec2 ); app.onKey( "Enter" );
+t = ""; view.paint( app, 100, 120, 36 ); t = tui.render_to_string( 120, 36 );
+check( "Basic mode: 9 pages and the review, no app group pages in the sidebar", find( "step 1 of 10", t ) > 0 && find( "Everyday", t ) == 0 );
+app = new bxcachy.WizardApp( spec2, { app_mode: "custom" } ); app.onKey( "Enter" );
+view.paint( app, 100, 120, 36 ); t = tui.render_to_string( 120, 36 );
+check( "Customize mode: 20 pages and the review, with the group pages in the sidebar", find( "step 1 of 21", t ) > 0 && find( "Everyday", t ) > 0 && find( "Development", t ) > 0 );
+app.gotoPage( 8 );
+view.paint( app, 100, 120, 36 ); t = tui.render_to_string( 120, 36 );
+check( "a generated page lists a category with ticked defaults and descriptions", find( "Development", t ) > 0 && find( "◆", t ) > 0 && find( "◇", t ) > 0 && find( "▸", t ) > 0 );
+
 if ( failures > 0 ) { println( failures & " failed" ); exit( 1 ); }
 println( "all passed" );

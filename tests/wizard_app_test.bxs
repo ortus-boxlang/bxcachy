@@ -102,5 +102,26 @@ check( "no database is preselected", a.answerList( "databases" ).len() == 0 );
 a = mk();
 check( "the password question appears only once a database is picked", !a.finalAnswers().keyExists( "database_passwords" ) && mk( { databases: [ "postgres" ] } ).finalAnswers().keyExists( "database_passwords" ) && mk().answerString( "database_passwords" ) == "generate" );
 
+// ---- pages that appear only for some answers ----
+function withPages() {
+    var spec = jsonDeserialize( new bxcachy.WizardData().demoPages() );
+    var extra = { id: "extra", title: "Extra", intro: "", when: { id: "app_mode", equals: "custom" }, questions: [ { type: "multi", id: "extra_pick", label: "Pick", default: [ "a" ], options: [ { value: "a", label: "A", description: "" }, { value: "b", label: "B", description: "" } ] } ] };
+    var pages = [];
+    for ( var i = 1; i <= spec.pages.len(); i++ ) { pages.append( spec.pages[ i ] ); if ( i == 1 ) pages.append( extra ); }
+    spec.pages = pages;
+    return spec;
+}
+a = new bxcachy.WizardApp( withPages() );
+check( "a page with `when` is hidden until its answer matches", !a.pageVisible( 2 ) && a.visiblePages().len() == a.pageCount() - 1 && a.stepCount() == a.pageCount() );
+check( "answers on a hidden page are not in the result", !a.finalAnswers().keyExists( "extra_pick" ) );
+a.onKey( "Enter" ); a.gotoPage( 1 ); a.nextPage();
+check( "next skips the hidden page", a.pageIndex() == 3 );
+a.prevPage();
+check( "and so does back", a.pageIndex() == 1 );
+a = new bxcachy.WizardApp( withPages(), { app_mode: "custom" } );
+check( "the page shows once the answer matches, counts as a step and its answers are returned", a.pageVisible( 2 ) && a.stepCount() == a.pageCount() + 1 && a.finalAnswers().keyExists( "extra_pick" ) );
+a.onKey( "Enter" ); a.gotoPage( 1 ); a.nextPage();
+check( "next lands on it", a.pageIndex() == 2 && a.stepOf( 2 ) == 2 );
+
 if ( failures > 0 ) { println( failures & " failed" ); exit( 1 ); }
 println( "all passed" );

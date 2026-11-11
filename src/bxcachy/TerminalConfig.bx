@@ -21,6 +21,12 @@ class TerminalConfig {
         ];
     }
 
+    // The desktop entry id of each terminal (from the Arch packages' file lists, 2026-11-11).
+    function desktopId( id ) {
+        var m = { ghostty: "com.mitchellh.ghostty.desktop", kitty: "kitty.desktop", alacritty: "Alacritty.desktop", foot: "foot.desktop", konsole: "org.kde.konsole.desktop" };
+        return structKeyExists( m, arguments.id ) ? m[ arguments.id ] : "";
+    }
+
     function ids() { return terminals().map( function( t ) { return t.id; } ); }
 
     // The terminal struct for an id, or an empty struct.

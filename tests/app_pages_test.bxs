@@ -1,0 +1,27 @@
+// AppPages: the customize pages generated from the catalog. Run from src/: (cd src && matchbox ../tests/app_pages_test.bxs)
+failures = 0;
+function check( label, ok ) { if ( ok ) println( "ok   " & label ); else { println( "FAIL " & label ); failures++; } }
+cat = new bxcachy.Catalog().load();
+ap = new bxcachy.AppPages();
+pg = ap.pages( cat );
+check( "one page per catalog group that has something to choose", pg.len() == 11 && pg[ 1 ].id == "apps-development" && pg[ pg.len() ].id == "apps-gaming" );
+check( "every page appears only for Customize", pg.filter( function( p ) { return p.when.id == "app_mode" && p.when.equals == "custom"; } ).len() == pg.len() );
+dev = pg[ 1 ];
+check( "a multi list per category, ordered like the catalog", dev.questions[ 1 ].type == "multi" && dev.questions[ 1 ].label == "Data" );
+allIds = {}; for ( p in pg ) for ( q in p.questions ) for ( o in q.options ) allIds[ o.value ] = true;
+check( "every option is a catalog app", allIds.keyArray().filter( function( id ) { return !cat.apps.filter( function( a ) { return a.id == id; } ).len(); } ).len() == 0 );
+ticked = 0; for ( p in pg ) for ( q in p.questions ) ticked += q.default.len();
+check( "the catalog's default apps are ticked", ticked > 40 && ticked <= cat.apps.filter( function( a ) { return a.tier == "default"; } ).len() );
+check( "categories the wizard asks about itself are left out (shell, terminal, launchers, orchestration)", !allIds.keyExists( "starship" ) && !allIds.keyExists( "ghostty" ) && !allIds.keyExists( "walker" ) && !allIds.keyExists( "pane" ) );
+check( "browsers are there", allIds.keyExists( "brave" ) && allIds.keyExists( "firefox" ) );
+check( "option descriptions carry the macOS equivalent", dev.questions.filter( function( q ) { return q.options.filter( function( o ) { return find( "macOS:", o.description ); } ).len(); } ).len() > 0 );
+check( "ids are stable", ap.questionId( "everyday", "Notes and writing" ) == "apps_everyday_notes_and_writing" );
+spec = ap.inject( jsonDeserialize( new bxcachy.WizardData().demoPages() ), cat );
+idx = 0; for ( i = 1; i <= spec.pages.len(); i++ ) if ( spec.pages[ i ].id == "apps" ) idx = i;
+check( "the pages are inserted right after the Apps page", idx > 0 && spec.pages[ idx + 1 ].id == "apps-development" && spec.pages.len() == 9 + 11 );
+brow = spec.pages[ idx ].questions.filter( function( q ) { return q.id == "default_browser"; } )[ 1 ];
+check( "the default browser options come from the catalog", brow.options.len() == 8 && brow.default == "brave" );
+check( "selected(): nothing in Basic mode", ap.selected( { app_mode: "defaults", apps_everyday_browsers: [ "brave" ] } ).len() == 0 );
+check( "selected(): the union of the lists in Customize mode", ap.selected( { app_mode: "custom", apps_everyday_browsers: [ "brave", "firefox" ], apps_media_video: [ "mpv", "brave" ], other: [ "x" ] } ).toList( "," ) == "brave,firefox,mpv" );
+if ( failures > 0 ) { println( failures & " failed" ); exit( 1 ); }
+println( "all passed" );
