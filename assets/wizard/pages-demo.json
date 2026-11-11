@@ -521,7 +521,7 @@
           "type": "choice",
           "id": "database_passwords",
           "label": "Database passwords",
-          "help": "Used for the databases you picked. The admin user name is fixed per database.",
+          "help": "Generated for you, or one you choose. Applies to the databases you picked; the admin user name is fixed per database.",
           "default": "generate",
           "when": {
             "id": "databases",
@@ -530,13 +530,13 @@
           "options": [
             {
               "value": "generate",
-              "label": "Generate a strong password for each (recommended)",
-              "description": "Random, kept in a private file. See it any time with: bxcachy db info ENGINE --show-password"
+              "label": "Generated (recommended)",
+              "description": "A strong random password for each, kept in a private file. Show it any time with: bxcachy db info ENGINE --show-password"
             },
             {
               "value": "ask",
-              "label": "Let me type each password",
-              "description": "You are asked as each database starts. Nothing is saved except the database's own password file."
+              "label": "My own password",
+              "description": "You type it (twice, hidden) as each database starts. Databases with no password (Redis, Chroma, Qdrant, Weaviate, Couchbase) are not asked."
             }
           ]
         }

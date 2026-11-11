@@ -2,7 +2,7 @@
 // bxcachy-db and bxcachy-vector, with more engines (DbEngines), one command shape, JSON output and exit codes.
 //
 // Rules: services listen on 127.0.0.1 only; a container that exists is never replaced (a stopped one is started); data lives in a
-// named volume that `remove` keeps unless --delete-data is given; generated passwords are kept in mode-600 files under
+// named volume that `remove` deletes with the container (--keep-data keeps it); generated passwords are kept in mode-600 files under
 // ~/.local/share/bxcachy/databases/<container>/ and never put on a command line (they go in an env file).
 //
 // Exit codes: 0 done, 2 usage or plan printed without --yes, 4 precondition (no container engine, unknown or unsupported engine,
@@ -197,7 +197,7 @@ class Db {
             return say( cmd, 4, { error: m2 }, arguments.asJson, [ "error: " & m2 ] );
         }
         var state = stateOf( res.container );
-        if ( wants && len( state ) ) return say( cmd, 4, { error: res.container & " already exists; a password can only be chosen when it is created" }, arguments.asJson, [ "error: " & res.container & " already exists; a password can only be chosen when it is created (remove it with --delete-data first to start over)" ] );
+        if ( wants && len( state ) ) return say( cmd, 4, { error: res.container & " already exists; a password can only be chosen when it is created" }, arguments.asJson, [ "error: " & res.container & " already exists; a password can only be chosen when it is created (remove it first (bxcachy db remove ENGINE --yes deletes its data) to start over)" ] );
         var data = { engine: e.id, name: res.name, container: res.container, port: p, image: e.image, volume: res.container, listens: "127.0.0.1" };
         if ( state == "running" ) return say( cmd, 0, merge( data, { already: "running" } ), arguments.asJson, [ res.container & " is already running on 127.0.0.1:" & p ] );
         var verb = len( state ) ? "start the stopped container " & res.container : "create " & res.container & " from " & e.image & " on 127.0.0.1:" & p & " (data in the volume " & res.container & ")" & ( wants ? " with a password you choose" : "" );
@@ -223,7 +223,7 @@ class Db {
             }
             // a kept data volume still has the password it was created with: reuse it, and refuse a different choice
             var kept = fileExists( dir & "/password" ) ? trim( fileRead( dir & "/password" ) ) : "";
-            if ( len( kept ) && len( chosen ) && kept != chosen ) return say( cmd, 4, { error: "A kept data volume for this name still uses its old password" }, arguments.asJson, [ "error: a kept data volume for this name still uses its old password; remove it with: bxcachy db remove " & e.id & " --delete-data --yes, or start without choosing a password" ] );
+            if ( len( kept ) && len( chosen ) && kept != chosen ) return say( cmd, 4, { error: "A kept data volume for this name still uses its old password" }, arguments.asJson, [ "error: a kept data volume for this name still uses its old password; remove it with: bxcachy db remove " & e.id & " --yes (this deletes its data), or start without choosing a password" ] );
             var pw = len( kept ) ? kept : ( len( chosen ) ? chosen : newSecret() & ( e.secret.suffix ?: "" ) );
             if ( len( pw ) < 8 ) return say( cmd, 4, { error: "Could not generate a password" }, arguments.asJson, [ "error: could not generate a password" ] );
             envFile = dir & "/database.env";
@@ -261,25 +261,35 @@ class Db {
         return say( cmd, s.exitCode == 0 ? 0 : 6, { container: res.container, stopped: s.exitCode == 0 }, arguments.asJson, [ s.exitCode == 0 ? "Stopped " & res.container : "error: " & trim( s.output ) ] );
     }
 
-    // `db remove ENGINE [--name N] [--delete-data] --yes`: removes the container; the data volume stays unless --delete-data.
-    function remove( engineId, name, deleteData, yes, dryRun, asJson ) {
+    // `db remove ENGINE [--name N] [--keep-data] --yes`: removes the container AND its data (the volume and the password file),
+    // so the next start is a clean database. --keep-data keeps the data; starting the same name again then reuses it.
+    function remove( engineId, name, keepData, yes, dryRun, asJson ) {
         var cmd = "db remove";
         var res = resolve( arguments.engineId, arguments.name );
         if ( len( res.error ) ) return say( cmd, res.code, { error: res.error }, arguments.asJson, [ "error: " & res.error ] );
         if ( !engineAvailable() ) return say( cmd, 4, { error: engineCli() & " was not found" }, arguments.asJson, [ "error: " & engineCli() & " was not found" ] );
-        var what = "remove the container " & res.container & ( arguments.deleteData ? " AND delete its data volume and password file" : " (the data volume and password file are kept)" );
+        var hasContainer = exists( res.container );
+        var hasFiles = directoryExists( stateDir( res.container ) );
+        var hasVolume = false;
+        try { hasVolume = engineExec( [ "volume", "inspect", res.container ], 30 ).exitCode == 0; } catch ( any e ) {}
+        if ( !hasContainer && !hasFiles && !hasVolume ) return say( cmd, 4, { error: "There is nothing to remove for " & res.container }, arguments.asJson, [ "error: there is nothing to remove for " & res.container ] );
+        var what = "remove the container " & res.container & ( arguments.keepData ? " (the data volume and password file are KEPT)" : " AND DELETE ITS DATA (the data volume and the password file)" );
         if ( !arguments.yes || arguments.dryRun ) {
             var code = arguments.dryRun ? 0 : 2;
-            return say( cmd, code, { container: res.container, would: what }, arguments.asJson, [ ( arguments.dryRun ? "Dry run" : "Plan" ) & ": would " & what, arguments.dryRun ? "Nothing was changed." : "Nothing was changed. Add --yes to apply." ], arguments.dryRun );
+            return say( cmd, code, { container: res.container, would: what, deletes_data: !arguments.keepData }, arguments.asJson, [ ( arguments.dryRun ? "Dry run" : "Plan" ) & ": would " & what, arguments.dryRun ? "Nothing was changed." : "Nothing was changed. Add --yes to apply." ], arguments.dryRun );
         }
-        var failed = "";
-        if ( exists( res.container ) ) { var r = engineExec( [ "rm", "-f", res.container ], 120 ); if ( r.exitCode != 0 ) failed = trim( r.output ); }
-        if ( !len( failed ) && arguments.deleteData ) {
-            engineExec( [ "volume", "rm", res.container ], 60 );
-            if ( directoryExists( stateDir( res.container ) ) ) directoryDelete( stateDir( res.container ), true );
+        if ( hasContainer ) {
+            var r = engineExec( [ "rm", "-f", res.container ], 120 );
+            if ( r.exitCode != 0 ) return say( cmd, 6, { container: res.container, error: trim( r.output ) }, arguments.asJson, [ "error: " & trim( r.output ) ] );
         }
-        if ( len( failed ) ) return say( cmd, 6, { container: res.container, error: failed }, arguments.asJson, [ "error: " & failed ] );
-        return say( cmd, 0, { container: res.container, removed: true, data_deleted: arguments.deleteData }, arguments.asJson, [ "Removed " & res.container & ( arguments.deleteData ? " and its data" : ". The data volume and password file were kept; start the same name again to reuse them." ) ] );
+        if ( !arguments.keepData ) {
+            if ( hasVolume ) {
+                var v = engineExec( [ "volume", "rm", res.container ], 60 );
+                if ( v.exitCode != 0 ) return say( cmd, 6, { container: res.container, error: "The container was removed but its data volume could not be: " & trim( v.output ) }, arguments.asJson, [ "error: the container was removed but its data volume could not be deleted: " & trim( v.output ) ] );
+            }
+            if ( hasFiles ) directoryDelete( stateDir( res.container ), true );
+        }
+        return say( cmd, 0, { container: res.container, removed: true, data_deleted: !arguments.keepData }, arguments.asJson, [ "Removed " & res.container & ( arguments.keepData ? ". The data volume and password file were kept; start the same name again to reuse them." : " and deleted its data." ) ] );
     }
 
     // `db info ENGINE [--name N] [--show-password]`: where it listens and how to connect.
@@ -332,7 +342,7 @@ class Db {
         var term = terminalProgram();
         if ( !len( term ) ) { println( "error: the menu needs a terminal program to show results (ghostty, kitty, foot, alacritty or konsole)" ); return 4; }
         var supported = variables.engines.all().filter( function( e ) { return !structKeyExists( e, "unsupported" ); } );
-        var actions = [ [ "Start", "start" ], [ "Stop", "stop" ], [ "Status", "status" ], [ "Connection info", "info" ], [ "Logs", "logs" ], [ "Remove (keeps the data)", "remove" ] ];
+        var actions = [ [ "Start", "start" ], [ "Stop", "stop" ], [ "Status", "status" ], [ "Connection info", "info" ], [ "Logs", "logs" ], [ "Remove (deletes the data)", "remove" ] ];
         var self = getSystemSetting( "BXCACHY_SELF", "bxcachy" );
         while ( true ) {
             var labels = supported.map( function( e ) { return e.title; } );

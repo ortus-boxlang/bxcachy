@@ -17,11 +17,12 @@ case "$1" in
     if [[ "$3" == --format ]]; then cat "$db/$name/state"; fi ;;
   run) [[ -z "${FAKE_FAIL:-}" ]] || { echo "boom: image pull failed"; exit 125; }
     name=""; for ((i=1;i<=$#;i++)); do [[ "${!i}" == --name ]] && { j=$((i+1)); name="${!j}"; }; done
+    for ((i=1;i<=$#;i++)); do if [[ "${!i}" == -v ]]; then j=$((i+1)); vol="${!j%%:*}"; mkdir -p "$FAKE/volumes/$vol"; fi; done
     mkdir -p "$db/$name"; echo running > "$db/$name/state"; echo "$*" > "$db/$name/run"; echo "abc123" ;;
   start) echo running > "$db/$2/state" ;;
   stop) echo exited > "$db/$2/state" ;;
   rm) rm -rf "$db/${@: -1}" ;;
-  volume) : ;;
+  volume) case "$2" in inspect) [[ -d "$FAKE/volumes/$3" ]] ;; rm) rm -rf "$FAKE/volumes/$3" ;; esac ;;
   logs) echo "log line from ${@: -1}" ;;
   ps) for d in "$db"/*/; do [[ -d "$d" ]] && echo "$(basename "$d")|Up 2 minutes|image"; done ;;
   *) exit 9 ;;
@@ -109,18 +110,30 @@ grep -q '^OPENSEARCH_INITIAL_ADMIN_PASSWORD=' "$tmp/data/databases/$c-opensearch
 BXCACHY_MAX_MAP_COUNT_FILE="$tmp/mmc" run "$binary" db start elasticsearch --yes >/dev/null || fail 'elasticsearch'
 grep -q 'elasticsearch/elasticsearch:9.5.6' "$FAKE/containers/$c-elasticsearch-default/run" && grep -q '^ELASTIC_PASSWORD=' "$tmp/data/databases/$c-elasticsearch-default/database.env" || fail 'elasticsearch'
 
-# remove keeps the data; --delete-data removes it
+# remove deletes the data too; --keep-data keeps it
 [[ "$(code "$binary" db remove postgres)" == 2 ]] || fail 'remove without --yes exits 2'
-run "$binary" db remove postgres --delete-data --dry-run | grep -q 'AND delete its data' || fail 'the plan says what --delete-data does'
-run "$binary" db remove postgres --yes | grep -q 'were kept' || fail 'remove'
-[[ ! -d "$FAKE/containers/$c-postgres-default" && -f "$dir/password" ]] || fail 'remove keeps the password file (and the data volume)'
-! grep -q '^volume rm' "$FAKE/podman.log" || fail 'plain remove must not delete a volume'
+run "$binary" db remove postgres --dry-run | grep -q 'AND DELETE ITS DATA' || fail 'the plan says it deletes the data'
+run "$binary" db remove postgres --dry-run --json | jq -e '.data.deletes_data == true' >/dev/null || fail 'the plan JSON says it deletes the data'
+run "$binary" db remove postgres --keep-data --dry-run | grep -q 'KEPT' || fail 'the --keep-data plan says the data is kept'
+[[ -d "$FAKE/containers/$c-postgres-default" && -f "$dir/password" ]] || fail 'a plan removed something'
+run "$binary" db remove postgres --keep-data --yes | grep -q 'were kept' || fail 'remove --keep-data'
+[[ ! -d "$FAKE/containers/$c-postgres-default" && -f "$dir/password" ]] || fail '--keep-data keeps the password file'
+! grep -q '^volume rm' "$FAKE/podman.log" || fail '--keep-data must not delete a volume'
 # starting the same name again reuses the kept volume, so it must reuse the kept password
-run "$binary" db start postgres --yes >/dev/null || fail 'start again after remove'
+run "$binary" db start postgres --yes >/dev/null || fail 'start again after remove --keep-data'
 [[ "$(tr -d '\n' < "$dir/password")" == "$pw" ]] || fail 'the password changed although the data volume was kept'
 [[ "$(cat "$dir/database.env")" == "POSTGRES_PASSWORD=$pw" ]] || fail 'the env file lost the old password'
-run "$binary" db remove postgres --delete-data --yes >/dev/null || fail 'remove --delete-data'
-grep -q "^volume rm $c-postgres-default" "$FAKE/podman.log" && [[ ! -d "$dir" ]] || fail '--delete-data removes the volume and the files'
+run "$binary" db remove postgres --yes | grep -q 'deleted its data' || fail 'remove'
+grep -q "^volume rm $c-postgres-default" "$FAKE/podman.log" && [[ ! -d "$dir" && ! -d "$FAKE/containers/$c-postgres-default" ]] || fail 'remove deletes the container, the volume and the files'
+# the next start is a clean database with a new password
+run "$binary" db start postgres --yes >/dev/null || fail 'start after a full remove'
+[[ "$(tr -d '\n' < "$dir/password")" != "$pw" ]] || fail 'a clean start must generate a new password'
+run "$binary" db remove postgres --yes >/dev/null
+[[ "$(code "$binary" db remove postgres --yes)" == 4 ]] || fail 'removing what is already gone exits 4'
+# leftovers of a --keep-data removal can still be cleaned up later
+run "$binary" db start postgres --name=left --yes >/dev/null; run "$binary" db remove postgres --name=left --keep-data --yes >/dev/null
+run "$binary" db remove postgres --name=left --yes >/dev/null || fail 'cleaning up kept data'
+[[ ! -d "$tmp/data/databases/$c-postgres-left" ]] || fail 'the kept data is cleaned up by a later remove'
 
 # a failing container command: exit 6 and no leftovers
 rc=0; FAKE_FAIL=1 run "$binary" db start qdrant --yes >/dev/null 2>&1 || rc=$?
@@ -186,7 +199,7 @@ PY
 ! grep -q 'Pty-Typed-Pass7' "$tmp/pty.seen" || fail 'the typed password was echoed to the terminal'
 
 # a kept volume keeps its password: another choice is refused, the same one is accepted
-run "$binary" db remove mysql --yes >/dev/null
+run "$binary" db remove mysql --keep-data --yes >/dev/null
 printf 'Another-Pass-77\n' > "$tmp/pw2"
 [[ "$(code "$binary" db start mysql --password-file="$tmp/pw2" --yes)" == 4 ]] || fail 'a different password for a kept volume exits 4'
 run "$binary" db start mysql --password-file="$tmp/pw" --yes >/dev/null || fail 'the same password for a kept volume is fine'

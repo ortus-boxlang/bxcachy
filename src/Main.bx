@@ -15,7 +15,7 @@ class {
         var config = new bxcachy.ConfigService();
         // One shared flag check for every command: unknown flags are usage errors and nothing runs.
         for ( var flag in args.options ) {
-            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "name", "port", "password-file", "ask-password", "delete-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo" ], flag ) ) {
+            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo" ], flag ) ) {
                 println( "Unknown option: --" & flag );
                 CLIExit( 2 );
             }
@@ -262,13 +262,13 @@ class {
           dbYes = structKeyExists( args.options, "yes" );
           dbDry = structKeyExists( args.options, "dry-run" );
           dbName = args.options.name ?: "default";
-          dbUsage = "Usage: bxcachy db engines | list | start ENGINE [--name N] [--port P] [--password-file FILE | --ask-password] [--yes] [--dry-run] | stop|status|logs ENGINE [--name N] | remove ENGINE [--name N] [--delete-data] --yes | info ENGINE [--name N] [--show-password] | engine [podman|docker] | menu [--json]";
+          dbUsage = "Usage: bxcachy db engines | list | start ENGINE [--name N] [--port P] [--password-file FILE | --ask-password] [--yes] [--dry-run] | stop|status|logs ENGINE [--name N] | remove ENGINE [--name N] [--keep-data] --yes | info ENGINE [--name N] [--show-password] | engine [podman|docker] | menu [--json]";
           if ( arrayFind( [ "engines", "list" ], dbSub ) && p.len() == 2 ) CLIExit( dbSub == "engines" ? db.listEngines( asJson ) : db.list( asJson ) );
           if ( dbSub == "menu" && p.len() == 2 ) CLIExit( db.menu() );
           if ( dbSub == "engine" && p.len() <= 3 ) CLIExit( db.engine( dbArg, asJson ) );
           if ( p.len() == 3 && dbSub == "start" ) CLIExit( db.start( dbArg, dbName, args.options.port ?: "", dbYes, dbDry, asJson, args.options["password-file"] ?: "", structKeyExists( args.options, "ask-password" ) ) );
           if ( p.len() == 3 && arrayFind( [ "stop", "status", "logs" ], dbSub ) ) CLIExit( db.act( dbSub, dbArg, dbName, asJson ) );
-          if ( p.len() == 3 && dbSub == "remove" ) CLIExit( db.remove( dbArg, dbName, structKeyExists( args.options, "delete-data" ), dbYes, dbDry, asJson ) );
+          if ( p.len() == 3 && dbSub == "remove" ) CLIExit( db.remove( dbArg, dbName, structKeyExists( args.options, "keep-data" ), dbYes, dbDry, asJson ) );
           if ( p.len() == 3 && dbSub == "info" ) CLIExit( db.info( dbArg, dbName, structKeyExists( args.options, "show-password" ), asJson ) );
           println( dbUsage );
           CLIExit( 2 );
