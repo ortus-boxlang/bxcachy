@@ -6,3 +6,6 @@ if status is-interactive
     # Starship prompt (the same prompt in every shell; config: ~/.config/starship.toml)
     command -q starship; and starship init fish | source
 end
+# API keys: per-command loaders written by `bxcachy secrets` (no values in this file)
+set -l bxc_cfg $HOME/.config; set -q XDG_CONFIG_HOME; and set bxc_cfg $XDG_CONFIG_HOME
+test -r "$bxc_cfg/bxcachy/secrets.fish"; and source "$bxc_cfg/bxcachy/secrets.fish"

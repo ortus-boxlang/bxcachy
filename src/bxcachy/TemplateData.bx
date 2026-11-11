@@ -325,7 +325,9 @@ command -v zoxide >/dev/null && eval "$(zoxide init zsh)"
 ## syntax highlighting must be loaded after everything that binds keys or widgets
 [[ -r /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]] && source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 ## Starship prompt (the same prompt in every shell; config: ~/.config/starship.toml)
-command -v starship >/dev/null && eval "$(starship init zsh)"' & chr( 10 );
+command -v starship >/dev/null && eval "$(starship init zsh)"
+## API keys: per-command loaders written by `bxcachy secrets` (no values in this file)
+[ -r "${XDG_CONFIG_HOME:-$HOME/.config}/bxcachy/secrets.sh" ] && . "${XDG_CONFIG_HOME:-$HOME/.config}/bxcachy/secrets.sh"' & chr( 10 );
             case "shell.bash":
                 return '## BxCachy shell setup for bash (managed by `bxcachy setup shell`; your own settings belong in ~/.bashrc).
 HISTSIZE=50000
@@ -337,7 +339,9 @@ shopt -s histappend checkwinsize autocd 2>/dev/null
 command -v fzf >/dev/null && eval "$(fzf --bash)"
 command -v zoxide >/dev/null && eval "$(zoxide init bash)"
 ## Starship prompt (the same prompt in every shell; config: ~/.config/starship.toml)
-command -v starship >/dev/null && eval "$(starship init bash)"' & chr( 10 );
+command -v starship >/dev/null && eval "$(starship init bash)"
+## API keys: per-command loaders written by `bxcachy secrets` (no values in this file)
+[ -r "${XDG_CONFIG_HOME:-$HOME/.config}/bxcachy/secrets.sh" ] && . "${XDG_CONFIG_HOME:-$HOME/.config}/bxcachy/secrets.sh"' & chr( 10 );
             case "shell.fish":
                 return '## BxCachy shell setup for fish (managed by `bxcachy setup shell`; your own settings belong in ~/.config/fish/config.fish).
 ## Fish has autosuggestions, syntax highlighting and completions built in.
@@ -346,7 +350,10 @@ if status is-interactive
     command -q zoxide; and zoxide init fish | source
     ## Starship prompt (the same prompt in every shell; config: ~/.config/starship.toml)
     command -q starship; and starship init fish | source
-end' & chr( 10 );
+end
+## API keys: per-command loaders written by `bxcachy secrets` (no values in this file)
+set -l bxc_cfg $HOME/.config; set -q XDG_CONFIG_HOME; and set bxc_cfg $XDG_CONFIG_HOME
+test -r "$bxc_cfg/bxcachy/secrets.fish"; and source "$bxc_cfg/bxcachy/secrets.fish"' & chr( 10 );
             case "nvm.json":
                 return '{"version":"v0.41.0","installer":"https://raw.githubusercontent.com/nvm-sh/nvm/v0.41.0/install.sh","node":"lts/*"}';
         }

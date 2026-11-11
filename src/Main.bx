@@ -275,6 +275,10 @@ class {
           if ( secSub == "set" && p.len() == 3 ) CLIExit( sec.setValue( p[3], args.options["from-file"] ?: "", asJson ) );
           if ( secSub == "get" && p.len() == 3 ) CLIExit( sec.getValue( p[3], structKeyExists( args.options, "show" ), asJson ) );
           if ( secSub == "unset" && p.len() == 3 ) CLIExit( sec.unset( p[3], structKeyExists( args.options, "yes" ), asJson ) );
+          if ( secSub == "apply" && p.len() == 2 ) CLIExit( sec.apply( structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
+          if ( secSub == "global" && p.len() >= 3 ) CLIExit( sec.globalCmd( p[3], p.len() >= 4 ? p[4] : "", structKeyExists( args.options, "yes" ), asJson ) );
+          if ( secSub == "unlock" && p.len() == 2 ) CLIExit( sec.unlock( asJson ) );
+          if ( secSub == "lock" && p.len() == 2 ) CLIExit( sec.lock( asJson ) );
           if ( secSub == "env" ) CLIExit( sec.env( p.len() > 2 ? p.slice( 3 ) : [] ) );
           if ( secSub == "run" ) {
             // Everything after -- is the program and its arguments, taken from the raw arguments (the flag parser would eat its flags).
@@ -287,7 +291,7 @@ class {
               CLIExit( sec.run( secNames.filter( function( x ) { return left( x, 2 ) != "--"; } ), secCmd, secStrict ) );
             }
           }
-          println( "Usage: bxcachy secrets status | list | set NAME [--from-file=F] | get NAME [--show] | unset NAME --yes | env [NAMES...] | run [NAMES...] [--strict] -- COMMAND [ARGS...] [--json]" );
+          println( "Usage: bxcachy secrets status | list | set NAME [--from-file=F] | get NAME [--show] | unset NAME --yes | apply [--yes] | global on NAME --yes|off NAME|show | unlock | lock | env [NAMES...] | run [NAMES...] [--strict] -- COMMAND [ARGS...] [--json]" );
           CLIExit( 2 );
           break;
          case "dotfiles":

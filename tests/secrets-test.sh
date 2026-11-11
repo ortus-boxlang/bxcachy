@@ -66,6 +66,40 @@ r="$(s run ANTHROPIC_API_KEY -- printf '%s' --resume)"; [[ "$r" == '--resume' ]]
 r="$(s run GEMINI_API_KEY -- sh -c 'echo "[${GEMINI_API_KEY:-none}]"')"; [[ "$r" == '[none]' ]] || fail 'a missing secret is skipped'
 [[ "$(code env -u GEMINI_API_KEY -u OPENAI_API_KEY -u ANTHROPIC_API_KEY HOME="$tmp/home" BXCACHY_CONFIG_HOME="$tmp/cfg" FAKE_KEYRING="$FAKE_KEYRING" PATH="$tmp/bin:$PATH" "$binary" secrets run GEMINI_API_KEY --strict -- true)" == 4 ]] || fail '--strict with a missing secret exits 4'
 
+
+# loaders: wrappers for the agents whose key is stored; they hold no values
+sh="$tmp/cfg/bxcachy/secrets.sh"; fish="$tmp/cfg/bxcachy/secrets.fish"
+[[ -f "$sh" && -f "$fish" ]] || fail 'set writes the loader files'
+grep -q '^claude() { bxcachy secrets run ANTHROPIC_API_KEY -- command claude "\$@"; }$' "$sh" || fail "claude wrapper (sh): $(cat "$sh")"
+grep -q '^codex() { bxcachy secrets run OPENAI_API_KEY' "$sh" || fail 'codex wrapper'
+! grep -q '^gemini()' "$sh" || fail 'no wrapper without a stored key'
+grep -q 'function claude' "$fish" && grep -q 'command claude \$argv' "$fish" || fail 'claude wrapper (fish)'
+! grep -rq 'sk-test-123' "$tmp/cfg" || fail 'a loader file holds a value'
+s apply --json | jq -e '.exit_code == 2' >/dev/null 2>&1 || [[ "$(code env HOME="$tmp/home" BXCACHY_CONFIG_HOME="$tmp/cfg" FAKE_KEYRING="$FAKE_KEYRING" PATH="$tmp/bin:$PATH" "$binary" secrets apply)" == 2 ]] || fail 'apply without --yes exits 2'
+s apply --yes | grep -q 'Wrote' || fail 'apply --yes'
+# the shell init templates source the loader (bash is enough to prove the line works)
+bash -c 'cfg="$1"; XDG_CONFIG_HOME="$cfg"; [ -r "${XDG_CONFIG_HOME:-$HOME/.config}/bxcachy/secrets.sh" ] && . "${XDG_CONFIG_HOME:-$HOME/.config}/bxcachy/secrets.sh"; type claude | head -1' _ "$tmp/cfg" | grep -q 'claude is a function' || fail 'the loader file must define the function when sourced'
+
+# global export: needs --yes and prints the warning first; the cache is mode 600 in the runtime dir and holds the value, files do not
+mkdir -p "$tmp/rt"; chmod 700 "$tmp/rt"
+g() { run env XDG_RUNTIME_DIR="$tmp/rt" "$binary" secrets global "$@"; }
+out="$(g on ANTHROPIC_API_KEY)" || true
+[[ "$out" == *'every program you start'* ]] || fail "the global warning: $out"
+[[ ! -e "$tmp/rt/bxcachy-secrets.env" ]] || fail 'the plan wrote the cache'
+g on ANTHROPIC_API_KEY --yes | grep -q 'exported to every new shell' || fail 'global on --yes'
+[[ "$(stat -c %a "$tmp/rt/bxcachy-secrets.env")" == 600 ]] || fail 'the cache is mode 600'
+grep -q "^export ANTHROPIC_API_KEY='sk-test-123'$" "$tmp/rt/bxcachy-secrets.env" || fail 'the cache holds the export line'
+grep -q "^set -gx ANTHROPIC_API_KEY 'sk-test-123'$" "$tmp/rt/bxcachy-secrets.fish" || fail 'the fish cache'
+! grep -q '^claude()' "$sh" || fail 'a globally exported key needs no wrapper'
+grep -q 'bxcachy secrets unlock' "$sh" || fail 'the loader unlocks once per login'
+[[ "$(env -i PATH="$PATH" XDG_RUNTIME_DIR="$tmp/rt" bash -c '. "$1"; echo "$ANTHROPIC_API_KEY"' _ "$sh")" == 'sk-test-123' ]] || fail 'a new shell gets the value from the cache'
+g show | grep -q 'ANTHROPIC_API_KEY' || fail 'global show'
+rm "$tmp/rt"/bxcachy-secrets.*; run env XDG_RUNTIME_DIR="$tmp/rt" "$binary" secrets unlock | grep -q 'Session cache filled' || fail 'unlock'
+[[ -s "$tmp/rt/bxcachy-secrets.env" ]] || fail 'unlock refills the cache'
+g off ANTHROPIC_API_KEY | grep -q 'back to per-command' || fail 'global off'
+[[ ! -e "$tmp/rt/bxcachy-secrets.env" ]] || fail 'the cache is removed when nothing is exported'
+grep -q '^claude()' "$sh" || fail 'the wrapper is back after global off'
+
 # unset: plan, then apply
 [[ "$(code env -u GEMINI_API_KEY -u OPENAI_API_KEY -u ANTHROPIC_API_KEY HOME="$tmp/home" BXCACHY_CONFIG_HOME="$tmp/cfg" FAKE_KEYRING="$FAKE_KEYRING" PATH="$tmp/bin:$PATH" "$binary" secrets unset QUOTE_TEST)" == 2 ]] || fail 'unset without --yes exits 2'
 [[ -f "$tmp/kr/QUOTE_TEST" ]] || fail 'the plan deleted the secret'

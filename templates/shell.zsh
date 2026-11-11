@@ -16,3 +16,5 @@ command -v zoxide >/dev/null && eval "$(zoxide init zsh)"
 [[ -r /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]] && source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 # Starship prompt (the same prompt in every shell; config: ~/.config/starship.toml)
 command -v starship >/dev/null && eval "$(starship init zsh)"
+# API keys: per-command loaders written by `bxcachy secrets` (no values in this file)
+[ -r "${XDG_CONFIG_HOME:-$HOME/.config}/bxcachy/secrets.sh" ] && . "${XDG_CONFIG_HOME:-$HOME/.config}/bxcachy/secrets.sh"

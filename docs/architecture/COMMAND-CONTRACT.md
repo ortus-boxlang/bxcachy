@@ -429,6 +429,9 @@ Wizard pages (and questions) may carry `when`; a hidden page is skipped by Next 
 - Values are passed to `secret-tool` and to programs through standard input and the process environment, never through a command line, a temp file, a log, or `answers.json`.
 - `set` is interactive on purpose and needs no `--yes`.
 - Exit codes: 0 done, 2 usage or plan without `--yes`, 4 precondition (bad name, secret not set, no value), 6 the store failed.
+Loading into shells (default is per command, global is opt-in per key):
+- `secrets apply [--yes]` writes `~/.config/bxcachy/secrets.sh` (bash, zsh) and `secrets.fish`. They hold no values: one wrapper per agent command whose key is stored (`claude() { bxcachy secrets run ANTHROPIC_API_KEY -- command claude "$@"; }`). `secrets set` runs it automatically. The shell init templates source these files.
+- `secrets global on NAME --yes | off NAME | show`: exports a key to every new shell. `on` prints a warning first (every program, including AI agents and what they run, can read it). The values go to a session cache, `$XDG_RUNTIME_DIR/bxcachy-secrets.env` and `.fish` (mode 600, tmpfs, wiped at logout), never to a config file. The loader files call `secrets unlock` once per login when the cache is missing (the keyring's single unlock prompt); `secrets lock` removes the cache. A globally exported key gets no wrapper.
 - Tests: `tests/secrets-test.sh` (fake `secret-tool` and `busctl`). The registry of agent key names is from the vendors' documentation and the user can store any other valid name.
 
 ## 14. Install and the setup wizard (decided with the owner 2026-11-10; install, wizard and the init engine are built, the pages' later commands are not)
