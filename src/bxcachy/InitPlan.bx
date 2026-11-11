@@ -130,6 +130,8 @@ class InitPlan {
         }
         for ( var id in agentIds ) apps.append( id );
         // local models: the apps you ticked, and the GPU build of Ollama when you named your card
+        // the pull-down AI shell on Plasma is Yakuake (Hyprland needs nothing extra)
+        if ( agentIds.len() && wantsPlasma ) apps.append( "yakuake" );
         var localAi = pick( a, "ai_local", [] );
         for ( var id in localAi ) apps.append( id );
         var gpu = pick( a, "ai_local_gpu" );

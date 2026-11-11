@@ -115,6 +115,8 @@ p = ip.plan( { ai_local: [ "ollama", "jan" ], ai_local_gpu: "nvidia" } );
 check( "local models are installed, with the GPU build of Ollama for your card", cmd( p, "apps" ) == "bxcachy install ollama jan ollama-cuda" );
 check( "AMD gets ROCm", cmd( ip.plan( { ai_local: [ "ollama" ], ai_local_gpu: "amd" } ), "apps" ) == "bxcachy install ollama ollama-rocm" );
 check( "no GPU build without Ollama or without an answer", cmd( ip.plan( { ai_local: [ "jan" ], ai_local_gpu: "nvidia" } ), "apps" ) == "bxcachy install jan" && cmd( ip.plan( { ai_local: [ "ollama" ] } ), "apps" ) == "bxcachy install ollama" );
+check( "Plasma with an agent also installs Yakuake for the pull-down AI shell", cmd( ip.plan( { desktops: "plasma", ai_agents: [ "claude-code" ] } ), "apps" ) == "bxcachy install claude-code yakuake" && cmd( ip.plan( { desktops: "both", ai_agents: [ "claude-code" ] } ), "apps" ) == "bxcachy install claude-code yakuake" );
+check( "Hyprland only, or Plasma without agents, adds no Yakuake", cmd( ip.plan( { desktops: "hyprland", ai_agents: [ "claude-code" ] } ), "apps" ) == "bxcachy install claude-code" && find( "apps", ids( ip.plan( { desktops: "plasma" } ) ) ) == 0 );
 check( "no keys step without an answer", find( "key-", ids( ip.plan( { ai_agents: [ "claude-code" ] } ) ) ) == 0 );
 p = ip.plan( { ai_agents: [ "claude-code" ], ai_default: "gemini-cli" } );
 check( "a default agent that was not ticked is installed too", cmd( p, "apps" ) == "bxcachy install claude-code gemini-cli" );

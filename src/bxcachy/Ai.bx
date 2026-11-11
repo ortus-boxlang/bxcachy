@@ -75,6 +75,15 @@ class Ai {
         return { id: found.id, argv: arrayFind( [ "ghostty", "alacritty", "konsole" ], found.id ) ? [ found.cmd, "-e" ] : [ found.cmd ] };
     }
 
+    // The argv that runs an agent with only the keys it accepts: bxcachy secrets run KEYS... -- COMMAND.
+    function agentCommand( agent ) {
+        var out = [ getSystemSetting( "BXCACHY_SELF", "bxcachy" ), "secrets", "run" ];
+        for ( var k in variables.agents.keys( arguments.agent ) ) out.append( k );
+        out.append( "--" );
+        out.append( arguments.agent.command );
+        return out;
+    }
+
     // `ai launch [ID] [--dry-run]`
     function launch( id, dryRun, asJson ) {
         var cmd = "ai launch";
@@ -85,12 +94,9 @@ class Ai {
         if ( !installed( a.command ) ) return say( cmd, 4, { error: a.id & " is not installed" }, arguments.asJson, [ "error: " & a.name & " is not installed. Install it first: bxcachy install " & a.id ] );
         var term = terminal();
         if ( structIsEmpty( term ) ) return say( cmd, 4, { error: "No terminal found" }, arguments.asJson, [ "error: no supported terminal is installed (ghostty, kitty, alacritty, foot, konsole)" ] );
-        var self = getSystemSetting( "BXCACHY_SELF", "bxcachy" );
         var argv = [];
         for ( var p in term.argv ) argv.append( p );
-        for ( var p in [ self, "secrets", "run" ] ) argv.append( p );
-        for ( var k in variables.agents.keys( a ) ) argv.append( k );
-        argv.append( "--" ); argv.append( a.command );
+        for ( var p in agentCommand( a ) ) argv.append( p );
         var data = { agent: a.id, terminal: term.id, command: argv };
         if ( arguments.dryRun ) return say( cmd, 0, data, arguments.asJson, [ "Dry run: would open " & a.name & " in " & term.id & ": " & argv.toList( " " ) ], true );
         var run = [ "sh", "-c", 'setsid "$@" >/dev/null 2>&1 &', "_" ];

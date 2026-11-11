@@ -23,14 +23,17 @@ class Shortcuts {
             { id: "switch-windows", keys: "Super+Tab", action: "Switch windows", kind: "remap", to: "Alt-Tab" },
             { id: "logout", keys: "Super+Shift+Q", action: "Log out to the login screen", kind: "bind",
               hyprland: 'hl.bind(mainMod .. " + SHIFT + Q", hl.dsp.exec_cmd("uwsm stop"))',
-              plasma: { group: "ksmserver", key: "Log Out", value: "Meta+Shift+Q,Ctrl+Alt+Del,Log Out" } }
+              plasma: { group: "ksmserver", key: "Log Out", value: "Meta+Shift+Q,Ctrl+Alt+Del,Log Out" } },
+            // Hyprland only (kind hypr-bind): on Plasma the AI shell is Yakuake, whose shortcut you set in System Settings.
+            { id: "ai-shell", keys: "Super+`", action: "Pull-down AI shell", kind: "hypr-bind",
+              hyprland: 'hl.bind(mainMod .. " + grave", hl.dsp.exec_cmd([[sh -c ''PATH="$HOME/.local/bin:$PATH"; bxcachy ai shell'']]))' }
         ];
     }
 
     // The table as text lines for `keys show`.
     function show() {
         return table().map( function( r ) {
-            return { id: r.id, keys: r.keys, action: r.action, how: r.kind == "remap" ? "xremap" : "desktop binding" };
+            return { id: r.id, keys: r.keys, action: r.action, how: r.kind == "remap" ? "xremap" : ( r.kind == "hypr-bind" ? "Hyprland binding" : "desktop binding" ) };
         } );
     }
 
@@ -88,7 +91,10 @@ class Shortcuts {
             '',
             '-- Shared shortcuts from the bxcachy table'
         ];
-        for ( var r in table() ) if ( r.kind == "bind" ) out.append( r.hyprland );
+        for ( var r in table() ) if ( r.kind == "bind" || r.kind == "hypr-bind" ) out.append( r.hyprland );
+        out.append( '' );
+        out.append( '-- The pull-down AI shell (bxcachy ai shell) lives on the special workspace "ai"; its window class is set by the terminal it starts' );
+        out.append( 'hl.window_rule({ name = "bxcachy-ai", match = { class = "^com.bxcachy.ai$" }, workspace = "special:ai", float = true })' );
         out.append( '' );
         out.append( '-- Noctalia settings window floats; its panels get blur and no layer animation' );
         out.append( 'hl.window_rule({ match = { class = "dev.noctalia.Noctalia" }, float = true, size = { 1080, 920 } })' );

@@ -15,7 +15,7 @@ class {
         var config = new bxcachy.ConfigService();
         // One shared flag check for every command: unknown flags are usage errors and nothing runs.
         for ( var flag in args.options ) {
-            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
+            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider", "backend" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
                 println( "Unknown option: --" & flag );
                 CLIExit( 2 );
             }
@@ -273,7 +273,8 @@ class {
           if ( aiSub == "list" && p.len() == 2 ) CLIExit( ai.list( asJson ) );
           if ( aiSub == "default" && p.len() <= 3 ) CLIExit( ai.setDefault( p.len() == 3 ? p[3] : "", structKeyExists( args.options, "yes" ), asJson ) );
           if ( aiSub == "launch" && p.len() <= 3 ) CLIExit( ai.launch( p.len() == 3 ? p[3] : "", structKeyExists( args.options, "dry-run" ), asJson ) );
-          println( "Usage: bxcachy ai list | default [ID] [--yes] | launch [ID] [--dry-run] [--json]" );
+          if ( aiSub == "shell" && p.len() <= 3 ) CLIExit( new bxcachy.AiShell( cli ).run( p.len() == 3 ? p[3] : "toggle", args.options.backend ?: "", structKeyExists( args.options, "dry-run" ), asJson ) );
+          println( "Usage: bxcachy ai list | default [ID] [--yes] | launch [ID] [--dry-run] | shell [toggle|status] [--backend=hyprland|yakuake] [--dry-run] [--json]" );
           CLIExit( 2 );
           break;
          case "secrets":

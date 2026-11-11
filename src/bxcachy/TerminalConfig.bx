@@ -27,6 +27,16 @@ class TerminalConfig {
         return structKeyExists( m, arguments.id ) ? m[ arguments.id ] : "";
     }
 
+    // The flags that give a terminal window its own class (Wayland app-id), so a window rule can find it. konsole has none.
+    // ghostty: `class` takes any config key as --class=; kitty and alacritty: --class; foot: --app-id (kitty, alacritty and foot from
+    // their manuals, not tested here).
+    function classArgs( id, cls ) {
+        if ( arguments.id == "ghostty" ) return [ "--class=" & arguments.cls ];
+        if ( arguments.id == "kitty" || arguments.id == "alacritty" ) return [ "--class", arguments.cls ];
+        if ( arguments.id == "foot" ) return [ "--app-id", arguments.cls ];
+        return [];
+    }
+
     function ids() { return terminals().map( function( t ) { return t.id; } ); }
 
     // The terminal struct for an id, or an empty struct.
