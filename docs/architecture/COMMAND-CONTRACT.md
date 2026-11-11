@@ -410,6 +410,27 @@ Wizard pages (and questions) may carry `when`; a hidden page is skipped by Next 
 - The real Arch container (`tests/arch/suite.sh`) runs the xremap plan, checks the AUR package names, runs the whole `setup hyprland`, checks the written files, byte-identical wallpapers, `keys check`, and has Hyprland verify the starter config.
 - Not verifiable in CI: HyprKwin's installer (needs a running KWin), xremap's per-app rules on both builds, Noctalia accepting every config key, and the exact Hyprland bind strings on a running session. These are covered by the owner's acceptance run on a real CachyOS KDE machine.
 
+### 13.13 Secrets: one way to store and load API keys (decided with the owner 2026-11-11)
+
+`bxcachy secrets` is the single way to keep API keys and tokens. Every machine uses the same commands; `export`/`import` (later) moves them between machines.
+
+| Command | Does |
+| --- | --- |
+| `secrets status` | backend in use, whether a keyring is available, how many secrets are stored |
+| `secrets set NAME [--from-file=F]` | stores a value: typed hidden at the terminal, or read from a file. Never a command-line value. Replaces an existing one |
+| `secrets list` | names only, with the coding agent that reads each known key |
+| `secrets get NAME [--show]` | says whether it is set and its length; `--show` prints the value |
+| `secrets unset NAME --yes` | deletes a value (plan without `--yes`, exit 2) |
+| `secrets run [NAMES...] [--strict] -- CMD...` | runs CMD with those secrets in its own environment only; exit code is CMD's. A name that is not set is skipped, `--strict` exits 4 |
+| `secrets env [NAMES...]` | prints `export NAME='value'` lines for `eval` (all stored names when none given) |
+
+- Names are environment variable names: capital letters, digits, underscores (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`).
+- Backend: the desktop keyring through `secret-tool` (libsecret) when `secret-tool` exists and `org.freedesktop.secrets` is on the user D-Bus (running or activatable); otherwise private files (`~/.local/share/bxcachy/secrets/NAME`, mode 600 in a mode 700 folder). The choice is saved in `~/.config/bxcachy/secrets.json` and shown by `status`. Keyring entries carry the attributes `service=bxcachy name=NAME`.
+- Values are passed to `secret-tool` and to programs through standard input and the process environment, never through a command line, a temp file, a log, or `answers.json`.
+- `set` is interactive on purpose and needs no `--yes`.
+- Exit codes: 0 done, 2 usage or plan without `--yes`, 4 precondition (bad name, secret not set, no value), 6 the store failed.
+- Tests: `tests/secrets-test.sh` (fake `secret-tool` and `busctl`). The registry of agent key names is from the vendors' documentation and the user can store any other valid name.
+
 ## 14. Install and the setup wizard (decided with the owner 2026-11-10; install, wizard and the init engine are built, the pages' later commands are not)
 
 ### 14.1 Install
