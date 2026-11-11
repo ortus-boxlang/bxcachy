@@ -619,57 +619,6 @@ class WizardData {
           ]
         },
         {
-          "type": "multi",
-          "id": "ai_agents",
-          "label": "AI agents",
-          "default": [
-            "claude-code"
-          ],
-          "options": [
-            {
-              "value": "claude-code",
-              "label": "Claude Code",
-              "description": "Anthropic''s coding agent."
-            },
-            {
-              "value": "codex-cli",
-              "label": "Codex",
-              "description": "OpenAI''s coding agent."
-            },
-            {
-              "value": "gemini-cli",
-              "label": "Gemini CLI",
-              "description": "Google''s coding agent."
-            }
-          ]
-        },
-        {
-          "type": "multi",
-          "id": "ai_orchestrators",
-          "label": "AI coding orchestration",
-          "help": "Run several coding agents at once, each in its own git worktree.",
-          "default": [
-            "pane"
-          ],
-          "options": [
-            {
-              "value": "pane",
-              "label": "Pane",
-              "description": "Desktop app for parallel agents with a diff viewer and git workflow. The BxCachy default."
-            },
-            {
-              "value": "orca",
-              "label": "Orca",
-              "description": "Agentic coding IDE from Stably: parallel agents across repos."
-            },
-            {
-              "value": "herdr",
-              "label": "Herdr",
-              "description": "Terminal workspace manager with live status for each agent."
-            }
-          ]
-        },
-        {
           "type": "choice",
           "id": "launcher",
           "label": "App launcher",
@@ -736,6 +685,144 @@ class WizardData {
               "value": "wofi",
               "label": "Wofi",
               "description": "Wofi''s dmenu mode."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ai",
+      "title": "AI",
+      "intro": "Coding agents, your default one, and where your API keys live.",
+      "questions": [
+        {
+          "type": "multi",
+          "id": "ai_agents",
+          "label": "Coding agents",
+          "default": [
+            "claude-code"
+          ],
+          "options": [
+            {
+              "value": "claude-code",
+              "label": "Claude Code",
+              "description": "Anthropic''s coding agent."
+            },
+            {
+              "value": "codex-cli",
+              "label": "Codex",
+              "description": "OpenAI''s coding agent."
+            },
+            {
+              "value": "gemini-cli",
+              "label": "Gemini CLI",
+              "description": "Google''s coding agent."
+            }
+          ],
+          "help": "Terminal agents that write code with you. Pick the ones you use."
+        },
+        {
+          "type": "choice",
+          "id": "ai_default",
+          "label": "Default agent",
+          "help": "The one `bxcachy ai launch` opens in your terminal. You can change it later.",
+          "default": "claude-code",
+          "when": {
+            "id": "ai_agents",
+            "nonempty": true
+          },
+          "options": [
+            {
+              "value": "claude-code",
+              "label": "Claude Code",
+              "description": "Anthropic''s coding agent."
+            },
+            {
+              "value": "codex-cli",
+              "label": "Codex",
+              "description": "OpenAI''s coding agent."
+            },
+            {
+              "value": "gemini-cli",
+              "label": "Gemini CLI",
+              "description": "Google''s coding agent."
+            }
+          ]
+        },
+        {
+          "type": "multi",
+          "id": "ai_orchestrators",
+          "label": "AI coding orchestration",
+          "help": "Run several coding agents at once, each in its own git worktree.",
+          "default": [
+            "pane"
+          ],
+          "options": [
+            {
+              "value": "pane",
+              "label": "Pane",
+              "description": "Desktop app for parallel agents with a diff viewer and git workflow. The BxCachy default."
+            },
+            {
+              "value": "orca",
+              "label": "Orca",
+              "description": "Agentic coding IDE from Stably: parallel agents across repos."
+            },
+            {
+              "value": "herdr",
+              "label": "Herdr",
+              "description": "Terminal workspace manager with live status for each agent."
+            }
+          ]
+        },
+        {
+          "type": "choice",
+          "id": "ai_keys",
+          "label": "API keys",
+          "help": "Stored in your desktop keyring (BxCachy installs one if you have none), never in files or shell history. Skip any prompt you do not want.",
+          "default": "later",
+          "when": {
+            "id": "ai_agents",
+            "nonempty": true
+          },
+          "options": [
+            {
+              "value": "later",
+              "label": "Add them later",
+              "description": "Nothing is asked now. Later: bxcachy secrets set NAME."
+            },
+            {
+              "value": "now",
+              "label": "Enter them at the end of the install",
+              "description": "You type each key hidden at the terminal, and can skip any."
+            }
+          ]
+        },
+        {
+          "type": "multi",
+          "id": "ai_global_keys",
+          "label": "Export to every shell?",
+          "help": "Default is NO: a key is given only to its own agent, when you start it. Exporting makes it readable by every program you start, including AI agents and anything they run.",
+          "default": [],
+          "when": {
+            "id": "ai_keys",
+            "equals": "now"
+          },
+          "options": [
+            {
+              "value": "ANTHROPIC_API_KEY",
+              "label": "ANTHROPIC_API_KEY",
+              "description": "Claude Code. Only if you picked it."
+            },
+            {
+              "value": "OPENAI_API_KEY",
+              "label": "OPENAI_API_KEY",
+              "description": "Codex. Only if you picked it."
+            },
+            {
+              "value": "GEMINI_API_KEY",
+              "label": "GEMINI_API_KEY",
+              "description": "Gemini CLI. Only if you picked it."
             }
           ]
         }

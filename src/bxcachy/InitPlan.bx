@@ -119,7 +119,16 @@ class InitPlan {
         for ( var ca in chosenApps ) apps.append( ca );
         for ( var id in jsApps ) apps.append( id );
         for ( var id in pick( a, "ai_orchestrators", [] ) ) apps.append( id );
-        for ( var id in pick( a, "ai_agents", [] ) ) apps.append( id );
+        // the coding agents: the ticked ones, plus the default agent if it was not ticked (it has to be there to be the default)
+        var agentLib = new bxcachy.AiAgents();
+        var agentIds = [];
+        for ( var id in pick( a, "ai_agents", [] ) ) agentIds.append( id );
+        var aiDefault = pick( a, "ai_default" );
+        if ( isSet( aiDefault ) ) {
+            if ( structIsEmpty( agentLib.find( aiDefault ) ) ) out.errors.append( "ai_default: unknown agent " & aiDefault );
+            else if ( !arrayFind( agentIds, aiDefault ) ) agentIds.append( aiDefault );
+        }
+        for ( var id in agentIds ) apps.append( id );
         if ( engine == "docker" ) apps.append( "docker" );
         var vpnIds = { tailscale: "tailscale", wireguard: "wireguard", openvpn: "openvpn", mullvad: "mullvad", proton: "proton-vpn" };
         var vpn = pick( a, "vpn" );
@@ -153,6 +162,19 @@ class InitPlan {
             if ( pick( a, "database_passwords" ) == "ask" && !arrayFind( [ "redis", "couchbase", "chroma", "qdrant", "weaviate" ], db ) ) dargv.append( "--ask-password" );
             out.steps.append( { id: "db-" & db, title: "start " & db & " (local container, 127.0.0.1 only)" & ( dargv.len() > 4 ? ", asking for its password" : "" ), argv: dargv } );
         }
+        // AI: a keyring for the API keys, the keys you chose to type now (optional steps: skipping one never stops the plan), the
+        // keys you chose to export to every shell, and the default agent
+        if ( agentIds.len() ) out.steps.append( { id: "secrets-setup", title: "check for a keyring for your API keys (installs one, with libsecret and age, only if none is found)", argv: [ "bxcachy", "secrets", "setup" ] } );
+        if ( pick( a, "ai_keys" ) == "now" ) for ( var id in agentIds ) {
+            var ag = agentLib.find( id );
+            if ( !structIsEmpty( ag ) ) out.steps.append( { id: "key-" & ag.key, title: "store your " & ag.label & " (typed hidden; you can skip it)", argv: [ "bxcachy", "secrets", "set", ag.key ], optional: true } );
+        }
+        if ( pick( a, "ai_keys" ) == "now" ) for ( var gk in pick( a, "ai_global_keys", [] ) ) {
+            var gAgent = {};
+            for ( var cand in agentLib.all() ) if ( cand.key == gk && arrayFind( agentIds, cand.id ) ) gAgent = cand;
+            if ( !structIsEmpty( gAgent ) ) out.steps.append( { id: "global-" & gk, title: "export " & gk & " to every shell (you chose this; every program can read it)", argv: [ "bxcachy", "secrets", "global", "on", gk ], optional: true } );
+        }
+        if ( isSet( aiDefault ) && !structIsEmpty( agentLib.find( aiDefault ) ) ) out.steps.append( { id: "ai-default", title: "make " & aiDefault & " your default coding agent", argv: [ "bxcachy", "ai", "default", aiDefault ] } );
         if ( len( pick( a, "launcher" ) ) ) out.steps.append( { id: "launcher", title: "use " & a.launcher & " as the app launcher (no shortcut is changed)", argv: [ "bxcachy", "runner", "set", a.launcher ] } );
         if ( len( pick( a, "menu" ) ) ) out.steps.append( { id: "menu", title: "use " & a.menu & " for BxCachy menus", argv: [ "bxcachy", "runner", "menu-set", a.menu ] } );
         var gname = pick( a, "git_name" );

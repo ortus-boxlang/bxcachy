@@ -14,7 +14,7 @@ check( "welcome: wordmark art, tagline and prompt", find( "███", s ) > 0 &
 app.onKey( "Enter" );
 s = shot();
 check( "page: title, options, selected marker", find( "Desktop", s ) > 0 && find( "Hyprland + Noctalia", s ) > 0 && find( "●  Hyprland + Noctalia (recommended)", s ) > 0 );
-check( "page: the sidebar lists the steps and Powered by BoxLang", find( "Steps", s ) > 0 && find( "Review", s ) > 0 && find( "Powered by BoxLang", s ) > 0 && find( "step 1 of 10", s ) > 0 );
+check( "page: the sidebar lists the steps and Powered by BoxLang", find( "Steps", s ) > 0 && find( "Review", s ) > 0 && find( "Powered by BoxLang", s ) > 0 && find( "step 1 of 11", s ) > 0 );
 check( "page: footer key hints", find( "ctrl-c", s ) > 0 && find( "space", s ) > 0 );
 check( "page: the focused option shows its description", find( "A fast tiling desktop", s ) > 0 );
 check( "page: number field shows its range", find( "1 to 10", s ) > 0 );
@@ -57,10 +57,10 @@ check( "a new screen fades in (first frame is dimmer, same text)", find( "Deskto
 spec2 = new bxcachy.AppPages().inject( jsonDeserialize( new bxcachy.WizardData().demoPages() ), new bxcachy.Catalog().load() );
 app = new bxcachy.WizardApp( spec2 ); app.onKey( "Enter" );
 t = ""; view.paint( app, 100, 120, 36 ); t = tui.render_to_string( 120, 36 );
-check( "Basic mode: 9 pages and the review, no app group pages in the sidebar", find( "step 1 of 10", t ) > 0 && find( "Everyday", t ) == 0 );
+check( "Basic mode: 10 pages and the review, no app group pages in the sidebar", find( "step 1 of 11", t ) > 0 && find( "Everyday", t ) == 0 );
 app = new bxcachy.WizardApp( spec2, { app_mode: "custom" } ); app.onKey( "Enter" );
 view.paint( app, 100, 120, 36 ); t = tui.render_to_string( 120, 36 );
-check( "Customize mode: 20 pages and the review, with the group pages in the sidebar", find( "step 1 of 21", t ) > 0 && find( "Everyday", t ) > 0 && find( "Development", t ) > 0 );
+check( "Customize mode: 21 pages and the review, with the group pages in the sidebar", find( "step 1 of 22", t ) > 0 && find( "Everyday", t ) > 0 && find( "Development", t ) > 0 );
 app.gotoPage( 8 );
 view.paint( app, 100, 120, 36 ); t = tui.render_to_string( 120, 36 );
 check( "a generated page lists a category with ticked defaults and descriptions", find( "Development", t ) > 0 && find( "◆", t ) > 0 && find( "◇", t ) > 0 && find( "▸", t ) > 0 );

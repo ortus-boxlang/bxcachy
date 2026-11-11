@@ -80,7 +80,10 @@ class Init {
             if ( !arguments.asJson ) println( "==> " & step.title );
             var r = variables.inst.exec( argv, 3600 );
             if ( !arguments.asJson && len( r.output ) ) print( r.output );
-            if ( r.timeout || r.exitCode != 0 ) {
+            if ( ( r.timeout || r.exitCode != 0 ) && ( step.optional ?: false ) ) {
+                // an optional step (typing a key) that could not run is reported, and the plan goes on
+                data.skipped.append( { id: step.id, reason: "could not run (exit " & ( r.timeout ? 124 : r.exitCode ) & "); do it later: " & commandFor( step ).toList( " " ) } );
+            } else if ( r.timeout || r.exitCode != 0 ) {
                 data.failed.append( { id: step.id, exit: r.timeout ? 124 : r.exitCode } );
                 firstCode = r.timeout ? 124 : r.exitCode;
                 stopped = true;

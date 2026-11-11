@@ -11,6 +11,7 @@ cat > "$tmp/self" <<'FAKE'
 #!/usr/bin/env bash
 echo "bxcachy $*" >> "$LOG"
 [[ -n "${FAIL_SHELL:-}" && "$1 $2" == "setup shell" ]] && { echo "boom"; exit 3; }
+[[ -n "${FAIL_KEY:-}" && "$1 $2" == "secrets set" ]] && exit 4
 echo "ok $1 $2"
 FAKE
 printf '#!/usr/bin/env bash\necho "git $*" >> "$LOG"\n' > "$tmp/bin/git"
@@ -59,6 +60,16 @@ echo '{"desktops":"gnome"}' > "$tmp/gnome.json"; [[ "$(code "$binary" init --ans
 [[ "$(run "$binary" init --print-answers)" == '{}' ]] || fail 'no saved answers prints {}'
 rc=0; run "$binary" init </dev/null >/dev/null 2>&1 || rc=$?; [[ "$rc" == 4 ]] || fail "no terminal should exit 4, got $rc"
 
+# an optional step (typing an API key) that cannot run is reported and the plan goes on
+: > "$LOG"
+cat > "$tmp/ai.json" <<'JSON'
+{"ai_agents":["claude-code","codex-cli"],"ai_default":"claude-code","ai_keys":"now","ai_global_keys":["ANTHROPIC_API_KEY"],"git_name":"Ada"}
+JSON
+FAIL_KEY=1 run "$binary" init --answers="$tmp/ai.json" --yes > "$tmp/ai.out" 2>&1 || fail "a skipped key must not fail the run: $(cat "$tmp/ai.out")"
+grep -q 'Skipped: key-ANTHROPIC_API_KEY (could not run' "$tmp/ai.out" || fail "the skipped key is reported: $(cat "$tmp/ai.out")"
+grep -q 'bxcachy ai default claude-code' "$LOG" && grep -q 'git config --global user.name Ada' "$LOG" || fail "steps after a skipped key still run: $(cat "$LOG")"
+grep -q 'bxcachy secrets setup' "$LOG" || fail 'the keyring check runs'
+
 # the wizard in a pty: Enter on the welcome screen, Tab through the pages to the review, Enter. The answers are saved (mode 600).
 : > "$LOG"
 python3 - "$binary" "$tmp" <<'PY'
@@ -78,7 +89,7 @@ def pump(t):
                 if not os.read(fd, 65536): return
             except OSError: return
 pump(1.5)
-for k in [b'\r'] + [b'\t'] * 9 + [b'\r']:
+for k in [b'\r'] + [b'\t'] * 10 + [b'\r']:
     os.write(fd, k); pump(0.3)
 pump(1.5)
 _, status = os.waitpid(pid, 0)

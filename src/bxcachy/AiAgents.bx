@@ -1,0 +1,19 @@
+// The coding agents BxCachy knows: the catalog app that installs each, the command it starts, and the environment variable it
+// reads its API key from (vendor docs). One list for the wizard, `bxcachy ai` and `bxcachy secrets`.
+class AiAgents {
+    function all() {
+        return [
+            { id: "claude-code", name: "Claude Code", command: "claude", key: "ANTHROPIC_API_KEY", label: "Anthropic API key" },
+            { id: "codex-cli", name: "Codex", command: "codex", key: "OPENAI_API_KEY", label: "OpenAI API key" },
+            { id: "gemini-cli", name: "Gemini CLI", command: "gemini", key: "GEMINI_API_KEY", label: "Google Gemini API key" }
+        ];
+    }
+
+    function ids() { return all().map( function( a ) { return a.id; } ); }
+
+    // The agent for an id, or an empty struct.
+    function find( id ) {
+        for ( var a in all() ) if ( a.id == arguments.id ) return a;
+        return {};
+    }
+}

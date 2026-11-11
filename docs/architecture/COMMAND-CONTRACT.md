@@ -438,6 +438,20 @@ Moving machines and the keyring:
 - `secrets setup [--keyring=kwallet|gnome-keyring|none] [--yes] [--dry-run]`: checks for a Secret Service on the user D-Bus (running or activatable). Installs `libsecret` (`secret-tool`, repo core) and `age` (repo extra) when missing; when no keyring exists, also `kwallet` on Plasma or `gnome-keyring` elsewhere, or the one named. `--keyring=none` installs no keyring and saves the file backend. The plan names what it installs. Package names and `secret-tool` in libsecret were checked on archlinux.org on 2026-11-11.
 - Tests: `tests/secrets-test.sh` (fake `secret-tool` and `busctl`). The registry of agent key names is from the vendors' documentation and the user can store any other valid name.
 
+### 13.14 AI agents (decided with the owner 2026-11-11)
+
+`bxcachy ai` knows three coding agents (`AiAgents`): `claude-code` (command `claude`, key `ANTHROPIC_API_KEY`), `codex-cli` (`codex`, `OPENAI_API_KEY`), `gemini-cli` (`gemini`, `GEMINI_API_KEY`). Command names were checked in the Arch packages (`openai-codex` ships `/usr/bin/codex`, `gemini-cli` ships `/usr/bin/gemini`; `claude-code` comes from the CachyOS repo). The key names are from the vendors' documentation.
+
+| Command | Does |
+| --- | --- |
+| `ai list` | each agent: installed, key stored, default |
+| `ai default [ID] [--yes]` | shows the default, or sets it (the agent must be installed; plan without `--yes`, exit 2). Saved in `~/.config/bxcachy/ai.json` |
+| `ai launch [ID] [--dry-run]` | opens the agent (the default when no ID) in your default terminal as `TERMINAL [-e] bxcachy secrets run KEY -- COMMAND`, detached. The terminal is the first line of `~/.config/xdg-terminals.list` if it names a terminal BxCachy knows and it is installed, else the first installed one. ghostty, alacritty and konsole get `-e`; kitty and foot get the command directly (foot and konsole flags are from memory, not verified here) |
+
+Exit codes: 0 done, 2 usage or plan without `--yes`, 4 precondition (unknown or missing agent, no default, no terminal), 6 failed. Tests: `tests/ai-test.sh`, `tests/init_plan_test.bxs`, `tests/init-test.sh`.
+
+Init rules for this page: a default agent that was not ticked is installed too; `secrets setup` runs whenever an agent is chosen (it installs a keyring only if none exists); the key steps are **optional**, so one that cannot run (no terminal, you press Enter to skip) is reported as skipped with the command to run later and the plan goes on.
+
 ## 14. Install and the setup wizard (decided with the owner 2026-11-10; install, wizard and the init engine are built, the pages' later commands are not)
 
 ### 14.1 Install
@@ -471,7 +485,7 @@ Exits: as `setup` (0, 2, 4, 5, 6, 7, 8); 4 also for no terminal without `--answe
 | Toolchains | `toolchains` (`java` with gradle and maven, `php` with composer and laravel, `python`, `go`, `javascript`), `js_runtimes` (`node` with nvm default, `bun`, `deno`; asked only when `javascript` is chosen). BoxLang is always installed (shown as a note) | catalog profiles, `toolchain node`, `install bun deno` |
 | Containers | `container_engine` (`podman` default, `docker`) | package and service setup |
 | Databases | `databases` (PostgreSQL, MySQL, MariaDB, Redis, MongoDB, Couchbase, pgvector, Chroma, Qdrant, Weaviate, Meilisearch, OpenSearch, Elasticsearch; none preselected; Milvus is not supported) | `db engine`, `db start` per service |
-| AI agents | `ai_default`, `ai_install`, `ai_orchestrators` (`pane` default, `orca`, `herdr`) | catalog (category Coding orchestration: AUR `pane-bin`, `stably-orca-bin`, `herdr-bin`) |
+| AI (own page, after Apps) | `ai_agents` (claude-code, codex-cli, gemini-cli), `ai_default`, `ai_orchestrators` (`pane` default, `orca`, `herdr`), `ai_keys` (`later` default, `now`), `ai_global_keys` (only with `now`; default none) | installs through `install`; then `secrets setup`, one optional `secrets set KEY` per agent when `now` (typed hidden at the terminal, skippable; never saved in answers.json), optional `secrets global on KEY`, and `ai default ID` |
 | VPN | `vpn` (Tailscale, WireGuard, OpenVPN, Mullvad, Proton) | catalog and services |
 | Password manager | `password_manager` (Bitwarden, 1Password, KeePassXC) | catalog |
 | Gaming | `gaming` (`none`, `steam`, `bundle`) | catalog (CachyOS gaming bundle) |

@@ -1,0 +1,99 @@
+// `bxcachy ai`: your coding agents and the default one.
+//   list [--json]            the agents, whether each is installed, whether its API key is stored, and which one is the default
+//   default [ID] [--yes]     show the default agent, or set it (the agent must be installed)
+//   launch [ID] [--dry-run]  open an agent (the default one when no ID) in your default terminal, with its API key loaded from
+//                            `bxcachy secrets` for that program only. The terminal is the first line of ~/.config/xdg-terminals.list
+//                            when it names a terminal BxCachy knows, else the first installed one of those.
+// Exit: 0 done, 2 usage or plan without --yes, 4 precondition (unknown or missing agent, no default, no terminal), 6 failed.
+class Ai {
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.inst = new bxcachy.Installer( arguments.runner );
+        variables.config = new bxcachy.ConfigService();
+        variables.agents = new bxcachy.AiAgents();
+        return this;
+    }
+
+    function file() { return variables.config.cfgHome() & "/bxcachy/ai.json"; }
+
+    function defaultId() {
+        if ( !fileExists( file() ) ) return "";
+        try { return jsonDeserialize( fileRead( file() ) ).default ?: ""; } catch ( any e ) { return ""; }
+    }
+
+    function say( command, code, data, asJson, lines = [], dryRun = false ) {
+        if ( arguments.asJson ) println( variables.cli.envelope( arguments.command, arguments.code, arguments.data, arguments.dryRun ) );
+        else for ( var l in arguments.lines ) println( l );
+        return arguments.code;
+    }
+
+    function installed( command ) {
+        try { return variables.inst.exec( [ "sh", "-c", 'command -v "$1"', "_", arguments.command ], 10 ).exitCode == 0; } catch ( any e ) { return false; }
+    }
+
+    // `ai list`
+    function list( asJson ) {
+        var def = defaultId();
+        var sec = new bxcachy.Secrets( variables.cli );
+        var rows = variables.agents.all().map( function( a ) {
+            return { id: a.id, name: a.name, command: a.command, installed: installed( a.command ), key: a.key, key_stored: len( sec.fetch( a.key ) ) > 0, default: a.id == def };
+        } );
+        var lines = rows.map( function( r ) { return left( r.id & repeatString( " ", 12 ), 12 ) & " " & left( r.name & repeatString( " ", 11 ), 11 ) & ( r.installed ? "installed    " : "not installed" ) & "  key " & ( r.key_stored ? "stored    " : "not stored" ) & ( r.default ? "  (default)" : "" ); } );
+        return say( "ai list", 0, { default: def, agents: rows }, arguments.asJson, lines );
+    }
+
+    // `ai default [ID] [--yes]`
+    function setDefault( id, yes, asJson ) {
+        var cmd = "ai default";
+        if ( !len( arguments.id ) ) {
+            var cur = defaultId();
+            return say( cmd, 0, { default: cur }, arguments.asJson, [ len( cur ) ? "Default agent: " & cur : "No default agent is set. Set one: bxcachy ai default claude-code" ] );
+        }
+        var a = variables.agents.find( arguments.id );
+        if ( structIsEmpty( a ) ) return say( cmd, 4, { error: "Unknown agent" }, arguments.asJson, [ "error: unknown agent " & arguments.id & " (use " & variables.agents.ids().toList( ", " ) & ")" ] );
+        if ( !installed( a.command ) ) return say( cmd, 4, { error: a.id & " is not installed" }, arguments.asJson, [ "error: " & a.name & " is not installed (" & a.command & " was not found). Install it first: bxcachy install " & a.id ] );
+        if ( !arguments.yes ) return say( cmd, 2, { default: a.id }, arguments.asJson, [ "Plan: make " & a.name & " your default coding agent.", "Nothing was changed. Add --yes to apply." ] );
+        var body = serializeJSON( { default: a.id } ) & chr( 10 );
+        if ( variables.config.configWrite( { name: "ai-settings", target: file(), mode: "644", content: body }, body, "apply", true, false ) != 0 ) return say( cmd, 6, { error: "Could not write " & file() }, arguments.asJson, [ "error: could not write " & file() ] );
+        return say( cmd, 0, { default: a.id }, arguments.asJson, [ a.name & " is now your default coding agent." ] );
+    }
+
+    // The terminal to open: { id, argv } where argv is the program and the flag that precedes the command ("" flag: the command follows).
+    function terminal() {
+        var tc = new bxcachy.TerminalConfig( true );
+        var list = variables.config.cfgHome() & "/xdg-terminals.list";
+        var wanted = "";
+        if ( fileExists( list ) ) for ( var l in listToArray( fileRead( list ), chr( 10 ) ) ) {
+            var t = trim( l );
+            if ( len( t ) && left( t, 1 ) != "##" ) { wanted = t; break; }
+        }
+        var found = {};
+        for ( var term in tc.terminals() ) if ( len( wanted ) && tc.desktopId( term.id ) == wanted && installed( term.cmd ) ) found = term;
+        if ( structIsEmpty( found ) ) for ( var term in tc.terminals() ) if ( installed( term.cmd ) ) { found = term; break; }
+        if ( structIsEmpty( found ) ) return {};
+        // ghostty, alacritty and konsole take the command after -e; kitty and foot take it directly
+        return { id: found.id, argv: arrayFind( [ "ghostty", "alacritty", "konsole" ], found.id ) ? [ found.cmd, "-e" ] : [ found.cmd ] };
+    }
+
+    // `ai launch [ID] [--dry-run]`
+    function launch( id, dryRun, asJson ) {
+        var cmd = "ai launch";
+        var pick = len( arguments.id ) ? arguments.id : defaultId();
+        if ( !len( pick ) ) return say( cmd, 4, { error: "No default agent" }, arguments.asJson, [ "error: no agent given and no default set. Use: bxcachy ai launch claude-code, or bxcachy ai default claude-code --yes" ] );
+        var a = variables.agents.find( pick );
+        if ( structIsEmpty( a ) ) return say( cmd, 4, { error: "Unknown agent" }, arguments.asJson, [ "error: unknown agent " & pick & " (use " & variables.agents.ids().toList( ", " ) & ")" ] );
+        if ( !installed( a.command ) ) return say( cmd, 4, { error: a.id & " is not installed" }, arguments.asJson, [ "error: " & a.name & " is not installed. Install it first: bxcachy install " & a.id ] );
+        var term = terminal();
+        if ( structIsEmpty( term ) ) return say( cmd, 4, { error: "No terminal found" }, arguments.asJson, [ "error: no supported terminal is installed (ghostty, kitty, alacritty, foot, konsole)" ] );
+        var self = getSystemSetting( "BXCACHY_SELF", "bxcachy" );
+        var argv = [];
+        for ( var p in term.argv ) argv.append( p );
+        for ( var p in [ self, "secrets", "run", a.key, "--", a.command ] ) argv.append( p );
+        var data = { agent: a.id, terminal: term.id, command: argv };
+        if ( arguments.dryRun ) return say( cmd, 0, data, arguments.asJson, [ "Dry run: would open " & a.name & " in " & term.id & ": " & argv.toList( " " ) ], true );
+        var run = [ "sh", "-c", 'setsid "$@" >/dev/null 2>&1 &', "_" ];
+        for ( var p in argv ) run.append( p );
+        variables.inst.exec( run, 10 );
+        return say( cmd, 0, data, arguments.asJson, [ "Opened " & a.name & " in " & term.id & "." ] );
+    }
+}

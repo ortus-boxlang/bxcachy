@@ -18,7 +18,7 @@ check( "option descriptions carry the macOS equivalent", dev.questions.filter( f
 check( "ids are stable", ap.questionId( "everyday", "Notes and writing" ) == "apps_everyday_notes_and_writing" );
 spec = ap.inject( jsonDeserialize( new bxcachy.WizardData().demoPages() ), cat );
 idx = 0; for ( i = 1; i <= spec.pages.len(); i++ ) if ( spec.pages[ i ].id == "apps" ) idx = i;
-check( "the pages are inserted right after the Apps page", idx > 0 && spec.pages[ idx + 1 ].id == "apps-development" && spec.pages.len() == 9 + 11 );
+check( "the pages are inserted right after the Apps page", idx > 0 && spec.pages[ idx + 1 ].id == "apps-development" && spec.pages.len() == 10 + 11 );
 brow = spec.pages[ idx ].questions.filter( function( q ) { return q.id == "default_browser"; } )[ 1 ];
 check( "the default browser options come from the catalog", brow.options.len() == 8 && brow.default == "brave" );
 check( "selected(): nothing in Basic mode", ap.selected( { app_mode: "defaults", apps_everyday_browsers: [ "brave" ] } ).len() == 0 );

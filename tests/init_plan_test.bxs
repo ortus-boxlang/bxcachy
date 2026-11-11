@@ -95,5 +95,21 @@ p = ip.plan( { app_mode: "defaults", default_browser: "firefox" } );
 check( "in Basic mode a different default browser is added to the install", ids( p ) == "apps-basic,apps,default-browser" && cmd( p, "apps" ) == "bxcachy install firefox" );
 check( "the default terminal follows the terminal answer", cmd( ip.plan( { terminal: "kitty" } ), "default-terminal" ) == "bxcachy default terminal kitty" );
 
+// ---- AI: agents, keys, default ----
+p = ip.plan( { ai_agents: [ "claude-code", "codex-cli" ], ai_default: "codex-cli", ai_keys: "later" } );
+check( "agents are installed, a keyring is checked, and the default is set", cmd( p, "apps" ) == "bxcachy install claude-code codex-cli" && cmd( p, "secrets-setup" ) == "bxcachy secrets setup" && cmd( p, "ai-default" ) == "bxcachy ai default codex-cli" );
+check( "keys 'later' asks for nothing", find( "key-", ids( p ) ) == 0 );
+check( "the keyring check comes after the install and before the default", ids( p ) == "apps,secrets-setup,ai-default" );
+p = ip.plan( { ai_agents: [ "claude-code", "gemini-cli" ], ai_keys: "now", ai_global_keys: [ "GEMINI_API_KEY", "OPENAI_API_KEY" ] } );
+check( "keys 'now' types one key per chosen agent, as optional steps", cmd( p, "key-ANTHROPIC_API_KEY" ) == "bxcachy secrets set ANTHROPIC_API_KEY" && cmd( p, "key-GEMINI_API_KEY" ) == "bxcachy secrets set GEMINI_API_KEY" && find( "key-OPENAI_API_KEY", ids( p ) ) == 0 );
+optional = true; for ( s in p.steps ) if ( left( s.id, 4 ) == "key-" && !( s.optional ?: false ) ) optional = false;
+check( "key steps are optional (skipping never stops the plan)", optional );
+check( "a global export is planned only for a key of a chosen agent", cmd( p, "global-GEMINI_API_KEY" ) == "bxcachy secrets global on GEMINI_API_KEY" && find( "global-OPENAI_API_KEY", ids( p ) ) == 0 );
+check( "no keys step without an answer", find( "key-", ids( ip.plan( { ai_agents: [ "claude-code" ] } ) ) ) == 0 );
+p = ip.plan( { ai_agents: [ "claude-code" ], ai_default: "gemini-cli" } );
+check( "a default agent that was not ticked is installed too", cmd( p, "apps" ) == "bxcachy install claude-code gemini-cli" );
+check( "an unknown default agent is an error", ip.plan( { ai_default: "bogus" } ).errors.len() == 1 );
+check( "no agents, no keyring step", ip.plan( { ai_agents: [], ai_keys: "later" } ).steps.len() == 0 );
+
 if ( failures > 0 ) { println( failures & " failed" ); exit( 1 ); }
 println( "all passed" );
