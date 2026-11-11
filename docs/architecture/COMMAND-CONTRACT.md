@@ -328,6 +328,43 @@ bxcachy runner select JSON_ENTRIES [--prompt=TEXT] [--json]                print
 
 Commands are JSON argument arrays, never shell strings (a string, an empty array or an empty part exits 4). `list` marks the current choice with `*` (`--json` adds each provider's title, package, icon support and answer format). `doctor` shows the commands and whether each executable is on PATH. `launch` starts the launcher detached (exit 4 for `system` or a missing program). The wizard offers Noctalia, Walker, Rofi, Fuzzel and Wofi; Vicinae, KRunner and `custom` work from the command line. `hyprrunner` was dropped (no package found, 2026-11-10). Fuzzel and Wofi flags are from their man pages.
 
+### 13.10 `db`: local databases and search engines as containers (port of the legacy `bxcachy-db` and `bxcachy-vector`)
+
+```
+bxcachy db engines | list [--json]
+bxcachy db start ENGINE [--name N] [--port P] [--yes] [--dry-run]    create, or start a stopped one; never replaces a container
+bxcachy db stop|status|logs ENGINE [--name N]
+bxcachy db remove ENGINE [--name N] [--delete-data] --yes            removes the container; the data volume stays unless --delete-data
+bxcachy db info ENGINE [--name N] [--show-password]                  where it listens and how to connect (password masked by default)
+bxcachy db engine [podman|docker]                                    which engine runs them (podman by default, saved in ~/.config/bxcachy/db.json)
+bxcachy db menu                                                      the control center, on the runner's menu provider (needs a terminal program)
+```
+
+Exit codes: 0 done, 2 usage or no `--yes` (the plan is printed; `--dry-run` exits 0), 4 precondition (no container engine, unknown or unsupported engine, bad name or port, `vm.max_map_count` too low), 6 the container command failed. `--json` gives the standard envelope.
+
+**Rules.** Services listen on `127.0.0.1` only. A container that exists is never replaced (a stopped one is started; a running one is left alone). Containers are named `bxcachy-db-<engine>-<name>` (name defaults to `default`; letters, digits and hyphens) and labelled `io.bxcachy.database=true`. Data lives in a **named volume** with the container's name, not a host folder: rootless containers cannot write to a bind-mounted folder as the image's own user (OpenSearch, Elasticsearch and Meilisearch run as non-root). Generated passwords (24 random bytes as hex) go in `~/.local/share/bxcachy/databases/<container>/` (`password` and `database.env`, mode 600, plus `meta.json` with the port) and reach the container through `--env-file`, never on a command line. Nothing changes system settings: when `vm.max_map_count` is too low `start` stops with the `sudo sysctl -w` line to run. Images are pinned and were checked on Docker Hub on 2026-11-10 (Elasticsearch's from Elastic's docs).
+
+| Engine | Image | Host port | Password | Notes |
+|---|---|---|---|---|
+| `postgres` | `postgres:17` | 5432 | generated (`postgres`) | |
+| `mysql` | `mysql:8.4` | 3306 | generated (`root`) | |
+| `mariadb` | `mariadb:11.8` | 3306 | generated (`root`) | |
+| `redis` | `redis:7.4` | 6379 | none (localhost only) | `--appendonly yes` |
+| `mongodb` | `mongo:8.0` | 27017 | generated (`root`) | |
+| `couchbase` | `couchbase:community-8.0.2` | 8091 | **none: set in the web console** | After `db start`, open http://127.0.0.1:8091, choose Setup New Cluster and set the administrator name and password there. Ports 8091-8096, 11210 and 11211 are fixed, so `--port` is refused and only one instance can run. |
+| `pgvector` | `pgvector/pgvector:pg17` | 5432 | generated (`postgres`) | run `CREATE EXTENSION vector;` |
+| `chroma` | `chromadb/chroma:1.5.9` | 8000 | none | data in `/data` (1.x images) |
+| `qdrant` | `qdrant/qdrant:v1.20.0` | 6333 | none | |
+| `weaviate` | `semitechnologies/weaviate:1.39.15` | 8080 | none (anonymous access) | local only; never publish the port |
+| `meilisearch` | `getmeili/meilisearch:v1.56` | 7700 | generated master key | runs with `MEILI_ENV=production`, which requires the key |
+| `opensearch` | `opensearchproject/opensearch:3.9.0` | 9200 | generated (`admin`) | HTTPS, self-signed (use `curl -k`); single node; the password gets a `-Aa1!` suffix to meet OpenSearch's policy; needs `vm.max_map_count` 262144 |
+| `elasticsearch` | `docker.elastic.co/elasticsearch/elasticsearch:9.5.6` | 9200 | generated (`elastic`) | HTTPS, self-signed; single node; `-Xms1g -Xmx1g`; needs `vm.max_map_count` 262144 |
+| `milvus` | none | | | **not supported**: it needs several services (etcd, object storage); `db start milvus` exits 4 |
+
+**Docker** works through the same commands (`db engine docker`): only `run`, `start`, `stop`, `rm`, `logs`, `ps`, `container inspect` and `volume rm` are used, which both engines share.
+
+**Verified and not.** Tested end to end against a fake Podman/Docker (arguments, files, modes, exit codes, the menu), never against real containers. Not confirmed from the docs fetched: that the Elasticsearch image reads `ELASTIC_PASSWORD` (the page showed a password printed at first start instead) and its data path `/usr/share/elasticsearch/data`; OpenSearch's data path; Couchbase's `/opt/couchbase/var`. A real `db start` of each engine on Podman is part of the acceptance run on a real machine.
+
 ### 13.8 Tests and what is verified
 
 - Pure `SetupPlan`, `Shortcuts`, `NoctaliaConfig` classes with script tests; native tests with fake `pacman`, `yay`, `git`, `qdbus6`, `kwriteconfig6`, `sudo`, `systemctl` (plan output, `--yes` gating, root refusal, partial failure, re-run, undo, drift, one clean `--json` envelope); the starter TOML and JSON are parsed.
@@ -366,7 +403,7 @@ Exits: as `setup` (0, 2, 4, 5, 6, 7, 8); 4 also for no terminal without `--answe
 | Developer identity | `git_name`, `git_email`, `ssh_key`, `shell` (`zsh` default, `fish`, `bash`; Starship always), `terminal` (`ghostty` default), `terminals_extra`, `editor` | `git config`, `ssh-keygen`, `setup shell`, `setup terminal`, `setup hyprland --terminal` |
 | Toolchains | `toolchains` (`java` with gradle and maven, `php` with composer and laravel, `python`, `go`, `javascript`), `js_runtimes` (`node` with nvm default, `bun`, `deno`; asked only when `javascript` is chosen). BoxLang is always installed (shown as a note) | catalog profiles, `toolchain node`, `install bun deno` |
 | Containers | `container_engine` (`podman` default, `docker`) | package and service setup |
-| Databases | `databases` (PostgreSQL, Redis, Couchbase, pgvector, Chroma, Milvus; optional MySQL/MariaDB and MongoDB) | `bxcachy db` on the chosen engine |
+| Databases | `databases` (PostgreSQL, MySQL, MariaDB, Redis, MongoDB, Couchbase, pgvector, Chroma, Qdrant, Weaviate, Meilisearch, OpenSearch, Elasticsearch; none preselected; Milvus is not supported) | `db engine`, `db start` per service |
 | AI agents | `ai_default`, `ai_install`, `ai_orchestrators` (`pane` default, `orca`, `herdr`) | catalog (category Coding orchestration: AUR `pane-bin`, `stably-orca-bin`, `herdr-bin`) |
 | VPN | `vpn` (Tailscale, WireGuard, OpenVPN, Mullvad, Proton) | catalog and services |
 | Password manager | `password_manager` (Bitwarden, 1Password, KeePassXC) | catalog |
@@ -377,7 +414,7 @@ Exits: as `setup` (0, 2, 4, 5, 6, 7, 8); 4 also for no terminal without `--answe
 
 Fonts are not a question: the install always adds JetBrains Mono, JetBrains Mono Nerd, the Powerline fonts and the Nerd Fonts symbols (with the Noto fonts `setup hyprland` already installs).
 
-**Built (W4):** `init`, `init --answers`, `init --print-answers`. The planner (`InitPlan`, pure) turns answers into this ordered list, one ordinary command each, run through the program itself with `--yes`: `setup hyprland [--terminal --layout]`, `setup plasma`, `setup terminal`, `setup shell`, `setup xremap`, `install` (AI orchestrators and agents), `git config --global` (name, email), and last `session set`. A missing answer adds no step. A step that fails stops the rest (exit 7 when some were done, else that step's exit code; the others are `skipped`). Also run: `profile-install jvm|php|python|go` per toolchain (`composer global require laravel/installer` after PHP; JavaScript runs `toolchain node` for Node.js with nvm, and Bun and Deno join the `install`), `profile-install containers` (Podman) or `install docker`, `profile-install gaming` (bundle) or `install steam`, and one `install` for the AI tools, VPN (`tailscale`, `wireguard`, `openvpn`, `mullvad`, `proton-vpn`), password manager and backup tools (`snapper` with `snap-pac`, `restic`, `borg`). Answers whose command does not exist yet (`databases`, `ssh_key`, `app_mode`; and `workspaces`, `natural_scroll`, `layouts`, `theme`, `wallpaper` when Hyprland is not being set up, because only the Hyprland starter takes them) are saved and listed as `pending`, never dropped silently. `init` at a terminal runs the wizard, saves `answers.json`, then runs the plan (the review screen is the confirmation; `--dry-run` only prints). `install.sh` ends with `bxcachy init` at a terminal and prints a hint otherwise.
+**Built (W4):** `init`, `init --answers`, `init --print-answers`. The planner (`InitPlan`, pure) turns answers into this ordered list, one ordinary command each, run through the program itself with `--yes`: `setup hyprland [--terminal --layout]`, `setup plasma`, `setup terminal`, `setup shell`, `setup xremap`, `install` (AI orchestrators and agents), `git config --global` (name, email), and last `session set`. A missing answer adds no step. A step that fails stops the rest (exit 7 when some were done, else that step's exit code; the others are `skipped`). Also run: `profile-install jvm|php|python|go` per toolchain (`composer global require laravel/installer` after PHP; JavaScript runs `toolchain node` for Node.js with nvm, and Bun and Deno join the `install`), `profile-install containers` (Podman) or `install docker`, `profile-install gaming` (bundle) or `install steam`, and one `install` for the AI tools, VPN (`tailscale`, `wireguard`, `openvpn`, `mullvad`, `proton-vpn`), password manager and backup tools (`snapper` with `snap-pac`, `restic`, `borg`). Databases: `db engine` remembers the container engine (`container_engine`), then `db start ENGINE` runs for each picked service (none is preselected). Answers whose command does not exist yet (`ssh_key`, `app_mode`; and `workspaces`, `natural_scroll`, `layouts`, `theme`, `wallpaper` when Hyprland is not being set up, because only the Hyprland starter takes them) are saved and listed as `pending`, never dropped silently. `init` at a terminal runs the wizard, saves `answers.json`, then runs the plan (the review screen is the confirmation; `--dry-run` only prints). `install.sh` ends with `bxcachy init` at a terminal and prints a hint otherwise.
 
 ### 14.4 Rules
 

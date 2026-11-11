@@ -6,7 +6,7 @@
 class InitPlan {
     // Answer keys that are saved but have no command behind them yet.
     function pendingKeys() {
-        return [ "databases", "ssh_key", "app_mode" ];
+        return [ "ssh_key", "app_mode" ];
     }
 
     // Answers that shape the Hyprland starter (applied by `setup hyprland`; pending when Hyprland is not being set up).
@@ -115,6 +115,12 @@ class InitPlan {
             for ( var id in apps ) iargv.append( id );
             out.steps.append( { id: "apps", title: "install " & apps.toList( ", " ), argv: iargv } );
         }
+        // databases: remember the container engine, then start each chosen service (nothing is started unless it was picked)
+        var dbs = pick( a, "databases", [] );
+        if ( dbs.len() || pick( a, "container_engine" ) == "docker" ) {
+            if ( arrayFind( [ "podman", "docker" ], pick( a, "container_engine" ) ) ) out.steps.append( { id: "db-engine", title: "run databases with " & a.container_engine, argv: [ "bxcachy", "db", "engine", a.container_engine ] } );
+        }
+        for ( var db in dbs ) out.steps.append( { id: "db-" & db, title: "start " & db & " (local container, 127.0.0.1 only)", argv: [ "bxcachy", "db", "start", db ] } );
         if ( len( pick( a, "launcher" ) ) ) out.steps.append( { id: "launcher", title: "use " & a.launcher & " as the app launcher (no shortcut is changed)", argv: [ "bxcachy", "runner", "set", a.launcher ] } );
         if ( len( pick( a, "menu" ) ) ) out.steps.append( { id: "menu", title: "use " & a.menu & " for BxCachy menus", argv: [ "bxcachy", "runner", "menu-set", a.menu ] } );
         var gname = pick( a, "git_name" );

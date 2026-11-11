@@ -96,5 +96,8 @@ check( "the toolchains page says BoxLang is always installed", find( "BoxLang", 
 a = mk();
 check( "the launcher defaults to Noctalia and the menu to Rofi; the launcher is for Hyprland only", a.answerString( "launcher" ) == "noctalia" && a.answerString( "menu" ) == "rofi" && a.finalAnswers().keyExists( "launcher" ) && !mk( { desktops: "plasma" } ).finalAnswers().keyExists( "launcher" ) );
 
+a = mk();
+check( "no database is preselected", a.answerList( "databases" ).len() == 0 );
+
 if ( failures > 0 ) { println( failures & " failed" ); exit( 1 ); }
 println( "all passed" );

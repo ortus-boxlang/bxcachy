@@ -41,8 +41,12 @@ check( "Fuzzel and Wofi are installed from the catalog", cmd( p, "apps" ) == "bx
 p = ip.plan( { launcher: "noctalia", menu: "rofi" } );
 check( "Noctalia needs no package of its own", cmd( p, "apps" ) == "bxcachy install rofi" && cmd( p, "launcher" ) == "bxcachy runner set noctalia" );
 
-p = ip.plan( { databases: [ "postgres" ], ssh_key: true, app_mode: "custom", natural_scroll: false, layouts: [] } );
-check( "answers without a command are listed as pending, not dropped, and not when empty or off", p.pending.toList( "," ) == "databases,ssh_key,app_mode" && p.steps.len() == 0 );
+p = ip.plan( { ssh_key: true, app_mode: "custom", natural_scroll: false, layouts: [] } );
+check( "answers without a command are listed as pending, not dropped, and not when empty or off", p.pending.toList( "," ) == "ssh_key,app_mode" && p.steps.len() == 0 );
+p = ip.plan( { container_engine: "docker", databases: [ "postgres", "meilisearch" ] } );
+check( "databases: docker is remembered, then each service starts", ids( p ) == "apps,db-engine,db-postgres,db-meilisearch" && cmd( p, "db-engine" ) == "bxcachy db engine docker" && cmd( p, "db-postgres" ) == "bxcachy db start postgres" && cmd( p, "db-meilisearch" ) == "bxcachy db start meilisearch" );
+check( "no databases picked: nothing starts (Podman needs no setting)", ids( ip.plan( { container_engine: "podman", databases: [] } ) ) == "containers" );
+check( "Docker without databases is still remembered", cmd( ip.plan( { container_engine: "docker", databases: [] } ), "db-engine" ) == "bxcachy db engine docker" );
 p = ip.plan( { desktops: "hyprland", workspaces: 4, natural_scroll: true, layouts: [ "us-intl", "es" ], theme: "light", wallpaper: "aurora" } );
 check( "the Hyprland starter takes workspaces, natural scroll, layouts, theme and wallpaper", cmd( p, "hyprland" ) == "bxcachy setup hyprland --workspaces=4 --natural-scroll --layouts=us-intl,es --theme=light --wallpaper=aurora" && p.pending.len() == 0 );
 p = ip.plan( { desktops: "plasma", workspaces: 4, theme: "light" } );

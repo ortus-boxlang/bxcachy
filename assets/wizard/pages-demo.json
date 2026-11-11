@@ -447,47 +447,75 @@
           "type": "multi",
           "id": "databases",
           "label": "Databases to run",
-          "default": [
-            "postgres"
-          ],
+          "default": [],
           "options": [
             {
               "value": "postgres",
               "label": "PostgreSQL",
-              "description": "The default relational database.",
-              "group": "Relational"
+              "description": "The reliable all-rounder."
             },
             {
               "value": "mysql",
-              "label": "MySQL / MariaDB",
-              "description": "For apps that expect MySQL.",
-              "group": "Relational"
+              "label": "MySQL",
+              "description": "MySQL 8.4."
+            },
+            {
+              "value": "mariadb",
+              "label": "MariaDB",
+              "description": "MariaDB 11.8, a MySQL-compatible database."
             },
             {
               "value": "redis",
               "label": "Redis",
-              "description": "Cache and queues.",
-              "group": "Other"
+              "description": "In-memory store and cache, persisted to disk."
+            },
+            {
+              "value": "mongodb",
+              "label": "MongoDB",
+              "description": "Document database."
             },
             {
               "value": "couchbase",
               "label": "Couchbase",
-              "description": "Document database.",
-              "group": "Other"
+              "description": "Document database. You finish its setup in the web console at http://127.0.0.1:8091."
             },
             {
               "value": "pgvector",
-              "label": "pgvector",
-              "description": "Vectors in PostgreSQL.",
-              "group": "Vectors"
+              "label": "PostgreSQL with pgvector",
+              "description": "PostgreSQL with vector search."
             },
             {
               "value": "chroma",
               "label": "Chroma",
-              "description": "Vector store for AI apps.",
-              "group": "Vectors"
+              "description": "Vector database for embeddings."
+            },
+            {
+              "value": "qdrant",
+              "label": "Qdrant",
+              "description": "Vector search engine."
+            },
+            {
+              "value": "weaviate",
+              "label": "Weaviate",
+              "description": "Vector database (anonymous access, local only)."
+            },
+            {
+              "value": "meilisearch",
+              "label": "Meilisearch",
+              "description": "Fast typo-tolerant search."
+            },
+            {
+              "value": "opensearch",
+              "label": "OpenSearch",
+              "description": "Search and analytics. Needs vm.max_map_count 262144."
+            },
+            {
+              "value": "elasticsearch",
+              "label": "Elasticsearch",
+              "description": "Search and analytics. Needs vm.max_map_count 262144 and about 1 GB of memory."
             }
-          ]
+          ],
+          "help": "Local containers on 127.0.0.1, with generated passwords. Nothing starts unless you pick it. Manage them with: bxcachy db"
         }
       ]
     },
