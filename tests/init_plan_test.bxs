@@ -48,6 +48,10 @@ check( "databases: docker is remembered, then each service starts", ids( p ) == 
 p = ip.plan( { databases: [ "postgres", "redis" ], database_passwords: "ask" } );
 check( "asking for passwords adds the prompt flag, except for engines with no password", cmd( p, "db-postgres" ) == "bxcachy db start postgres --ask-password" && cmd( p, "db-redis" ) == "bxcachy db start redis" );
 check( "generated passwords add nothing", cmd( ip.plan( { databases: [ "postgres" ], database_passwords: "generate" } ), "db-postgres" ) == "bxcachy db start postgres" );
+p = ip.plan( { desktops: "hyprland", dotfiles_repo: "https://github.com/me/dotfiles" } );
+check( "your dotfiles are the last step", ids( p ) == "hyprland,session,dotfiles" || ids( p ).endsWith( ",dotfiles" ) );
+check( "dotfiles: the command takes the repo, the method is detected", cmd( p, "dotfiles" ) == "bxcachy dotfiles apply https://github.com/me/dotfiles" );
+check( "an empty repo answer adds nothing", find( "dotfiles", ids( ip.plan( { dotfiles_repo: "" } ) ) ) == 0 );
 check( "no databases picked: nothing starts (Podman needs no setting)", ids( ip.plan( { container_engine: "podman", databases: [] } ) ) == "containers" );
 check( "Docker without databases is still remembered", cmd( ip.plan( { container_engine: "docker", databases: [] } ), "db-engine" ) == "bxcachy db engine docker" );
 p = ip.plan( { desktops: "hyprland", workspaces: 4, natural_scroll: true, layouts: [ "us-intl", "es" ], theme: "light", wallpaper: "aurora" } );

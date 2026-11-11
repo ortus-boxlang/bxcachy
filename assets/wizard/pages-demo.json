@@ -802,6 +802,26 @@
           ]
         }
       ]
+    },
+    {
+      "id": "import",
+      "title": "Import",
+      "intro": "Bring your own dotfiles. This runs last, so your files win over BxCachy's starter configs.",
+      "questions": [
+        {
+          "type": "text",
+          "id": "dotfiles_repo",
+          "label": "Dotfiles repository (optional)",
+          "help": "A git URL or a local path. Leave empty to skip.",
+          "default": "",
+          "placeholder": "https://github.com/you/dotfiles"
+        },
+        {
+          "type": "info",
+          "label": "How it works",
+          "help": "BxCachy detects whether the repository uses chezmoi, yadm, stow or plain files. Nothing is replaced without asking: files you already have are listed, and each one is backed up first. Undo any time with: bxcachy dotfiles undo."
+        }
+      ]
     }
   ]
 }

@@ -14,7 +14,7 @@ check( "welcome: wordmark art, tagline and prompt", find( "███", s ) > 0 &
 app.onKey( "Enter" );
 s = shot();
 check( "page: title, options, selected marker", find( "Desktop", s ) > 0 && find( "Hyprland + Noctalia", s ) > 0 && find( "●  Hyprland + Noctalia (recommended)", s ) > 0 );
-check( "page: the sidebar lists the steps and Powered by BoxLang", find( "Steps", s ) > 0 && find( "Review", s ) > 0 && find( "Powered by BoxLang", s ) > 0 && find( "step 1 of 9", s ) > 0 );
+check( "page: the sidebar lists the steps and Powered by BoxLang", find( "Steps", s ) > 0 && find( "Review", s ) > 0 && find( "Powered by BoxLang", s ) > 0 && find( "step 1 of 10", s ) > 0 );
 check( "page: footer key hints", find( "ctrl-c", s ) > 0 && find( "space", s ) > 0 );
 check( "page: the focused option shows its description", find( "A fast tiling desktop", s ) > 0 );
 check( "page: number field shows its range", find( "1 to 10", s ) > 0 );

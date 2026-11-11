@@ -15,7 +15,7 @@ class {
         var config = new bxcachy.ConfigService();
         // One shared flag check for every command: unknown flags are usage errors and nothing runs.
         for ( var flag in args.options ) {
-            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo" ], flag ) ) {
+            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo" ], flag ) ) {
                 println( "Unknown option: --" & flag );
                 CLIExit( 2 );
             }
@@ -252,6 +252,20 @@ class {
            CLIExit( st.undoXremap( setupYes, setupDry, asJson ) );
           }
           println( "Usage: bxcachy setup plasma [--keys | --undo-keys] | hyprland [--terminal=ghostty|kitty|alacritty|foot|konsole] [--layout=dwindle|master|scrolling|floating] [--workspaces=N] [--natural-scroll] [--layouts=us-intl,es] [--theme=dark|light|auto] [--wallpaper=box|grid|aurora|minimal] | terminal [--default=ghostty] [--also=a,b] | shell [--shell=zsh|fish|bash] | xremap [--build=hypr|kde] | undo plasma|hyprland|xremap | status [--yes] [--dry-run] [--json]" );
+          CLIExit( 2 );
+          break;
+         case "dotfiles":
+          // Apply your own dotfiles repository (method detected: chezmoi, yadm, stow or links). See COMMAND-CONTRACT.md 13.11.
+          dfSub = p.len() >= 2 ? p[2] : "";
+          df = new bxcachy.Dotfiles( cli );
+          dfYes = structKeyExists( args.options, "yes" );
+          dfDry = structKeyExists( args.options, "dry-run" );
+          dfUsage = "Usage: bxcachy dotfiles plan REPO [--method=chezmoi|yadm|stow|links] | apply REPO [--method=M] [--overwrite] [--yes] [--dry-run] | status | undo [--yes] [--dry-run] [--json]";
+          if ( dfSub == "plan" && p.len() == 3 ) CLIExit( df.showPlan( p[3], args.options.method ?: "", asJson ) );
+          if ( dfSub == "apply" && p.len() == 3 ) CLIExit( df.apply( p[3], args.options.method ?: "", structKeyExists( args.options, "overwrite" ), dfYes, dfDry, asJson ) );
+          if ( dfSub == "status" && p.len() == 2 ) CLIExit( df.status( asJson ) );
+          if ( dfSub == "undo" && p.len() == 2 ) CLIExit( df.undo( dfYes, dfDry, asJson ) );
+          println( dfUsage );
           CLIExit( 2 );
           break;
          case "db":

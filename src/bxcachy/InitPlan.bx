@@ -137,6 +137,8 @@ class InitPlan {
         if ( !wantsHypr ) for ( var key in hyprlandKeys() ) {
             if ( structKeyExists( a, key ) && isSet( a[ key ] ) ) out.pending.append( key );
         }
+        // your own dotfiles go last so they win over the starter configs; replacing a file you have is asked at the prompt
+        if ( len( pick( a, "dotfiles_repo" ) ) ) out.steps.append( { id: "dotfiles", title: "apply your dotfiles from " & a.dotfiles_repo & " (method detected; you are asked before any existing file is replaced)", argv: [ "bxcachy", "dotfiles", "apply", a.dotfiles_repo ] } );
         for ( var key in pendingKeys() ) {
             if ( structKeyExists( a, key ) && isSet( a[ key ] ) ) out.pending.append( key );
         }

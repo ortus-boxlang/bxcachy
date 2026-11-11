@@ -365,6 +365,29 @@ Exit codes: 0 done, 2 usage or no `--yes` (the plan is printed; `--dry-run` exit
 
 **Verified and not.** Tested end to end against a fake Podman/Docker (arguments, files, modes, exit codes, the menu), never against real containers. Not confirmed from the docs fetched: that the Elasticsearch image reads `ELASTIC_PASSWORD` (the page showed a password printed at first start instead) and its data path `/usr/share/elasticsearch/data`; OpenSearch's data path; Couchbase's `/opt/couchbase/var`. A real `db start` of each engine on Podman is part of the acceptance run on a real machine.
 
+### 13.11 `dotfiles`: your own dotfiles repository (decided with the owner 2026-11-11)
+
+```
+bxcachy dotfiles plan REPO [--method=chezmoi|yadm|stow|links] [--json]    clones the repo into BxCachy's data folder; changes nothing in your home
+bxcachy dotfiles apply REPO [--method=M] [--overwrite] [--yes] [--dry-run] [--json]
+bxcachy dotfiles status | undo [--yes] [--dry-run] [--json]
+```
+
+`REPO` is a git URL or a local path. **The method is detected** (`--method` overrides): `chezmoi` (`.chezmoiroot`, `.chezmoiignore`, or `dot_` / `.chezmoi*` names), then `yadm` (`.config/yadm/`, or `##` alternate names), then `stow` (`.stowrc`, `.stow-local-ignore`, or only top-level package folders that hold dotfiles), else `links`.
+
+**Your dotfiles win, but nothing is replaced unasked.** The plan splits the repo's files into new, already in place (a link to the repo, or an identical file) and **conflicts** (files you already have that would be replaced; chezmoi templates always count). `apply --yes` needs your approval of the conflicts: `--overwrite`, or a `y` at the prompt (read from `/dev/tty`, so a headless run without `--overwrite` exits 2 and changes nothing). Every replaced file is first moved into `~/.local/state/bxcachy/backups/dotfiles/<time>/`; if a step then fails (exit 6) the originals are put back. `status` shows what was applied; `undo --yes` removes the links BxCachy made (`stow -D` for stow) and restores the originals (for chezmoi and yadm only the originals come back: the files those tools created stay, remove them with the tool).
+
+| Method | Files go to your home by | Applied with |
+|---|---|---|
+| `links` | one symlink per file (folders are never replaced by a link) | `ln -s` |
+| `stow` | each top-level folder is a package | `stow -d CLONE -t HOME -R PACKAGES` |
+| `chezmoi` | `dot_`, `private_`, `executable_`, ... prefixes and `.tmpl` are mapped to the plain path for the conflict list | `chezmoi apply --source CLONE --force` |
+| `yadm` | `##` alternate suffixes are mapped to the plain name | `yadm clone -f --no-bootstrap REPO` (`yadm pull` when it is already set up) |
+
+Repo-only files (`.git`, `README*`, `LICENSE*`, `.gitignore`, `.stow-local-ignore`...) are never linked. A missing tool (`chezmoi`, `yadm`, `stow`; Arch `extra`) is installed with `sudo pacman -S --needed` as the first step of `apply` (the plan says so). One repository can be set up at a time: a second one is refused (exit 4) until `undo`. Exits: 0 done, 2 no `--yes` or conflicts not approved, 4 precondition (cannot clone, unknown method, nothing to apply, tool not installable), 6 a step failed. The wizard's Import page asks for the repository (empty skips); `init` runs `dotfiles apply REPO` **last**, so your files win over the starter configs, and the conflict question appears at the terminal.
+
+Tested against real git repositories and fake tools (`stow`, `chezmoi`, `yadm`, `pacman`); the real tools have not been run. Private repositories and credentials are git's business (SSH keys or a credential helper must already work).
+
 ### 13.8 Tests and what is verified
 
 - Pure `SetupPlan`, `Shortcuts`, `NoctaliaConfig` classes with script tests; native tests with fake `pacman`, `yay`, `git`, `qdbus6`, `kwriteconfig6`, `sudo`, `systemctl` (plan output, `--yes` gating, root refusal, partial failure, re-run, undo, drift, one clean `--json` envelope); the starter TOML and JSON are parsed.
@@ -410,7 +433,7 @@ Exits: as `setup` (0, 2, 4, 5, 6, 7, 8); 4 also for no terminal without `--answe
 | Gaming | `gaming` (`none`, `steam`, `bundle`) | catalog (CachyOS gaming bundle) |
 | Apps | `app_mode` (`defaults` or `custom`), `app_selection` per category, `default_browser`, `default_terminal`, `launcher` (`noctalia` default, `walker`, `rofi`, `fuzzel`, `wofi`; asked for Hyprland and Both), `menu` (`rofi` default, `walker`, `fuzzel`, `wofi`) | `install` (the provider's package), `runner set`, `runner menu-set` |
 | Backups and storage | `snapshots`, `backup_target` (restic or borg), `mounts`, `cache_cleanup` | snapper, timers |
-| Import | `dotfiles_repo`, `dotfiles_method` (`chezmoi`, `yadm`, `stow`, `links`) | dotfiles import (last step) |
+| Import | `dotfiles_repo` (the method is detected, not asked) | `dotfiles apply` (last step) |
 
 Fonts are not a question: the install always adds JetBrains Mono, JetBrains Mono Nerd, the Powerline fonts and the Nerd Fonts symbols (with the Noto fonts `setup hyprland` already installs).
 

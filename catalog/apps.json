@@ -1,6 +1,6 @@
 {
   "schema": 3,
-  "catalog_version": "0.11.0-draft",
+  "catalog_version": "0.12.0-draft",
   "generated": "2026-11-09",
   "notes": [
     "Tier default = installed by a plain install; optional = offered in the picker; apps not listed are not part of the catalog.",
@@ -1313,6 +1313,48 @@
       }
     },
     {
+      "id": "chezmoi",
+      "name": "chezmoi",
+      "description": "Manage your dotfiles across machines (used by bxcachy dotfiles)",
+      "description_source": "curated",
+      "kind": "tui",
+      "group": "development",
+      "category": "Version control",
+      "tier": "optional",
+      "source": "pacman",
+      "targets": [
+        "chezmoi"
+      ],
+      "repo": "extra",
+      "homepage": "https://www.chezmoi.io/",
+      "macos": "chezmoi (same)",
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-11"
+    },
+    {
+      "id": "stow",
+      "name": "GNU Stow",
+      "description": "Symlink farm manager for dotfiles (used by bxcachy dotfiles)",
+      "description_source": "curated",
+      "kind": "tui",
+      "group": "development",
+      "category": "Version control",
+      "tier": "optional",
+      "source": "pacman",
+      "targets": [
+        "stow"
+      ],
+      "repo": "extra",
+      "homepage": "https://www.gnu.org/software/stow/",
+      "macos": "stow (same)",
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-11"
+    },
+    {
       "id": "sublime-merge",
       "name": "Sublime Merge",
       "description": "Meet a new Git Client, from the makers of Sublime Text",
@@ -1331,6 +1373,27 @@
         "owner-request"
       ],
       "verified_on": "2026-11-09"
+    },
+    {
+      "id": "yadm",
+      "name": "yadm",
+      "description": "Yet Another Dotfiles Manager, built on git (used by bxcachy dotfiles)",
+      "description_source": "curated",
+      "kind": "tui",
+      "group": "development",
+      "category": "Version control",
+      "tier": "optional",
+      "source": "pacman",
+      "targets": [
+        "yadm"
+      ],
+      "repo": "extra",
+      "homepage": "https://yadm.io/",
+      "macos": "yadm (same)",
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-11"
     },
     {
       "id": "virt-manager",
