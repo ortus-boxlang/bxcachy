@@ -4,7 +4,7 @@ set -euo pipefail
 binary="$(realpath "${1:?native executable required}")"
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 fail() { echo "FAIL: $*" >&2; exit 1; }
-mkdir -p "$tmp/bin" "$tmp/home" "$tmp/fake"
+mkdir -p "$tmp/bin" "$tmp/home" "$tmp/fake" "$tmp/nobin"   # nobin: an empty PATH, so a real podman or docker on the machine can never be reached
 # fake container engine: keeps one folder per container, logs every call to $FAKE/<program>.log
 cat > "$tmp/bin/fakeengine" <<'FAKE'
 #!/usr/bin/env bash
@@ -46,8 +46,8 @@ run "$binary" db engines --json | jq -e '.data.engines | map(select(.id=="milvus
 [[ "$(code "$binary" db start postgres --port=80 --yes)" == 4 && "$(code "$binary" db start postgres --port=abc --yes)" == 4 ]] || fail 'a bad port exits 4'
 [[ "$(code "$binary" db start couchbase --port=9000 --yes)" == 4 ]] || fail 'Couchbase has fixed ports'
 [[ "$(code "$binary" db)" == 2 && "$(code "$binary" db bogus)" == 2 && "$(code "$binary" db start)" == 2 ]] || fail 'usage exits 2'
-env BXCACHY_CONFIG_HOME="$tmp/cfg" BXCACHY_DATA_HOME="$tmp/data" HOME="$tmp/home" PATH="/usr/bin:/bin" "$binary" db start postgres --yes >/dev/null 2>&1 && fail 'no container engine must fail'
-[[ "$(env BXCACHY_CONFIG_HOME="$tmp/cfg" BXCACHY_DATA_HOME="$tmp/data" HOME="$tmp/home" PATH="/usr/bin:/bin" "$binary" db start postgres --yes >/dev/null 2>&1; echo $?)" == 4 ]] || fail 'no container engine exits 4'
+env BXCACHY_CONFIG_HOME="$tmp/cfg" BXCACHY_DATA_HOME="$tmp/data" HOME="$tmp/home" PATH="$tmp/nobin" "$binary" db start postgres --yes >/dev/null 2>&1 && fail 'no container engine must fail'
+[[ "$(env BXCACHY_CONFIG_HOME="$tmp/cfg" BXCACHY_DATA_HOME="$tmp/data" HOME="$tmp/home" PATH="$tmp/nobin" "$binary" db start postgres --yes >/dev/null 2>&1; echo $?)" == 4 ]] || fail 'no container engine exits 4'
 
 # plan and dry-run create nothing
 [[ "$(code "$binary" db start postgres)" == 2 ]] || fail 'no --yes exits 2'
