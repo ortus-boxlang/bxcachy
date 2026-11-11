@@ -165,14 +165,23 @@ class InitPlan {
         // AI: a keyring for the API keys, the keys you chose to type now (optional steps: skipping one never stops the plan), the
         // keys you chose to export to every shell, and the default agent
         if ( agentIds.len() ) out.steps.append( { id: "secrets-setup", title: "check for a keyring for your API keys (installs one, with libsecret and age, only if none is found)", argv: [ "bxcachy", "secrets", "setup" ] } );
-        if ( pick( a, "ai_keys" ) == "now" ) for ( var id in agentIds ) {
-            var ag = agentLib.find( id );
-            if ( !structIsEmpty( ag ) ) out.steps.append( { id: "key-" & ag.key, title: "store your " & ag.label & " (typed hidden; you can skip it)", argv: [ "bxcachy", "secrets", "set", ag.key ], optional: true } );
-        }
-        if ( pick( a, "ai_keys" ) == "now" ) for ( var gk in pick( a, "ai_global_keys", [] ) ) {
-            var gAgent = {};
-            for ( var cand in agentLib.all() ) if ( cand.key == gk && arrayFind( agentIds, cand.id ) ) gAgent = cand;
-            if ( !structIsEmpty( gAgent ) ) out.steps.append( { id: "global-" & gk, title: "export " & gk & " to every shell (you chose this; every program can read it)", argv: [ "bxcachy", "secrets", "global", "on", gk ], optional: true } );
+        // keys to type: the key of every single-provider agent you chose, plus the providers you ticked (OpenCode and others take many)
+        var keyEnvs = [];
+        if ( pick( a, "ai_keys" ) == "now" ) {
+            var provLib = new bxcachy.AiProviders();
+            for ( var id in agentIds ) {
+                var ag = agentLib.find( id );
+                if ( !structIsEmpty( ag ) && ag.providers.len() == 1 ) { var env1 = provLib.find( ag.providers[ 1 ] ).env; if ( !arrayFind( keyEnvs, env1 ) ) keyEnvs.append( env1 ); }
+            }
+            for ( var pid in pick( a, "ai_providers", [] ) ) {
+                var pv = provLib.find( pid );
+                if ( structIsEmpty( pv ) ) out.errors.append( "ai_providers: unknown provider " & pid );
+                else if ( !arrayFind( keyEnvs, pv.env ) ) keyEnvs.append( pv.env );
+            }
+            for ( var env in keyEnvs ) out.steps.append( { id: "key-" & env, title: "store your " & provLib.byEnv( env ).name & " API key (typed hidden; you can skip it)", argv: [ "bxcachy", "secrets", "set", env ], optional: true } );
+            for ( var gk in pick( a, "ai_global_keys", [] ) ) {
+                if ( arrayFind( keyEnvs, gk ) ) out.steps.append( { id: "global-" & gk, title: "export " & gk & " to every shell (you chose this; every program can read it)", argv: [ "bxcachy", "secrets", "global", "on", gk ], optional: true } );
+            }
         }
         if ( isSet( aiDefault ) && !structIsEmpty( agentLib.find( aiDefault ) ) ) out.steps.append( { id: "ai-default", title: "make " & aiDefault & " your default coding agent", argv: [ "bxcachy", "ai", "default", aiDefault ] } );
         if ( len( pick( a, "launcher" ) ) ) out.steps.append( { id: "launcher", title: "use " & a.launcher & " as the app launcher (no shortcut is changed)", argv: [ "bxcachy", "runner", "set", a.launcher ] } );

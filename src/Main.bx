@@ -15,7 +15,7 @@ class {
         var config = new bxcachy.ConfigService();
         // One shared flag check for every command: unknown flags are usage errors and nothing runs.
         for ( var flag in args.options ) {
-            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
+            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
                 println( "Unknown option: --" & flag );
                 CLIExit( 2 );
             }
@@ -281,8 +281,8 @@ class {
           secSub = p.len() >= 2 ? p[2] : "";
           sec = new bxcachy.Secrets( cli );
           if ( secSub == "status" && p.len() == 2 ) CLIExit( sec.status( asJson ) );
-          if ( secSub == "list" && p.len() == 2 ) CLIExit( sec.list( asJson ) );
-          if ( secSub == "set" && p.len() == 3 ) CLIExit( sec.setValue( p[3], args.options["from-file"] ?: "", asJson ) );
+          if ( secSub == "list" && p.len() == 2 ) CLIExit( sec.list( asJson, args.options.type ?: "" ) );
+          if ( secSub == "set" && p.len() == 3 ) CLIExit( sec.setValue( p[3], args.options["from-file"] ?: "", asJson, args.options.type ?: "", args.options.provider ?: "" ) );
           if ( secSub == "get" && p.len() == 3 ) CLIExit( sec.getValue( p[3], structKeyExists( args.options, "show" ), asJson ) );
           if ( secSub == "unset" && p.len() == 3 ) CLIExit( sec.unset( p[3], structKeyExists( args.options, "yes" ), asJson ) );
           if ( secSub == "apply" && p.len() == 2 ) CLIExit( sec.apply( structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
@@ -301,10 +301,11 @@ class {
               secNames = secRaw.slice( 3, secDash - 3 );
               secCmd = secRaw.slice( secDash + 1 );
               secStrict = arrayFind( secNames, "--strict" ) > 0;
-              CLIExit( sec.run( secNames.filter( function( x ) { return left( x, 2 ) != "--"; } ), secCmd, secStrict ) );
+              secType = ""; for ( secOpt in secNames ) if ( left( secOpt, 7 ) == "--type=" ) secType = mid( secOpt, 8, 10 );
+              CLIExit( sec.run( secNames.filter( function( x ) { return left( x, 2 ) != "--"; } ), secCmd, secStrict, secType ) );
             }
           }
-          println( "Usage: bxcachy secrets status | setup [--keyring=kwallet|gnome-keyring|none] [--yes] | list | set NAME [--from-file=F] | get NAME [--show] | unset NAME --yes | apply [--yes] | global on NAME --yes|off NAME|show | unlock | lock | export FILE [--plain] [--force] --yes | import FILE [--overwrite] --yes | env [NAMES...] | run [NAMES...] [--strict] -- COMMAND [ARGS...] [--json]" );
+          println( "Usage: bxcachy secrets status | setup [--keyring=kwallet|gnome-keyring|none] [--yes] | list [--type=ai|other] | set NAME [--from-file=F] [--type=ai|other] [--provider=ID] | get NAME [--show] | unset NAME --yes | apply [--yes] | global on NAME --yes|off NAME|show | unlock | lock | export FILE [--plain] [--force] --yes | import FILE [--overwrite] --yes | env [NAMES...] | run [NAMES...] [--strict] -- COMMAND [ARGS...] [--json]" );
           CLIExit( 2 );
           break;
          case "dotfiles":

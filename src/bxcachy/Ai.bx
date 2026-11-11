@@ -36,9 +36,9 @@ class Ai {
         var def = defaultId();
         var sec = new bxcachy.Secrets( variables.cli );
         var rows = variables.agents.all().map( function( a ) {
-            return { id: a.id, name: a.name, command: a.command, installed: installed( a.command ), key: a.key, key_stored: len( sec.fetch( a.key ) ) > 0, default: a.id == def };
+            return { id: a.id, name: a.name, command: a.command, installed: installed( a.command ), keys: variables.agents.keys( a ).map( function( k ) { return { name: k, stored: len( sec.fetch( k ) ) > 0 }; } ), default: a.id == def };
         } );
-        var lines = rows.map( function( r ) { return left( r.id & repeatString( " ", 12 ), 12 ) & " " & left( r.name & repeatString( " ", 11 ), 11 ) & ( r.installed ? "installed    " : "not installed" ) & "  key " & ( r.key_stored ? "stored    " : "not stored" ) & ( r.default ? "  (default)" : "" ); } );
+        var lines = rows.map( function( r ) { return left( r.id & repeatString( " ", 12 ), 12 ) & " " & left( r.name & repeatString( " ", 11 ), 11 ) & ( r.installed ? "installed    " : "not installed" ) & "  keys " & r.keys.filter( function( k ) { return k.stored; } ).len() & "/" & r.keys.len() & " stored" & ( r.default ? "  (default)" : "" ); } );
         return say( "ai list", 0, { default: def, agents: rows }, arguments.asJson, lines );
     }
 
@@ -88,7 +88,9 @@ class Ai {
         var self = getSystemSetting( "BXCACHY_SELF", "bxcachy" );
         var argv = [];
         for ( var p in term.argv ) argv.append( p );
-        for ( var p in [ self, "secrets", "run", a.key, "--", a.command ] ) argv.append( p );
+        for ( var p in [ self, "secrets", "run" ] ) argv.append( p );
+        for ( var k in variables.agents.keys( a ) ) argv.append( k );
+        argv.append( "--" ); argv.append( a.command );
         var data = { agent: a.id, terminal: term.id, command: argv };
         if ( arguments.dryRun ) return say( cmd, 0, data, arguments.asJson, [ "Dry run: would open " & a.name & " in " & term.id & ": " & argv.toList( " " ) ], true );
         var run = [ "sh", "-c", 'setsid "$@" >/dev/null 2>&1 &', "_" ];

@@ -105,6 +105,12 @@ check( "keys 'now' types one key per chosen agent, as optional steps", cmd( p, "
 optional = true; for ( s in p.steps ) if ( left( s.id, 4 ) == "key-" && !( s.optional ?: false ) ) optional = false;
 check( "key steps are optional (skipping never stops the plan)", optional );
 check( "a global export is planned only for a key of a chosen agent", cmd( p, "global-GEMINI_API_KEY" ) == "bxcachy secrets global on GEMINI_API_KEY" && find( "global-OPENAI_API_KEY", ids( p ) ) == 0 );
+p = ip.plan( { ai_agents: [ "opencode-cli" ], ai_keys: "now", ai_providers: [ "novita", "openrouter", "anthropic" ], ai_global_keys: [ "NOVITA_API_KEY", "GROQ_API_KEY" ] } );
+check( "a many-provider agent implies no key; the ticked providers are asked", cmd( p, "key-NOVITA_API_KEY" ) == "bxcachy secrets set NOVITA_API_KEY" && cmd( p, "key-OPENROUTER_API_KEY" ) == "bxcachy secrets set OPENROUTER_API_KEY" && cmd( p, "key-ANTHROPIC_API_KEY" ) == "bxcachy secrets set ANTHROPIC_API_KEY" && find( "key-OPENAI_API_KEY", ids( p ) ) == 0 );
+check( "global export only for keys that are being typed", cmd( p, "global-NOVITA_API_KEY" ) == "bxcachy secrets global on NOVITA_API_KEY" && find( "global-GROQ_API_KEY", ids( p ) ) == 0 );
+p = ip.plan( { ai_agents: [ "claude-code" ], ai_keys: "now", ai_providers: [ "anthropic", "novita" ] } );
+check( "a key is asked once even when the agent and the providers both name it", ids( p ) == "apps,secrets-setup,key-ANTHROPIC_API_KEY,key-NOVITA_API_KEY" );
+check( "an unknown provider is an error", ip.plan( { ai_keys: "now", ai_providers: [ "nope" ] } ).errors.len() == 1 );
 check( "no keys step without an answer", find( "key-", ids( ip.plan( { ai_agents: [ "claude-code" ] } ) ) ) == 0 );
 p = ip.plan( { ai_agents: [ "claude-code" ], ai_default: "gemini-cli" } );
 check( "a default agent that was not ticked is installed too", cmd( p, "apps" ) == "bxcachy install claude-code gemini-cli" );

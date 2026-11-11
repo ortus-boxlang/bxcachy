@@ -25,8 +25,8 @@ chmod +x "$tmp/bin/secret-tool" "$tmp/bin/busctl"
 ln -sf "$(command -v sh)" "$tmp/nobin/sh"
 for c in grep cat chmod mkdir rm printf stty; do ln -sf "$(command -v $c)" "$tmp/nobin/$c"; done
 export FAKE_KEYRING="$tmp/kr"
-run() { env -u GEMINI_API_KEY -u OPENAI_API_KEY -u ANTHROPIC_API_KEY HOME="$tmp/home" BXCACHY_CONFIG_HOME="$tmp/cfg" BXCACHY_STATE_HOME="$tmp/state" BXCACHY_DATA_HOME="$tmp/data" FAKE_KEYRING="$FAKE_KEYRING" PATH="$tmp/bin:$PATH" "$@"; }
-runfile() { env -u GEMINI_API_KEY -u OPENAI_API_KEY -u ANTHROPIC_API_KEY HOME="$tmp/home" BXCACHY_CONFIG_HOME="$tmp/cfg2" BXCACHY_STATE_HOME="$tmp/state" BXCACHY_DATA_HOME="$tmp/data2" PATH="$tmp/nobin" "$@"; }
+run() { env -u GEMINI_API_KEY -u OPENAI_API_KEY -u ANTHROPIC_API_KEY -u GITHUB_TOKEN -u NOVITA_API_KEY -u MY_LLM_KEY HOME="$tmp/home" BXCACHY_CONFIG_HOME="$tmp/cfg" BXCACHY_STATE_HOME="$tmp/state" BXCACHY_DATA_HOME="$tmp/data" FAKE_KEYRING="$FAKE_KEYRING" PATH="$tmp/bin:$PATH" "$@"; }
+runfile() { env -u GEMINI_API_KEY -u OPENAI_API_KEY -u ANTHROPIC_API_KEY -u GITHUB_TOKEN -u NOVITA_API_KEY -u MY_LLM_KEY HOME="$tmp/home" BXCACHY_CONFIG_HOME="$tmp/cfg2" BXCACHY_STATE_HOME="$tmp/state" BXCACHY_DATA_HOME="$tmp/data2" PATH="$tmp/nobin" "$@"; }
 code() { set +e; "$@" >/dev/null 2>&1; local c=$?; set -e; echo "$c"; }
 s() { run "$binary" secrets "$@"; }
 
@@ -38,20 +38,20 @@ printf 'sk-test-123\n' > "$tmp/tty"
 BXCACHY_TTY_IN="$tmp/tty" s set ANTHROPIC_API_KEY | grep -q 'was saved (keyring)' || fail 'set via prompt'
 [[ "$(cat "$tmp/kr/ANTHROPIC_API_KEY")" == 'sk-test-123' ]] || fail "the keyring got the value: $(cat "$tmp/kr/ANTHROPIC_API_KEY")"
 [[ "$(code "$binary" secrets set lower_case)" == 4 ]] || fail 'a bad name exits 4'
-printf '' > "$tmp/tty"; [[ "$(BXCACHY_TTY_IN="$tmp/tty" code env -u GEMINI_API_KEY -u OPENAI_API_KEY -u ANTHROPIC_API_KEY HOME="$tmp/home" BXCACHY_CONFIG_HOME="$tmp/cfg" FAKE_KEYRING="$FAKE_KEYRING" PATH="$tmp/bin:$PATH" BXCACHY_TTY_IN="$tmp/tty" "$binary" secrets set OPENAI_API_KEY)" == 4 ]] || fail 'an empty value exits 4'
+printf '' > "$tmp/tty"; [[ "$(BXCACHY_TTY_IN="$tmp/tty" code env -u GEMINI_API_KEY -u OPENAI_API_KEY -u ANTHROPIC_API_KEY -u GITHUB_TOKEN -u NOVITA_API_KEY -u MY_LLM_KEY HOME="$tmp/home" BXCACHY_CONFIG_HOME="$tmp/cfg" FAKE_KEYRING="$FAKE_KEYRING" PATH="$tmp/bin:$PATH" BXCACHY_TTY_IN="$tmp/tty" "$binary" secrets set OPENAI_API_KEY)" == 4 ]] || fail 'an empty value exits 4'
 printf 'oa-key\n' > "$tmp/valfile"
 s set OPENAI_API_KEY --from-file="$tmp/valfile" | grep -q 'was saved' || fail 'set --from-file'
 printf 'oa-key2\n' > "$tmp/valfile"
 s set OPENAI_API_KEY --from-file="$tmp/valfile" | grep -q 'was replaced' || fail 'a second set replaces'
 
 # list, get
-s list | grep -q 'ANTHROPIC_API_KEY  (claude-code)' || fail 'list shows names and the agent that uses them'
+s list | grep -q 'ANTHROPIC_API_KEY .*ai .*(claude-code, opencode-cli)' || fail "list shows names, type and the agents that use them: $(s list)"
 [[ "$(s list)" != *sk-test-123* ]] || fail 'list must never print values'
 s get ANTHROPIC_API_KEY | grep -q 'is set (11 characters)' || fail 'get hides the value'
 [[ "$(s get ANTHROPIC_API_KEY)" != *sk-test-123* ]] || fail 'get printed the value without --show'
 [[ "$(s get ANTHROPIC_API_KEY --show)" == 'sk-test-123' ]] || fail 'get --show prints the value'
 s get ANTHROPIC_API_KEY --json | jq -e '.data.length == 11 and (.data | has("value") | not)' >/dev/null || fail 'get --json hides the value'
-[[ "$(code env -u GEMINI_API_KEY -u OPENAI_API_KEY -u ANTHROPIC_API_KEY HOME="$tmp/home" BXCACHY_CONFIG_HOME="$tmp/cfg" FAKE_KEYRING="$FAKE_KEYRING" PATH="$tmp/bin:$PATH" "$binary" secrets get GEMINI_API_KEY)" == 4 ]] || fail 'a missing secret exits 4'
+[[ "$(code env -u GEMINI_API_KEY -u OPENAI_API_KEY -u ANTHROPIC_API_KEY -u GITHUB_TOKEN -u NOVITA_API_KEY -u MY_LLM_KEY HOME="$tmp/home" BXCACHY_CONFIG_HOME="$tmp/cfg" FAKE_KEYRING="$FAKE_KEYRING" PATH="$tmp/bin:$PATH" "$binary" secrets get GEMINI_API_KEY)" == 4 ]] || fail 'a missing secret exits 4'
 
 # env: export lines, quotes escaped
 printf "a'b\n" > "$tmp/valfile"; s set QUOTE_TEST --from-file="$tmp/valfile" >/dev/null
@@ -62,9 +62,9 @@ out="$(s env QUOTE_TEST)"; [[ "$out" == "export QUOTE_TEST='a'\\''b'" ]] || fail
 # run: the program gets the secret, its flags are its own, its exit code comes back, a missing secret is skipped (or --strict stops)
 r="$(s run ANTHROPIC_API_KEY -- sh -c 'echo "$ANTHROPIC_API_KEY"')"; [[ "$r" == 'sk-test-123' ]] || fail "run passes the env: $r"
 r="$(s run ANTHROPIC_API_KEY -- printf '%s' --resume)"; [[ "$r" == '--resume' ]] || fail "flags after -- belong to the program: $r"
-[[ "$(code env -u GEMINI_API_KEY -u OPENAI_API_KEY -u ANTHROPIC_API_KEY HOME="$tmp/home" BXCACHY_CONFIG_HOME="$tmp/cfg" FAKE_KEYRING="$FAKE_KEYRING" PATH="$tmp/bin:$PATH" "$binary" secrets run ANTHROPIC_API_KEY -- sh -c 'exit 7')" == 7 ]] || fail 'run returns the program exit code'
+[[ "$(code env -u GEMINI_API_KEY -u OPENAI_API_KEY -u ANTHROPIC_API_KEY -u GITHUB_TOKEN -u NOVITA_API_KEY -u MY_LLM_KEY HOME="$tmp/home" BXCACHY_CONFIG_HOME="$tmp/cfg" FAKE_KEYRING="$FAKE_KEYRING" PATH="$tmp/bin:$PATH" "$binary" secrets run ANTHROPIC_API_KEY -- sh -c 'exit 7')" == 7 ]] || fail 'run returns the program exit code'
 r="$(s run GEMINI_API_KEY -- sh -c 'echo "[${GEMINI_API_KEY:-none}]"')"; [[ "$r" == '[none]' ]] || fail 'a missing secret is skipped'
-[[ "$(code env -u GEMINI_API_KEY -u OPENAI_API_KEY -u ANTHROPIC_API_KEY HOME="$tmp/home" BXCACHY_CONFIG_HOME="$tmp/cfg" FAKE_KEYRING="$FAKE_KEYRING" PATH="$tmp/bin:$PATH" "$binary" secrets run GEMINI_API_KEY --strict -- true)" == 4 ]] || fail '--strict with a missing secret exits 4'
+[[ "$(code env -u GEMINI_API_KEY -u OPENAI_API_KEY -u ANTHROPIC_API_KEY -u GITHUB_TOKEN -u NOVITA_API_KEY -u MY_LLM_KEY HOME="$tmp/home" BXCACHY_CONFIG_HOME="$tmp/cfg" FAKE_KEYRING="$FAKE_KEYRING" PATH="$tmp/bin:$PATH" "$binary" secrets run GEMINI_API_KEY --strict -- true)" == 4 ]] || fail '--strict with a missing secret exits 4'
 
 
 # loaders: wrappers for the agents whose key is stored; they hold no values
@@ -79,6 +79,22 @@ s apply --json | jq -e '.exit_code == 2' >/dev/null 2>&1 || [[ "$(code env HOME=
 s apply --yes | grep -q 'Wrote' || fail 'apply --yes'
 # the shell init templates source the loader (bash is enough to prove the line works)
 bash -c 'cfg="$1"; XDG_CONFIG_HOME="$cfg"; [ -r "${XDG_CONFIG_HOME:-$HOME/.config}/bxcachy/secrets.sh" ] && . "${XDG_CONFIG_HOME:-$HOME/.config}/bxcachy/secrets.sh"; type claude | head -1' _ "$tmp/cfg" | grep -q 'claude is a function' || fail 'the loader file must define the function when sourced'
+
+# type: provider keys are "ai" by name; others are "other" unless told; --type filters; a given type is remembered (names only)
+printf 'tok\n' > "$tmp/valfile"
+s set GITHUB_TOKEN --from-file="$tmp/valfile" | grep -q 'Type: other' || fail 'an unknown name is type other, with a hint'
+s set NOVITA_API_KEY --from-file="$tmp/valfile" --json | jq -e '.data.type == "ai"' >/dev/null || fail 'a provider key is type ai'
+s set MY_LLM_KEY --from-file="$tmp/valfile" --type=ai --provider=custom --json | jq -e '.data.type == "ai"' >/dev/null || fail '--type=ai on an unknown name'
+[[ "$(code env HOME="$tmp/home" BXCACHY_CONFIG_HOME="$tmp/cfg" FAKE_KEYRING="$FAKE_KEYRING" PATH="$tmp/bin:$PATH" "$binary" secrets set X_KEY --from-file="$tmp/valfile" --type=bogus)" == 4 ]] || fail 'a bad --type exits 4'
+s list --type=ai --json | jq -e '([.data.secrets[].name] | index("NOVITA_API_KEY")) and ([.data.secrets[].name] | index("MY_LLM_KEY")) and (([.data.secrets[].name] | index("GITHUB_TOKEN")) | not)' >/dev/null || fail 'list --type=ai'
+s list --type=other --json | jq -e '[.data.secrets[].name] == ["GITHUB_TOKEN"] or ([.data.secrets[].name] | index("GITHUB_TOKEN"))' >/dev/null || fail 'list --type=other'
+jq -e '.meta.MY_LLM_KEY.type == "ai" and (tostring | contains("tok") | not)' "$tmp/cfg/bxcachy/secrets.json" >/dev/null || fail 'secrets.json keeps type and provider, never a value'
+# run --type=ai loads every AI key and no other secret
+r="$(s run --type=ai -- sh -c 'echo "${NOVITA_API_KEY:-no}/${MY_LLM_KEY:-no}/${GITHUB_TOKEN:-no}"')"; [[ "$r" == 'tok/tok/no' ]] || fail "run --type=ai: $r"
+# OpenCode accepts many providers: its wrapper carries every stored key it accepts, and only those
+grep -q '^opencode() { bxcachy secrets run ANTHROPIC_API_KEY OPENAI_API_KEY NOVITA_API_KEY -- command opencode "\$@"; }$' "$sh" || fail "opencode wrapper: $(grep opencode "$sh")"
+! grep -q 'GITHUB_TOKEN\|MY_LLM_KEY' "$sh" || fail 'a wrapper must not carry keys the agent does not accept'
+s unset GITHUB_TOKEN --yes >/dev/null; s unset NOVITA_API_KEY --yes >/dev/null; s unset MY_LLM_KEY --yes >/dev/null
 
 # global export: needs --yes and prints the warning first; the cache is mode 600 in the runtime dir and holds the value, files do not
 mkdir -p "$tmp/rt"; chmod 700 "$tmp/rt"
@@ -153,7 +169,7 @@ su "$binary" secrets setup --yes --json | jq -e '.data.keyring_found == true and
 [[ ! -s "$tmp/pacman.log" ]] || fail 'pacman ran although nothing was missing'
 
 # unset: plan, then apply
-[[ "$(code env -u GEMINI_API_KEY -u OPENAI_API_KEY -u ANTHROPIC_API_KEY HOME="$tmp/home" BXCACHY_CONFIG_HOME="$tmp/cfg" FAKE_KEYRING="$FAKE_KEYRING" PATH="$tmp/bin:$PATH" "$binary" secrets unset QUOTE_TEST)" == 2 ]] || fail 'unset without --yes exits 2'
+[[ "$(code env -u GEMINI_API_KEY -u OPENAI_API_KEY -u ANTHROPIC_API_KEY -u GITHUB_TOKEN -u NOVITA_API_KEY -u MY_LLM_KEY HOME="$tmp/home" BXCACHY_CONFIG_HOME="$tmp/cfg" FAKE_KEYRING="$FAKE_KEYRING" PATH="$tmp/bin:$PATH" "$binary" secrets unset QUOTE_TEST)" == 2 ]] || fail 'unset without --yes exits 2'
 [[ -f "$tmp/kr/QUOTE_TEST" ]] || fail 'the plan deleted the secret'
 s unset QUOTE_TEST --yes | grep -q 'was deleted' || fail 'unset --yes'
 [[ ! -f "$tmp/kr/QUOTE_TEST" ]] || fail 'unset did not delete'
@@ -164,7 +180,7 @@ printf 'file-secret\n' > "$tmp/valfile"
 runfile "$binary" secrets set GEMINI_API_KEY --from-file="$tmp/valfile" | grep -q 'was saved (file)' || fail 'set (file)'
 [[ "$(stat -c %a "$tmp/data2/secrets/GEMINI_API_KEY")" == 600 && "$(stat -c %a "$tmp/data2/secrets")" == 700 ]] || fail 'file modes'
 [[ "$(runfile "$binary" secrets get GEMINI_API_KEY --show)" == 'file-secret' ]] || fail 'get (file)'
-runfile "$binary" secrets list | grep -q 'GEMINI_API_KEY  (gemini-cli)' || fail 'list (file)'
+runfile "$binary" secrets list | grep -q 'GEMINI_API_KEY .*ai .*(gemini-cli, opencode-cli)' || fail 'list (file)'
 r="$(runfile "$binary" secrets run GEMINI_API_KEY -- sh -c 'echo "$GEMINI_API_KEY"')"; [[ "$r" == 'file-secret' ]] || fail "run (file): $r"
 runfile "$binary" secrets unset GEMINI_API_KEY --yes >/dev/null; [[ ! -e "$tmp/data2/secrets/GEMINI_API_KEY" ]] || fail 'unset (file)'
 echo "secrets-test: ok"

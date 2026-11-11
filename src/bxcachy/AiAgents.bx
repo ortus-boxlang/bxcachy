@@ -1,11 +1,14 @@
-// The coding agents BxCachy knows: the catalog app that installs each, the command it starts, and the environment variable it
-// reads its API key from (vendor docs). One list for the wizard, `bxcachy ai` and `bxcachy secrets`.
+// The coding agents BxCachy knows: the catalog app that installs each, the command it starts, and the providers whose API keys it
+// accepts (AiProviders ids). A single-provider agent implies its key; OpenCode accepts many. One list for the wizard,
+// `bxcachy ai` and `bxcachy secrets`: an agent is only ever given keys from its own list.
 class AiAgents {
     function all() {
+        var many = [ "anthropic", "openai", "google", "openrouter", "novita", "opencode", "groq", "mistral", "deepseek", "xai", "together" ];
         return [
-            { id: "claude-code", name: "Claude Code", command: "claude", key: "ANTHROPIC_API_KEY", label: "Anthropic API key" },
-            { id: "codex-cli", name: "Codex", command: "codex", key: "OPENAI_API_KEY", label: "OpenAI API key" },
-            { id: "gemini-cli", name: "Gemini CLI", command: "gemini", key: "GEMINI_API_KEY", label: "Google Gemini API key" }
+            { id: "claude-code", name: "Claude Code", command: "claude", providers: [ "anthropic" ] },
+            { id: "codex-cli", name: "Codex", command: "codex", providers: [ "openai" ] },
+            { id: "gemini-cli", name: "Gemini CLI", command: "gemini", providers: [ "google" ] },
+            { id: "opencode-cli", name: "OpenCode", command: "opencode", providers: many }
         ];
     }
 
@@ -15,5 +18,11 @@ class AiAgents {
     function find( id ) {
         for ( var a in all() ) if ( a.id == arguments.id ) return a;
         return {};
+    }
+
+    // The environment variable names an agent accepts.
+    function keys( agent ) {
+        var prov = new bxcachy.AiProviders();
+        return arguments.agent.providers.map( function( id ) { return prov.find( id ).env; } );
     }
 }

@@ -15,7 +15,7 @@ ai() { run "$binary" ai "$@"; }
 printf '{"backend":"file"}\n' > "$tmp/cfg/bxcachy/secrets.json"
 
 # list: only claude is "installed" (a fake on PATH); nothing is the default yet
-ai list --json | jq -e '(.data.agents | length) == 3 and (.data.agents[0].id == "claude-code") and .data.agents[0].installed == true and (.data.agents[1].installed == false) and .data.default == ""' >/dev/null || fail "list: $(ai list --json)"
+ai list --json | jq -e '(.data.agents | length) == 4 and (.data.agents[0].id == "claude-code") and .data.agents[0].installed == true and (.data.agents[1].installed == false) and .data.default == ""' >/dev/null || fail "list: $(ai list --json)"
 ai list | grep -q 'claude-code.*installed' || fail 'list text'
 
 # default: unknown 4, not installed 4, plan 2, apply 0, show
