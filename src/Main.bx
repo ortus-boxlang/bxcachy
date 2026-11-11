@@ -15,7 +15,7 @@ class {
         var config = new bxcachy.ConfigService();
         // One shared flag check for every command: unknown flags are usage errors and nothing runs.
         for ( var flag in args.options ) {
-            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
+            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
                 println( "Unknown option: --" & flag );
                 CLIExit( 2 );
             }
@@ -279,6 +279,8 @@ class {
           if ( secSub == "global" && p.len() >= 3 ) CLIExit( sec.globalCmd( p[3], p.len() >= 4 ? p[4] : "", structKeyExists( args.options, "yes" ), asJson ) );
           if ( secSub == "unlock" && p.len() == 2 ) CLIExit( sec.unlock( asJson ) );
           if ( secSub == "lock" && p.len() == 2 ) CLIExit( sec.lock( asJson ) );
+          if ( secSub == "export" && p.len() == 3 ) CLIExit( sec.exportTo( p[3], structKeyExists( args.options, "plain" ), structKeyExists( args.options, "force" ), structKeyExists( args.options, "yes" ), asJson ) );
+          if ( secSub == "import" && p.len() == 3 ) CLIExit( sec.importFrom( p[3], structKeyExists( args.options, "overwrite" ), structKeyExists( args.options, "yes" ), asJson ) );
           if ( secSub == "env" ) CLIExit( sec.env( p.len() > 2 ? p.slice( 3 ) : [] ) );
           if ( secSub == "run" ) {
             // Everything after -- is the program and its arguments, taken from the raw arguments (the flag parser would eat its flags).
@@ -291,7 +293,7 @@ class {
               CLIExit( sec.run( secNames.filter( function( x ) { return left( x, 2 ) != "--"; } ), secCmd, secStrict ) );
             }
           }
-          println( "Usage: bxcachy secrets status | list | set NAME [--from-file=F] | get NAME [--show] | unset NAME --yes | apply [--yes] | global on NAME --yes|off NAME|show | unlock | lock | env [NAMES...] | run [NAMES...] [--strict] -- COMMAND [ARGS...] [--json]" );
+          println( "Usage: bxcachy secrets status | list | set NAME [--from-file=F] | get NAME [--show] | unset NAME --yes | apply [--yes] | global on NAME --yes|off NAME|show | unlock | lock | export FILE [--plain] [--force] --yes | import FILE [--overwrite] --yes | env [NAMES...] | run [NAMES...] [--strict] -- COMMAND [ARGS...] [--json]" );
           CLIExit( 2 );
           break;
          case "dotfiles":

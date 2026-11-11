@@ -100,6 +100,36 @@ g off ANTHROPIC_API_KEY | grep -q 'back to per-command' || fail 'global off'
 [[ ! -e "$tmp/rt/bxcachy-secrets.env" ]] || fail 'the cache is removed when nothing is exported'
 grep -q '^claude()' "$sh" || fail 'the wrapper is back after global off'
 
+# export and import (fake age: header line + reversed text; the real age asks for a passphrase on the terminal)
+cat > "$tmp/bin/age" <<'SH'
+#!/usr/bin/env bash
+if [[ "$1" == -p ]]; then out="$3"; { echo "age-encryption.org/v1"; rev; } > "$out"; elif [[ "$1" == -d ]]; then tail -n +2 "$2" | rev; fi
+SH
+chmod +x "$tmp/bin/age"
+printf 'x\n' > "$tmp/valfile"; s set EXTRA_TOKEN --from-file="$tmp/valfile" >/dev/null
+rc() { set +e; run "$@" >/dev/null 2>&1; local c=$?; set -e; echo "$c"; }
+[[ "$(rc "$binary" secrets export "$tmp/out.age")" == 2 ]] || fail 'export without --yes exits 2'
+[[ ! -e "$tmp/out.age" ]] || fail 'the plan wrote the export'
+s export "$tmp/out.age" --yes | grep -q 'Exported 4 secret(s)' || fail "export: $(s export "$tmp/out2.age" --yes 2>&1)"
+head -1 "$tmp/out.age" | grep -q '^age-encryption.org/v' || fail 'the export is an age file'
+! grep -q 'sk-test-123' "$tmp/out.age" || fail 'the encrypted export shows a value'
+[[ "$(rc "$binary" secrets export "$tmp/out.age" --yes)" == 4 ]] || fail 'export refuses to replace a file without --force'
+s export "$tmp/plain.env" --plain --yes >/dev/null; [[ "$(stat -c %a "$tmp/plain.env")" == 600 ]] || fail 'the plain export is mode 600'
+grep -q "^export ANTHROPIC_API_KEY='sk-test-123'$" "$tmp/plain.env" || fail 'the plain export holds export lines'
+
+# import on a "new machine" (empty keyring): plan, then apply; differing values are kept unless --overwrite
+rm -f "$tmp/kr"/*
+[[ "$(rc "$binary" secrets import "$tmp/out.age")" == 2 ]] || fail 'import without --yes exits 2'
+[[ -z "$(ls "$tmp/kr")" ]] || fail 'the import plan stored something'
+s import "$tmp/out.age" --yes | grep -q 'Imported 4 secret(s)' || fail 'import (age)'
+[[ "$(s get ANTHROPIC_API_KEY --show)" == 'sk-test-123' ]] || fail 'imported value round-trips'
+printf 'ANTHROPIC_API_KEY="changed"\n# comment\nexport NEW_ONE=plain\nbad name=1\n' > "$tmp/in.env"
+out="$(s import "$tmp/in.env" --yes)"
+[[ "$out" == *'ANTHROPIC_API_KEY: differs, kept'* && "$out" == *'NEW_ONE: will be added'* && "$(s get ANTHROPIC_API_KEY --show)" == 'sk-test-123' ]] || fail "differing values are kept: $out"
+s import "$tmp/in.env" --overwrite --yes >/dev/null; [[ "$(s get ANTHROPIC_API_KEY --show)" == 'changed' ]] || fail '--overwrite replaces'
+[[ "$(s get NEW_ONE --show)" == 'plain' ]] || fail 'a plain .env line imports'
+[[ "$(rc "$binary" secrets import "$tmp/nope")" == 4 ]] || fail 'a missing file exits 4'
+
 # unset: plan, then apply
 [[ "$(code env -u GEMINI_API_KEY -u OPENAI_API_KEY -u ANTHROPIC_API_KEY HOME="$tmp/home" BXCACHY_CONFIG_HOME="$tmp/cfg" FAKE_KEYRING="$FAKE_KEYRING" PATH="$tmp/bin:$PATH" "$binary" secrets unset QUOTE_TEST)" == 2 ]] || fail 'unset without --yes exits 2'
 [[ -f "$tmp/kr/QUOTE_TEST" ]] || fail 'the plan deleted the secret'
