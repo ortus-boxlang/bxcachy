@@ -120,7 +120,12 @@ class InitPlan {
         if ( dbs.len() || pick( a, "container_engine" ) == "docker" ) {
             if ( arrayFind( [ "podman", "docker" ], pick( a, "container_engine" ) ) ) out.steps.append( { id: "db-engine", title: "run databases with " & a.container_engine, argv: [ "bxcachy", "db", "engine", a.container_engine ] } );
         }
-        for ( var db in dbs ) out.steps.append( { id: "db-" & db, title: "start " & db & " (local container, 127.0.0.1 only)", argv: [ "bxcachy", "db", "start", db ] } );
+        for ( var db in dbs ) {
+            var dargv = [ "bxcachy", "db", "start", db ];
+            // asking for a password needs a terminal; the answer is typed at the prompt, never saved in answers.json or put on a command line
+            if ( pick( a, "database_passwords" ) == "ask" && !arrayFind( [ "redis", "couchbase", "chroma", "qdrant", "weaviate" ], db ) ) dargv.append( "--ask-password" );
+            out.steps.append( { id: "db-" & db, title: "start " & db & " (local container, 127.0.0.1 only)" & ( dargv.len() > 4 ? ", asking for its password" : "" ), argv: dargv } );
+        }
         if ( len( pick( a, "launcher" ) ) ) out.steps.append( { id: "launcher", title: "use " & a.launcher & " as the app launcher (no shortcut is changed)", argv: [ "bxcachy", "runner", "set", a.launcher ] } );
         if ( len( pick( a, "menu" ) ) ) out.steps.append( { id: "menu", title: "use " & a.menu & " for BxCachy menus", argv: [ "bxcachy", "runner", "menu-set", a.menu ] } );
         var gname = pick( a, "git_name" );

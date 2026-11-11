@@ -88,6 +88,34 @@ class Db {
         return { error: "", code: 0, engine: e, name: arguments.name, container: containerName( e.id, arguments.name ) };
     }
 
+    // ---- a password of the user's choice ----
+
+    // "" when a password is acceptable for the engine, else why not. Never echoes the password.
+    function checkPassword( engineId, pw ) {
+        if ( len( arguments.pw ) < 8 ) return "The password must be at least 8 characters";
+        if ( len( arguments.pw ) > 128 ) return "The password must be at most 128 characters";
+        if ( reFind( "[[:space:][:cntrl:]]", arguments.pw ) ) return "The password cannot contain spaces, tabs or line breaks";
+        if ( arguments.engineId == "opensearch" && !( reFind( "[A-Z]", arguments.pw ) && reFind( "[a-z]", arguments.pw ) && reFind( "[0-9]", arguments.pw ) && reFind( "[^A-Za-z0-9]", arguments.pw ) ) )
+            return "OpenSearch needs an uppercase letter, a lowercase letter, a digit and a special character";
+        return "";
+    }
+
+    // Asks for a password twice on the terminal without echo. BXCACHY_TTY_IN names a file to read the two lines from instead
+    // (tests). Returns { error, password }.
+    function askPassword() {
+        var tmp = reReplace( getTempDirectory(), "/+$", "" ) & "/bxcachy-pw-" & left( createUUID(), 8 );
+        var script = 'in="${BXCACHY_TTY_IN:-/dev/tty}"; exec 3< "$in"; ask() { if [ "$in" = /dev/tty ]; then printf "%s" "$1" > /dev/tty; stty -echo < /dev/tty; fi; IFS= read -r v <&3; if [ "$in" = /dev/tty ]; then stty echo < /dev/tty; echo > /dev/tty; fi; printf "%s" "$v"; }; ask "Password: " > "$1"; echo >> "$1"; ask "Repeat password: " >> "$1"';
+        try {
+            variables.inst.exec( [ "sh", "-c", script, "_", tmp ], 300 );
+            var lines = fileExists( tmp ) ? listToArray( fileRead( tmp ), chr( 10 ), true ) : [];
+        } finally {
+            if ( fileExists( tmp ) ) fileDelete( tmp );
+        }
+        if ( lines.len() < 2 || !len( lines[ 1 ] ) ) return { error: "No password was entered (--ask-password needs a terminal)", password: "" };
+        if ( lines[ 1 ] != lines[ 2 ] ) return { error: "The two passwords did not match", password: "" };
+        return { error: "", password: lines[ 1 ] };
+    }
+
     // ---- verbs ----
 
     // `db engines`
@@ -135,7 +163,7 @@ class Db {
     }
 
     // `db start ENGINE [--name N] [--port P] [--yes] [--dry-run]`
-    function start( engineId, name, port, yes, dryRun, asJson ) {
+    function start( engineId, name, port, yes, dryRun, asJson, passwordFile = "", ask = false ) {
         var cmd = "db start";
         var res = resolve( arguments.engineId, arguments.name );
         if ( len( res.error ) ) return say( cmd, res.code, { error: res.error }, arguments.asJson, [ "error: " & res.error ] );
@@ -147,6 +175,19 @@ class Db {
         if ( p < 1024 || p > 65535 || int( p ) != p ) return say( cmd, 4, badPort, arguments.asJson, [ "error: " & badPort.error ] );
         p = int( p );
         if ( variables.engines.portIsFixed( e ) && p != e.port ) return say( cmd, 4, { error: e.title & " uses fixed ports, --port cannot change them" }, arguments.asJson, [ "error: " & e.title & " uses fixed ports, --port cannot change them" ] );
+        // a password of the user's choice: from a file (never a command-line value) or typed at the prompt
+        var chosen = "";
+        var wants = len( arguments.passwordFile ) || arguments.ask;
+        if ( wants ) {
+            var pwErr = "";
+            if ( structIsEmpty( e.secret ) ) pwErr = e.title & " has no password to set" & ( e.id == "couchbase" ? " here: set the administrator in its web console" : "" );
+            else if ( len( arguments.passwordFile ) && arguments.ask ) pwErr = "Use --password-file or --ask-password, not both";
+            else if ( len( arguments.passwordFile ) ) {
+                if ( !fileExists( arguments.passwordFile ) ) pwErr = "Password file not found: " & arguments.passwordFile;
+                else { chosen = reReplace( fileRead( arguments.passwordFile ), "[\r\n]+$", "" ); pwErr = checkPassword( e.id, chosen ); }
+            }
+            if ( len( pwErr ) ) return say( cmd, 4, { error: pwErr }, arguments.asJson, [ "error: " & pwErr ] );
+        }
         if ( !engineAvailable() ) {
             var msg = engineCli() & " is required but was not found" & ( engineCli() == "podman" ? " (install it with: bxcachy profile-install containers; or choose Docker with: bxcachy db engine docker)" : "" );
             return say( cmd, 4, { error: msg }, arguments.asJson, [ "error: " & msg ] );
@@ -156,9 +197,10 @@ class Db {
             return say( cmd, 4, { error: m2 }, arguments.asJson, [ "error: " & m2 ] );
         }
         var state = stateOf( res.container );
+        if ( wants && len( state ) ) return say( cmd, 4, { error: res.container & " already exists; a password can only be chosen when it is created" }, arguments.asJson, [ "error: " & res.container & " already exists; a password can only be chosen when it is created (remove it with --delete-data first to start over)" ] );
         var data = { engine: e.id, name: res.name, container: res.container, port: p, image: e.image, volume: res.container, listens: "127.0.0.1" };
         if ( state == "running" ) return say( cmd, 0, merge( data, { already: "running" } ), arguments.asJson, [ res.container & " is already running on 127.0.0.1:" & p ] );
-        var verb = len( state ) ? "start the stopped container " & res.container : "create " & res.container & " from " & e.image & " on 127.0.0.1:" & p & " (data in the volume " & res.container & ")";
+        var verb = len( state ) ? "start the stopped container " & res.container : "create " & res.container & " from " & e.image & " on 127.0.0.1:" & p & " (data in the volume " & res.container & ")" & ( wants ? " with a password you choose" : "" );
         if ( !arguments.yes || arguments.dryRun ) {
             var code = arguments.dryRun ? 0 : 2;
             var lines = [ ( arguments.dryRun ? "Dry run" : "Plan" ) & ": " & cmd & " " & e.id, "  would " & verb, arguments.dryRun ? "Nothing was changed." : "Nothing was changed. Add --yes to apply." ];
@@ -170,12 +212,20 @@ class Db {
         }
         // create: the secret goes in an env file (mode 600), never on a command line
         var dir = stateDir( res.container );
-        directoryCreate( dir, true, true );
+        // (the folder is created by the first file written, so a refused password leaves nothing behind)
         var envFile = "";
         if ( !structIsEmpty( e.secret ) ) {
-            // reuse the password of an earlier container with this name: its data volume (kept by `remove`) still has that password
-            var pw = fileExists( dir & "/password" ) ? trim( fileRead( dir & "/password" ) ) : newSecret() & ( e.secret.suffix ?: "" );
-            if ( len( pw ) < 16 ) return say( cmd, 4, { error: "Could not generate a password" }, arguments.asJson, [ "error: could not generate a password" ] );
+            if ( arguments.ask ) {
+                var got = askPassword();
+                var gotErr = len( got.error ) ? got.error : checkPassword( e.id, got.password );
+                if ( len( gotErr ) ) return say( cmd, 4, { error: gotErr }, arguments.asJson, [ "error: " & gotErr ] );
+                chosen = got.password;
+            }
+            // a kept data volume still has the password it was created with: reuse it, and refuse a different choice
+            var kept = fileExists( dir & "/password" ) ? trim( fileRead( dir & "/password" ) ) : "";
+            if ( len( kept ) && len( chosen ) && kept != chosen ) return say( cmd, 4, { error: "A kept data volume for this name still uses its old password" }, arguments.asJson, [ "error: a kept data volume for this name still uses its old password; remove it with: bxcachy db remove " & e.id & " --delete-data --yes, or start without choosing a password" ] );
+            var pw = len( kept ) ? kept : ( len( chosen ) ? chosen : newSecret() & ( e.secret.suffix ?: "" ) );
+            if ( len( pw ) < 8 ) return say( cmd, 4, { error: "Could not generate a password" }, arguments.asJson, [ "error: could not generate a password" ] );
             envFile = dir & "/database.env";
             var envText = "";
             for ( var en in e.secret.env ) envText &= en & "=" & pw & chr( 10 );
@@ -242,7 +292,7 @@ class Db {
         if ( structIsEmpty( meta ) ) return say( cmd, 4, { error: res.container & " was not started by BxCachy" }, arguments.asJson, [ "error: " & res.container & " was not started by BxCachy (start it with: bxcachy db start " & e.id & " --yes)" ] );
         var pwFile = stateDir( res.container ) & "/password";
         var pw = fileExists( pwFile ) ? trim( fileRead( pwFile ) ) : "";
-        var shown = arguments.showPassword ? pw : "********";
+        var shown = arguments.showPassword ? urlEncodedFormat( pw ) : "********";
         var url = structIsEmpty( e.secret ) ? "127.0.0.1:" & meta.port : replace( replace( e.secret.urlTemplate, "{password}", shown ), "{port}", meta.port );
         var lines = [ e.title & " (" & res.container & ")", "  listens on 127.0.0.1:" & meta.port, "  connect:   " & url ];
         if ( len( pw ) ) lines.append( "  password:  " & ( arguments.showPassword ? pw : "in " & pwFile & " (mode 600); add --show-password to print it" ) );

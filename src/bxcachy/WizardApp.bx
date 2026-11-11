@@ -33,6 +33,7 @@ class WizardApp {
         if ( !structKeyExists( arguments.q, "when" ) ) return true;
         var w = arguments.q.when;
         var current = answerString( w.id );
+        if ( structKeyExists( w, "nonempty" ) ) return answerList( w.id ).len() > 0;
         if ( structKeyExists( w, "has" ) ) return arrayFind( answerList( w.id ), w.has ) > 0;
         if ( structKeyExists( w, "in" ) ) return arrayFind( w.in, current ) > 0;
         if ( structKeyExists( w, "equals" ) ) return current == w.equals;

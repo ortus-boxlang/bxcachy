@@ -544,6 +544,29 @@ class WizardData {
             }
           ],
           "help": "Local containers on 127.0.0.1, with generated passwords. Nothing starts unless you pick it. Manage them with: bxcachy db"
+        },
+        {
+          "type": "choice",
+          "id": "database_passwords",
+          "label": "Database passwords",
+          "help": "Used for the databases you picked. The admin user name is fixed per database.",
+          "default": "generate",
+          "when": {
+            "id": "databases",
+            "nonempty": true
+          },
+          "options": [
+            {
+              "value": "generate",
+              "label": "Generate a strong password for each (recommended)",
+              "description": "Random, kept in a private file. See it any time with: bxcachy db info ENGINE --show-password"
+            },
+            {
+              "value": "ask",
+              "label": "Let me type each password",
+              "description": "You are asked as each database starts. Nothing is saved except the database''s own password file."
+            }
+          ]
         }
       ]
     },

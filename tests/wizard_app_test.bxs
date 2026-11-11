@@ -99,5 +99,8 @@ check( "the launcher defaults to Noctalia and the menu to Rofi; the launcher is 
 a = mk();
 check( "no database is preselected", a.answerList( "databases" ).len() == 0 );
 
+a = mk();
+check( "the password question appears only once a database is picked", !a.finalAnswers().keyExists( "database_passwords" ) && mk( { databases: [ "postgres" ] } ).finalAnswers().keyExists( "database_passwords" ) && mk().answerString( "database_passwords" ) == "generate" );
+
 if ( failures > 0 ) { println( failures & " failed" ); exit( 1 ); }
 println( "all passed" );

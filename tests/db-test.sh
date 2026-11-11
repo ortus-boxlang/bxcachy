@@ -126,6 +126,71 @@ grep -q "^volume rm $c-postgres-default" "$FAKE/podman.log" && [[ ! -d "$dir" ]]
 rc=0; FAKE_FAIL=1 run "$binary" db start qdrant --yes >/dev/null 2>&1 || rc=$?
 [[ "$rc" == 6 && ! -d "$tmp/data/databases/$c-qdrant-default" ]] || fail "a failed run exits 6 and cleans up (rc=$rc)"
 
+# a password of your choice: from a file or a hidden prompt, never a command-line value
+printf 'MyChosen#Pass1\n' > "$tmp/pw"
+[[ "$(code "$binary" db start mysql --password-file="$tmp/pw")" == 2 ]] || fail 'the plan with a password file exits 2'
+run "$binary" db start mysql --password-file="$tmp/pw" --dry-run | grep -q 'with a password you choose' || fail 'the plan says a password is chosen'
+[[ ! -e "$tmp/data/databases/$c-mysql-default" ]] || fail 'the plan wrote files'
+run "$binary" db start mysql --password-file="$tmp/pw" --yes >/dev/null || fail 'start with a password file'
+mdir="$tmp/data/databases/$c-mysql-default"
+[[ "$(cat "$mdir/password")" == 'MyChosen#Pass1' && "$(cat "$mdir/database.env")" == 'MYSQL_ROOT_PASSWORD=MyChosen#Pass1' ]] || fail 'the chosen password is stored (trailing newline trimmed)'
+[[ "$(stat -c %a "$mdir/password")" == 600 ]] || fail 'the chosen password file is mode 600'
+! grep -q 'MyChosen' "$FAKE/containers/$c-mysql-default/run" || fail 'the chosen password must not be on a command line'
+run "$binary" db info mysql --show-password | grep -q 'mysql://root:MyChosen%23Pass1@127.0.0.1:3306' || fail 'info URL-encodes the password'
+# bad choices
+printf 'short\n' > "$tmp/pw-short"; printf 'has a space 1234\n' > "$tmp/pw-space"; printf 'alllowercase123\n' > "$tmp/pw-weak"
+[[ "$(code "$binary" db start mariadb --password-file="$tmp/pw-short" --yes)" == 4 && "$(code "$binary" db start mariadb --password-file="$tmp/pw-space" --yes)" == 4 && "$(code "$binary" db start mariadb --password-file="$tmp/missing" --yes)" == 4 ]] || fail 'short, spaced and missing password files exit 4'
+BXCACHY_MAX_MAP_COUNT_FILE="$tmp/mmc" code "$binary" db start opensearch --name=weak --password-file="$tmp/pw-weak" --yes | grep -q . ; [[ "$(BXCACHY_MAX_MAP_COUNT_FILE="$tmp/mmc" code "$binary" db start opensearch --name=weak --password-file="$tmp/pw-weak" --yes)" == 4 ]] || fail 'a weak OpenSearch password exits 4'
+[[ "$(code "$binary" db start redis --name=r2 --password-file="$tmp/pw" --yes)" == 4 && "$(code "$binary" db start couchbase --name=c2 --password-file="$tmp/pw" --yes)" == 4 ]] || fail 'engines without a password refuse one'
+[[ "$(code "$binary" db start mariadb --password-file="$tmp/pw" --ask-password --yes)" == 4 ]] || fail 'both flags exit 4'
+[[ "$(code "$binary" db start mysql --password-file="$tmp/pw" --yes)" == 4 ]] || fail 'an existing container cannot be given a new password'
+# the hidden prompt (a file stands in for the terminal): two matching lines
+printf 'Typed-By-Hand9\nTyped-By-Hand9\n' > "$tmp/tty"
+BXCACHY_TTY_IN="$tmp/tty" run "$binary" db start mongodb --name=asked --ask-password --yes >/dev/null || fail 'start with --ask-password'
+[[ "$(cat "$tmp/data/databases/$c-mongodb-asked/password")" == 'Typed-By-Hand9' ]] || fail 'the typed password is stored'
+printf 'Typed-By-Hand9\nSomething-Else9\n' > "$tmp/tty"
+[[ "$(BXCACHY_TTY_IN="$tmp/tty" code "$binary" db start mongodb --name=mismatch --ask-password --yes)" == 4 && ! -d "$tmp/data/databases/$c-mongodb-mismatch" ]] || fail 'mismatched passwords exit 4 and create nothing'
+: > "$tmp/tty"; [[ "$(BXCACHY_TTY_IN="$tmp/tty" code "$binary" db start mongodb --name=none --ask-password --yes)" == 4 ]] || fail 'no password typed exits 4'
+# the plan never prompts
+[[ "$(BXCACHY_TTY_IN="$tmp/none" code "$binary" db start mongodb --name=planned --ask-password)" == 2 ]] || fail 'the plan with --ask-password does not prompt'
+# the real prompt, in a pseudo-terminal: typed twice, not echoed
+python3 - "$binary" "$tmp" <<'PY'
+import os, pty, select, sys, time
+binary, tmp = sys.argv[1:3]
+env = dict(os.environ, BXCACHY_CONFIG_HOME=tmp + '/cfg', BXCACHY_DATA_HOME=tmp + '/data', HOME=tmp + '/home', PATH=tmp + '/bin:' + os.environ['PATH'], FAKE=tmp + '/fake')
+env.pop('BXCACHY_TTY_IN', None)
+pid, fd = pty.fork()
+if pid == 0:
+    os.execve(binary, [binary, 'db', 'start', 'mongodb', '--name=tty', '--ask-password', '--yes'], env)
+seen = b''
+def pump(t):
+    global seen
+    end = time.time() + t
+    while time.time() < end:
+        r, _, _ = select.select([fd], [], [], 0.05)
+        if r:
+            try:
+                d = os.read(fd, 65536)
+                if not d: return
+                seen += d
+            except OSError: return
+pump(2.5)
+os.write(fd, b'Pty-Typed-Pass7\r'); pump(0.8)
+os.write(fd, b'Pty-Typed-Pass7\r'); pump(2.5)
+_, status = os.waitpid(pid, 0)
+assert os.WIFEXITED(status) and os.WEXITSTATUS(status) == 0, ('exit', status, seen)
+assert b'Password:' in seen and b'Repeat password:' in seen, seen
+open(tmp + '/pty.seen', 'wb').write(seen)
+PY
+[[ "$(cat "$tmp/data/databases/$c-mongodb-tty/password")" == 'Pty-Typed-Pass7' ]] || fail 'the password typed in the terminal is stored'
+! grep -q 'Pty-Typed-Pass7' "$tmp/pty.seen" || fail 'the typed password was echoed to the terminal'
+
+# a kept volume keeps its password: another choice is refused, the same one is accepted
+run "$binary" db remove mysql --yes >/dev/null
+printf 'Another-Pass-77\n' > "$tmp/pw2"
+[[ "$(code "$binary" db start mysql --password-file="$tmp/pw2" --yes)" == 4 ]] || fail 'a different password for a kept volume exits 4'
+run "$binary" db start mysql --password-file="$tmp/pw" --yes >/dev/null || fail 'the same password for a kept volume is fine'
+
 # Docker instead of Podman
 [[ "$(run "$binary" db engine)" == 'Container engine: podman' ]] || fail 'podman is the default'
 [[ "$(code "$binary" db engine rkt)" == 2 ]] || fail 'an unknown engine choice exits 2'
