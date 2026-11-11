@@ -5801,6 +5801,108 @@
       "profiles": {
         "gaming": "default"
       }
+    },
+    {
+      "id": "ollama-cuda",
+      "name": "Ollama (NVIDIA CUDA)",
+      "description": "Create, run and share large language models (LLMs) with CUDA (add-on for ollama)",
+      "description_source": "arch",
+      "kind": "tui",
+      "source": "pacman",
+      "targets": [
+        "ollama-cuda"
+      ],
+      "repo": "extra",
+      "homepage": "https://github.com/ollama/ollama",
+      "macos": null,
+      "group": "ai",
+      "category": "Local models",
+      "tier": "optional",
+      "profiles": {
+        "ai": "optional"
+      },
+      "verified_on": "2026-11-11"
+    },
+    {
+      "id": "ollama-rocm",
+      "name": "Ollama (AMD ROCm)",
+      "description": "Create, run and share large language models (LLMs) with ROCm (add-on for ollama)",
+      "description_source": "arch",
+      "kind": "tui",
+      "source": "pacman",
+      "targets": [
+        "ollama-rocm"
+      ],
+      "repo": "extra",
+      "homepage": "https://github.com/ollama/ollama",
+      "macos": null,
+      "group": "ai",
+      "category": "Local models",
+      "tier": "optional",
+      "profiles": {
+        "ai": "optional"
+      },
+      "verified_on": "2026-11-11"
+    },
+    {
+      "id": "jan",
+      "name": "Jan",
+      "description": "Open source ChatGPT alternative that runs models fully offline",
+      "description_source": "aur",
+      "kind": "desktop",
+      "source": "aur",
+      "targets": [
+        "jan-bin"
+      ],
+      "homepage": "https://jan.ai/",
+      "macos": "Jan (same)",
+      "group": "ai",
+      "category": "Local models",
+      "tier": "optional",
+      "profiles": {
+        "ai": "optional"
+      },
+      "verified_on": "2026-11-11"
+    },
+    {
+      "id": "koboldcpp",
+      "name": "KoboldCpp",
+      "description": "Easy-to-use text-generation software for GGML and GGUF models",
+      "description_source": "aur",
+      "kind": "desktop",
+      "source": "aur",
+      "targets": [
+        "koboldcpp"
+      ],
+      "homepage": "https://github.com/LostRuins/koboldcpp",
+      "macos": "KoboldCpp (same)",
+      "group": "ai",
+      "category": "Local models",
+      "tier": "optional",
+      "profiles": {
+        "ai": "optional"
+      },
+      "verified_on": "2026-11-11"
+    },
+    {
+      "id": "gpt4all",
+      "name": "GPT4All",
+      "description": "Run open-source LLMs locally with a chat app",
+      "description_source": "aur",
+      "kind": "desktop",
+      "source": "aur",
+      "targets": [
+        "gpt4all-chat"
+      ],
+      "homepage": "https://gpt4all.io",
+      "macos": "GPT4All (same)",
+      "group": "ai",
+      "category": "Local models",
+      "tier": "optional",
+      "profiles": {
+        "ai": "optional"
+      },
+      "verified_on": "2026-11-11"
     }
   ]
 }

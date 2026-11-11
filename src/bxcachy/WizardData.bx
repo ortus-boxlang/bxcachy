@@ -943,6 +943,68 @@ class WizardData {
               "description": "Together AI"
             }
           ]
+        },
+        {
+          "type": "multi",
+          "id": "ai_local",
+          "label": "Local models",
+          "help": "Run AI models on this machine, no cloud. Nothing is preselected.",
+          "default": [],
+          "options": [
+            {
+              "value": "ollama",
+              "label": "Ollama",
+              "description": "Run models from the command line; the usual backend for local agents."
+            },
+            {
+              "value": "lm-studio",
+              "label": "LM Studio",
+              "description": "Desktop app to find, download and chat with models."
+            },
+            {
+              "value": "jan",
+              "label": "Jan",
+              "description": "Open source ChatGPT-style app that runs fully offline."
+            },
+            {
+              "value": "koboldcpp",
+              "label": "KoboldCpp",
+              "description": "Single-file text generation for GGUF models, with a web UI."
+            },
+            {
+              "value": "gpt4all",
+              "label": "GPT4All",
+              "description": "Simple local chat app for open models."
+            }
+          ]
+        },
+        {
+          "type": "choice",
+          "id": "ai_local_gpu",
+          "label": "Ollama GPU support",
+          "help": "Ollama runs on the CPU unless you add the GPU build for your card.",
+          "default": "none",
+          "when": {
+            "id": "ai_local",
+            "has": "ollama"
+          },
+          "options": [
+            {
+              "value": "none",
+              "label": "CPU only (or I will set it up later)",
+              "description": "Just the ollama package."
+            },
+            {
+              "value": "nvidia",
+              "label": "NVIDIA (CUDA)",
+              "description": "Adds ollama-cuda, which pulls in the CUDA toolkit."
+            },
+            {
+              "value": "amd",
+              "label": "AMD (ROCm)",
+              "description": "Adds ollama-rocm, which pulls in HIP/ROCm libraries."
+            }
+          ]
         }
       ]
     },

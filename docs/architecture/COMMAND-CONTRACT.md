@@ -454,6 +454,8 @@ Secret types and providers (decided with the owner 2026-11-11):
 
 Exit codes: 0 done, 2 usage or plan without `--yes`, 4 precondition (unknown or missing agent, no default, no terminal), 6 failed. Tests: `tests/ai-test.sh`, `tests/init_plan_test.bxs`, `tests/init-test.sh`.
 
+Local models: AUR names were checked on 2026-11-11 (`lmstudio-bin`, `jan-bin`, `koboldcpp`, `gpt4all-chat`); Ollama is in `extra`, with `ollama-cuda` and `ollama-rocm` as add-ons that depend on `ollama`. Open WebUI is left out: its AUR package is flagged out of date. Starting the Ollama service and pulling models is later work.
+
 Init rules for this page: a default agent that was not ticked is installed too; `secrets setup` runs whenever an agent is chosen (it installs a keyring only if none exists); the key steps are **optional**, so one that cannot run (no terminal, you press Enter to skip) is reported as skipped with the command to run later and the plan goes on.
 
 ## 14. Install and the setup wizard (decided with the owner 2026-11-10; install, wizard and the init engine are built, the pages' later commands are not)
@@ -489,7 +491,7 @@ Exits: as `setup` (0, 2, 4, 5, 6, 7, 8); 4 also for no terminal without `--answe
 | Toolchains | `toolchains` (`java` with gradle and maven, `php` with composer and laravel, `python`, `go`, `javascript`), `js_runtimes` (`node` with nvm default, `bun`, `deno`; asked only when `javascript` is chosen). BoxLang is always installed (shown as a note) | catalog profiles, `toolchain node`, `install bun deno` |
 | Containers | `container_engine` (`podman` default, `docker`) | package and service setup |
 | Databases | `databases` (PostgreSQL, MySQL, MariaDB, Redis, MongoDB, Couchbase, pgvector, Chroma, Qdrant, Weaviate, Meilisearch, OpenSearch, Elasticsearch; none preselected; Milvus is not supported) | `db engine`, `db start` per service |
-| AI (own page, after Apps) | `ai_agents` (claude-code, codex-cli, gemini-cli), `ai_default`, `ai_orchestrators` (`pane` default, `orca`, `herdr`), `ai_keys` (`later` default, `now`), `ai_global_keys` (only with `now`; default none) | installs through `install`; then `secrets setup`, one optional `secrets set KEY` per single-provider agent plus per ticked provider (`ai_providers`) when `now` (typed hidden at the terminal, skippable; never saved in answers.json), optional `secrets global on KEY`, and `ai default ID` |
+| AI (own page, after Apps) | `ai_agents` (claude-code, codex-cli, gemini-cli), `ai_default`, `ai_orchestrators` (`pane` default, `orca`, `herdr`), `ai_local` (ollama, lm-studio, jan, koboldcpp, gpt4all; nothing preselected), `ai_local_gpu` (`none`, `nvidia`, `amd`; only with Ollama), `ai_keys` (`later` default, `now`), `ai_global_keys` (only with `now`; default none) | installs through `install`; then `secrets setup`, one optional `secrets set KEY` per single-provider agent plus per ticked provider (`ai_providers`) when `now` (typed hidden at the terminal, skippable; never saved in answers.json), optional `secrets global on KEY`, and `ai default ID` |
 | VPN | `vpn` (Tailscale, WireGuard, OpenVPN, Mullvad, Proton) | catalog and services |
 | Password manager | `password_manager` (Bitwarden, 1Password, KeePassXC) | catalog |
 | Gaming | `gaming` (`none`, `steam`, `bundle`) | catalog (CachyOS gaming bundle) |

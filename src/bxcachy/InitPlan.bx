@@ -129,6 +129,14 @@ class InitPlan {
             else if ( !arrayFind( agentIds, aiDefault ) ) agentIds.append( aiDefault );
         }
         for ( var id in agentIds ) apps.append( id );
+        // local models: the apps you ticked, and the GPU build of Ollama when you named your card
+        var localAi = pick( a, "ai_local", [] );
+        for ( var id in localAi ) apps.append( id );
+        var gpu = pick( a, "ai_local_gpu" );
+        if ( arrayFind( localAi, "ollama" ) ) {
+            if ( gpu == "nvidia" ) apps.append( "ollama-cuda" );
+            else if ( gpu == "amd" ) apps.append( "ollama-rocm" );
+        }
         if ( engine == "docker" ) apps.append( "docker" );
         var vpnIds = { tailscale: "tailscale", wireguard: "wireguard", openvpn: "openvpn", mullvad: "mullvad", proton: "proton-vpn" };
         var vpn = pick( a, "vpn" );
