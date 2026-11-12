@@ -89,7 +89,7 @@ binary, tmp = sys.argv[1:3]
 env = dict(os.environ, BXCACHY_CONFIG_HOME=tmp + '/cfg', BXCACHY_STATE_HOME=tmp + '/state', BXCACHY_SELF=tmp + '/self', HOME=tmp + '/home', PATH=tmp + '/bin:' + os.environ['PATH'], LOG=tmp + '/log')
 pid, fd = pty.fork()
 if pid == 0:
-    os.execve(binary, [binary, 'init', '--dry-run'], env)
+    os.execve(binary, [binary, 'init', '--fresh', '--dry-run'], env)
 fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack('HHHH', 36, 120, 0, 0))
 def pump(t):
     end = time.time() + t
