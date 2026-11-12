@@ -1,0 +1,21 @@
+// SystemState: what the machine has, in wizard terms, with an injected installed set. Run from src/: (cd src && matchbox ../tests/system_state_test.bxs)
+failures = 0;
+function check( label, ok ) { if ( ok ) println( "ok   " & label ); else { println( "FAIL " & label ); failures++; } }
+spec = jsonDeserialize( new bxcachy.WizardData().demoPages() );
+names = {}; for ( n in [ "git", "curl", "hyprland", "plasma-desktop", "ollama", "claude-code" ] ) names[ n ] = true;
+sys = new bxcachy.SystemState( names );
+found = sys.scan( spec );
+check( "desktops: both when Hyprland and Plasma are installed", found.answers.desktops == "both" );
+check( "multi: installed AI agent is selected", isArray( found.answers.ai_agents ) && arrayFind( found.answers.ai_agents, "claude-code" ) > 0 );
+check( "installed map lists ollama", structKeyExists( found.installed, "ai_local" ) && arrayFind( found.installed.ai_local, "ollama" ) > 0 );
+check( "appInstalled true/false", sys.appInstalled( "git" ) && !sys.appInstalled( "timeshift" ) );
+check( "merge fresh is empty", structCount( sys.merge( { a: 1 }, found.answers, "fresh" ) ) == 0 );
+check( "merge rerun is saved only", structCount( sys.merge( { a: 1 }, found.answers, "rerun" ) ) == 1 );
+m = sys.merge( { ai_agents: [ "codex-cli" ], keep: "x" }, found.answers, "tune" );
+check( "merge tune joins lists and keeps saved keys", arrayFind( m.ai_agents, "codex-cli" ) > 0 && arrayFind( m.ai_agents, "claude-code" ) > 0 && m.keep == "x" );
+ann = sys.annotate( spec, found.installed );
+mark = false;
+for ( pg in ann.pages ) for ( q in pg.questions ) if ( structKeyExists( q, "options" ) && q.id == "ai_local" ) for ( o in q.options ) if ( o.value == "ollama" && structKeyExists( o, "installed" ) ) mark = true;
+check( "annotate marks installed options", mark );
+if ( failures > 0 ) { println( failures & " failure(s)" ); CLIExit( 1 ); }
+println( "all ok" );

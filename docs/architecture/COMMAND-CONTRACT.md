@@ -538,6 +538,12 @@ The wizard asks the window layout once per desktop you set up: Hyprland (`layout
 - BxCachy does not write HyprKwin's default layout for the other workspaces: the settings page names a "Layout" setting (default dwindle) but its config key is not documented. Set it in System Settings, Window Management, KWin Scripts, HyprKwin. Workspace rules (`workspace = 2, layout:master`) are also entered on that settings page.
 - Tests: `tests/tiling-test.sh`, `tests/init_plan_test.bxs`.
 
+### 13.24 System-aware wizard and `status`
+
+`bxcachy status [--json]` (read-only, exit 0) shows what the machine already has in the wizard's terms: detected answers per question (desktops from installed packages, shell from `$SHELL`, default terminal from `xdg-terminals.list`, default browser from `xdg-settings`, AI default, runner, container engine, installed apps per question) and the default apps still missing (the Resolver with the shell and root filesystem). `--json` data: `detected` (id, label, page, value), `installed_catalog_apps`, `default_apps_missing`.
+
+`bxcachy init` on a set-up machine starts from your saved answers merged with that scan (`tune`, the default): lists are joined, single choices follow the system when it says something, installed options show `✓ installed`. `--rerun` uses the saved answers only, `--fresh` the defaults, `--from=FILE` replaces the saved answers with a file (answers exported on another machine). Nothing the machine has is ever removed. The plan output splits `apps` into to install and already installed. `init --from-system --print-answers [--json]` prints the scan merged over the saved answers.
+
 ## 14. Install and the setup wizard (decided with the owner 2026-11-10; install, wizard and the init engine are built, the pages' later commands are not)
 
 ### 14.1 Install

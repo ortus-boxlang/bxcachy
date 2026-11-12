@@ -350,6 +350,8 @@ class WizardView {
                 var mark = multi ? ( selected ? "◆" : "◇" ) : ( selected ? "●" : "○" );
                 put( ix + 2, ry, mark, selected ? variables.GREEN : variables.OVERLAY, bg );
                 put( ix + 5, ry, opt.label, selected ? variables.GREEN : variables.TEXT, bg, selected );
+                // an option the machine already has is marked (the wizard never removes anything)
+                if ( opt.installed ?: false ) put( ix + 5 + len( opt.label ) + 2, ry, "✓ installed", variables.OVERLAY, bg );
                 variables.hits.append( { x: ix, y: ry, w: iw, h: 1, kind: "focus", n: idx } );
             } else if ( row.kind == "field" ) {
                 var qn = pg.questions[ row.q ];

@@ -44,8 +44,13 @@ class Init {
     }
 
     // `init --print-answers`
-    function printAnswers( asJson ) {
+    function printAnswers( asJson, fromSystem = false ) {
         var saved = loadSaved();
+        if ( arguments.fromSystem ) {
+            // what this machine has, in the wizard's answers (merged over your saved ones): a starting point for a script or another machine
+            var sys = new bxcachy.SystemState();
+            saved = sys.merge( saved, sys.scan( wizardSpec() ).answers, "tune" );
+        }
         if ( arguments.asJson ) println( variables.cli.envelope( "init --print-answers", 0, { answers: saved, file: answersFile() } ) );
         else println( jsonSerialize( saved ) );
         return 0;
@@ -63,6 +68,22 @@ class Init {
         return new bxcachy.AppPages().inject( jsonDeserialize( new bxcachy.WizardData().demoPages() ), new bxcachy.Catalog().load() );
     }
 
+    // The apps named by the plan's `apps` install step, split into { new, installed } by what pacman already has.
+    function appsSplit( plan ) {
+        var out = { new: [], installed: [] };
+        var state = "";
+        for ( var st in arguments.plan.steps ) {
+            if ( st.id != "apps" ) continue;
+            if ( !isStruct( state ) ) state = new bxcachy.SystemState();
+            for ( var i = 3; i <= st.argv.len(); i++ ) {
+                var id = st.argv[ i ];
+                if ( left( id, 2 ) == "--" ) continue;
+                if ( state.appInstalled( id ) ) out.installed.append( id ); else out.new.append( id );
+            }
+        }
+        return out;
+    }
+
     // This program, to run the plan's own commands: BXCACHY_SELF (tests, odd installs), else `bxcachy` on PATH.
     function selfPath() { return getSystemSetting( "BXCACHY_SELF", "bxcachy" ); }
 
@@ -78,6 +99,8 @@ class Init {
     function run( answers, yes, dryRun, asJson ) {
         var plan = new bxcachy.InitPlan().plan( arguments.answers, shellMap() );
         var data = { steps: plan.steps, pending: plan.pending, errors: plan.errors, done: [], failed: [], skipped: [] };
+        // what the install step would add and what is already there (left alone)
+        data.apps = appsSplit( plan );
         if ( plan.errors.len() ) {
             if ( arguments.asJson ) println( variables.cli.envelope( "init", 4, data ) );
             else for ( var e in plan.errors ) println( "error: " & e );
@@ -88,6 +111,7 @@ class Init {
             if ( arguments.asJson ) { println( variables.cli.envelope( "init", code, data, arguments.dryRun ) ); return code; }
             println( ( arguments.dryRun ? "Dry run" : "Plan" ) & ": init, " & plan.steps.len() & " steps" );
             for ( var s in plan.steps ) println( "  " & s.id & ": " & s.title & "   (" & commandFor( s ).toList( " " ) & ")" );
+            if ( data.apps.new.len() || data.apps.installed.len() ) println( "  apps: " & data.apps.new.len() & " to install" & ( data.apps.new.len() ? " (" & data.apps.new.toList( ", " ) & ")" : "" ) & ", " & data.apps.installed.len() & " already installed and left alone" & ( data.apps.installed.len() ? " (" & data.apps.installed.toList( ", " ) & ")" : "" ) );
             if ( plan.pending.len() ) println( "  not applied yet (saved, no command for them): " & plan.pending.toList( ", " ) );
             println( arguments.dryRun ? "Nothing was changed." : "Nothing was changed. Add --yes to apply." );
             return code;
@@ -120,15 +144,21 @@ class Init {
 
     // The wizard, then the plan. The review screen is the confirmation, so the steps run without a second prompt
     // (unless --dry-run). Needs a terminal.
-    function wizard( dryRun, asJson, from = "" ) {
+    function wizard( dryRun, asJson, from = "", mode = "tune" ) {
         var spec = wizardSpec();
         var result = "";
         try {
-            var start = loadSaved();
+            // where the answers start: your saved ones, or a file you name (answers exported from another machine)
+            var base = loadSaved();
             if ( len( arguments.from ) ) {
-                // answers from another machine (or a file you keep) fill the wizard instead of this machine's saved ones
-                try { start = jsonDeserialize( fileRead( arguments.from ) ); } catch ( any e2 ) { println( "bxcachy init: cannot read " & arguments.from & ": " & e2.message ); return 4; }
+                try { base = jsonDeserialize( fileRead( arguments.from ) ); } catch ( any e2 ) { println( "bxcachy init: cannot read " & arguments.from & ": " & e2.message ); return 4; }
             }
+            // tune (default): those answers plus what this machine already has, installed options marked; rerun: those answers only;
+            // fresh: the defaults. Nothing the machine has is ever removed.
+            var sys = new bxcachy.SystemState();
+            var found = sys.scan( spec );
+            if ( arguments.mode == "tune" ) sys.annotate( spec, found.installed );
+            var start = sys.merge( base, found.answers, arguments.mode );
             result = new bxcachy.Wizard( spec, start ).run();
         } catch ( any e ) {
             println( "bxcachy init needs a terminal (" & e.message & "). Use --answers FILE to run without one." );
