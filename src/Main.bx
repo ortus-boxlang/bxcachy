@@ -257,6 +257,13 @@ class {
           println( "Usage: bxcachy setup plasma [--keys | --undo-keys] | hyprland [--terminal=ghostty|kitty|alacritty|foot|konsole] [--layout=dwindle|master|scrolling|floating] [--workspaces=N] [--natural-scroll] [--layouts=us-intl,es] [--theme=dark|light|auto] [--wallpaper=box|grid|aurora|minimal] | terminal [--default=ghostty] [--also=a,b] | shell [--shell=zsh|fish|bash] | keyboard [--layouts=us-intl,es] | xremap [--build=hypr|kde] | undo plasma|hyprland|xremap | status [--yes] [--dry-run] [--json]" );
           CLIExit( 2 );
           break;
+         case "menu":
+          // The BxCachy control center on the runner's menu provider. See COMMAND-CONTRACT.md 13.16.
+          if ( p.len() == 1 ) CLIExit( new bxcachy.Menu( cli ).run() );
+          if ( p.len() == 2 && p[2] == "items" ) CLIExit( new bxcachy.Menu( cli ).show( asJson ) );
+          println( "Usage: bxcachy menu | menu items [--json]" );
+          CLIExit( 2 );
+          break;
          case "ssh":
           // Create an ed25519 SSH key (never replaces one). See COMMAND-CONTRACT.md 13.15.
           if ( p.len() == 2 && p[2] == "key" ) CLIExit( new bxcachy.SshKey( cli ).run( args.options.email ?: "", structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );

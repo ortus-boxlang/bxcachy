@@ -1,0 +1,113 @@
+// `bxcachy menu`: the BxCachy control center, shown with the menu provider you chose (`runner menu-set`: Rofi, Walker, Fuzzel, ...).
+//   menu                interactive: pick an entry; submenus open in place, results of `run` entries open in a terminal window
+//   menu items [--json] the menu tree as data (what the menu shows), for scripts and tests
+// Entry kinds: spawn (starts a command detached, no window), run (runs it in a terminal and waits for Enter), menu (Databases opens
+// the existing `db menu` control center), back / exit. Nothing here changes the system by itself: every run entry is a read-only
+// view or a command that has its own plan/--yes rules and is started without --yes.
+// Exit: 0 done or cancelled, 4 precondition (no menu program, no terminal for a `run` entry).
+class Menu {
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.inst = new bxcachy.Installer( arguments.runner );
+        return this;
+    }
+
+    // The tree. kind "sub" has `children`; "spawn" and "run" have `argv` (arguments after bxcachy); "db" opens the databases menu.
+    function tree() {
+        return [
+            { label: "AI", kind: "sub", children: [
+                { label: "Open the default agent", kind: "spawn", argv: [ "ai", "launch" ] },
+                { label: "Pull-down AI shell", kind: "spawn", argv: [ "ai", "shell" ] },
+                { label: "Agent session: start", kind: "run", argv: [ "ai", "session", "start" ] },
+                { label: "Agent sessions: list", kind: "run", argv: [ "ai", "session", "list" ] },
+                { label: "Local models: list", kind: "run", argv: [ "ai", "models", "list" ] },
+                { label: "Local models: running", kind: "run", argv: [ "ai", "models", "ps" ] },
+                { label: "API keys: list", kind: "run", argv: [ "secrets", "list" ] }
+            ] },
+            { label: "Databases", kind: "db" },
+            { label: "Settings", kind: "sub", children: [
+                { label: "Defaults (browser, terminal)", kind: "run", argv: [ "default", "show" ] },
+                { label: "Shortcuts", kind: "run", argv: [ "keys", "show" ] },
+                { label: "App launcher check", kind: "run", argv: [ "runner", "doctor" ] },
+                { label: "Setup status", kind: "run", argv: [ "setup", "status" ] },
+                { label: "Dotfiles status", kind: "run", argv: [ "dotfiles", "status" ] }
+            ] }
+        ];
+    }
+
+    function say( command, code, data, asJson, lines = [] ) {
+        if ( arguments.asJson ) println( variables.cli.envelope( arguments.command, arguments.code, arguments.data, false ) );
+        else for ( var l in arguments.lines ) println( l );
+        return arguments.code;
+    }
+
+    function show( asJson ) {
+        var rows = tree();
+        var lines = [];
+        for ( var r in rows ) {
+            lines.append( r.label );
+            if ( r.kind == "sub" ) for ( var c in r.children ) lines.append( "  " & c.label & "   (" & ( c.kind == "spawn" ? "opens" : "shows in a terminal" ) & ": bxcachy " & c.argv.toList( " " ) & ")" );
+        }
+        return say( "menu items", 0, { menu: rows }, arguments.asJson, lines );
+    }
+
+    // The terminal program (and the flag that precedes the command) for `run` entries.
+    function terminalArgv() {
+        for ( var t in [ "ghostty", "kitty", "foot", "alacritty", "konsole" ] ) {
+            var found = false;
+            try { found = variables.inst.exec( [ "sh", "-c", 'command -v "$1"', "_", t ], 10 ).exitCode == 0; } catch ( any e ) {}
+            if ( found ) return arrayFind( [ "ghostty", "alacritty", "konsole" ], t ) ? [ t, "-e" ] : [ t ];
+        }
+        return [];
+    }
+
+    function detach( argv ) {
+        var run = [ "sh", "-c", 'setsid "$@" >/dev/null 2>&1 &', "_" ];
+        for ( var p in arguments.argv ) run.append( p );
+        variables.inst.exec( run, 10 );
+    }
+
+    // Starts one entry.
+    function start( entry ) {
+        var self = getSystemSetting( "BXCACHY_SELF", "bxcachy" );
+        if ( arguments.entry.kind == "spawn" ) {
+            var sp = [ self ];
+            for ( var a in arguments.entry.argv ) sp.append( a );
+            detach( sp );
+            return 0;
+        }
+        var term = terminalArgv();
+        if ( !term.len() ) { println( "error: this entry needs a terminal program (ghostty, kitty, foot, alacritty or konsole)" ); return 4; }
+        var argv = [];
+        for ( var t in term ) argv.append( t );
+        for ( var w in [ "sh", "-c", 'bxcachy_cmd="$1"; shift; "$bxcachy_cmd" "$@"; echo; echo "Press Enter to close"; read _', "_", self ] ) argv.append( w );
+        for ( var a2 in arguments.entry.argv ) argv.append( a2 );
+        detach( argv );
+        return 0;
+    }
+
+    // Shows one level and follows the choice. Returns when the user goes back or cancels.
+    function level( runner, title, entries ) {
+        while ( true ) {
+            var labels = arguments.entries.map( function( e ) { return e.label; } );
+            labels.append( arguments.title == "BxCachy" ? "Exit" : "Back" );
+            var pick = arguments.runner.select( arguments.title, labels );
+            if ( pick == 0 || pick == labels.len() ) return 0;
+            var e = arguments.entries[ pick ];
+            if ( e.kind == "sub" ) { var inner = level( arguments.runner, e.label, e.children ); if ( inner != 0 ) return inner; }
+            else if ( e.kind == "db" ) new bxcachy.Db( variables.cli, variables.inst.runner() ).menu();
+            else { var rc = start( e ); if ( rc != 0 ) return rc; }
+        }
+        return 0;
+    }
+
+    function run() {
+        try {
+            var runner = new bxcachy.Runner( variables.cli, variables.inst.runner() );
+            return level( runner, "BxCachy", tree() );
+        } catch ( any err ) {
+            println( "error: " & err.message );
+            return 4;
+        }
+    }
+}

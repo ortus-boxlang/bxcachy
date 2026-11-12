@@ -475,6 +475,16 @@ Init rules for this page: a default agent that was not ticked is installed too; 
 - `ssh key [--email=ADDRESS] [--yes] [--dry-run]` creates `~/.ssh/id_ed25519` with `ssh-keygen -t ed25519 [-C ADDRESS]` (`~/.ssh` is made mode 700). An existing key is **never** replaced: it is reported with its public half and exit 0. ssh-keygen asks for the passphrase itself on the terminal (empty means none), so it needs a terminal; the public key is printed for GitHub. Exit 2 plan without `--yes`, 4 no ssh-keygen, 6 ssh-keygen failed. The wizard's `ssh_key` answer runs it as an **optional** init step with the git email as the comment.
 - `setup keyboard --layouts=us-intl,es [--yes] [--dry-run]` writes the layouts of a Plasma session with `kwriteconfig6 --file kxkbrc --group Layout` (`Use=true`, `LayoutList=us,es`, `VariantList=intl,`, `Options=grp:alt_shift_toggle` when there are two or more, else empty). Layout names are the wizard's (`StarterOptions.keyboards`). Plasma reads the file at login. The key names are from KDE's `kxkbrc`; not run on a real Plasma here. Hyprland takes the same answer through `setup hyprland --layouts`. `init` runs it when Plasma is chosen, so `layouts` is no longer pending there. Locale (`LANG`) is a system setting and is not changed. Tests: `tests/ssh-keyboard-test.sh`.
 
+### 13.16 Control center menu (decided with the owner 2026-11-12)
+
+`bxcachy menu` shows the BxCachy control center with the menu provider you chose (`runner menu-set`). `menu items [--json]` prints the same tree as data.
+- **AI:** open the default agent and the pull-down AI shell (both start detached, no window); agent session start and list, local models list and running, API keys list (these open in a terminal window and wait for Enter).
+- **Databases:** opens the existing `db menu`.
+- **Settings:** defaults, shortcuts, launcher check, setup status, dotfiles status (read-only views in a terminal).
+- Every entry is started without `--yes`, so nothing is changed by the menu itself; the commands keep their own plan/`--yes` rules. Back and Exit are the last entry of each level; cancelling the provider (empty answer) leaves the menu with exit 0.
+- Terminals for `run` entries: the first installed of ghostty, kitty, foot, alacritty, konsole (`-e` for ghostty, alacritty, konsole). Exit 4 when there is no menu program, or no terminal for a `run` entry.
+- Hyprland binds it to `Super+Alt+Space` in the shortcut table. Tests: `tests/menu-test.sh` (fake Rofi and terminal).
+
 ## 14. Install and the setup wizard (decided with the owner 2026-11-10; install, wizard and the init engine are built, the pages' later commands are not)
 
 ### 14.1 Install

@@ -26,7 +26,9 @@ class Shortcuts {
               plasma: { group: "ksmserver", key: "Log Out", value: "Meta+Shift+Q,Ctrl+Alt+Del,Log Out" } },
             // Hyprland only (kind hypr-bind): on Plasma the AI shell is Yakuake, whose shortcut you set in System Settings.
             { id: "ai-shell", keys: "Super+`", action: "Pull-down AI shell", kind: "hypr-bind",
-              hyprland: 'hl.bind(mainMod .. " + grave", hl.dsp.exec_cmd([[sh -c ''PATH="$HOME/.local/bin:$PATH"; bxcachy ai shell'']]))' }
+              hyprland: 'hl.bind(mainMod .. " + grave", hl.dsp.exec_cmd([[sh -c ''PATH="$HOME/.local/bin:$PATH"; bxcachy ai shell'']]))' },
+            { id: "control-center", keys: "Super+Alt+Space", action: "BxCachy control center (AI, databases, settings)", kind: "hypr-bind",
+              hyprland: 'hl.bind(mainMod .. " + ALT + Space", hl.dsp.exec_cmd([[sh -c ''PATH="$HOME/.local/bin:$PATH"; bxcachy menu'']]))' }
         ];
     }
 
