@@ -470,6 +470,11 @@ Local models: AUR names were checked on 2026-11-11 (`lmstudio-bin`, `jan-bin`, `
 
 Init rules for this page: a default agent that was not ticked is installed too; `secrets setup` runs whenever an agent is chosen (it installs a keyring only if none exists); the key steps are **optional**, so one that cannot run (no terminal, you press Enter to skip) is reported as skipped with the command to run later and the plan goes on.
 
+### 13.15 SSH key and Plasma keyboard layouts (decided with the owner 2026-11-12)
+
+- `ssh key [--email=ADDRESS] [--yes] [--dry-run]` creates `~/.ssh/id_ed25519` with `ssh-keygen -t ed25519 [-C ADDRESS]` (`~/.ssh` is made mode 700). An existing key is **never** replaced: it is reported with its public half and exit 0. ssh-keygen asks for the passphrase itself on the terminal (empty means none), so it needs a terminal; the public key is printed for GitHub. Exit 2 plan without `--yes`, 4 no ssh-keygen, 6 ssh-keygen failed. The wizard's `ssh_key` answer runs it as an **optional** init step with the git email as the comment.
+- `setup keyboard --layouts=us-intl,es [--yes] [--dry-run]` writes the layouts of a Plasma session with `kwriteconfig6 --file kxkbrc --group Layout` (`Use=true`, `LayoutList=us,es`, `VariantList=intl,`, `Options=grp:alt_shift_toggle` when there are two or more, else empty). Layout names are the wizard's (`StarterOptions.keyboards`). Plasma reads the file at login. The key names are from KDE's `kxkbrc`; not run on a real Plasma here. Hyprland takes the same answer through `setup hyprland --layouts`. `init` runs it when Plasma is chosen, so `layouts` is no longer pending there. Locale (`LANG`) is a system setting and is not changed. Tests: `tests/ssh-keyboard-test.sh`.
+
 ## 14. Install and the setup wizard (decided with the owner 2026-11-10; install, wizard and the init engine are built, the pages' later commands are not)
 
 ### 14.1 Install

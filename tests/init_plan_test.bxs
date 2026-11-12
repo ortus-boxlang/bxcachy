@@ -42,7 +42,11 @@ p = ip.plan( { launcher: "noctalia", menu: "rofi" } );
 check( "Noctalia needs no package of its own", cmd( p, "apps" ) == "bxcachy install rofi" && cmd( p, "launcher" ) == "bxcachy runner set noctalia" );
 
 p = ip.plan( { ssh_key: true, natural_scroll: false, layouts: [] } );
-check( "answers without a command are listed as pending, not dropped, and not when empty or off", p.pending.toList( "," ) == "ssh_key" && p.steps.len() == 0 );
+check( "ssh_key is now a step (optional: ssh-keygen asks for a passphrase), no longer pending", p.pending.len() == 0 && cmd( p, "ssh-key" ) == "bxcachy ssh key" && ( p.steps[ 1 ].optional ?: false ) );
+check( "the SSH key takes the git email as its comment", cmd( ip.plan( { ssh_key: true, git_email: "ada@example.com" } ), "ssh-key" ) == "bxcachy ssh key --email=ada@example.com" && find( "ssh-key", ids( ip.plan( { ssh_key: false } ) ) ) == 0 );
+p = ip.plan( { desktops: "plasma", layouts: [ "us-intl", "es" ] } );
+check( "Plasma gets its keyboard layouts through setup keyboard (not pending)", cmd( p, "plasma-keyboard" ) == "bxcachy setup keyboard --layouts=us-intl,es" && p.pending.len() == 0 );
+check( "Hyprland-only has no Plasma keyboard step", find( "plasma-keyboard", ids( ip.plan( { desktops: "hyprland", layouts: [ "us" ] } ) ) ) == 0 );
 p = ip.plan( { container_engine: "docker", databases: [ "postgres", "meilisearch" ] } );
 check( "databases: docker is remembered, then each service starts", ids( p ) == "apps,db-engine,db-postgres,db-meilisearch" && cmd( p, "db-engine" ) == "bxcachy db engine docker" && cmd( p, "db-postgres" ) == "bxcachy db start postgres" && cmd( p, "db-meilisearch" ) == "bxcachy db start meilisearch" );
 p = ip.plan( { databases: [ "postgres", "redis" ], database_passwords: "ask" } );

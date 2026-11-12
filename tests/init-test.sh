@@ -26,11 +26,11 @@ JSON
 # no --yes: the plan, exit 2, nothing run
 [[ "$(code "$binary" init --answers="$tmp/a.json")" == 2 ]] || fail 'no --yes exits 2'
 [[ ! -s "$LOG" ]] || fail 'the plan ran something'
-run "$binary" init --answers="$tmp/a.json" --dry-run --json | jq -e '.ok and (.data.steps | map(.id) == ["hyprland","plasma","terminal","shell","xremap","toolchain-python","apps","default-terminal","db-postgres","git-name","git-email","session"]) and (.data.pending == ["ssh_key"])' >/dev/null || fail 'dry-run --json plan'
+run "$binary" init --answers="$tmp/a.json" --dry-run --json | jq -e '.ok and (.data.steps | map(.id) == ["hyprland","plasma","terminal","shell","xremap","toolchain-python","apps","default-terminal","db-postgres","git-name","git-email","ssh-key","session"]) and (.data.pending == [])' >/dev/null || fail 'dry-run --json plan'
 [[ ! -s "$LOG" ]] || fail 'dry-run ran something'
 
 # --yes: every step runs in order; our own commands get --yes, git does not
-run "$binary" init --answers="$tmp/a.json" --yes --json | jq -e '.ok and (.data.done | length == 12) and (.data.failed | length == 0)' >/dev/null || fail 'init --yes --json'
+run "$binary" init --answers="$tmp/a.json" --yes --json | jq -e '.ok and (.data.done | length == 13) and (.data.failed | length == 0)' >/dev/null || fail 'init --yes --json'
 expected='bxcachy setup hyprland --terminal=ghostty --layout=scrolling --yes
 bxcachy setup plasma --yes
 bxcachy setup terminal --default=ghostty --also=kitty --yes
@@ -42,6 +42,7 @@ bxcachy default terminal ghostty --yes
 bxcachy db start postgres --yes
 git config --global user.name Ada Lovelace
 git config --global user.email ada@example.com
+bxcachy ssh key --email=ada@example.com --yes
 bxcachy session set plasma --yes'
 [[ "$(cat "$LOG")" == "$expected" ]] || fail "commands run were: $(cat "$LOG")"
 
@@ -49,7 +50,7 @@ bxcachy session set plasma --yes'
 : > "$LOG"
 rc=0; FAIL_SHELL=1 run "$binary" init --answers="$tmp/a.json" --yes --json > "$tmp/out.json" || rc=$?
 [[ "$rc" == 7 ]] || fail "exit was $rc, wanted 7"
-jq -e '(.data.done | map(.id) == ["hyprland","plasma","terminal"]) and (.data.failed[0].id == "shell") and (.data.skipped | length == 8)' "$tmp/out.json" >/dev/null || fail "failure report: $(cat "$tmp/out.json")"
+jq -e '(.data.done | map(.id) == ["hyprland","plasma","terminal"]) and (.data.failed[0].id == "shell") and (.data.skipped | length == 9)' "$tmp/out.json" >/dev/null || fail "failure report: $(cat "$tmp/out.json")"
 ! grep -q 'session set' "$LOG" || fail 'a step ran after the failure'
 
 # bad input

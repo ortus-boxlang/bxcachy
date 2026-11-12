@@ -1,0 +1,44 @@
+// `bxcachy setup keyboard [--layouts=us-intl,es] [--yes] [--dry-run]`: the keyboard layouts of a KDE Plasma session, written with
+// kwriteconfig6 to kxkbrc [Layout] (Use, LayoutList, VariantList, and Alt+Shift to switch when there are two or more). The layout
+// names are the wizard's (us-intl, us, es, ...). Hyprland takes the same answer through `setup hyprland --layouts`.
+// Plasma reads the file at login, so log out and in to see it. The key names are from KDE's kxkbrc; not run on a real Plasma here.
+// Exit: 0 done, 2 plan without --yes, 4 precondition (no kwriteconfig6, unknown layout), 6 a write failed.
+class PlasmaKeyboard {
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.inst = new bxcachy.Installer( arguments.runner );
+        return this;
+    }
+
+    function say( command, code, data, asJson, lines = [], dryRun = false ) {
+        if ( arguments.asJson ) println( variables.cli.envelope( arguments.command, arguments.code, arguments.data, arguments.dryRun ) );
+        else for ( var l in arguments.lines ) println( l );
+        return arguments.code;
+    }
+
+    function run( layouts, yes, dryRun, asJson ) {
+        var cmd = "setup keyboard";
+        var kb = new bxcachy.StarterOptions().keyboards();
+        var list = listToArray( arguments.layouts, "," ).map( function( x ) { return trim( x ); } ).filter( function( x ) { return len( x ) > 0; } );
+        if ( !list.len() ) return say( cmd, 2, {}, arguments.asJson, [ "Usage: bxcachy setup keyboard --layouts=us-intl,es [--yes] [--dry-run]" ] );
+        for ( var k in list ) if ( !structKeyExists( kb, k ) ) return say( cmd, 4, { error: "Unknown layout" }, arguments.asJson, [ "error: unknown layout " & k & " (use " & structKeyArray( kb ).sort( "text" ).toList( ", " ) & ")" ] );
+        var codes = list.map( function( k ) { return kb[ k ].layout; } );
+        var variants = list.map( function( k ) { return kb[ k ].variant; } );
+        var writes = [
+            [ "Use", "true" ],
+            [ "LayoutList", codes.toList( "," ) ],
+            [ "VariantList", variants.toList( "," ) ],
+            [ "Options", codes.len() > 1 ? "grp:alt_shift_toggle" : "" ]
+        ];
+        var data = { layouts: list, layout_list: codes.toList( "," ), variant_list: variants.toList( "," ) };
+        if ( !arguments.yes || arguments.dryRun ) return say( cmd, arguments.dryRun ? 0 : 2, data, arguments.asJson, [ ( arguments.dryRun ? "Dry run" : "Plan" ) & ": set the Plasma keyboard layouts to " & codes.toList( "," ) & " (variants " & variants.toList( "," ) & ")", "Nothing was changed." & ( arguments.dryRun ? "" : " Add --yes to apply." ) ], arguments.dryRun );
+        var have = false;
+        try { have = variables.inst.exec( [ "sh", "-c", 'command -v kwriteconfig6' ], 10 ).exitCode == 0; } catch ( any e ) {}
+        if ( !have ) return say( cmd, 4, { error: "kwriteconfig6 was not found" }, arguments.asJson, [ "error: kwriteconfig6 was not found (this is for a KDE Plasma 6 session)" ] );
+        for ( var w in writes ) {
+            var r = variables.inst.exec( [ "kwriteconfig6", "--file", "kxkbrc", "--group", "Layout", "--key", w[ 1 ], w[ 2 ] ], 20 );
+            if ( r.exitCode != 0 ) return say( cmd, 6, { error: "kwriteconfig6 failed on " & w[ 1 ] }, arguments.asJson, [ "error: kwriteconfig6 failed on " & w[ 1 ] ] );
+        }
+        return say( cmd, 0, data, arguments.asJson, [ "Plasma keyboard layouts set to " & codes.toList( "," ) & ". Log out and in to apply them." ] );
+    }
+}

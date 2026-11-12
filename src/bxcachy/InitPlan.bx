@@ -6,7 +6,7 @@
 class InitPlan {
     // Answer keys that are saved but have no command behind them yet.
     function pendingKeys() {
-        return [ "ssh_key" ];
+        return [];
     }
 
     // Answers that shape the Hyprland starter (applied by `setup hyprland`; pending when Hyprland is not being set up).
@@ -212,9 +212,18 @@ class InitPlan {
         var gmail = pick( a, "git_email" );
         if ( len( gname ) ) out.steps.append( { id: "git-name", title: "git user.name", argv: [ "git", "config", "--global", "user.name", gname ] } );
         if ( len( gmail ) ) out.steps.append( { id: "git-email", title: "git user.email", argv: [ "git", "config", "--global", "user.email", gmail ] } );
+        // an SSH key (ssh-keygen asks for the passphrase on the terminal, so it is optional: skipping it never stops the plan)
+        if ( pick( a, "ssh_key", false ) == true ) {
+            var skArgv = [ "bxcachy", "ssh", "key" ];
+            if ( len( gmail ) ) skArgv.append( "--email=" & gmail );
+            out.steps.append( { id: "ssh-key", title: "create an SSH key (ed25519; an existing key is kept; you type a passphrase or leave it empty)", argv: skArgv, optional: true } );
+        }
+        // keyboard layouts for Plasma (Hyprland takes them through `setup hyprland --layouts`)
+        if ( wantsPlasma && pick( a, "layouts", [] ).len() ) out.steps.append( { id: "plasma-keyboard", title: "set the Plasma keyboard layouts (" & a.layouts.toList( ", " ) & "; takes effect at your next login)", argv: [ "bxcachy", "setup", "keyboard", "--layouts=" & a.layouts.toList( "," ) ] } );
         var sess = session( a );
         if ( len( sess ) ) out.steps.append( { id: "session", title: "start on " & ( sess == "hyprland" ? "Hyprland" : "KDE Plasma" ) & " at the login screen", argv: [ "bxcachy", "session", "set", sess ] } );
         if ( !wantsHypr ) for ( var key in hyprlandKeys() ) {
+            if ( key == "layouts" && wantsPlasma ) continue;
             if ( structKeyExists( a, key ) && isSet( a[ key ] ) ) out.pending.append( key );
         }
         // your own dotfiles go last so they win over the starter configs; replacing a file you have is asked at the prompt

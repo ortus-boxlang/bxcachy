@@ -15,7 +15,7 @@ class {
         var config = new bxcachy.ConfigService();
         // One shared flag check for every command: unknown flags are usage errors and nothing runs.
         for ( var flag in args.options ) {
-            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider", "backend", "dir" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
+            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider", "backend", "dir", "email" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
                 println( "Unknown option: --" & flag );
                 CLIExit( 2 );
             }
@@ -245,13 +245,22 @@ class {
           if ( setupSub == "shell" && p.len() == 2 ) {
            CLIExit( st.shell( { shell: args.options.shell ?: "" }, setupYes, setupDry, asJson ) );
           }
+          if ( setupSub == "keyboard" && p.len() == 2 ) {
+           CLIExit( new bxcachy.PlasmaKeyboard( cli ).run( args.options.layouts ?: "", setupYes, setupDry, asJson ) );
+          }
           if ( setupSub == "xremap" && p.len() == 2 ) {
            CLIExit( st.xremap( { build: args.options.build ?: "" }, setupYes, setupDry, asJson ) );
           }
           if ( setupSub == "undo" && p.len() == 3 && p[3] == "xremap" ) {
            CLIExit( st.undoXremap( setupYes, setupDry, asJson ) );
           }
-          println( "Usage: bxcachy setup plasma [--keys | --undo-keys] | hyprland [--terminal=ghostty|kitty|alacritty|foot|konsole] [--layout=dwindle|master|scrolling|floating] [--workspaces=N] [--natural-scroll] [--layouts=us-intl,es] [--theme=dark|light|auto] [--wallpaper=box|grid|aurora|minimal] | terminal [--default=ghostty] [--also=a,b] | shell [--shell=zsh|fish|bash] | xremap [--build=hypr|kde] | undo plasma|hyprland|xremap | status [--yes] [--dry-run] [--json]" );
+          println( "Usage: bxcachy setup plasma [--keys | --undo-keys] | hyprland [--terminal=ghostty|kitty|alacritty|foot|konsole] [--layout=dwindle|master|scrolling|floating] [--workspaces=N] [--natural-scroll] [--layouts=us-intl,es] [--theme=dark|light|auto] [--wallpaper=box|grid|aurora|minimal] | terminal [--default=ghostty] [--also=a,b] | shell [--shell=zsh|fish|bash] | keyboard [--layouts=us-intl,es] | xremap [--build=hypr|kde] | undo plasma|hyprland|xremap | status [--yes] [--dry-run] [--json]" );
+          CLIExit( 2 );
+          break;
+         case "ssh":
+          // Create an ed25519 SSH key (never replaces one). See COMMAND-CONTRACT.md 13.15.
+          if ( p.len() == 2 && p[2] == "key" ) CLIExit( new bxcachy.SshKey( cli ).run( args.options.email ?: "", structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
+          println( "Usage: bxcachy ssh key [--email=ADDRESS] [--yes] [--dry-run] [--json]" );
           CLIExit( 2 );
           break;
          case "default":
