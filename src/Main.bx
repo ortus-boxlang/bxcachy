@@ -15,7 +15,7 @@ class {
         var config = new bxcachy.ConfigService();
         // One shared flag check for every command: unknown flags are usage errors and nothing runs.
         for ( var flag in args.options ) {
-            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider", "backend", "dir", "email", "region", "browser", "path", "from", "export", "from-system", "fresh", "rerun" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
+            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider", "backend", "dir", "email", "region", "browser", "path", "from", "export", "from-system", "fresh", "rerun", "fix" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
                 println( "Unknown option: --" & flag );
                 CLIExit( 2 );
             }
@@ -331,6 +331,34 @@ class {
           // The LazyVim starter for Neovim. See COMMAND-CONTRACT.md 13.17.
           if ( p.len() == 2 && p[2] == "lazyvim" ) CLIExit( new bxcachy.Editor( cli ).lazyvim( structKeyExists( args.options, "yes" ), asJson ) );
           println( "Usage: bxcachy editor lazyvim [--yes] [--json]" );
+          CLIExit( 2 );
+          break;
+         case "quicklook":
+          // Quick Look style preview with Kiview. See COMMAND-CONTRACT.md 13.25.
+          if ( p.len() <= 2 ) CLIExit( new bxcachy.Quicklook( cli ).run( p.len() == 2 ? p[2] : "", structKeyExists( args.options, "dry-run" ), asJson ) );
+          println( "Usage: bxcachy quicklook [PATH] [--dry-run] [--json]" );
+          CLIExit( 2 );
+          break;
+         case "dolphin":
+          // Dolphin outside Plasma. See COMMAND-CONTRACT.md 13.25.
+          if ( p.len() == 2 && p[2] == "doctor" ) CLIExit( new bxcachy.Dolphin( cli ).run( structKeyExists( args.options, "fix" ), asJson ) );
+          println( "Usage: bxcachy dolphin doctor [--fix] [--json]" );
+          CLIExit( 2 );
+          break;
+         case "dictation":
+          // Voice dictation: Superwhisper (default) or Voxtype. See COMMAND-CONTRACT.md 13.25.
+          dctSub = p.len() >= 2 ? p[2] : "";
+          dct = new bxcachy.Dictation( cli );
+          if ( dctSub == "setup" && p.len() <= 3 ) CLIExit( dct.setup( p.len() == 3 ? p[3] : "", structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
+          if ( dctSub == "status" && p.len() == 2 ) CLIExit( dct.status( asJson ) );
+          if ( dctSub == "key" && p.len() <= 3 ) CLIExit( dct.key( p.len() == 3 ? p[3] : "", asJson ) );
+          println( "Usage: bxcachy dictation setup [superwhisper|voxtype] [--yes] [--dry-run] | status | key [ENGINE] [--json]" );
+          CLIExit( 2 );
+          break;
+         case "strata":
+          // Strata's Send to providers (LocalSend, KDE Connect). See COMMAND-CONTRACT.md 13.25.
+          if ( p.len() == 2 && p[2] == "integrations" ) CLIExit( new bxcachy.Strata( cli ).integrations( structKeyExists( args.options, "dry-run" ), asJson ) );
+          println( "Usage: bxcachy strata integrations [--dry-run] [--json]" );
           CLIExit( 2 );
           break;
          case "status":

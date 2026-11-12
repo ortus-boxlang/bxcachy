@@ -1,0 +1,72 @@
+// `bxcachy dolphin doctor [--fix] [--json]`: checks that Dolphin works outside a full Plasma session (Hyprland). Each check says what it
+// found and how to fix it; `--fix` only rebuilds KDE's service cache (kbuildsycoca6 --noincremental), which is what an empty "Open with"
+// menu needs. Checks: the applications menu file (the usual cause of an empty Open with), the KDE helper packages (kio-extras, the
+// thumbnailers and image formats), a default folder handler, and a polkit agent. Exit 0 when every check passes, 4 when something needs
+// fixing (like `doctor`), 6 when --fix failed.
+class Dolphin {
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.inst = new bxcachy.Installer( arguments.runner );
+        return this;
+    }
+
+    function check( id, ok, found, fix ) {
+        return { id: arguments.id, ok: arguments.ok, found: arguments.found, fix: arguments.ok ? "" : arguments.fix };
+    }
+
+    function installed( names ) {
+        try {
+            var r = variables.inst.exec( [ "pacman", "-Qq" ], 60 );
+            var have = {};
+            for ( var l in listToArray( r.output, chr( 10 ) ) ) have[ trim( l ) ] = true;
+            var missing = [];
+            for ( var n in arguments.names ) if ( !structKeyExists( have, n ) ) missing.append( n );
+            return missing;
+        } catch ( any e ) { return arguments.names; }
+    }
+
+    function menuFile() {
+        var dirs = listToArray( getSystemSetting( "XDG_CONFIG_DIRS", "/etc/xdg" ), ":" );
+        for ( var d in dirs ) for ( var f in [ "plasma-applications.menu", "applications.menu" ] ) if ( fileExists( d & "/menus/" & f ) ) return d & "/menus/" & f;
+        return "";
+    }
+
+    function checks() {
+        var out = [];
+        var menu = menuFile();
+        out.append( check( "menu", len( menu ) > 0, len( menu ) ? menu : "no applications menu file", "install plasma-workspace (it ships plasma-applications.menu), then run: kbuildsycoca6 --noincremental" ) );
+        var prefix = getSystemSetting( "XDG_MENU_PREFIX", "" );
+        out.append( check( "menu-prefix", prefix == "plasma-" || !find( "plasma-applications.menu", menu ), len( prefix ) ? "XDG_MENU_PREFIX=" & prefix : "XDG_MENU_PREFIX is not set", "export XDG_MENU_PREFIX=plasma- in your session environment (Dolphin's Open with reads plasma-applications.menu)" ) );
+        var missing = installed( [ "kio-extras", "kdegraphics-thumbnailers", "kimageformats", "ffmpegthumbs" ] );
+        out.append( check( "helpers", !missing.len(), missing.len() ? "missing: " & missing.toList( ", " ) : "kio-extras and the thumbnailers are installed", "bxcachy install " & missing.toList( " " ) ) );
+        var fm = "";
+        try { fm = trim( variables.inst.exec( [ "xdg-mime", "query", "default", "inode/directory" ], 20 ).output ); } catch ( any e ) {}
+        out.append( check( "folder-handler", len( fm ) > 0, len( fm ) ? "folders open with " & fm : "no default folder handler", "bxcachy default filemanager dolphin --yes" ) );
+        var agent = installed( [ "polkit-kde-agent" ] );
+        out.append( check( "polkit", !agent.len(), agent.len() ? "no polkit-kde-agent (admin actions and mounting will not ask for a password)" : "polkit-kde-agent is installed", "sudo pacman -S --needed polkit-kde-agent" ) );
+        return out;
+    }
+
+    function run( fix, asJson ) {
+        var rows = checks();
+        var bad = rows.filter( function( c ) { return !c.ok; } );
+        var fixed = false;
+        if ( arguments.fix && len( menuFile() ) ) {
+            var r = variables.inst.exec( [ "kbuildsycoca6", "--noincremental" ], 300 );
+            if ( r.exitCode != 0 ) {
+                if ( arguments.asJson ) println( variables.cli.envelope( "dolphin doctor", 6, { error: "kbuildsycoca6 failed", checks: rows } ) );
+                else println( "error: kbuildsycoca6 --noincremental failed (exit " & r.exitCode & ")" );
+                return 6;
+            }
+            fixed = true;
+        }
+        var code = bad.len() ? 4 : 0;
+        if ( arguments.asJson ) { println( variables.cli.envelope( "dolphin doctor", code, { checks: rows, rebuilt_cache: fixed } ) ); return code; }
+        for ( var c in rows ) {
+            println( ( c.ok ? "ok    " : "FIX   " ) & c.id & ": " & c.found );
+            if ( !c.ok ) println( "        " & c.fix );
+        }
+        if ( fixed ) println( "Rebuilt KDE's service cache (kbuildsycoca6 --noincremental)." );
+        return code;
+    }
+}

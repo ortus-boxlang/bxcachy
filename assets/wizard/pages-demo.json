@@ -688,6 +688,30 @@
         },
         {
           "type": "choice",
+          "id": "dictation",
+          "label": "Voice dictation",
+          "help": "Hold a key, speak, release: the text is typed where you are. Superwhisper holds Right Alt; Voxtype holds F9 (Omarchy's choice).",
+          "default": "superwhisper",
+          "options": [
+            {
+              "value": "superwhisper",
+              "label": "Superwhisper",
+              "description": "Hold Right Alt to talk. Local and cloud models."
+            },
+            {
+              "value": "voxtype",
+              "label": "Voxtype",
+              "description": "Offline push-to-talk, free."
+            },
+            {
+              "value": "none",
+              "label": "None",
+              "description": "Skip dictation."
+            }
+          ]
+        },
+        {
+          "type": "choice",
           "id": "launcher",
           "label": "App launcher",
           "help": "What opens your apps and commands. BxCachy never changes your shortcuts.",

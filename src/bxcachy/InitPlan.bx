@@ -120,6 +120,9 @@ class InitPlan {
         }
         var fileManager = pick( a, "file_manager" );
         if ( len( fileManager ) && !arrayFind( chosenApps, fileManager ) ) chosenApps.append( fileManager );
+        var dictation = pick( a, "dictation" );
+        if ( dictation == "superwhisper" ) { if ( !arrayFind( chosenApps, "superwhisper" ) ) chosenApps.append( "superwhisper" ); }
+        else if ( dictation == "voxtype" ) { for ( var dapp in [ "voxtype", "wtype" ] ) if ( !arrayFind( chosenApps, dapp ) ) chosenApps.append( dapp ); }
         var browser = pick( a, "default_browser" );
         if ( len( browser ) && !arrayFind( chosenApps, browser ) ) chosenApps.append( browser );
         // everything else that is one package each goes in a single install
@@ -176,6 +179,7 @@ class InitPlan {
         if ( vpn == "nordvpn" ) out.steps.append( { id: "vpn-nordvpn", title: "enable the NordVPN service and add you to the nordvpn group (sudo)", argv: [ "bxcachy", "vpn", "nordvpn", "setup" ], optional: true } );
         // defaults: the browser and the terminal you picked (both are installed by now)
         if ( len( fileManager ) ) out.steps.append( { id: "default-filemanager", title: "make " & fileManager & " your default file manager", argv: [ "bxcachy", "default", "filemanager", fileManager ] } );
+        if ( fileManager == "strata" ) out.steps.append( { id: "strata-integrations", title: "add Strata's LocalSend and KDE Connect Send to providers", argv: [ "bxcachy", "strata", "integrations" ], optional: true } );
         if ( len( browser ) ) out.steps.append( { id: "default-browser", title: "make " & browser & " your default browser", argv: [ "bxcachy", "default", "browser", browser ] } );
         if ( len( terminal ) ) out.steps.append( { id: "default-terminal", title: "make " & terminal & " your default terminal", argv: [ "bxcachy", "default", "terminal", terminal ] } );
         // databases: remember the container engine, then start each chosen service (nothing is started unless it was picked)

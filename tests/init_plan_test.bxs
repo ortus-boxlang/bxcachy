@@ -96,7 +96,11 @@ c.desktops = "both"; check( "Both keeps everything", cmd( ip.plan( c, sm ), "app
 p = ip.plan( { app_mode: "custom", default_browser: "brave", apps_everyday_browsers: [ "firefox" ] } );
 check( "the default browser is installed too (even when not ticked) and set as default, after the install", cmd( p, "apps" ) == "bxcachy install firefox brave" && cmd( p, "default-browser" ) == "bxcachy default browser brave" && ids( p ) == "apps,default-browser" );
 p = ip.plan( { app_mode: "defaults", file_manager: "strata", toolchains: [ "rust" ] } );
-check( "file manager: installed, then set as default; rust: rustup stable, optional", cmd( p, "apps" ) == "bxcachy install strata" && cmd( p, "default-filemanager" ) == "bxcachy default filemanager strata" && cmd( p, "toolchain-rust" ) == "rustup default stable" );
+check( "file manager: installed, then set as default; rust: rustup stable, optional", cmd( p, "apps" ) == "bxcachy install strata" && cmd( p, "default-filemanager" ) == "bxcachy default filemanager strata" && cmd( p, "toolchain-rust" ) == "rustup default stable" && cmd( p, "strata-integrations" ) == "bxcachy strata integrations" );
+p = ip.plan( { app_mode: "defaults", dictation: "voxtype" } );
+check( "dictation voxtype installs voxtype and wtype", cmd( p, "apps" ) == "bxcachy install voxtype wtype" );
+p = ip.plan( { app_mode: "defaults", dictation: "none" } );
+check( "dictation none adds nothing", ids( p ) == "apps-basic" );
 p = ip.plan( { app_mode: "defaults", default_browser: "firefox" } );
 check( "in Basic mode a different default browser is added to the install", ids( p ) == "apps-basic,apps,default-browser" && cmd( p, "apps" ) == "bxcachy install firefox" );
 check( "the default terminal follows the terminal answer", cmd( ip.plan( { terminal: "kitty" } ), "default-terminal" ) == "bxcachy default terminal kitty" );

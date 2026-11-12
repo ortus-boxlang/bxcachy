@@ -1,0 +1,71 @@
+// `bxcachy dictation setup|status|key`: voice dictation with Superwhisper (default) or Voxtype (the alternative, Omarchy's choice).
+// BxCachy installs the app and reports the shortcut the app itself ships; it does not add a shortcut of its own.
+//   superwhisper  hold Right Alt to talk, release to paste (Hyprland, KDE Plasma and GNOME Wayland sessions); change it in its Configuration
+//   voxtype       hold F9 to dictate (Omarchy's setup); `voxtype setup model` picks the speech model; settings in ~/.config/voxtype/config.toml
+// Exit: 0 ok, 2 plan without --yes, 4 precondition, 5/6/7 as `install`.
+class Dictation {
+    variables.engines = [
+        { id: "superwhisper", name: "Superwhisper", apps: [ "superwhisper" ], bin: "superwhisper", key: "Hold Right Alt to talk, release to paste. Change it in Superwhisper's Configuration (Escape cancels on Hyprland).", home: "https://superwhisper.com/linux" },
+        { id: "voxtype", name: "Voxtype", apps: [ "voxtype", "wtype" ], bin: "voxtype", key: "Hold F9 to dictate (Omarchy's setup). Change the model with: voxtype setup model. Other settings: ~/.config/voxtype/config.toml", home: "https://github.com/peteonrails/voxtype" }
+    ];
+
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.runner = arguments.runner;
+        variables.inst = new bxcachy.Installer( arguments.runner );
+        return this;
+    }
+
+    function engine( id ) {
+        for ( var e in variables.engines ) if ( e.id == arguments.id ) return e;
+        return {};
+    }
+
+    function hasCommand( name ) {
+        try { return variables.inst.exec( [ "sh", "-c", 'command -v "$1"', "_", arguments.name ], 10 ).exitCode == 0; } catch ( any e ) { return false; }
+    }
+
+    function say( code, data, asJson, lines ) {
+        if ( arguments.asJson ) println( variables.cli.envelope( "dictation", arguments.code, arguments.data ) );
+        else for ( var l in arguments.lines ) println( l );
+        return arguments.code;
+    }
+
+    // `dictation setup [ENGINE]`: install the app through the catalog (`bxcachy install`), then say how to use it.
+    function setup( id, yes, dryRun, asJson ) {
+        var e = engine( len( arguments.id ) ? arguments.id : "superwhisper" );
+        if ( structIsEmpty( e ) ) return say( 4, { error: "Unknown engine " & arguments.id }, arguments.asJson, [ "error: unknown engine " & arguments.id & " (use superwhisper or voxtype)" ] );
+        var data = { engine: e.id, apps: e.apps, shortcut: e.key };
+        if ( !arguments.yes || arguments.dryRun ) {
+            var code = arguments.dryRun ? 0 : 2;
+            return say( code, data, arguments.asJson, [ ( arguments.dryRun ? "Dry run" : "Plan" ) & ": install " & e.apps.toList( ", " ) & " for dictation with " & e.name, "Shortcut: " & e.key, arguments.dryRun ? "Nothing was changed." : "Nothing was changed. Add --yes to apply." ] );
+        }
+        var argv = [ "bxcachy", "install" ];
+        for ( var a in e.apps ) argv.append( a );
+        argv.append( "--yes" );
+        var r = variables.inst.exec( argv, 3600 );
+        if ( r.exitCode != 0 ) return say( 6, { error: "install failed (exit " & r.exitCode & ")" }, arguments.asJson, [ "error: installing " & e.name & " failed (exit " & r.exitCode & ")" ] );
+        return say( 0, data, arguments.asJson, [ e.name & " is installed.", "Shortcut: " & e.key ] );
+    }
+
+    // `dictation status`: which engines are installed, and the shortcut of each.
+    function status( asJson ) {
+        var rows = [];
+        var lines = [];
+        for ( var e in variables.engines ) {
+            var have = hasCommand( e.bin );
+            rows.append( { engine: e.id, installed: have, shortcut: e.key } );
+            lines.append( e.name & ": " & ( have ? "installed" : "not installed" ) & "  |  " & e.key );
+        }
+        return say( 0, { engines: rows }, arguments.asJson, lines );
+    }
+
+    // `dictation key [ENGINE]`: the shortcut the app ships (BxCachy does not rebind it).
+    function key( id, asJson ) {
+        var list = len( arguments.id ) ? [ engine( arguments.id ) ] : variables.engines;
+        if ( list[ 1 ].keyExists( "id" ) == false ) return say( 4, { error: "Unknown engine " & arguments.id }, arguments.asJson, [ "error: unknown engine " & arguments.id ] );
+        var lines = [];
+        for ( var e in list ) lines.append( e.name & ": " & e.key );
+        return say( 0, { shortcuts: list.map( function( e ) { return { engine: e.id, shortcut: e.key }; } ) }, arguments.asJson, lines );
+    }
+}
