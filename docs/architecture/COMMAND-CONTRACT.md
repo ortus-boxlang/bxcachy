@@ -509,6 +509,13 @@ Bindings are built from their key combo (`Shortcuts.bindLine`), so changing the 
 - `keys conflicts [--json]` reports combos used twice inside the table and clashes with your own `hl.bind(` lines (best effort: it reads `mainMod` and the quoted names on the line, it is not a Lua parser; `bxcachy.lua` is skipped).
 - `keys show` marks changed rows (`custom`). The screen-record region shortcut is its own row (`screen-record-region`). Tests: `tests/keys-editor-test.sh`.
 
+### 13.20 Web apps, NordVPN setup and remote desktop (decided with the owner 2026-11-12)
+
+- `web add NAME URL [--browser=brave|chromium|google-chrome|edge|firefox] [--yes]` writes `~/.local/share/applications/bxcachy-web-NAME.desktop` (`XDG_DATA_HOME` is honored). Chromium-family browsers get `Exec=BROWSER --app=URL` (a window without tabs or address bar); Firefox has no app mode, so it gets `--new-window URL`. The browser is `--browser`, else your default (`xdg-settings get default-web-browser`) when it is one of those and installed, else the first installed. NAME is letters, digits, `-`, `_`; the URL must be http(s) without spaces or quotes. Written through the config service: the same text again is fine, an entry you edited is kept (exit 4). `web list` shows the apps BxCachy made (the URL is stored as `X-BxCachy-Web=`); `web rm NAME [--yes]` deletes one. Plan without `--yes` (exit 2). Browser commands: `chromium`; `brave`, `google-chrome-stable`, `microsoft-edge-stable`, `firefox` are the vendors' usual names, not verified here. No icon is fetched (`Icon=web-browser`).
+- `vpn nordvpn setup [--yes]` runs the two steps the `nordvpn-bin` AUR package prints in its install notes (checked 2026-11-12): `sudo systemctl enable --now nordvpnd` and `sudo gpasswd -a $USER nordvpn` (log out and in afterwards), then `nordvpn login` by hand. NordLayer is not covered. The wizard's VPN question offers NordVPN (catalog `nordvpn`); `init` installs it and runs the setup as an **optional** step.
+- Remote desktop: the wizard's `remote_desktop` multi-choice (Remmina, RustDesk, Moonlight, Sunshine; nothing preselected) installs catalog apps in the single `install` step. These were already in the catalog; there is no command of their own.
+- Tests: `tests/web-vpn-test.sh`.
+
 ## 14. Install and the setup wizard (decided with the owner 2026-11-10; install, wizard and the init engine are built, the pages' later commands are not)
 
 ### 14.1 Install

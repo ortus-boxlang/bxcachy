@@ -142,9 +142,10 @@ class InitPlan {
             if ( gpu == "nvidia" ) apps.append( "ollama-cuda" );
             else if ( gpu == "amd" ) apps.append( "ollama-rocm" );
         }
+        for ( var id in pick( a, "remote_desktop", [] ) ) if ( !arrayFind( apps, id ) ) apps.append( id );
         for ( var id in pick( a, "desktop_utilities", [] ) ) if ( !arrayFind( apps, id ) ) apps.append( id );
         if ( engine == "docker" ) apps.append( "docker" );
-        var vpnIds = { tailscale: "tailscale", wireguard: "wireguard", openvpn: "openvpn", mullvad: "mullvad", proton: "proton-vpn" };
+        var vpnIds = { tailscale: "tailscale", wireguard: "wireguard", openvpn: "openvpn", mullvad: "mullvad", proton: "proton-vpn", nordvpn: "nordvpn" };
         var vpn = pick( a, "vpn" );
         if ( structKeyExists( vpnIds, vpn ) ) apps.append( vpnIds[ vpn ] );
         var pm = pick( a, "password_manager" );
@@ -163,6 +164,8 @@ class InitPlan {
             out.steps.append( { id: "apps", title: "install " & apps.toList( ", " ), argv: iargv } );
         }
         if ( pick( a, "editor_starter" ) == "lazyvim" ) out.steps.append( { id: "editor-lazyvim", title: "install the LazyVim starter for Neovim (an existing ~/.config/nvim is left alone)", argv: [ "bxcachy", "editor", "lazyvim" ] } );
+        // NordVPN needs its service and your group after the install (sudo; optional so a missing password prompt never stops the plan)
+        if ( vpn == "nordvpn" ) out.steps.append( { id: "vpn-nordvpn", title: "enable the NordVPN service and add you to the nordvpn group (sudo)", argv: [ "bxcachy", "vpn", "nordvpn", "setup" ], optional: true } );
         // defaults: the browser and the terminal you picked (both are installed by now)
         if ( len( browser ) ) out.steps.append( { id: "default-browser", title: "make " & browser & " your default browser", argv: [ "bxcachy", "default", "browser", browser ] } );
         if ( len( terminal ) ) out.steps.append( { id: "default-terminal", title: "make " & terminal & " your default terminal", argv: [ "bxcachy", "default", "terminal", terminal ] } );

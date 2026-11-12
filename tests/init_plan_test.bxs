@@ -134,6 +134,8 @@ check( "no docker shim without the answer, or on Docker", find( "docker-compat",
 check( "the LazyVim starter is a step", cmd( ip.plan( { editor_starter: "lazyvim" } ), "editor-lazyvim" ) == "bxcachy editor lazyvim" && find( "editor-lazyvim", ids( ip.plan( { editor_starter: "none" } ) ) ) == 0 );
 p = ip.plan( { desktop_utilities: [ "cliphist", "wf-recorder", "playerctl" ] } );
 check( "desktop utilities are installed in the one apps step", cmd( p, "apps" ) == "bxcachy install cliphist wf-recorder playerctl" );
+p = ip.plan( { vpn: "nordvpn", remote_desktop: [ "remmina", "rustdesk" ] } );
+check( "NordVPN is installed, then set up (optional step); remote desktop apps join the install", cmd( p, "apps" ) == "bxcachy install remmina rustdesk nordvpn" && cmd( p, "vpn-nordvpn" ) == "bxcachy vpn nordvpn setup" && ( p.steps[ 2 ].optional ?: false ) );
 check( "no keys step without an answer", find( "key-", ids( ip.plan( { ai_agents: [ "claude-code" ] } ) ) ) == 0 );
 p = ip.plan( { ai_agents: [ "claude-code" ], ai_default: "gemini-cli" } );
 check( "a default agent that was not ticked is installed too", cmd( p, "apps" ) == "bxcachy install claude-code gemini-cli tmux" );

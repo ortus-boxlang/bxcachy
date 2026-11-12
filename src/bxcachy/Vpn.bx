@@ -1,0 +1,35 @@
+// `bxcachy vpn nordvpn setup [--yes]`: the steps NordVPN needs after its package is installed (the AUR package prints them as notes):
+//   sudo systemctl enable --now nordvpnd       the daemon
+//   sudo gpasswd -a USER nordvpn               your user joins the nordvpn group (log out and in, or reboot, for it to count)
+// then `nordvpn login`. Source: the nordvpn-bin AUR package's install notes (checked 2026-11-12). NordLayer is not covered.
+// Exit: 0 done, 2 plan without --yes, 4 precondition (NordVPN missing), 6 a command failed.
+class Vpn {
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.inst = new bxcachy.Installer( arguments.runner );
+        return this;
+    }
+
+    function say( command, code, data, asJson, lines = [] ) {
+        if ( arguments.asJson ) println( variables.cli.envelope( arguments.command, arguments.code, arguments.data, false ) );
+        else for ( var l in arguments.lines ) println( l );
+        return arguments.code;
+    }
+
+    function nordvpn( yes, asJson ) {
+        var cmd = "vpn nordvpn setup";
+        var found = false;
+        try { found = variables.inst.exec( [ "sh", "-c", 'command -v nordvpn', "_" ], 10 ).exitCode == 0; } catch ( any e ) {}
+        if ( !found ) return say( cmd, 4, { error: "NordVPN is not installed" }, arguments.asJson, [ "error: NordVPN is not installed. Install it: bxcachy install nordvpn" ] );
+        var user = getSystemSetting( "USER", "" );
+        var steps = [ [ "sudo", "systemctl", "enable", "--now", "nordvpnd" ], [ "sudo", "gpasswd", "-a", user, "nordvpn" ] ];
+        var data = { steps: steps };
+        if ( !len( user ) ) return say( cmd, 4, { error: "No USER" }, arguments.asJson, [ "error: could not tell which user to add to the nordvpn group" ] );
+        if ( !arguments.yes ) return say( cmd, 2, data, arguments.asJson, [ "Plan:", "  " & steps[ 1 ].toList( " " ), "  " & steps[ 2 ].toList( " " ), "Nothing was changed. Add --yes to apply." ] );
+        for ( var s in steps ) {
+            var r = variables.inst.exec( s, 60 );
+            if ( r.exitCode != 0 ) return say( cmd, 6, { error: trim( r.output ), step: s }, arguments.asJson, [ "error: " & s.toList( " " ) & ": " & trim( r.output ) ] );
+        }
+        return say( cmd, 0, data, arguments.asJson, [ "The NordVPN daemon is running and you are in the nordvpn group.", "Log out and in (or reboot) for the group to count, then run: nordvpn login" ] );
+    }
+}

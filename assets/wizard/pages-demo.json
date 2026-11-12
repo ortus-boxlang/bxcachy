@@ -1073,6 +1073,11 @@
               "value": "proton",
               "label": "Proton VPN",
               "description": "Proton's VPN app."
+            },
+            {
+              "value": "nordvpn",
+              "label": "NordVPN",
+              "description": "NordVPN's command-line client (AUR). BxCachy also enables its service and your group."
             }
           ]
         },
@@ -1187,6 +1192,35 @@
               "value": "playerctl",
               "label": "Media keys",
               "description": "playerctl: control any media player from the keyboard."
+            }
+          ]
+        },
+        {
+          "type": "multi",
+          "id": "remote_desktop",
+          "label": "Remote desktop",
+          "default": [],
+          "help": "Reach other machines, or let them reach this one. Nothing is preselected.",
+          "options": [
+            {
+              "value": "remmina",
+              "label": "Remmina",
+              "description": "RDP, VNC and SSH client."
+            },
+            {
+              "value": "rustdesk",
+              "label": "RustDesk",
+              "description": "Open source remote desktop with its own relay."
+            },
+            {
+              "value": "moonlight",
+              "label": "Moonlight",
+              "description": "Stream games and your desktop from a Sunshine or NVIDIA host."
+            },
+            {
+              "value": "sunshine",
+              "label": "Sunshine",
+              "description": "Host: stream this machine to Moonlight clients."
             }
           ]
         }
