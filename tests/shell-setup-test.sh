@@ -41,7 +41,7 @@ grep -q '^# my zshrc' "$tmp/home/.zshrc" && grep -q 'alias ll=' "$tmp/home/.zshr
 [[ "$(grep -c '>>> bxcachy shell' "$tmp/home/.zshrc")" == 1 ]] || fail 'exactly one block in .zshrc'
 grep -q "source \"$tmp/cfg/bxcachy/shell.zsh\"" "$tmp/home/.zshrc" || fail 'block sources the managed init'
 grep -q 'starship init zsh' "$tmp/cfg/bxcachy/shell.zsh" && grep -q 'zsh-autosuggestions.zsh' "$tmp/cfg/bxcachy/shell.zsh" && grep -q 'zsh-syntax-highlighting.zsh' "$tmp/cfg/bxcachy/shell.zsh" || fail 'zsh init has starship and the plugins'
-grep -q 'bold #00ff78' "$tmp/cfg/starship.toml" || fail 'starship config written'
+grep -q "palette = 'catppuccin_mocha'" "$tmp/cfg/starship.toml" && grep -q 'fg:peach)' "$tmp/cfg/starship.toml" && grep -q '^\$directory.' "$tmp/cfg/starship.toml" || fail 'starship config written'
 
 # again: nothing duplicated, a changed starship.toml is kept
 echo '# mine' >> "$tmp/cfg/starship.toml"

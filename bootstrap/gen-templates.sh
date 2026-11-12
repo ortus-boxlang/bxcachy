@@ -13,11 +13,13 @@ files=(hyprland.lua starship.toml shell.zsh shell.bash shell.fish)
   echo '        switch ( arguments.name ) {'
   for f in "${files[@]}"; do
     body="$(cat "$root/templates/$f")"
-    # MatchBox string literals do not keep backslashes.
-    [[ "$body" != *\\* ]] || { echo "templates/$f contains a backslash; use a Lua long string instead" >&2; exit 4; }
+    # MatchBox string literals do not keep backslashes: each one becomes a marker that text() turns back into chr( 92 ).
+    bs=0; [[ "$body" != *\\* ]] || bs=1
+    body="${body//\\/@@BS@@}"
     lit="${body//\'/\'\'}"; lit="${lit//#/##}"
     echo "            case \"$f\":"
-    printf "                return '%s' & chr( 10 );\n" "$lit"
+    if [[ $bs == 1 ]]; then printf "                return replace( '%s' & chr( 10 ), '@@BS@@', chr( 92 ), 'all' );\n" "$lit"
+    else printf "                return '%s' & chr( 10 );\n" "$lit"; fi
   done
   # the nvm pin comes from box.json (the one place that names tool versions)
   nvm="$(jq -c .toolchain.nvm "$root/box.json")"
