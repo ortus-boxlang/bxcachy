@@ -1223,6 +1223,13 @@
               "description": "Host: stream this machine to Moonlight clients."
             }
           ]
+        },
+        {
+          "type": "confirm",
+          "id": "cloud_storage",
+          "label": "Cloud storage (rclone)",
+          "default": false,
+          "help": "Installs rclone and fuse3. Afterwards `bxcachy cloud configure` adds your accounts and `bxcachy cloud mount NAME` makes a folder of one."
         }
       ]
     },

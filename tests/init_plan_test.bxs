@@ -136,6 +136,7 @@ p = ip.plan( { desktop_utilities: [ "cliphist", "wf-recorder", "playerctl" ] } )
 check( "desktop utilities are installed in the one apps step", cmd( p, "apps" ) == "bxcachy install cliphist wf-recorder playerctl" );
 p = ip.plan( { vpn: "nordvpn", remote_desktop: [ "remmina", "rustdesk" ] } );
 check( "NordVPN is installed, then set up (optional step); remote desktop apps join the install", cmd( p, "apps" ) == "bxcachy install remmina rustdesk nordvpn" && cmd( p, "vpn-nordvpn" ) == "bxcachy vpn nordvpn setup" && ( p.steps[ 2 ].optional ?: false ) );
+check( "cloud storage installs rclone and fuse3, and nothing without the answer", cmd( ip.plan( { cloud_storage: true } ), "apps" ) == "bxcachy install rclone fuse3" && ip.plan( { cloud_storage: false } ).steps.len() == 0 );
 check( "no keys step without an answer", find( "key-", ids( ip.plan( { ai_agents: [ "claude-code" ] } ) ) ) == 0 );
 p = ip.plan( { ai_agents: [ "claude-code" ], ai_default: "gemini-cli" } );
 check( "a default agent that was not ticked is installed too", cmd( p, "apps" ) == "bxcachy install claude-code gemini-cli tmux" );

@@ -142,6 +142,7 @@ class InitPlan {
             if ( gpu == "nvidia" ) apps.append( "ollama-cuda" );
             else if ( gpu == "amd" ) apps.append( "ollama-rocm" );
         }
+        if ( pick( a, "cloud_storage", false ) == true ) { apps.append( "rclone" ); apps.append( "fuse3" ); }
         for ( var id in pick( a, "remote_desktop", [] ) ) if ( !arrayFind( apps, id ) ) apps.append( id );
         for ( var id in pick( a, "desktop_utilities", [] ) ) if ( !arrayFind( apps, id ) ) apps.append( id );
         if ( engine == "docker" ) apps.append( "docker" );

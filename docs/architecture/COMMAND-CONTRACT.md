@@ -516,6 +516,13 @@ Bindings are built from their key combo (`Shortcuts.bindLine`), so changing the 
 - Remote desktop: the wizard's `remote_desktop` multi-choice (Remmina, RustDesk, Moonlight, Sunshine; nothing preselected) installs catalog apps in the single `install` step. These were already in the catalog; there is no command of their own.
 - Tests: `tests/web-vpn-test.sh`.
 
+### 13.21 Runtime controls and cloud storage (decided with the owner 2026-11-12)
+
+- `layout [toggle|float|tile|status] [--dry-run]` (default toggle). **Hyprland:** the windows of the active workspace come from `hyprctl activeworkspace -j` and `hyprctl clients -j`; each one that is not already there gets `hyprctl dispatch setfloating address:ADDR` or `settiled address:ADDR`. `toggle` floats everything when at least one window is tiled, otherwise tiles everything. **Plasma:** HyprKwin is a session-wide switch, so toggle flips `tiling on|off` (float = off, tile = on). Exit 4 without a Hyprland or Plasma session. The dispatchers are the documented legacy ones and are not verified on a Hyprland 0.55+ Lua session; there is no keyboard shortcut yet (bind it with the editor or by hand).
+- `keys mac [on|off|status] [--yes]` enables or disables the user service `xremap` that `setup xremap` wrote (`systemctl --user enable|disable --now xremap`), so Super+C, Super+V and Super+Tab go back to plain Super shortcuts without uninstalling anything. Exit 4 when the unit is not set up.
+- **Not done:** a theme manager (Omarchy themes to Noctalia palettes). It needs Noctalia's runtime theme interface, which has not been verified; `setup hyprland --theme=dark|light|auto` still picks the theme of the starter.
+- `cloud remotes | configure | mount NAME [--path=DIR] [--yes] | unmount NAME [--yes] | status`: rclone remotes as folders. `configure` hands your terminal to `rclone config` (BxCachy never sees the logins). `mount` writes `~/.config/systemd/user/bxcachy-cloud-NAME.service` through the config service (`Type=notify`, `rclone mount NAME: DIR --vfs-cache-mode writes`, `ExecStop=fusermount3 -u DIR`, `WantedBy=default.target`), reloads systemd and runs `enable --now`; DIR is `~/Cloud/NAME`, absolute, without spaces or quotes. An edited unit is never overwritten (exit 4). `unmount` disables and stops it and deletes the unit only while it is still the text BxCachy wrote. Exit 4: rclone or fuse3 missing, unknown remote. The wizard's `cloud_storage` (default no) installs `rclone` and `fuse3`. Package facts checked on archlinux.org 2026-11-12. Not run against a real remote here. Tests: `tests/runtime-cloud-test.sh`.
+
 ## 14. Install and the setup wizard (decided with the owner 2026-11-10; install, wizard and the init engine are built, the pages' later commands are not)
 
 ### 14.1 Install

@@ -15,7 +15,7 @@ class {
         var config = new bxcachy.ConfigService();
         // One shared flag check for every command: unknown flags are usage errors and nothing runs.
         for ( var flag in args.options ) {
-            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider", "backend", "dir", "email", "region", "browser" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
+            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider", "backend", "dir", "email", "region", "browser", "path" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
                 println( "Unknown option: --" & flag );
                 CLIExit( 2 );
             }
@@ -255,6 +255,27 @@ class {
            CLIExit( st.undoXremap( setupYes, setupDry, asJson ) );
           }
           println( "Usage: bxcachy setup plasma [--keys | --undo-keys] | hyprland [--terminal=ghostty|kitty|alacritty|foot|konsole] [--layout=dwindle|master|scrolling|floating] [--workspaces=N] [--natural-scroll] [--layouts=us-intl,es] [--theme=dark|light|auto] [--wallpaper=box|grid|aurora|minimal] | terminal [--default=ghostty] [--also=a,b] | shell [--shell=zsh|fish|bash] | keyboard [--layouts=us-intl,es] | xremap [--build=hypr|kde] | undo plasma|hyprland|xremap | status [--yes] [--dry-run] [--json]" );
+          CLIExit( 2 );
+          break;
+         case "cloud":
+          // Cloud storage as folders with rclone. See COMMAND-CONTRACT.md 13.21.
+          clSub = p.len() >= 2 ? p[2] : "";
+          cl = new bxcachy.Cloud( cli );
+          if ( clSub == "remotes" && p.len() == 2 ) CLIExit( cl.listRemotes( asJson ) );
+          if ( clSub == "configure" && p.len() == 2 ) CLIExit( cl.configure() );
+          if ( clSub == "mount" && p.len() == 3 ) CLIExit( cl.mount( p[3], args.options.path ?: "", structKeyExists( args.options, "yes" ), asJson ) );
+          if ( clSub == "unmount" && p.len() == 3 ) CLIExit( cl.unmount( p[3], structKeyExists( args.options, "yes" ), asJson ) );
+          if ( clSub == "status" && p.len() == 2 ) CLIExit( cl.status( asJson ) );
+          println( "Usage: bxcachy cloud remotes | configure | mount NAME [--path=DIR] [--yes] | unmount NAME [--yes] | status [--json]" );
+          CLIExit( 2 );
+          break;
+         case "layout":
+          // Tiled or floating windows on the current workspace. See COMMAND-CONTRACT.md 13.21.
+          lyAct = p.len() >= 2 ? p[2] : "toggle";
+          ly = new bxcachy.Layout( cli );
+          if ( lyAct == "status" && p.len() <= 2 ) CLIExit( ly.status( asJson ) );
+          if ( arrayFind( [ "toggle", "float", "tile" ], lyAct ) && p.len() <= 2 ) CLIExit( ly.apply( lyAct, structKeyExists( args.options, "dry-run" ), asJson ) );
+          println( "Usage: bxcachy layout [toggle|float|tile|status] [--dry-run] [--json]" );
           CLIExit( 2 );
           break;
          case "web":
@@ -584,7 +605,13 @@ class {
           if ( keysSub == "set" && p.len() == 4 ) CLIExit( new bxcachy.KeysEditor( cli ).setKeys( p[3], p[4], structKeyExists( args.options, "yes" ), structKeyExists( args.options, "force" ), asJson ) );
           if ( keysSub == "reset" && p.len() == 3 ) CLIExit( new bxcachy.KeysEditor( cli ).reset( p[3], structKeyExists( args.options, "yes" ), asJson ) );
           if ( keysSub == "conflicts" && p.len() == 2 ) CLIExit( new bxcachy.KeysEditor( cli ).conflicts( asJson ) );
-          println( "Usage: bxcachy keys show | set ID KEYS [--yes] [--force] | reset ID [--yes] | conflicts | render xremap|hyprland|plasma | check | apply [--yes] [--dry-run] [--force] [--json]" );
+          if ( keysSub == "mac" && p.len() <= 3 ) {
+           macAct = p.len() == 3 ? p[3] : "status";
+           macSvc = new bxcachy.MacKeys( cli );
+           if ( macAct == "status" ) CLIExit( macSvc.status( asJson ) );
+           if ( macAct == "on" || macAct == "off" ) CLIExit( macSvc.set( macAct == "on", structKeyExists( args.options, "yes" ), asJson ) );
+          }
+          println( "Usage: bxcachy keys show | mac [on|off|status] [--yes] | set ID KEYS [--yes] [--force] | reset ID [--yes] | conflicts | render xremap|hyprland|plasma | check | apply [--yes] [--dry-run] [--force] [--json]" );
           CLIExit( 2 );
           break;
          case "assets":
