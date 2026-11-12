@@ -15,7 +15,7 @@ class {
         var config = new bxcachy.ConfigService();
         // One shared flag check for every command: unknown flags are usage errors and nothing runs.
         for ( var flag in args.options ) {
-            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider", "backend", "dir", "email", "region", "browser", "path" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
+            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider", "backend", "dir", "email", "region", "browser", "path", "from", "export" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
                 println( "Unknown option: --" & flag );
                 CLIExit( 2 );
             }
@@ -332,6 +332,13 @@ class {
           println( "Usage: bxcachy editor lazyvim [--yes] [--json]" );
           CLIExit( 2 );
           break;
+         case "apps":
+          // Every installed application in one window (Omarchy 4.5's app grid). See COMMAND-CONTRACT.md 13.22.
+          if ( p.len() == 1 ) CLIExit( new bxcachy.Apps( cli ).grid() );
+          if ( p.len() == 2 && p[2] == "list" ) CLIExit( new bxcachy.Apps( cli ).list( asJson ) );
+          println( "Usage: bxcachy apps | apps list [--json]" );
+          CLIExit( 2 );
+          break;
          case "menu":
           // The BxCachy control center on the runner's menu provider. See COMMAND-CONTRACT.md 13.16.
           if ( p.len() == 1 ) CLIExit( new bxcachy.Menu( cli ).run() );
@@ -545,10 +552,11 @@ class {
          case "init":
           // The setup wizard and what it runs. init (needs a terminal) | init --answers=FILE [--yes] [--dry-run] [--json] | init --print-answers.
           if ( p.len() != 1 ) {
-           println( "Usage: bxcachy init | init --answers=FILE [--yes] [--dry-run] [--json] | init --print-answers [--json]" );
+           println( "Usage: bxcachy init [--from=FILE] | init --answers=FILE [--yes] [--dry-run] [--json] | init --print-answers [--json] | init --export=FILE [--force]" );
            CLIExit( 2 );
           }
           initRun = new bxcachy.Init( cli );
+          if ( structKeyExists( args.options, "export" ) ) CLIExit( initRun.exportAnswers( args.options.export, structKeyExists( args.options, "force" ), asJson ) );
           if ( structKeyExists( args.options, "print-answers" ) ) CLIExit( initRun.printAnswers( asJson ) );
           if ( structKeyExists( args.options, "answers" ) ) {
            try {
@@ -559,7 +567,7 @@ class {
            }
            CLIExit( initRun.run( initAnswers, structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
           }
-          CLIExit( initRun.wizard( structKeyExists( args.options, "dry-run" ), asJson ) );
+          CLIExit( initRun.wizard( structKeyExists( args.options, "dry-run" ), asJson, args.options.from ?: "" ) );
           break;
          case "wizard":
           // The full-screen setup wizard on MatchBox's terminal canvas. It shows pages from a JSON file (--pages) or the

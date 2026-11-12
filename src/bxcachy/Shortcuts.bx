@@ -99,7 +99,8 @@ class Shortcuts {
             { id: "clipboard-history", keys: "Super+Shift+V", action: "Clipboard history", kind: "hypr-bind", dispatch: execBxcachy( "clipboard pick" ) },
             { id: "screen-record", keys: "Super+Shift+R", action: "Start or stop a screen recording", kind: "hypr-bind", dispatch: execBxcachy( "record toggle" ) },
             { id: "screen-record-region", keys: "Super+Alt+Shift+R", action: "Record a region of the screen", kind: "hypr-bind", dispatch: execBxcachy( "record toggle --region" ) },
-            { id: "control-center", keys: "Super+Alt+Space", action: "BxCachy control center (AI, databases, settings)", kind: "hypr-bind", dispatch: execBxcachy( "menu" ) }
+            { id: "control-center", keys: "Super+Alt+M", action: "BxCachy control center (AI, databases, settings)", kind: "hypr-bind", dispatch: execBxcachy( "menu" ) },
+            { id: "all-apps", keys: "Super+Alt+Space", action: "All apps in one window (like Omarchy 4.5's app grid)", kind: "hypr-bind", dispatch: execBxcachy( "apps" ) }
         ];
         // your overrides (only the rows that are bindings can be changed; remaps are xremap's)
         for ( var r in rows ) {

@@ -23,6 +23,26 @@ class Init {
         variables.config.writeAtomic( answersFile(), jsonSerialize( arguments.answers ) & chr( 10 ), "600" );
     }
 
+    // `init --export=FILE`: a copy of your saved answers (mode 600), to take to another machine: there, `init --from=FILE` fills the wizard with
+    // them, or `init --answers=FILE --yes` runs them without asking. The answers hold no secrets (API keys are never in them).
+    function exportAnswers( file, force, asJson ) {
+        var saved = loadSaved();
+        if ( structIsEmpty( saved ) ) {
+            if ( arguments.asJson ) println( variables.cli.envelope( "init --export", 4, { error: "No saved answers" } ) );
+            else println( "error: there are no saved answers yet. Run the wizard first: bxcachy init" );
+            return 4;
+        }
+        if ( fileExists( arguments.file ) && !arguments.force ) {
+            if ( arguments.asJson ) println( variables.cli.envelope( "init --export", 4, { error: arguments.file & " exists" } ) );
+            else println( "error: " & arguments.file & " already exists (use --force to replace it)" );
+            return 4;
+        }
+        variables.config.writeAtomic( arguments.file, jsonSerialize( saved ) & chr( 10 ), "600" );
+        if ( arguments.asJson ) println( variables.cli.envelope( "init --export", 0, { file: arguments.file } ) );
+        else println( "Your answers were copied to " & arguments.file & ". On the other machine: bxcachy init --from=" & arguments.file );
+        return 0;
+    }
+
     // `init --print-answers`
     function printAnswers( asJson ) {
         var saved = loadSaved();
@@ -100,11 +120,16 @@ class Init {
 
     // The wizard, then the plan. The review screen is the confirmation, so the steps run without a second prompt
     // (unless --dry-run). Needs a terminal.
-    function wizard( dryRun, asJson ) {
+    function wizard( dryRun, asJson, from = "" ) {
         var spec = wizardSpec();
         var result = "";
         try {
-            result = new bxcachy.Wizard( spec, loadSaved() ).run();
+            var start = loadSaved();
+            if ( len( arguments.from ) ) {
+                // answers from another machine (or a file you keep) fill the wizard instead of this machine's saved ones
+                try { start = jsonDeserialize( fileRead( arguments.from ) ); } catch ( any e2 ) { println( "bxcachy init: cannot read " & arguments.from & ": " & e2.message ); return 4; }
+            }
+            result = new bxcachy.Wizard( spec, start ).run();
         } catch ( any e ) {
             println( "bxcachy init needs a terminal (" & e.message & "). Use --answers FILE to run without one." );
             return 4;

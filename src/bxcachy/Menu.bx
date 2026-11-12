@@ -25,6 +25,7 @@ class Menu {
                 { label: "API keys: list", kind: "run", argv: [ "secrets", "list" ] }
             ] },
             { label: "Databases", kind: "db" },
+            { label: "All apps", kind: "spawn", argv: [ "apps" ] },
             { label: "Settings", kind: "sub", children: [
                 { label: "Defaults (browser, terminal)", kind: "run", argv: [ "default", "show" ] },
                 { label: "Shortcuts", kind: "run", argv: [ "keys", "show" ] },

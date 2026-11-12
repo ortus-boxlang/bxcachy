@@ -15,29 +15,33 @@ code() { set +e; run "$@" >/dev/null 2>&1; local c=$?; set -e; echo "$c"; }
 wait_for() { for _ in $(seq 1 30); do [[ -s "$1" ]] && return 0; sleep 0.2; done; return 1; }
 
 # the tree as data
-run "$binary" menu items --json | jq -e '(.data.menu | map(.label)) == ["AI","Databases","Settings"] and (.data.menu[0].children | length) == 7 and .data.menu[0].children[0].argv == ["ai","launch"]' >/dev/null || fail "menu items: $(run "$binary" menu items --json)"
+run "$binary" menu items --json | jq -e '(.data.menu | map(.label)) == ["AI","Databases","All apps","Settings"] and (.data.menu[0].children | length) == 7 and .data.menu[0].children[0].argv == ["ai","launch"]' >/dev/null || fail "menu items: $(run "$binary" menu items --json)"
 run "$binary" menu items | grep -q 'Pull-down AI shell   (opens: bxcachy ai shell)' || fail 'menu items text'
 run "$binary" runner menu-set rofi >/dev/null
 
 # AI (0) -> "Open the default agent" (0): started detached, no terminal; then Back (7) and Exit (3)
-printf '0\n0\n7\n3\n' > "$FAKE/answers"
+printf '0\n0\n7\n4\n' > "$FAKE/answers"
 run "$binary" menu || fail 'menu exits 0'
 wait_for "$FAKE/spawn.log" || fail 'the spawn entry did not start'
 grep -q 'bxcachy ai launch' "$FAKE/spawn.log" || fail "spawn: $(cat "$FAKE/spawn.log")"
 [[ ! -s "$FAKE/terminal.log" ]] || fail 'a spawn entry opened a terminal'
 
 # AI (0) -> "Local models: list" (4): runs in a terminal and waits for Enter
-rm -f "$FAKE/n" "$FAKE/spawn.log" "$FAKE/terminal.log"; printf '0\n4\n7\n3\n' > "$FAKE/answers"
+rm -f "$FAKE/n" "$FAKE/spawn.log" "$FAKE/terminal.log"; printf '0\n4\n7\n4\n' > "$FAKE/answers"
 run "$binary" menu || fail 'menu (run entry)'
 wait_for "$FAKE/terminal.log" || fail 'the run entry did not open a terminal'
 grep -q "terminal -e sh -c .* _ $tmp/self ai models list" "$FAKE/terminal.log" || fail "run entry: $(cat "$FAKE/terminal.log")"
 
-# Settings (2) -> Shortcuts (1), and cancelling (empty answer) at the top leaves without running anything
-rm -f "$FAKE/n" "$FAKE/terminal.log"; printf '2\n1\n5\n3\n' > "$FAKE/answers"
+# All apps (2) starts `apps` detached; Settings (3) -> Shortcuts (1), and cancelling (empty answer) at the top leaves without running anything
+rm -f "$FAKE/n" "$FAKE/terminal.log"; printf '3\n1\n5\n4\n' > "$FAKE/answers"
 run "$binary" menu >/dev/null; wait_for "$FAKE/terminal.log" || fail 'settings entry'; grep -q 'keys show' "$FAKE/terminal.log" || fail 'Shortcuts runs keys show'
 rm -f "$FAKE/n" "$FAKE/terminal.log" "$FAKE/spawn.log"; : > "$FAKE/answers"
 run "$binary" menu || fail 'cancel exits 0'; sleep 0.4
 [[ ! -s "$FAKE/terminal.log" && ! -s "$FAKE/spawn.log" ]] || fail 'a cancelled menu ran something'
+
+# All apps (2): started detached like any spawn entry
+rm -f "$FAKE/n" "$FAKE/spawn.log" "$FAKE/terminal.log"; printf '2\n4\n' > "$FAKE/answers"
+run "$binary" menu >/dev/null; wait_for "$FAKE/spawn.log" || fail 'All apps did not start'; grep -q 'bxcachy apps' "$FAKE/spawn.log" || fail "all apps: $(cat "$FAKE/spawn.log")"
 
 # no terminal: a run entry is a precondition error; no menu program: exit 4
 rm -f "$FAKE/n"; rm "$tmp/bin/ghostty"; printf '0\n4\n' > "$FAKE/answers"

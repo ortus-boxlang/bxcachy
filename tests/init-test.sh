@@ -71,6 +71,16 @@ grep -q 'Skipped: key-ANTHROPIC_API_KEY (could not run' "$tmp/ai.out" || fail "t
 grep -q 'bxcachy ai default claude-code' "$LOG" && grep -q 'git config --global user.name Ada' "$LOG" || fail "steps after a skipped key still run: $(cat "$LOG")"
 grep -q 'bxcachy secrets setup' "$LOG" || fail 'the keyring check runs'
 
+# export the saved answers to take them to another machine
+rm -f "$tmp/cfg/bxcachy/answers.json"
+[[ "$(code "$binary" init --export="$tmp/exported-answers.json")" == 4 ]] || fail 'export without saved answers exits 4'
+mkdir -p "$tmp/cfg/bxcachy"; echo '{"desktops":"hyprland","shell":"zsh"}' > "$tmp/cfg/bxcachy/answers.json"
+run "$binary" init --export="$tmp/exported-answers.json" | grep -q 'bxcachy init --from=' || fail 'export tells how to use it'
+[[ "$(jq -r .shell "$tmp/exported-answers.json")" == zsh && "$(stat -c %a "$tmp/exported-answers.json")" == 600 ]] || fail 'the export is a mode 600 copy'
+[[ "$(code "$binary" init --export="$tmp/exported-answers.json")" == 4 ]] || fail 'export refuses to replace a file without --force'
+run "$binary" init --export="$tmp/exported-answers.json" --force >/dev/null || fail 'export --force'
+rm -f "$tmp/cfg/bxcachy/answers.json"
+
 # the wizard in a pty: Enter on the welcome screen, Tab through the pages to the review, Enter. The answers are saved (mode 600).
 : > "$LOG"
 python3 - "$binary" "$tmp" <<'PY'
