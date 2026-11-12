@@ -37,6 +37,13 @@ echo '# mine' >> "$f"
 [[ "$(code "$binary" web add notion https://other.example --browser=brave --yes)" == 4 ]] || fail 'a changed entry is kept (exit 4)'
 grep -q '# mine' "$f" || fail 'the changed entry was overwritten'
 
+# web add with no arguments asks on the terminal (a file plays the three answers: name, URL, browser)
+printf 'Docs\nhttps://docs.example.com\nbrave\n' > "$tmp/answers"
+BXCACHY_TTY_IN="$tmp/answers" run "$binary" web add --json | jq -e '.data.name == "Docs" and .data.url == "https://docs.example.com" and .data.browser == "brave"' >/dev/null || fail "interactive web add: $(BXCACHY_TTY_IN="$tmp/answers" run "$binary" web add --json 2>&1)"
+grep -q '^Exec=brave --app=https://docs.example.com$' "$tmp/data/applications/bxcachy-web-Docs.desktop" || fail 'interactive entry'
+run "$binary" web rm Docs --yes >/dev/null
+printf '\n\n\n' > "$tmp/answers"; set +e; BXCACHY_TTY_IN="$tmp/answers" run "$binary" web add >/dev/null 2>&1; rc=$?; set -e; [[ "$rc" == 4 ]] || fail 'empty answers exit 4'
+
 # rm
 [[ "$(code "$binary" web rm notion)" == 2 ]] || fail 'rm without --yes exits 2'
 [[ -e "$f" ]] || fail 'the rm plan deleted it'

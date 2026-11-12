@@ -17,7 +17,7 @@ class RunnerProviders {
             { id: "system", title: "Desktop default", package: "", launch: [], menu: {} },
             { id: "noctalia", title: "Noctalia launcher", package: "", launch: [ "noctalia", "msg", "panel-toggle", "launcher" ], menu: {} },
             { id: "walker", title: "Walker", package: "walker", launch: [ "walker" ], menu: { argv: [ "walker", "--dmenu" ], icons: false, returns: "text" } },
-            { id: "rofi", title: "Rofi", package: "rofi", launch: [ "rofi", "-show", "drun" ], menu: { argv: [ "rofi", "-dmenu", "-i", "-show-icons", "-format", "i", "-p", "{prompt}" ], icons: true, returns: "index" } },
+            { id: "rofi", title: "Rofi", package: "rofi", launch: [ "rofi", "-show", "drun" ], menu: { argv: [ "rofi", "-dmenu", "-i", "-show-icons", "-format", "i", "-p", "{prompt}" ], input: [ "rofi", "-dmenu", "-l", "0", "-p", "{prompt}" ], icons: true, returns: "index" } },
             { id: "fuzzel", title: "Fuzzel", package: "fuzzel", launch: [ "fuzzel" ], menu: { argv: [ "fuzzel", "--dmenu", "--index", "--prompt", "{prompt}" ], icons: true, returns: "index" } },
             { id: "wofi", title: "Wofi", package: "wofi", launch: [ "wofi", "--show", "drun" ], menu: { argv: [ "wofi", "--dmenu", "--insensitive", "--prompt", "{prompt}" ], icons: false, returns: "text" } },
             { id: "krunner", title: "KRunner", package: "", launch: [ "krunner" ], menu: {} },

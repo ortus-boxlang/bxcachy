@@ -154,6 +154,30 @@ class Runner {
         return 0;
     }
 
+    // Whether the chosen menu provider can take typed text (`input`). Only providers whose way of doing it is known say so (Rofi: an empty
+    // `-dmenu` with `-l 0` prints what you type); for the others callers fall back to a prompt in a terminal.
+    function inputSupported( cfg = "" ) {
+        if ( !isStruct( arguments.cfg ) ) arguments.cfg = load();
+        var d = registry().get( arguments.cfg.menu_provider );
+        return structKeyExists( d, "menu" ) && structKeyExists( d.menu, "input" ) && d.menu.input.len() > 0;
+    }
+
+    // Asks for one line of text with the menu provider. Returns the text, or "" when it was cancelled or empty.
+    // Throws a message when the provider cannot take text or is not installed.
+    function input( prompt, cfg = "" ) {
+        if ( !isStruct( arguments.cfg ) ) arguments.cfg = load();
+        var cfg = arguments.cfg;
+        if ( !inputSupported( cfg ) ) throw( message = "The menu provider " & cfg.menu_provider & " cannot take typed text" );
+        var cmd = [];
+        for ( var part in registry().get( cfg.menu_provider ).menu.input ) cmd.append( replace( part, "{prompt}", arguments.prompt, "all" ) );
+        if ( !found( cmd[ 1 ] ) ) throw( message = "Menu provider unavailable: " & cmd[ 1 ] );
+        var argv = [ "sh", "-c", 'exec "$@" < /dev/null', "_" ];
+        for ( var p2 in cmd ) argv.append( p2 );
+        var r = variables.inst.exec( argv, 600 );
+        if ( r.timeout || r.exitCode != 0 ) return "";
+        return trim( replace( r.output, chr( 10 ), " ", "all" ) );
+    }
+
     // Records a choice. kind: provider | menu | launcher-command | menu-command. Returns "" or an error message.
     function set( kind, provider, argv = [] ) {
         var cfg = load();

@@ -61,6 +61,24 @@ class Web {
             & "Categories=Network;" & chr( 10 ) & "X-BxCachy-Web=" & arguments.url & chr( 10 );
     }
 
+    // Asks for the name, the URL and the browser on the terminal (visible, one line each; Enter leaves the browser to the default).
+    // BXCACHY_TTY_IN names a file to read the three lines from instead (tests). Returns { name, url, browser } (empty strings when nothing was typed).
+    function askDetails() {
+        var script = 'in="${BXCACHY_TTY_IN:-/dev/tty}"; exec 3< "$in"; for p in "Name: " "URL: " "Browser (brave, chromium, google-chrome, edge, firefox; Enter for the default): "; do [ "$in" = /dev/tty ] && printf "%s" "$p" > /dev/tty; IFS= read -r v <&3; printf "%s\n" "$v"; done';
+        var out = "";
+        try { out = variables.inst.exec( [ "sh", "-c", script ], 600 ).output; } catch ( any e ) {}
+        var lines = listToArray( out, chr( 10 ), true );
+        while ( lines.len() < 3 ) lines.append( "" );
+        return { name: trim( lines[ 1 ] ), url: trim( lines[ 2 ] ), browser: trim( lines[ 3 ] ) };
+    }
+
+    // `web add` with no arguments: asks for the details, then adds the app (typing them is the consent, no --yes needed).
+    function addInteractive( asJson ) {
+        var d = askDetails();
+        if ( !len( d.name ) || !len( d.url ) ) return say( "web add", 4, { error: "Name and URL are required" }, arguments.asJson, [ "error: a name and a URL are needed (this prompt needs a terminal)" ] );
+        return add( d.name, d.url, d.browser, true, arguments.asJson );
+    }
+
     // `web add NAME URL`
     function add( name, url, browser, yes, asJson ) {
         var cmd = "web add";

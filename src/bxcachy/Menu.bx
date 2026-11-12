@@ -26,6 +26,11 @@ class Menu {
             ] },
             { label: "Databases", kind: "db" },
             { label: "All apps", kind: "spawn", argv: [ "apps" ] },
+            { label: "Web apps", kind: "sub", children: [
+                { label: "Create web app", kind: "webcreate" },
+                { label: "List web apps", kind: "run", argv: [ "web", "list" ] },
+                { label: "Remove a web app", kind: "webrm" }
+            ] },
             { label: "Settings", kind: "sub", children: [
                 { label: "Defaults (browser, terminal)", kind: "run", argv: [ "default", "show" ] },
                 { label: "Shortcuts", kind: "run", argv: [ "keys", "show" ] },
@@ -47,7 +52,11 @@ class Menu {
         var lines = [];
         for ( var r in rows ) {
             lines.append( r.label );
-            if ( r.kind == "sub" ) for ( var c in r.children ) lines.append( "  " & c.label & "   (" & ( c.kind == "spawn" ? "opens" : "shows in a terminal" ) & ": bxcachy " & c.argv.toList( " " ) & ")" );
+            if ( r.kind == "sub" ) for ( var c in r.children ) {
+                if ( c.kind == "webcreate" ) lines.append( "  " & c.label & "   (asks for a name and a URL, then: bxcachy web add NAME URL)" );
+                else if ( c.kind == "webrm" ) lines.append( "  " & c.label & "   (pick one, confirm, then: bxcachy web rm NAME)" );
+                else lines.append( "  " & c.label & "   (" & ( c.kind == "spawn" ? "opens" : "shows in a terminal" ) & ": bxcachy " & c.argv.toList( " " ) & ")" );
+            }
         }
         return say( "menu items", 0, { menu: rows }, arguments.asJson, lines );
     }
@@ -87,6 +96,33 @@ class Menu {
         return 0;
     }
 
+    // Create web app, Omarchy style: asks for the name and the URL, then adds it. Providers that cannot take typed text open a terminal
+    // that asks the same questions (`bxcachy web add`).
+    function createWebApp( runner ) {
+        var self = getSystemSetting( "BXCACHY_SELF", "bxcachy" );
+        if ( !arguments.runner.inputSupported() ) return start( { kind: "run", argv: [ "web", "add" ] } );
+        var name = arguments.runner.input( "Web app name" );
+        if ( !len( name ) ) return 0;
+        var url = arguments.runner.input( "URL (https://...)" );
+        if ( !len( url ) ) return 0;
+        var r = variables.inst.exec( [ self, "web", "add", name, url, "--yes" ], 60 );
+        arguments.runner.select( r.exitCode == 0 ? "Added " & name : "Could not add " & name & ": " & left( trim( r.output ), 120 ), [ "OK" ] );
+        return 0;
+    }
+
+    // Remove a web app: pick one, confirm, delete.
+    function removeWebApp( runner ) {
+        var self = getSystemSetting( "BXCACHY_SELF", "bxcachy" );
+        var apps = new bxcachy.Web( variables.cli, variables.inst.runner() ).apps();
+        if ( !apps.len() ) { arguments.runner.select( "No web apps yet", [ "OK" ] ); return 0; }
+        var labels = apps.map( function( a ) { return a.name & "  " & a.url; } );
+        var pick = arguments.runner.select( "Remove which web app?", labels );
+        if ( pick == 0 ) return 0;
+        if ( arguments.runner.select( "Remove " & apps[ pick ].name & "?", [ "Cancel", "Remove" ] ) != 2 ) return 0;
+        variables.inst.exec( [ self, "web", "rm", apps[ pick ].name, "--yes" ], 30 );
+        return 0;
+    }
+
     // Shows one level and follows the choice. Returns when the user goes back or cancels.
     function level( runner, title, entries ) {
         while ( true ) {
@@ -97,6 +133,8 @@ class Menu {
             var e = arguments.entries[ pick ];
             if ( e.kind == "sub" ) { var inner = level( arguments.runner, e.label, e.children ); if ( inner != 0 ) return inner; }
             else if ( e.kind == "db" ) new bxcachy.Db( variables.cli, variables.inst.runner() ).menu();
+            else if ( e.kind == "webcreate" ) { var wc = createWebApp( arguments.runner ); if ( wc != 0 ) return wc; }
+            else if ( e.kind == "webrm" ) { var wr = removeWebApp( arguments.runner ); if ( wr != 0 ) return wr; }
             else { var rc = start( e ); if ( rc != 0 ) return rc; }
         }
         return 0;

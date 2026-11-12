@@ -480,10 +480,11 @@ Init rules for this page: a default agent that was not ticked is installed too; 
 `bxcachy menu` shows the BxCachy control center with the menu provider you chose (`runner menu-set`). `menu items [--json]` prints the same tree as data.
 - **AI:** open the default agent and the pull-down AI shell (both start detached, no window); agent session start and list, local models list and running, API keys list (these open in a terminal window and wait for Enter).
 - **Databases:** opens the existing `db menu`.
+- **Web apps** (Omarchy's "create web app"): *Create web app* asks for a name and a URL typed into the menu, then runs `web add NAME URL --yes` and shows the result; *List web apps*; *Remove a web app* (pick, confirm, `web rm NAME --yes`). Typed text is supported by Rofi (`rofi -dmenu -l 0` with empty input prints what you type); for Walker, Fuzzel, Wofi and Vicinae, where typed text is not verified, *Create* opens a terminal that runs `web add` with no arguments, which asks for the name, URL and browser itself (the typing is the consent). `web add` with no arguments does the same on its own. Menu order is now AI, Databases, All apps, Web apps, Settings.
 - **Settings:** defaults, shortcuts, launcher check, setup status, dotfiles status (read-only views in a terminal).
 - Every entry is started without `--yes`, so nothing is changed by the menu itself; the commands keep their own plan/`--yes` rules. Back and Exit are the last entry of each level; cancelling the provider (empty answer) leaves the menu with exit 0.
 - Terminals for `run` entries: the first installed of ghostty, kitty, foot, alacritty, konsole (`-e` for ghostty, alacritty, konsole). Exit 4 when there is no menu program, or no terminal for a `run` entry.
-- Hyprland binds it to `Super+Alt+Space` in the shortcut table. Tests: `tests/menu-test.sh` (fake Rofi and terminal).
+- Hyprland binds it to `Super+Alt+M` in the shortcut table (`Super+Alt+Space` is the all-apps window, 13.22). Tests: `tests/menu-test.sh` (fake Rofi and terminal).
 
 ### 13.17 Podman helpers, docker compatibility and the LazyVim starter (decided with the owner 2026-11-12)
 

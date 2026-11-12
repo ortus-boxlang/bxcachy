@@ -50,5 +50,8 @@ check( "an empty answer or a non-zero exit is a cancel", sel( "rofi", "", entrie
 check( "the same call works on every provider (switching changes nothing for the caller)", sel( "rofi", "0", [ "A", "B" ] ) == 1 && sel( "fuzzel", "0", [ "A", "B" ] ) == 1 && sel( "wofi", "A", [ "A", "B" ] ) == 1 && sel( "walker", "A", [ "A", "B" ] ) == 1 );
 check( "a newline inside a label cannot split the entry", ( function() { sel( "wofi", "x", [ "Two" & chr( 10 ) & "lines" ] ); return listToArray( seen.payload, chr( 10 ) ).len() == 1; } )() );
 
+inCfg = r.defaults( "Hyprland" ); inCfg.menu_provider = "rofi";
+check( "Rofi can take typed text, the others fall back to a terminal prompt", r.inputSupported( inCfg ) );
+for ( ip in [ "walker", "fuzzel", "wofi", "vicinae" ] ) { inCfg.menu_provider = ip; check( ip & " has no typed-text input", !r.inputSupported( inCfg ) ); }
 if ( failures > 0 ) { println( failures & " failed" ); exit( 1 ); }
 println( "all passed" );
