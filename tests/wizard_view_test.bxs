@@ -65,5 +65,10 @@ app.gotoPage( 8 );
 view.paint( app, 100, 120, 36 ); t = tui.render_to_string( 120, 36 );
 check( "a generated page lists a category with ticked defaults and descriptions", find( "Development", t ) > 0 && find( "◆", t ) > 0 && find( "◇", t ) > 0 && find( "▸", t ) > 0 );
 
+// ---- a long help text wraps under its question (it used to run past the panel edge) ----
+app = new bxcachy.WizardApp( spec2 ); app.onKey( "Enter" ); for ( i = 1; i <= 7; i++ ) app.onKey( "Tab" );
+view.paint( app, 100, 100, 44 ); t = tui.render_to_string( 100, 44 );
+check( "the API keys help wraps: its last words are on screen at 100 columns", find( "Stored in your desktop keyring", t ) > 0 && find( "shell history", t ) > 0 );
+
 if ( failures > 0 ) { println( failures & " failed" ); exit( 1 ); }
 println( "all passed" );

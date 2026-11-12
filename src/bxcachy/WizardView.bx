@@ -294,7 +294,7 @@ class WizardView {
 
     // Lines a row takes on the page.
     function rowHeight( pg, row, width ) {
-        if ( row.kind == "heading" ) return 1 + ( len( pg.questions[ row.q ].help ?: "" ) ? 1 : 0 );
+        if ( row.kind == "heading" ) return 1 + wrap( pg.questions[ row.q ].help ?: "", width ).len();
         if ( row.kind == "info" ) return 1 + wrap( pg.questions[ row.q ].help ?: "", width ).len();
         return 1;
     }
@@ -328,7 +328,9 @@ class WizardView {
             if ( row.kind == "heading" ) {
                 var qn = pg.questions[ row.q ];
                 put( ix, ry, qn.label, variables.TEXT, variables.MANTLE, true );
-                if ( len( qn.help ?: "" ) ) put( ix, ry + 1, qn.help, variables.OVERLAY, variables.MANTLE );
+                // a long help text wraps under the question instead of running past the panel
+                var hk = 1;
+                for ( var hline in wrap( qn.help ?: "", iw ) ) { put( ix, ry + hk, hline, variables.OVERLAY, variables.MANTLE ); hk++; }
             } else if ( row.kind == "group" ) {
                 put( ix + 2, ry, ucase( row.group ), variables.OVERLAY, variables.MANTLE, true );
             } else if ( row.kind == "info" ) {
