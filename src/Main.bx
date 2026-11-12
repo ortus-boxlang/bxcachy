@@ -565,7 +565,10 @@ class {
           if ( keysSub == "apply" && p.len() == 2 ) {
            CLIExit( new bxcachy.KeysService( cli ).apply( structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), structKeyExists( args.options, "force" ), asJson ) );
           }
-          println( "Usage: bxcachy keys show | render xremap|hyprland|plasma | check | apply [--yes] [--dry-run] [--force] [--json]" );
+          if ( keysSub == "set" && p.len() == 4 ) CLIExit( new bxcachy.KeysEditor( cli ).setKeys( p[3], p[4], structKeyExists( args.options, "yes" ), structKeyExists( args.options, "force" ), asJson ) );
+          if ( keysSub == "reset" && p.len() == 3 ) CLIExit( new bxcachy.KeysEditor( cli ).reset( p[3], structKeyExists( args.options, "yes" ), asJson ) );
+          if ( keysSub == "conflicts" && p.len() == 2 ) CLIExit( new bxcachy.KeysEditor( cli ).conflicts( asJson ) );
+          println( "Usage: bxcachy keys show | set ID KEYS [--yes] [--force] | reset ID [--yes] | conflicts | render xremap|hyprland|plasma | check | apply [--yes] [--dry-run] [--force] [--json]" );
           CLIExit( 2 );
           break;
          case "assets":

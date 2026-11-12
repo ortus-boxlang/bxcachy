@@ -501,6 +501,14 @@ Packages are catalog entries (all `extra`, checked 2026-11-12): `cliphist`, `wf-
 - `record [toggle|start|stop|status] [--region] [--dry-run]` (default toggle) runs `wf-recorder -f ~/Videos/bxcachy-YYYYMMDD-HHMMSS.mp4` detached (`BXCACHY_VIDEOS` changes the folder); `--region` adds `-g "$(slurp)"`. Stop sends SIGINT (`pkill -INT -x wf-recorder`) so the file is finished. Hyprland binds `Super+Shift+R` (toggle) and `Super+Alt+Shift+R` (a region). Exit 4 when `wf-recorder` or, for a region, `slurp` is missing. `wf-recorder` has no GPU encoding by default; `gpu-screen-recorder` (already in the catalog) is the faster option and is not wired here.
 - Tests: `tests/utilities-test.sh`. The `wl-paste --watch` autostart and the shortcuts are not verified on a real Hyprland session.
 
+### 13.19 Shortcut editor (decided with the owner 2026-11-12)
+
+Bindings are built from their key combo (`Shortcuts.bindLine`), so changing the keys changes the rendered Hyprland line and the Plasma text together.
+- `keys set ID KEYS [--yes] [--force]` (for example `keys set ai-shell Super+Alt+A`): one or more modifiers (Super, Shift, Alt, Ctrl) plus a letter, a digit, or a named key (Space, Tab, Return, Escape, `` ` ``, comma, period, slash, minus, equal, arrows, Print, F1-F12). Exit 4 when the binding is unknown or is a Cmd-style remap (those are xremap's), the combo is invalid, another BxCachy binding uses it (never overridable), or a line in your own `~/.config/hypr/*.lua` already binds it (`--force` allows that one). Plan without `--yes` (exit 2). The override is saved in `~/.config/bxcachy/shortcuts.json` through the config service; it takes effect with `keys apply --yes`.
+- `keys reset ID [--yes]` removes the override.
+- `keys conflicts [--json]` reports combos used twice inside the table and clashes with your own `hl.bind(` lines (best effort: it reads `mainMod` and the quoted names on the line, it is not a Lua parser; `bxcachy.lua` is skipped).
+- `keys show` marks changed rows (`custom`). The screen-record region shortcut is its own row (`screen-record-region`). Tests: `tests/keys-editor-test.sh`.
+
 ## 14. Install and the setup wizard (decided with the owner 2026-11-10; install, wizard and the init engine are built, the pages' later commands are not)
 
 ### 14.1 Install

@@ -1,11 +1,82 @@
 // The one shortcut table shared by Hyprland and KDE Plasma (docs/architecture/COMMAND-CONTRACT.md section 13.4).
-// Pure: no I/O. `render( target )` turns the table into the text each target needs:
+// The only I/O is reading your overrides (~/.config/bxcachy/shortcuts.json, written by `keys set`). `render( target )` turns the table into the text each target needs:
 //   xremap   YAML for the Cmd-style keys (one file, read by both xremap builds)
 //   hyprland Hyprland `bind` lines for the keys that are not remaps
 //   plasma   kglobalshortcutsrc lines for the keys that are not remaps
 class Shortcuts {
-    function init() {
+    function init( overrides = "" ) {
+        // overrides: { rowId: "Super+Alt+K" }; read from the config file unless given (tests pass a struct)
+        variables.overrides = isStruct( arguments.overrides ) ? arguments.overrides : loadOverrides();
         return this;
+    }
+
+    function overridesFile() { return new bxcachy.ConfigService().quiet( true ).cfgHome() & "/bxcachy/shortcuts.json"; }
+
+    function loadOverrides() {
+        var f = overridesFile();
+        if ( !fileExists( f ) ) return {};
+        try { var d = jsonDeserialize( fileRead( f ) ); return isStruct( d ) ? d : {}; } catch ( any e ) { return {}; }
+    }
+
+    // ---- key combos ----
+    // Valid key names besides single letters and digits.
+    function namedKeys() {
+        return [ "Space", "Tab", "Return", "Escape", "grave", "comma", "period", "slash", "minus", "equal", "Left", "Right", "Up", "Down", "Print",
+                 "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12" ];
+    }
+
+    // Parses "Super+Shift+V" into { ok, mods (SUPER, SHIFT, ALT, CTRL; sorted), key, error }. "`" and "Enter" are accepted spellings.
+    function parseKeys( keys ) {
+        var parts = listToArray( arguments.keys, "+", true );
+        if ( parts.len() < 2 ) return { ok: false, error: "use at least one modifier and a key, like Super+Shift+V", mods: [], key: "" };
+        var map = { super: "SUPER", meta: "SUPER", win: "SUPER", shift: "SHIFT", alt: "ALT", ctrl: "CTRL", control: "CTRL" };
+        var mods = [];
+        for ( var i = 1; i < parts.len(); i++ ) {
+            var m = lcase( trim( parts[ i ] ) );
+            if ( !structKeyExists( map, m ) ) return { ok: false, error: "unknown modifier " & parts[ i ] & " (Super, Shift, Alt, Ctrl)", mods: [], key: "" };
+            if ( !arrayFind( mods, map[ m ] ) ) mods.append( map[ m ] );
+        }
+        var raw = trim( parts[ parts.len() ] );
+        var key = raw == "`" ? "grave" : ( lcase( raw ) == "enter" ? "Return" : raw );
+        if ( len( key ) == 1 && reFind( "[A-Za-z]", key ) ) key = ucase( key );
+        var okKey = ( len( key ) == 1 && reFind( "[A-Z0-9]", key ) ) || arrayFindNoCase( namedKeys(), key ) > 0;
+        if ( !okKey ) return { ok: false, error: "unknown key " & raw & " (a letter, a digit, or one of: " & namedKeys().toList( ", " ) & ")", mods: [], key: "" };
+        if ( arrayFindNoCase( namedKeys(), key ) > 0 ) key = namedKeys()[ arrayFindNoCase( namedKeys(), key ) ];
+        return { ok: true, error: "", mods: mods.sort( "text" ), key: key };
+    }
+
+    // The same combo as one comparable string, e.g. "ALT+SHIFT+SUPER+V".
+    function normalize( keys ) {
+        var k = parseKeys( arguments.keys );
+        return k.ok ? k.mods.toList( "+" ) & "+" & ucase( k.key ) : "";
+    }
+
+    // The first argument of Hyprland's hl.bind for a combo: mainMod .. " + SHIFT + V".
+    function hyprExpr( keys ) {
+        var k = parseKeys( arguments.keys );
+        var rest = [];
+        for ( var m in [ "CTRL", "ALT", "SHIFT" ] ) if ( arrayFind( k.mods, m ) ) rest.append( m );
+        rest.append( k.key );
+        return arrayFind( k.mods, "SUPER" ) ? 'mainMod .. " + ' & rest.toList( " + " ) & '"' : '"' & rest.toList( " + " ) & '"';
+    }
+
+    // Qt's spelling for kglobalshortcutsrc: Meta+Shift+Q.
+    function qtKeys( keys ) {
+        var k = parseKeys( arguments.keys );
+        var out = [];
+        for ( var m in [ "SUPER", "CTRL", "ALT", "SHIFT" ] ) if ( arrayFind( k.mods, m ) ) out.append( m == "SUPER" ? "Meta" : ( m == "CTRL" ? "Ctrl" : ( m == "ALT" ? "Alt" : "Shift" ) ) );
+        out.append( k.key == "grave" ? "`" : k.key );
+        return out.toList( "+" );
+    }
+
+    // exec_cmd for a bxcachy command (PATH gets ~/.local/bin so the binary is found from a shortcut).
+    function execBxcachy( words ) {
+        return 'hl.dsp.exec_cmd([[sh -c ''PATH="$HOME/.local/bin:$PATH"; bxcachy ' & arguments.words & ''']])';
+    }
+
+    // A bind line for a row.
+    function bindLine( r ) {
+        return "hl.bind(" & hyprExpr( r.keys ) & ", " & r.dispatch & ")";
     }
 
     // Terminal window classes: in these, Cmd+C/V send Ctrl+Shift+C/V because plain Ctrl+C interrupts the running program.
@@ -17,29 +88,34 @@ class Shortcuts {
     // remap rows: to (key sent), termTo (key sent in terminals, optional).
     // bind rows: hyprland (full bind line), plasma (kglobalshortcutsrc group, key, value).
     function table() {
-        return [
+        var rows = [
             { id: "copy", keys: "Super+C", action: "Copy", kind: "remap", to: "Ctrl-c", termTo: "Ctrl-Shift-c" },
             { id: "paste", keys: "Super+V", action: "Paste", kind: "remap", to: "Ctrl-v", termTo: "Ctrl-Shift-v" },
             { id: "switch-windows", keys: "Super+Tab", action: "Switch windows", kind: "remap", to: "Alt-Tab" },
-            { id: "logout", keys: "Super+Shift+Q", action: "Log out to the login screen", kind: "bind",
-              hyprland: 'hl.bind(mainMod .. " + SHIFT + Q", hl.dsp.exec_cmd("uwsm stop"))',
-              plasma: { group: "ksmserver", key: "Log Out", value: "Meta+Shift+Q,Ctrl+Alt+Del,Log Out" } },
+            { id: "logout", keys: "Super+Shift+Q", action: "Log out to the login screen", kind: "bind", dispatch: 'hl.dsp.exec_cmd("uwsm stop")',
+              plasmaTail: "Ctrl+Alt+Del,Log Out", plasma: { group: "ksmserver", key: "Log Out", value: "" } },
             // Hyprland only (kind hypr-bind): on Plasma the AI shell is Yakuake, whose shortcut you set in System Settings.
-            { id: "ai-shell", keys: "Super+`", action: "Pull-down AI shell", kind: "hypr-bind",
-              hyprland: 'hl.bind(mainMod .. " + grave", hl.dsp.exec_cmd([[sh -c ''PATH="$HOME/.local/bin:$PATH"; bxcachy ai shell'']]))' },
-            { id: "clipboard-history", keys: "Super+Shift+V", action: "Clipboard history", kind: "hypr-bind",
-              hyprland: 'hl.bind(mainMod .. " + SHIFT + V", hl.dsp.exec_cmd([[sh -c ''PATH="$HOME/.local/bin:$PATH"; bxcachy clipboard pick'']]))' },
-            { id: "screen-record", keys: "Super+Shift+R", action: "Start or stop a screen recording (Super+Alt+Shift+R: a region)", kind: "hypr-bind",
-              hyprland: 'hl.bind(mainMod .. " + SHIFT + R", hl.dsp.exec_cmd([[sh -c ''PATH="$HOME/.local/bin:$PATH"; bxcachy record toggle'']]))' + chr( 10 ) & 'hl.bind(mainMod .. " + ALT + SHIFT + R", hl.dsp.exec_cmd([[sh -c ''PATH="$HOME/.local/bin:$PATH"; bxcachy record toggle --region'']]))' },
-            { id: "control-center", keys: "Super+Alt+Space", action: "BxCachy control center (AI, databases, settings)", kind: "hypr-bind",
-              hyprland: 'hl.bind(mainMod .. " + ALT + Space", hl.dsp.exec_cmd([[sh -c ''PATH="$HOME/.local/bin:$PATH"; bxcachy menu'']]))' }
+            { id: "ai-shell", keys: "Super+`", action: "Pull-down AI shell", kind: "hypr-bind", dispatch: execBxcachy( "ai shell" ) },
+            { id: "clipboard-history", keys: "Super+Shift+V", action: "Clipboard history", kind: "hypr-bind", dispatch: execBxcachy( "clipboard pick" ) },
+            { id: "screen-record", keys: "Super+Shift+R", action: "Start or stop a screen recording", kind: "hypr-bind", dispatch: execBxcachy( "record toggle" ) },
+            { id: "screen-record-region", keys: "Super+Alt+Shift+R", action: "Record a region of the screen", kind: "hypr-bind", dispatch: execBxcachy( "record toggle --region" ) },
+            { id: "control-center", keys: "Super+Alt+Space", action: "BxCachy control center (AI, databases, settings)", kind: "hypr-bind", dispatch: execBxcachy( "menu" ) }
         ];
+        // your overrides (only the rows that are bindings can be changed; remaps are xremap's)
+        for ( var r in rows ) {
+            if ( r.kind != "remap" && structKeyExists( variables.overrides, r.id ) && parseKeys( variables.overrides[ r.id ] ).ok ) r.keys = variables.overrides[ r.id ];
+            if ( r.kind == "bind" ) r.plasma.value = qtKeys( r.keys ) & "," & r.plasmaTail;
+        }
+        return rows;
     }
+
+    // The rows you may change with `keys set`.
+    function editable() { return table().filter( function( r ) { return r.kind != "remap"; } ); }
 
     // The table as text lines for `keys show`.
     function show() {
         return table().map( function( r ) {
-            return { id: r.id, keys: r.keys, action: r.action, how: r.kind == "remap" ? "xremap" : ( r.kind == "hypr-bind" ? "Hyprland binding" : "desktop binding" ) };
+            return { id: r.id, keys: r.keys, custom: r.kind != "remap" && structKeyExists( variables.overrides, r.id ), action: r.action, how: r.kind == "remap" ? "xremap" : ( r.kind == "hypr-bind" ? "Hyprland binding" : "desktop binding" ) };
         } );
     }
 
@@ -100,7 +176,7 @@ class Shortcuts {
             '',
             '-- Shared shortcuts from the bxcachy table'
         ];
-        for ( var r in table() ) if ( r.kind == "bind" || r.kind == "hypr-bind" ) out.append( r.hyprland );
+        for ( var r in table() ) if ( r.kind == "bind" || r.kind == "hypr-bind" ) out.append( bindLine( r ) );
         out.append( '' );
         out.append( '-- The pull-down AI shell (bxcachy ai shell) lives on the special workspace "ai"; its window class is set by the terminal it starts' );
         out.append( 'hl.window_rule({ name = "bxcachy-ai", match = { class = "^com.bxcachy.ai$" }, workspace = "special:ai", float = true })' );
