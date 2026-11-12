@@ -1,0 +1,103 @@
+// `bxcachy screenshot screen|region|window|ocr|qr|menu [--edit]` and `bxcachy qr TEXT [--out=FILE]`.
+//   Hyprland + Noctalia  `noctalia msg screenshot-fullscreen|screenshot-region|screenshot-window` (Noctalia has its own capture and
+//                        annotation; --edit adds --annotate). Without Noctalia: grim + slurp into the clipboard (wl-copy).
+//   Plasma               Spectacle (`spectacle -f|-r|-a`)
+//   ocr                  you drag a region, its text goes to the clipboard (tesseract); qr: the QR code in a region is read (zbarimg) and copied
+//   menu                 the Cmd+Shift+5 style picker (Screen, Region, Window, OCR, QR, Record) in your menu program
+//   qr TEXT              prints the QR code in the terminal, or writes a PNG with --out FILE (qrencode)
+// The desktop is read from XDG_CURRENT_DESKTOP (BXCACHY_DESKTOP overrides it). Exit: 0 done, 4 precondition (tool missing), 6 failed.
+class Screenshot {
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.inst = new bxcachy.Installer( arguments.runner );
+        variables.runnerArg = arguments.runner;
+        return this;
+    }
+
+    function say( code, data, asJson, lines = [] ) {
+        if ( arguments.asJson ) println( variables.cli.envelope( "screenshot", arguments.code, arguments.data ) );
+        else for ( var l in arguments.lines ) println( l );
+        return arguments.code;
+    }
+
+    function tryExec( argv, timeout = 600 ) {
+        try { return variables.inst.exec( arguments.argv, arguments.timeout ); } catch ( any e ) { return { exitCode: 127, output: e.message }; }
+    }
+
+    function has( name ) { return tryExec( [ "sh", "-c", 'command -v "$1"', "_", arguments.name ], 10 ).exitCode == 0; }
+
+    function desktop() {
+        var d = lCase( getSystemSetting( "BXCACHY_DESKTOP", getSystemSetting( "XDG_CURRENT_DESKTOP", "" ) ) );
+        return find( "kde", d ) || find( "plasma", d ) ? "plasma" : "hyprland";
+    }
+
+    // The capture command for a mode, or an empty array when no tool can do it. { argv, tool }
+    function capture( mode, edit ) {
+        var plasma = desktop() == "plasma";
+        if ( plasma ) {
+            if ( !has( "spectacle" ) ) return { tool: "spectacle", argv: [] };
+            return { tool: "spectacle", argv: [ "spectacle", arguments.mode == "screen" ? "-f" : ( arguments.mode == "window" ? "-a" : "-r" ) ] };
+        }
+        if ( has( "noctalia" ) ) {
+            var words = { screen: "screenshot-fullscreen", region: "screenshot-region", window: "screenshot-window" };
+            var argv = [ "noctalia", "msg", words[ arguments.mode ] ];
+            if ( arguments.edit ) argv.append( "--annotate" );
+            return { tool: "noctalia", argv: argv };
+        }
+        if ( !has( "grim" ) || ( arguments.mode != "screen" && !has( "slurp" ) ) ) return { tool: "grim and slurp", argv: [] };
+        var script = arguments.mode == "screen" ? 'grim - | wl-copy' : 'grim -g "$(slurp)" - | wl-copy';
+        return { tool: "grim", argv: [ "sh", "-c", script ] };
+    }
+
+    function shot( mode, edit, dryRun, asJson ) {
+        var c = capture( arguments.mode, arguments.edit );
+        if ( !c.argv.len() ) return say( 4, { error: c.tool & " is not installed" }, arguments.asJson, [ "error: " & c.tool & " is not installed. Install it: bxcachy install " & listFirst( c.tool, " " ) ] );
+        var data = { mode: arguments.mode, desktop: desktop(), argv: c.argv };
+        if ( arguments.dryRun ) return say( 0, data, arguments.asJson, [ "Dry run: " & c.argv.toList( " " ), "Nothing was started." ] );
+        var r = tryExec( c.argv, 600 );
+        if ( r.exitCode != 0 ) return say( 6, { error: "capture failed (exit " & r.exitCode & ")" }, arguments.asJson, [ "error: the capture failed (exit " & r.exitCode & ")" ] );
+        return say( 0, data, arguments.asJson, [] );
+    }
+
+    // Drag a region into a temporary PNG, then run `post` on it (the post step reads "$f"). Hyprland uses grim and slurp, Plasma Spectacle.
+    function fromRegion( tool, post, dryRun, asJson ) {
+        var plasma = desktop() == "plasma";
+        var need = plasma ? [ "spectacle", arguments.tool, "wl-copy" ] : [ "grim", "slurp", arguments.tool, "wl-copy" ];
+        for ( var n in need ) if ( !has( n ) ) return say( 4, { error: n & " is not installed" }, arguments.asJson, [ "error: " & n & " is not installed. Install it: bxcachy install " & ( n == "wl-copy" ? "wl-clipboard" : ( n == "zbarimg" ? "zbar" : n ) ) ] );
+        var grab = plasma ? 'spectacle -b -n -r -o "$f"' : 'grim -g "$(slurp)" "$f"';
+        var script = 'f="$(mktemp --suffix=.png)"; ' & grab & ' && ' & arguments.post & '; c=$?; rm -f "$f"; exit $c';
+        var argv = [ "sh", "-c", script ];
+        if ( arguments.dryRun ) return say( 0, { argv: argv }, arguments.asJson, [ "Dry run: " & script, "Nothing was started." ] );
+        var r = tryExec( argv, 600 );
+        if ( r.exitCode != 0 ) return say( 6, { error: "no text found or the capture was cancelled" }, arguments.asJson, [ "Nothing was copied (the capture was cancelled or nothing was found)." ] );
+        return say( 0, { copied: true }, arguments.asJson, [ "Copied to the clipboard." ] );
+    }
+
+    function ocr( dryRun, asJson ) { return fromRegion( "tesseract", 'tesseract "$f" stdout 2>/dev/null | wl-copy', arguments.dryRun, arguments.asJson ); }
+    function qrScan( dryRun, asJson ) { return fromRegion( "zbarimg", 'zbarimg -q --raw "$f" | wl-copy', arguments.dryRun, arguments.asJson ); }
+
+    // `qr TEXT [--out=FILE]`
+    function qrMake( text, out, asJson ) {
+        if ( !has( "qrencode" ) ) return say( 4, { error: "qrencode is not installed" }, arguments.asJson, [ "error: qrencode is not installed. Install it: bxcachy install qrencode" ] );
+        var argv = len( arguments.out ) ? [ "qrencode", "-o", arguments.out, arguments.text ] : [ "qrencode", "-t", "ANSIUTF8", arguments.text ];
+        var r = tryExec( argv, 30 );
+        if ( r.exitCode != 0 ) return say( 6, { error: trim( r.output ) }, arguments.asJson, [ "error: " & trim( r.output ) ] );
+        if ( len( arguments.out ) ) return say( 0, { file: arguments.out }, arguments.asJson, [ "Wrote " & arguments.out ] );
+        return say( 0, { text: arguments.text }, arguments.asJson, [ r.output ] );
+    }
+
+    // The picker. Each entry runs another mode.
+    function menu( dryRun, asJson ) {
+        var entries = [ "Screen", "Region", "Window", "Text from a region (OCR)", "Read a QR code", "Record the screen" ];
+        var rn = new bxcachy.Runner( variables.cli, variables.runnerArg );
+        var pick = 0;
+        try { pick = rn.select( "Screenshot", entries ); } catch ( any e ) { return say( 4, { error: e.message }, arguments.asJson, [ "error: " & e.message ] ); }
+        if ( !pick ) return 0;
+        if ( pick == 1 ) return shot( "screen", false, arguments.dryRun, arguments.asJson );
+        if ( pick == 2 ) return shot( "region", false, arguments.dryRun, arguments.asJson );
+        if ( pick == 3 ) return shot( "window", false, arguments.dryRun, arguments.asJson );
+        if ( pick == 4 ) return ocr( arguments.dryRun, arguments.asJson );
+        if ( pick == 5 ) return qrScan( arguments.dryRun, arguments.asJson );
+        return new bxcachy.Record( variables.cli, variables.runnerArg ).toggle( true, arguments.dryRun, arguments.asJson );
+    }
+}

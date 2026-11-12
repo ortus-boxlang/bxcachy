@@ -100,6 +100,11 @@ class Shortcuts {
             { id: "screen-record", keys: "Super+Shift+R", action: "Start or stop a screen recording", kind: "hypr-bind", dispatch: execBxcachy( "record toggle" ) },
             { id: "screen-record-region", keys: "Super+Alt+Shift+R", action: "Record a region of the screen", kind: "hypr-bind", dispatch: execBxcachy( "record toggle --region" ) },
             { id: "control-center", keys: "Super+Alt+M", action: "BxCachy control center (AI, databases, settings)", kind: "hypr-bind", dispatch: execBxcachy( "menu" ) },
+            { id: "key-sheet", keys: "Super+K", action: "Shortcut cheat sheet", kind: "hypr-bind", dispatch: execBxcachy( "keys sheet" ) },
+            { id: "screenshot-screen", keys: "Super+Shift+3", action: "Screenshot: the whole screen", kind: "hypr-bind", dispatch: execBxcachy( "screenshot screen" ) },
+            { id: "screenshot-region", keys: "Super+Shift+4", action: "Screenshot: a region", kind: "hypr-bind", dispatch: execBxcachy( "screenshot region" ) },
+            { id: "screenshot-menu", keys: "Super+Shift+5", action: "Screenshot menu (region, window, OCR, QR, record)", kind: "hypr-bind", dispatch: execBxcachy( "screenshot menu" ) },
+            { id: "dnd", keys: "Super+Alt+N", action: "Do Not Disturb on or off", kind: "hypr-bind", dispatch: execBxcachy( "notify dnd toggle" ) },
             { id: "all-apps", keys: "Super+Alt+Space", action: "All apps in one window (like Omarchy 4.5's app grid)", kind: "hypr-bind", dispatch: execBxcachy( "apps" ) }
         ];
         // your overrides (only the rows that are bindings can be changed; remaps are xremap's)

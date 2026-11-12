@@ -26,6 +26,14 @@ class Menu {
             ] },
             { label: "Databases", kind: "db" },
             { label: "All apps", kind: "spawn", argv: [ "apps" ] },
+            { label: "Screenshot", kind: "spawn", argv: [ "screenshot", "menu" ] },
+            { label: "Notifications", kind: "sub", children: [
+                { label: "Do Not Disturb: toggle", kind: "spawn", argv: [ "notify", "dnd", "toggle" ] },
+                { label: "Snooze for 30 minutes", kind: "spawn", argv: [ "notify", "snooze", "30m" ] },
+                { label: "Snooze for 2 hours", kind: "spawn", argv: [ "notify", "snooze", "2h" ] },
+                { label: "Turn snooze off", kind: "spawn", argv: [ "notify", "snooze", "off" ] },
+                { label: "Clear notifications", kind: "spawn", argv: [ "notify", "clear" ] }
+            ] },
             { label: "Web apps", kind: "sub", children: [
                 { label: "Create web app", kind: "webcreate" },
                 { label: "List web apps", kind: "run", argv: [ "web", "list" ] },
@@ -36,7 +44,8 @@ class Menu {
                 { label: "Shortcuts", kind: "run", argv: [ "keys", "show" ] },
                 { label: "App launcher check", kind: "run", argv: [ "runner", "doctor" ] },
                 { label: "Setup status", kind: "run", argv: [ "setup", "status" ] },
-                { label: "Dotfiles status", kind: "run", argv: [ "dotfiles", "status" ] }
+                { label: "Dotfiles status", kind: "run", argv: [ "dotfiles", "status" ] },
+                { label: "Shortcut cheat sheet", kind: "spawn", argv: [ "keys", "sheet" ] }
             ] }
         ];
     }

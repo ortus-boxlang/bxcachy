@@ -5400,7 +5400,7 @@
       "kind": "desktop",
       "group": "media",
       "category": "Screenshots and recording",
-      "tier": "default",
+      "tier": "optional",
       "source": "pacman",
       "targets": [
         "flameshot"
@@ -6127,6 +6127,152 @@
       "targets": [
         "wtype"
       ]
+    },
+    {
+      "kind": "desktop",
+      "tier": "optional",
+      "origin": [
+        "owner-pick"
+      ],
+      "verified_on": "2026-11-12",
+      "source": "pacman",
+      "repo": "extra",
+      "description_source": "arch",
+      "id": "vlc",
+      "name": "VLC",
+      "description": "Multi-platform multimedia player and framework",
+      "group": "media",
+      "category": "Media",
+      "targets": [
+        "vlc"
+      ],
+      "homepage": "https://www.videolan.org/vlc/",
+      "macos": "QuickTime Player"
+    },
+    {
+      "kind": "desktop",
+      "tier": "default",
+      "origin": [
+        "owner-pick"
+      ],
+      "verified_on": "2026-11-12",
+      "source": "pacman",
+      "repo": "extra",
+      "description_source": "arch",
+      "id": "spectacle",
+      "name": "Spectacle",
+      "description": "KDE screenshot capture utility",
+      "targets": [
+        "spectacle"
+      ],
+      "shells": [
+        "plasma"
+      ],
+      "macos": "Screenshot",
+      "group": "media",
+      "category": "Screenshots and recording"
+    },
+    {
+      "kind": "desktop",
+      "tier": "default",
+      "origin": [
+        "owner-pick"
+      ],
+      "verified_on": "2026-11-12",
+      "source": "pacman",
+      "repo": "extra",
+      "description_source": "arch",
+      "id": "grim",
+      "name": "grim",
+      "description": "Screenshot utility for Wayland (BxCachy: fallback when Noctalia is not running)",
+      "targets": [
+        "grim"
+      ],
+      "shells": [
+        "hyprland"
+      ],
+      "group": "media",
+      "category": "Screenshots and recording"
+    },
+    {
+      "kind": "desktop",
+      "tier": "default",
+      "origin": [
+        "owner-pick"
+      ],
+      "verified_on": "2026-11-12",
+      "source": "pacman",
+      "repo": "extra",
+      "description_source": "arch",
+      "id": "slurp",
+      "name": "slurp",
+      "description": "Select a region in a Wayland compositor (used with grim)",
+      "targets": [
+        "slurp"
+      ],
+      "shells": [
+        "hyprland"
+      ],
+      "group": "media",
+      "category": "Screenshots and recording"
+    },
+    {
+      "kind": "desktop",
+      "tier": "default",
+      "origin": [
+        "owner-pick"
+      ],
+      "verified_on": "2026-11-12",
+      "source": "pacman",
+      "repo": "extra",
+      "description_source": "arch",
+      "id": "tesseract",
+      "name": "Tesseract OCR",
+      "description": "Text recognition for screenshot OCR (BxCachy: screenshot ocr)",
+      "targets": [
+        "tesseract",
+        "tesseract-data-eng"
+      ],
+      "group": "media",
+      "category": "Screenshots and recording"
+    },
+    {
+      "kind": "desktop",
+      "tier": "default",
+      "origin": [
+        "owner-pick"
+      ],
+      "verified_on": "2026-11-12",
+      "source": "pacman",
+      "repo": "extra",
+      "description_source": "arch",
+      "id": "zbar",
+      "name": "ZBar",
+      "description": "Reads QR codes and bar codes (BxCachy: screenshot qr)",
+      "targets": [
+        "zbar"
+      ],
+      "group": "media",
+      "category": "Screenshots and recording"
+    },
+    {
+      "kind": "desktop",
+      "tier": "default",
+      "origin": [
+        "owner-pick"
+      ],
+      "verified_on": "2026-11-12",
+      "source": "pacman",
+      "repo": "extra",
+      "description_source": "arch",
+      "id": "qrencode",
+      "name": "qrencode",
+      "description": "Makes QR codes (BxCachy: qr)",
+      "targets": [
+        "qrencode"
+      ],
+      "group": "media",
+      "category": "Screenshots and recording"
     }
   ]
 }

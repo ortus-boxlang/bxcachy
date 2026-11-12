@@ -180,9 +180,7 @@ hl.bind(mainMod .. " + mouse_up",   hl.dsp.focus({ workspace = "e-1" }))
 hl.bind(mainMod .. " + mouse:272", hl.dsp.window.drag(),   { mouse = true })
 hl.bind(mainMod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
 
--- Screenshots (grim + slurp) and lock (hyprlock)
-hl.bind(mainMod .. " + SHIFT + 4", hl.dsp.exec_cmd([[grim -g "$(slurp)" - | wl-copy]]))
-hl.bind(mainMod .. " + SHIFT + 3", hl.dsp.exec_cmd("grim - | wl-copy"))
+-- Screenshots (Super+Shift+3/4/5, like Cmd+Shift+3/4/5 on a Mac) come from the bxcachy module below; lock (hyprlock)
 hl.bind(mainMod .. " + CTRL + Q", hl.dsp.exec_cmd("hyprlock"))
 
 -- Media, volume and brightness keys

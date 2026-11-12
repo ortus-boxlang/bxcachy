@@ -15,7 +15,7 @@ class {
         var config = new bxcachy.ConfigService();
         // One shared flag check for every command: unknown flags are usage errors and nothing runs.
         for ( var flag in args.options ) {
-            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider", "backend", "dir", "email", "region", "browser", "path", "from", "export", "from-system", "fresh", "rerun", "fix" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
+            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider", "backend", "dir", "email", "region", "browser", "path", "from", "export", "from-system", "fresh", "rerun", "fix", "edit", "history", "out" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
                 println( "Unknown option: --" & flag );
                 CLIExit( 2 );
             }
@@ -333,6 +333,33 @@ class {
           println( "Usage: bxcachy editor lazyvim [--yes] [--json]" );
           CLIExit( 2 );
           break;
+         case "screenshot":
+          // Screenshots, OCR and QR codes. See COMMAND-CONTRACT.md 13.26.
+          ssMode = p.len() >= 2 ? p[2] : "menu";
+          ss = new bxcachy.Screenshot( cli );
+          ssDry = structKeyExists( args.options, "dry-run" );
+          if ( p.len() <= 2 && arrayFind( [ "screen", "region", "window" ], ssMode ) ) CLIExit( ss.shot( ssMode, structKeyExists( args.options, "edit" ), ssDry, asJson ) );
+          if ( p.len() <= 2 && ssMode == "ocr" ) CLIExit( ss.ocr( ssDry, asJson ) );
+          if ( p.len() <= 2 && ssMode == "qr" ) CLIExit( ss.qrScan( ssDry, asJson ) );
+          if ( p.len() <= 2 && ssMode == "menu" ) CLIExit( ss.menu( ssDry, asJson ) );
+          println( "Usage: bxcachy screenshot screen|region|window [--edit] | ocr | qr | menu [--dry-run] [--json]" );
+          CLIExit( 2 );
+          break;
+         case "qr":
+          if ( p.len() == 2 ) CLIExit( new bxcachy.Screenshot( cli ).qrMake( p[2], args.options.out ?: "", asJson ) );
+          println( "Usage: bxcachy qr TEXT [--out=FILE.png] [--json]" );
+          CLIExit( 2 );
+          break;
+         case "notify":
+          // Noctalia notifications: Do Not Disturb, snooze, clear. See COMMAND-CONTRACT.md 13.26.
+          ntSub = p.len() >= 2 ? p[2] : "";
+          nt = new bxcachy.Notify( cli );
+          if ( ntSub == "dnd" && p.len() == 3 && arrayFind( [ "on", "off", "toggle", "status" ], p[3] ) ) CLIExit( nt.dnd( p[3], asJson ) );
+          if ( ntSub == "snooze" && p.len() <= 3 ) CLIExit( nt.snooze( p.len() == 3 ? p[3] : "", asJson ) );
+          if ( ntSub == "clear" && p.len() == 2 ) CLIExit( nt.clear( structKeyExists( args.options, "history" ), asJson ) );
+          println( "Usage: bxcachy notify dnd on|off|toggle|status | snooze [30m|2h|90s|off] | clear [--history] [--json]" );
+          CLIExit( 2 );
+          break;
          case "quicklook":
           // Quick Look style preview with Kiview. See COMMAND-CONTRACT.md 13.25.
           if ( p.len() <= 2 ) CLIExit( new bxcachy.Quicklook( cli ).run( p.len() == 2 ? p[2] : "", structKeyExists( args.options, "dry-run" ), asJson ) );
@@ -640,6 +667,7 @@ class {
            else print( sc.render( p[3] ) );
            CLIExit( 0 );
           }
+          if ( keysSub == "sheet" && p.len() == 2 ) CLIExit( new bxcachy.KeySheet( cli ).run( asJson ) );
           if ( keysSub == "check" && p.len() == 2 ) {
            CLIExit( new bxcachy.KeysService( cli ).check( asJson ) );
           }
