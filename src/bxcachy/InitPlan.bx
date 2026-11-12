@@ -142,6 +142,7 @@ class InitPlan {
             if ( gpu == "nvidia" ) apps.append( "ollama-cuda" );
             else if ( gpu == "amd" ) apps.append( "ollama-rocm" );
         }
+        for ( var id in pick( a, "desktop_utilities", [] ) ) if ( !arrayFind( apps, id ) ) apps.append( id );
         if ( engine == "docker" ) apps.append( "docker" );
         var vpnIds = { tailscale: "tailscale", wireguard: "wireguard", openvpn: "openvpn", mullvad: "mullvad", proton: "proton-vpn" };
         var vpn = pick( a, "vpn" );

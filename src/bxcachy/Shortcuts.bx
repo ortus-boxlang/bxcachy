@@ -27,6 +27,10 @@ class Shortcuts {
             // Hyprland only (kind hypr-bind): on Plasma the AI shell is Yakuake, whose shortcut you set in System Settings.
             { id: "ai-shell", keys: "Super+`", action: "Pull-down AI shell", kind: "hypr-bind",
               hyprland: 'hl.bind(mainMod .. " + grave", hl.dsp.exec_cmd([[sh -c ''PATH="$HOME/.local/bin:$PATH"; bxcachy ai shell'']]))' },
+            { id: "clipboard-history", keys: "Super+Shift+V", action: "Clipboard history", kind: "hypr-bind",
+              hyprland: 'hl.bind(mainMod .. " + SHIFT + V", hl.dsp.exec_cmd([[sh -c ''PATH="$HOME/.local/bin:$PATH"; bxcachy clipboard pick'']]))' },
+            { id: "screen-record", keys: "Super+Shift+R", action: "Start or stop a screen recording (Super+Alt+Shift+R: a region)", kind: "hypr-bind",
+              hyprland: 'hl.bind(mainMod .. " + SHIFT + R", hl.dsp.exec_cmd([[sh -c ''PATH="$HOME/.local/bin:$PATH"; bxcachy record toggle'']]))' + chr( 10 ) & 'hl.bind(mainMod .. " + ALT + SHIFT + R", hl.dsp.exec_cmd([[sh -c ''PATH="$HOME/.local/bin:$PATH"; bxcachy record toggle --region'']]))' },
             { id: "control-center", keys: "Super+Alt+Space", action: "BxCachy control center (AI, databases, settings)", kind: "hypr-bind",
               hyprland: 'hl.bind(mainMod .. " + ALT + Space", hl.dsp.exec_cmd([[sh -c ''PATH="$HOME/.local/bin:$PATH"; bxcachy menu'']]))' }
         ];
@@ -82,6 +86,9 @@ class Shortcuts {
             '-- Noctalia starts with the session',
             'hl.on("hyprland.start", function()',
             '  hl.exec_cmd("noctalia")',
+            '  -- clipboard history (cliphist stores what wl-paste sees; pick it with Super+Shift+V)',
+            '  hl.exec_cmd("wl-paste --type text --watch cliphist store")',
+            '  hl.exec_cmd("wl-paste --type image --watch cliphist store")',
             'end)',
             '',
             '-- Super+Space opens the launcher you chose (`bxcachy runner set`; Noctalia by default). If that cannot run, Noctalia opens.',

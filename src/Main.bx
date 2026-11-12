@@ -15,7 +15,7 @@ class {
         var config = new bxcachy.ConfigService();
         // One shared flag check for every command: unknown flags are usage errors and nothing runs.
         for ( var flag in args.options ) {
-            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider", "backend", "dir", "email" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
+            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider", "backend", "dir", "email", "region" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
                 println( "Unknown option: --" & flag );
                 CLIExit( 2 );
             }
@@ -255,6 +255,28 @@ class {
            CLIExit( st.undoXremap( setupYes, setupDry, asJson ) );
           }
           println( "Usage: bxcachy setup plasma [--keys | --undo-keys] | hyprland [--terminal=ghostty|kitty|alacritty|foot|konsole] [--layout=dwindle|master|scrolling|floating] [--workspaces=N] [--natural-scroll] [--layouts=us-intl,es] [--theme=dark|light|auto] [--wallpaper=box|grid|aurora|minimal] | terminal [--default=ghostty] [--also=a,b] | shell [--shell=zsh|fish|bash] | keyboard [--layouts=us-intl,es] | xremap [--build=hypr|kde] | undo plasma|hyprland|xremap | status [--yes] [--dry-run] [--json]" );
+          CLIExit( 2 );
+          break;
+         case "clipboard":
+          // Clipboard history with cliphist. See COMMAND-CONTRACT.md 13.18.
+          cbSub = p.len() >= 2 ? p[2] : "";
+          cb = new bxcachy.Clipboard( cli );
+          if ( cbSub == "pick" && p.len() == 2 ) CLIExit( cb.pick( asJson ) );
+          if ( cbSub == "clear" && p.len() == 2 ) CLIExit( cb.clear( structKeyExists( args.options, "yes" ), asJson ) );
+          if ( cbSub == "status" && p.len() == 2 ) CLIExit( cb.status( asJson ) );
+          println( "Usage: bxcachy clipboard pick | clear [--yes] | status [--json]" );
+          CLIExit( 2 );
+          break;
+         case "record":
+          // Screen recording with wf-recorder. See COMMAND-CONTRACT.md 13.18.
+          rcSub = p.len() >= 2 ? p[2] : "toggle";
+          rc = new bxcachy.Record( cli );
+          rcRegion = structKeyExists( args.options, "region" );
+          if ( rcSub == "toggle" && p.len() <= 2 ) CLIExit( rc.toggle( rcRegion, structKeyExists( args.options, "dry-run" ), asJson ) );
+          if ( rcSub == "start" && p.len() == 2 ) CLIExit( rc.start( rcRegion, structKeyExists( args.options, "dry-run" ), asJson ) );
+          if ( rcSub == "stop" && p.len() == 2 ) CLIExit( rc.stop( asJson ) );
+          if ( rcSub == "status" && p.len() == 2 ) CLIExit( rc.status( asJson ) );
+          println( "Usage: bxcachy record [toggle|start|stop|status] [--region] [--dry-run] [--json]" );
           CLIExit( 2 );
           break;
          case "containers":

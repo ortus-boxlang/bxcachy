@@ -1,0 +1,68 @@
+// `bxcachy record [toggle|start|stop|status] [--region]`: screen recording on Wayland with wf-recorder.
+//   start    records the screen (or with --region the area you drag with slurp) to ~/Videos/bxcachy-YYYYMMDD-HHMMSS.mp4
+//   stop     ends the recording (SIGINT, so the file is finished properly)
+//   toggle   start when nothing is recording, stop when something is (the Hyprland shortcut uses this; it is the default action)
+//   status   recording or not
+// Exit: 0 done, 4 precondition (wf-recorder or slurp missing), 6 could not start or stop.
+class Record {
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.inst = new bxcachy.Installer( arguments.runner );
+        return this;
+    }
+
+    function say( command, code, data, asJson, lines = [] ) {
+        if ( arguments.asJson ) println( variables.cli.envelope( arguments.command, arguments.code, arguments.data, false ) );
+        else for ( var l in arguments.lines ) println( l );
+        return arguments.code;
+    }
+
+    function tryExec( argv, timeout = 30 ) {
+        try { return variables.inst.exec( arguments.argv, arguments.timeout ); } catch ( any e ) { return { exitCode: 127, output: e.message }; }
+    }
+
+    function has( name ) { return tryExec( [ "sh", "-c", 'command -v "$1"', "_", arguments.name ], 10 ).exitCode == 0; }
+    function recording() { return tryExec( [ "pgrep", "-x", "wf-recorder" ], 10 ).exitCode == 0; }
+    function folder() { return getSystemSetting( "BXCACHY_VIDEOS", getSystemSetting( "HOME", "" ) & "/Videos" ); }
+
+    function start( region, dryRun, asJson ) {
+        var cmd = "record start";
+        if ( !has( "wf-recorder" ) ) return say( cmd, 4, { error: "wf-recorder is not installed" }, arguments.asJson, [ "error: wf-recorder is not installed. Install: bxcachy install wf-recorder" ] );
+        if ( arguments.region && !has( "slurp" ) ) return say( cmd, 4, { error: "slurp is not installed" }, arguments.asJson, [ "error: slurp is not installed (it comes with the Hyprland setup)" ] );
+        if ( recording() ) return say( cmd, 0, { recording: true, started: false }, arguments.asJson, [ "A recording is already running. Stop it: bxcachy record stop" ] );
+        var stamp = trim( tryExec( [ "date", "+%Y%m%d-%H%M%S" ], 10 ).output );
+        var file = folder() & "/bxcachy-" & stamp & ".mp4";
+        var script = arguments.region ? 'mkdir -p "$1" && exec wf-recorder -g "$(slurp)" -f "$2"' : 'mkdir -p "$1" && exec wf-recorder -f "$2"';
+        var argv = [ "sh", "-c", script, "_", folder(), file ];
+        var data = { file: file, region: arguments.region, command: argv };
+        if ( arguments.dryRun ) return say( cmd, 0, data, arguments.asJson, [ "Dry run: " & argv.toList( " " ) ] );
+        var run = [ "sh", "-c", 'setsid "$@" >/dev/null 2>&1 &', "_" ];
+        for ( var p in argv ) run.append( p );
+        tryExec( run, 10 );
+        return say( cmd, 0, merge( data, { started: true } ), arguments.asJson, [ "Recording to " & file & ". Stop: bxcachy record stop" ] );
+    }
+
+    function merge( base, extra ) {
+        var out = {};
+        for ( var k in structKeyArray( arguments.base ) ) out[ k ] = arguments.base[ k ];
+        for ( var k in structKeyArray( arguments.extra ) ) out[ k ] = arguments.extra[ k ];
+        return out;
+    }
+
+    function stop( asJson ) {
+        var cmd = "record stop";
+        if ( !recording() ) return say( cmd, 0, { recording: false }, arguments.asJson, [ "Nothing is recording." ] );
+        var r = tryExec( [ "pkill", "-INT", "-x", "wf-recorder" ], 10 );
+        if ( r.exitCode != 0 ) return say( cmd, 6, { error: "could not stop the recording" }, arguments.asJson, [ "error: could not stop the recording" ] );
+        return say( cmd, 0, { recording: false, stopped: true }, arguments.asJson, [ "The recording was stopped and saved in " & folder() & "." ] );
+    }
+
+    function toggle( region, dryRun, asJson ) {
+        return recording() ? stop( arguments.asJson ) : start( arguments.region, arguments.dryRun, arguments.asJson );
+    }
+
+    function status( asJson ) {
+        var on = recording();
+        return say( "record status", 0, { recording: on }, arguments.asJson, [ on ? "Recording." : "Not recording." ] );
+    }
+}

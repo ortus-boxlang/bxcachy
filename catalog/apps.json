@@ -5903,6 +5903,144 @@
         "ai": "optional"
       },
       "verified_on": "2026-11-11"
+    },
+    {
+      "tier": "optional",
+      "source": "pacman",
+      "repo": "extra",
+      "verified_on": "2026-11-12",
+      "macos": "Clipboard history (Raycast, Alfred)",
+      "origin": [
+        "owner-request"
+      ],
+      "description_source": "arch",
+      "id": "cliphist",
+      "name": "Cliphist",
+      "description": "Wayland clipboard manager (history for wl-clipboard); BxCachy: clipboard pick",
+      "kind": "tui",
+      "group": "desktop",
+      "category": "Desktop polish",
+      "targets": [
+        "cliphist"
+      ],
+      "shells": [
+        "hyprland"
+      ],
+      "homepage": "https://github.com/sentriz/cliphist"
+    },
+    {
+      "tier": "optional",
+      "source": "pacman",
+      "repo": "extra",
+      "verified_on": "2026-11-12",
+      "macos": "Screen recording (Shift+Cmd+5)",
+      "origin": [
+        "owner-request"
+      ],
+      "description_source": "arch",
+      "id": "wf-recorder",
+      "name": "wf-recorder",
+      "description": "Screen recorder for Wayland (wlroots compositors); BxCachy: record",
+      "kind": "tui",
+      "group": "media",
+      "category": "Screenshots and recording",
+      "targets": [
+        "wf-recorder"
+      ],
+      "shells": [
+        "hyprland"
+      ],
+      "homepage": "https://github.com/ammen99/wf-recorder",
+      "profiles": {
+        "media": "optional"
+      }
+    },
+    {
+      "tier": "optional",
+      "source": "pacman",
+      "repo": "extra",
+      "verified_on": "2026-11-12",
+      "macos": "Sound settings",
+      "origin": [
+        "owner-request"
+      ],
+      "description_source": "arch",
+      "id": "pavucontrol",
+      "name": "PulseAudio Volume Control",
+      "description": "Volume control GUI for PulseAudio and PipeWire",
+      "kind": "desktop",
+      "group": "media",
+      "category": "Audio",
+      "targets": [
+        "pavucontrol"
+      ],
+      "homepage": "https://freedesktop.org/software/pulseaudio/pavucontrol/"
+    },
+    {
+      "tier": "optional",
+      "source": "pacman",
+      "repo": "extra",
+      "verified_on": "2026-11-12",
+      "macos": "Sound settings",
+      "origin": [
+        "owner-request"
+      ],
+      "description_source": "arch",
+      "id": "wiremix",
+      "name": "wiremix",
+      "description": "TUI audio mixer for PipeWire",
+      "kind": "tui",
+      "group": "media",
+      "category": "Audio",
+      "targets": [
+        "wiremix"
+      ],
+      "homepage": "https://github.com/tsowell/wiremix"
+    },
+    {
+      "tier": "optional",
+      "source": "pacman",
+      "repo": "extra",
+      "verified_on": "2026-11-12",
+      "macos": "Displays settings",
+      "origin": [
+        "owner-request"
+      ],
+      "description_source": "arch",
+      "id": "nwg-displays",
+      "name": "nwg-displays",
+      "description": "Output management GUI for Sway and Hyprland (monitors, scaling, layout)",
+      "kind": "desktop",
+      "group": "desktop",
+      "category": "Desktop polish",
+      "targets": [
+        "nwg-displays"
+      ],
+      "shells": [
+        "hyprland"
+      ],
+      "homepage": "https://github.com/nwg-piotr/nwg-displays"
+    },
+    {
+      "tier": "optional",
+      "source": "pacman",
+      "repo": "extra",
+      "verified_on": "2026-11-12",
+      "macos": "Media keys",
+      "origin": [
+        "owner-request"
+      ],
+      "description_source": "arch",
+      "id": "playerctl",
+      "name": "playerctl",
+      "description": "Command-line controller for MPRIS media players (media keys)",
+      "kind": "tui",
+      "group": "media",
+      "category": "Audio",
+      "targets": [
+        "playerctl"
+      ],
+      "homepage": "https://github.com/altdesktop/playerctl"
     }
   ]
 }

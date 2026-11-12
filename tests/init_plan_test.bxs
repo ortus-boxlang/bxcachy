@@ -132,6 +132,8 @@ p = ip.plan( { container_engine: "podman", docker_compat: true } );
 check( "Podman with docker compatibility adds the shim step after the containers profile", ids( p ) == "containers,docker-compat" && cmd( p, "docker-compat" ) == "bxcachy containers docker-compat" );
 check( "no docker shim without the answer, or on Docker", find( "docker-compat", ids( ip.plan( { container_engine: "podman" } ) ) ) == 0 && find( "docker-compat", ids( ip.plan( { container_engine: "docker", docker_compat: true } ) ) ) == 0 );
 check( "the LazyVim starter is a step", cmd( ip.plan( { editor_starter: "lazyvim" } ), "editor-lazyvim" ) == "bxcachy editor lazyvim" && find( "editor-lazyvim", ids( ip.plan( { editor_starter: "none" } ) ) ) == 0 );
+p = ip.plan( { desktop_utilities: [ "cliphist", "wf-recorder", "playerctl" ] } );
+check( "desktop utilities are installed in the one apps step", cmd( p, "apps" ) == "bxcachy install cliphist wf-recorder playerctl" );
 check( "no keys step without an answer", find( "key-", ids( ip.plan( { ai_agents: [ "claude-code" ] } ) ) ) == 0 );
 p = ip.plan( { ai_agents: [ "claude-code" ], ai_default: "gemini-cli" } );
 check( "a default agent that was not ticked is installed too", cmd( p, "apps" ) == "bxcachy install claude-code gemini-cli tmux" );

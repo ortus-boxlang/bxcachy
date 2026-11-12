@@ -493,6 +493,14 @@ Init rules for this page: a default agent that was not ticked is installed too; 
 - `editor lazyvim [--yes]` follows lazyvim.org/installation: installs `neovim git ripgrep fd lazygit` when missing, `git clone https://github.com/LazyVim/starter ~/.config/nvim`, removes its `.git`. An existing `~/.config/nvim` is **never** touched (exit 4 with the `mv` to run). Wizard: `editor_starter` (`none` default, `lazyvim`) on the Developer page.
 - Package names checked on archlinux.org 2026-11-12 (all in `extra`). Tests: `tests/containers-test.sh`.
 
+### 13.18 Desktop utilities: clipboard history and screen recording (decided with the owner 2026-11-12)
+
+Packages are catalog entries (all `extra`, checked 2026-11-12): `cliphist`, `wf-recorder`, `pavucontrol`, `wiremix`, `nwg-displays`, `playerctl`. `grim`, `slurp`, `wl-clipboard`, `brightnessctl` and `hyprpicker` already come with `setup hyprland`. The wizard's Extras page asks `desktop_utilities` (Hyprland and Both only; `cliphist` and `wf-recorder` preselected); the answers go into the single `install` step.
+- `clipboard pick` lists the history with your menu provider, decodes the chosen entry (`cliphist decode`, entry line on standard input) and copies it with `wl-copy`. Text entries only (binary entries are left out of the menu). `clipboard clear [--yes]` runs `cliphist wipe` (plan without `--yes`); `clipboard status` shows the tools and the entry count. Exit 4 when `cliphist`, `wl-clipboard` or the menu program is missing.
+- The Hyprland module (`keys apply`) starts the history at login: `wl-paste --type text --watch cliphist store` and the same for images, and binds `Super+Shift+V` to `clipboard pick`.
+- `record [toggle|start|stop|status] [--region] [--dry-run]` (default toggle) runs `wf-recorder -f ~/Videos/bxcachy-YYYYMMDD-HHMMSS.mp4` detached (`BXCACHY_VIDEOS` changes the folder); `--region` adds `-g "$(slurp)"`. Stop sends SIGINT (`pkill -INT -x wf-recorder`) so the file is finished. Hyprland binds `Super+Shift+R` (toggle) and `Super+Alt+Shift+R` (a region). Exit 4 when `wf-recorder` or, for a region, `slurp` is missing. `wf-recorder` has no GPU encoding by default; `gpu-screen-recorder` (already in the catalog) is the faster option and is not wired here.
+- Tests: `tests/utilities-test.sh`. The `wl-paste --watch` autostart and the shortcuts are not verified on a real Hyprland session.
+
 ## 14. Install and the setup wizard (decided with the owner 2026-11-10; install, wizard and the init engine are built, the pages' later commands are not)
 
 ### 14.1 Install

@@ -1145,6 +1145,50 @@
               "description": "Deduplicating backups with compression."
             }
           ]
+        },
+        {
+          "type": "multi",
+          "id": "desktop_utilities",
+          "label": "Desktop utilities",
+          "default": [
+            "cliphist",
+            "wf-recorder"
+          ],
+          "help": "Small tools with BxCachy shortcuts on Hyprland: clipboard history (Super+Shift+V) and screen recording (Super+Shift+R).",
+          "when": {
+            "id": "desktops",
+            "in": [
+              "hyprland",
+              "both"
+            ]
+          },
+          "options": [
+            {
+              "value": "cliphist",
+              "label": "Clipboard history",
+              "description": "cliphist: pick earlier copies with Super+Shift+V."
+            },
+            {
+              "value": "wf-recorder",
+              "label": "Screen recording",
+              "description": "wf-recorder: Super+Shift+R starts and stops, with Alt a region."
+            },
+            {
+              "value": "pavucontrol",
+              "label": "Volume control",
+              "description": "pavucontrol: a window to set volumes and outputs."
+            },
+            {
+              "value": "nwg-displays",
+              "label": "Monitor layout",
+              "description": "nwg-displays: arrange monitors, resolution and scale."
+            },
+            {
+              "value": "playerctl",
+              "label": "Media keys",
+              "description": "playerctl: control any media player from the keyboard."
+            }
+          ]
         }
       ]
     },
