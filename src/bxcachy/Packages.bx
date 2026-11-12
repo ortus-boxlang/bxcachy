@@ -34,6 +34,16 @@ class Packages {
         return true;
     }
 
+    // The filesystem of / ("btrfs", "ext4", ...; "" when it cannot be read). BXCACHY_ROOT_FS overrides it (tests).
+    function rootFs() {
+        var forced = getSystemSetting( "BXCACHY_ROOT_FS", "" );
+        if ( len( forced ) ) return forced;
+        try {
+            var r = systemExecute( "findmnt", [ "-n", "-o", "FSTYPE", "/" ], 10, true );
+            return r.exitCode == 0 ? lcase( trim( r.output ) ) : "";
+        } catch ( any e ) { return ""; }
+    }
+
     // The running shell ("hyprland", "plasma" or "" when unknown) from XDG_CURRENT_DESKTOP.
     function defaultShell() {
         return new bxcachy.Resolver().detectShell( getSystemSetting( "XDG_CURRENT_DESKTOP", "" ) );
@@ -93,6 +103,7 @@ class Packages {
         var names = installedNames();
         var self = this;
         req.installed = function( a ) { return self.isInstalled( a, names ); };
+        req.rootFs = rootFs();
         var res = new bxcachy.Resolver().resolve( variables.cat, req );
         if ( res.errors.len() ) {
             for ( var e in res.errors ) println( "error: " & e );
@@ -153,6 +164,7 @@ class Packages {
         var names = installedNames();
         var self = this;
         req.installed = function( a ) { return self.isInstalled( a, names ); };
+        req.rootFs = rootFs();
         var res = new bxcachy.Resolver().resolve( variables.cat, req );
         if ( res.errors.len() ) {
             for ( var e in res.errors ) println( "error: " & e );

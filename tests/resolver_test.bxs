@@ -88,5 +88,19 @@ r = resolverClass.resolve( real, { profile: "jvm" } );
 check( "real: jvm profile", listSort( idsOf( r ), "text", "asc" ) == "gradle,jdk21,maven" );
 r = resolverClass.resolve( real, { shell: "plasma" } );
 check( "real: no hyprland-only app is selected on plasma", r.selected.filter( function( a ) { return structKeyExists( a, "shells" ) && !arrayFind( a.shells, "plasma" ); } ).len() == 0 );
+// filesystem rule: an app that names filesystems is in the default set only on them
+fsFix = { profiles: [], apps: [ { id: "btop", tier: "default", source: "pacman" }, { id: "btrfs-assistant", tier: "default", source: "pacman", filesystems: [ "btrfs" ] } ] };
+r = resolverClass.resolve( fsFix, { rootFs: "btrfs" } );
+check( "fs: on Btrfs the Btrfs-only app is selected", idsOf( r ) == "btop,btrfs-assistant" );
+r = resolverClass.resolve( fsFix, { rootFs: "ext4" } );
+check( "fs: on ext4 it is skipped as wrong_filesystem", idsOf( r ) == "btop" && reasonOf( r, "btrfs-assistant" ) == "wrong_filesystem" );
+r = resolverClass.resolve( fsFix, {} );
+check( "fs: an unknown filesystem counts as not Btrfs", idsOf( r ) == "btop" );
+r = resolverClass.resolve( fsFix, { ids: [ "btrfs-assistant" ], rootFs: "ext4" } );
+check( "fs: naming the app installs it anyway", idsOf( r ) == "btrfs-assistant" );
+r = resolverClass.resolve( real, { rootFs: "ext4" } );
+check( "real: Btrfs Assistant is not in the default set on ext4, Timeshift is", !arrayFind( r.selected.map( function( a ) { return a.id; } ), "btrfs-assistant" ) && arrayFind( r.selected.map( function( a ) { return a.id; } ), "timeshift" ) );
+r = resolverClass.resolve( real, { rootFs: "btrfs" } );
+check( "real: on Btrfs both are", arrayFind( r.selected.map( function( a ) { return a.id; } ), "btrfs-assistant" ) && arrayFind( r.selected.map( function( a ) { return a.id; } ), "timeshift" ) );
 if ( failures > 0 ) { println( failures & " failed" ); CLIExit( 1 ); }
 println( "resolver tests passed" );

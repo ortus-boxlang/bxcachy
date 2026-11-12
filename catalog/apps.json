@@ -6056,12 +6056,15 @@
       "kind": "desktop",
       "id": "btrfs-assistant",
       "name": "Btrfs Assistant",
-      "description": "GUI for managing Btrfs subvolumes and Snapper snapshots (useful on a Btrfs disk)",
+      "description": "GUI for managing Btrfs subvolumes and Snapper snapshots (offered only when the root filesystem is Btrfs)",
       "targets": [
         "btrfs-assistant"
       ],
       "homepage": "https://gitlab.com/btrfs-assistant/btrfs-assistant",
-      "macos": "Time Machine (snapshots)"
+      "macos": "Time Machine (snapshots)",
+      "filesystems": [
+        "btrfs"
+      ]
     },
     {
       "tier": "default",
