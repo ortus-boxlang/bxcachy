@@ -163,12 +163,66 @@ class WizardData {
           ]
         },
         {
+          "type": "choice",
+          "id": "plasma_panels",
+          "label": "Plasma panels",
+          "help": "BxCachy layout: a top status panel (launcher, workspaces, active window, clock, media, system vitals, tray, in rounded islands) and a bottom dock. Your current panels are backed up first and can be restored with: bxcachy plasma panels undo.",
+          "default": "bxcachy",
+          "when": {
+            "id": "desktops",
+            "in": [
+              "plasma",
+              "both"
+            ]
+          },
+          "options": [
+            {
+              "value": "bxcachy",
+              "label": "BxCachy layout (recommended)",
+              "description": "Top status panel plus a bottom icons-only dock, styled with Panel Colorizer."
+            },
+            {
+              "value": "keep",
+              "label": "Keep my panels",
+              "description": "Leave the Plasma panels exactly as they are."
+            }
+          ]
+        },
+        {
+          "type": "confirm",
+          "id": "plasma_weather",
+          "label": "Weather in the top panel",
+          "default": true,
+          "when": {
+            "id": "desktops",
+            "in": [
+              "plasma",
+              "both"
+            ]
+          },
+          "help": "Adds the Weather Report widget before the media controls."
+        },
+        {
+          "type": "confirm",
+          "id": "plasma_agenda",
+          "label": "Event Calendar with an agenda instead of the plain clock",
+          "default": false,
+          "when": {
+            "id": "desktops",
+            "in": [
+              "plasma",
+              "both"
+            ]
+          },
+          "help": "Installs Event Calendar (AUR); the plain Digital Clock is the default."
+        },
+        {
           "type": "number",
           "id": "workspaces",
           "label": "Workspaces always shown",
           "min": 1,
           "max": 10,
-          "default": 2,
+          "default": 4,
           "help": "Empty workspaces stay visible in the bar."
         }
       ]

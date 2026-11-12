@@ -15,7 +15,7 @@ class {
         var config = new bxcachy.ConfigService();
         // One shared flag check for every command: unknown flags are usage errors and nothing runs.
         for ( var flag in args.options ) {
-            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider", "backend", "dir", "email", "region", "browser", "path", "from", "export", "from-system", "fresh", "rerun", "fix", "edit", "history", "out" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
+            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider", "backend", "dir", "email", "region", "browser", "path", "from", "export", "from-system", "fresh", "rerun", "fix", "edit", "history", "out", "agenda", "without-weather", "desktops", "preset" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
                 println( "Unknown option: --" & flag );
                 CLIExit( 2 );
             }
@@ -331,6 +331,21 @@ class {
           // The LazyVim starter for Neovim. See COMMAND-CONTRACT.md 13.17.
           if ( p.len() == 2 && p[2] == "lazyvim" ) CLIExit( new bxcachy.Editor( cli ).lazyvim( structKeyExists( args.options, "yes" ), asJson ) );
           println( "Usage: bxcachy editor lazyvim [--yes] [--json]" );
+          CLIExit( 2 );
+          break;
+         case "plasma":
+          // The Plasma panel layout and virtual desktops. See COMMAND-CONTRACT.md 13.27.
+          plSub = p.len() >= 2 ? p[2] : "";
+          plp = new bxcachy.PlasmaPanels( cli );
+          plYes = structKeyExists( args.options, "yes" );
+          plDry = structKeyExists( args.options, "dry-run" );
+          if ( plSub == "desktops" && p.len() == 3 ) CLIExit( plp.desktops( p[3], plYes, plDry, asJson ) );
+          if ( plSub == "panels" && p.len() >= 3 ) {
+            if ( p[3] == "apply" && p.len() == 3 ) CLIExit( plp.apply( { agenda: structKeyExists( args.options, "agenda" ), weather: !structKeyExists( args.options, "without-weather" ), desktops: int( val( args.options.desktops ?: 4 ) ), preset: replace( args.options.preset ?: "Rounded Widgets", "-", " ", "all" ) }, plYes, plDry, asJson ) );
+            if ( p[3] == "undo" && p.len() == 3 ) CLIExit( plp.undo( plYes, asJson ) );
+            if ( p[3] == "status" && p.len() == 3 ) CLIExit( plp.status( asJson ) );
+          }
+          println( "Usage: bxcachy plasma panels apply [--agenda] [--without-weather] [--desktops=N] [--preset=NAME] | undo | status [--yes] [--dry-run] [--json]  |  plasma desktops N [--yes]" );
           CLIExit( 2 );
           break;
          case "screenshot":

@@ -6273,6 +6273,139 @@
       ],
       "group": "media",
       "category": "Screenshots and recording"
+    },
+    {
+      "kind": "desktop",
+      "tier": "default",
+      "origin": [
+        "owner-pick"
+      ],
+      "verified_on": "2026-11-12",
+      "group": "desktop",
+      "category": "Desktop polish",
+      "shells": [
+        "plasma"
+      ],
+      "id": "panel-colorizer",
+      "name": "Panel Colorizer",
+      "description": "Style Plasma panels: colors, rounded islands, blur (Latte-Dock and status-bar looks)",
+      "description_source": "aur",
+      "source": "aur",
+      "targets": [
+        "plasma6-applets-panel-colorizer"
+      ],
+      "homepage": "https://github.com/luisbocanegra/plasma-panel-colorizer"
+    },
+    {
+      "kind": "desktop",
+      "tier": "default",
+      "origin": [
+        "owner-pick"
+      ],
+      "verified_on": "2026-11-12",
+      "group": "desktop",
+      "category": "Desktop polish",
+      "shells": [
+        "plasma"
+      ],
+      "id": "panel-colorizer-islands",
+      "name": "Panel Colorizer islands separator",
+      "description": "Separator widget that splits a Plasma panel into Panel Colorizer islands",
+      "description_source": "aur",
+      "source": "aur",
+      "targets": [
+        "plasma6-applets-panel-colorizer-islands-separator-git"
+      ],
+      "homepage": "https://github.com/luisbocanegra/plasma-panel-colorizer-islands-separator"
+    },
+    {
+      "kind": "desktop",
+      "tier": "default",
+      "origin": [
+        "owner-pick"
+      ],
+      "verified_on": "2026-11-12",
+      "group": "desktop",
+      "category": "Desktop polish",
+      "shells": [
+        "plasma"
+      ],
+      "id": "window-title",
+      "name": "Active Window Title",
+      "description": "Plasma 6 applet that shows the active window title and icon",
+      "description_source": "aur",
+      "source": "aur",
+      "targets": [
+        "plasma6-applets-window-title"
+      ],
+      "homepage": "https://github.com/dhruv8sh/plasma6-window-title-applet"
+    },
+    {
+      "kind": "desktop",
+      "tier": "default",
+      "origin": [
+        "owner-pick"
+      ],
+      "verified_on": "2026-11-12",
+      "group": "desktop",
+      "category": "Desktop polish",
+      "shells": [
+        "plasma"
+      ],
+      "id": "kvitals",
+      "name": "KVitals",
+      "description": "Live CPU, RAM and other system vitals in a Plasma 6 panel",
+      "description_source": "aur",
+      "source": "aur",
+      "targets": [
+        "plasma6-applets-kvitals-git"
+      ],
+      "homepage": "https://github.com/yassine20011/kvitals",
+      "note": "Only a git build is packaged (no tagged release)"
+    },
+    {
+      "kind": "desktop",
+      "tier": "optional",
+      "origin": [
+        "owner-pick"
+      ],
+      "verified_on": "2026-11-12",
+      "group": "desktop",
+      "category": "Desktop polish",
+      "shells": [
+        "plasma"
+      ],
+      "id": "event-calendar",
+      "name": "Event Calendar",
+      "description": "Calendar with an agenda for the Plasma 6 panel (instead of the plain clock)",
+      "description_source": "aur",
+      "source": "aur",
+      "targets": [
+        "plasma6-applets-eventcalendar"
+      ],
+      "homepage": "https://github.com/lenonk/plasma6-applet-eventcalendar"
+    },
+    {
+      "kind": "desktop",
+      "tier": "default",
+      "origin": [
+        "owner-pick"
+      ],
+      "verified_on": "2026-11-12",
+      "group": "desktop",
+      "category": "Desktop polish",
+      "shells": [
+        "plasma"
+      ],
+      "id": "kdeplasma-addons",
+      "name": "Plasma add-ons",
+      "description": "Extra Plasma widgets, including Weather Report",
+      "description_source": "arch",
+      "source": "pacman",
+      "repo": "extra",
+      "targets": [
+        "kdeplasma-addons"
+      ]
     }
   ]
 }

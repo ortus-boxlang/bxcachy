@@ -145,6 +145,13 @@ class InitPlan {
         if ( agentIds.len() ) apps.append( "tmux" );
         // the pull-down AI shell on Plasma is Yakuake (Hyprland needs nothing extra)
         if ( agentIds.len() && wantsPlasma ) apps.append( "yakuake" );
+        // the Plasma panel layout needs its widgets installed
+        var panelsOn = wantsPlasma && pick( a, "plasma_panels" ) == "bxcachy";
+        if ( panelsOn ) {
+            for ( var pw in [ "panel-colorizer", "panel-colorizer-islands", "window-title", "kvitals" ] ) apps.append( pw );
+            if ( pick( a, "plasma_weather", true ) ) apps.append( "kdeplasma-addons" );
+            if ( pick( a, "plasma_agenda", false ) ) apps.append( "event-calendar" );
+        }
         var localAi = pick( a, "ai_local", [] );
         for ( var id in localAi ) apps.append( id );
         var gpu = pick( a, "ai_local_gpu" );
@@ -242,6 +249,16 @@ class InitPlan {
         if ( wantsPlasma && len( pick( a, "plasma_layout" ) ) ) {
             if ( !arrayFind( [ "dwindle", "master", "monocle", "scrolling", "stage" ], a.plasma_layout ) ) out.errors.append( "plasma_layout: unknown layout " & a.plasma_layout );
             else out.steps.append( { id: "plasma-layout", title: "use the " & a.plasma_layout & " window layout on this Plasma workspace (needs a running Plasma session)", argv: [ "bxcachy", "tiling", "layout", a.plasma_layout ], optional: true } );
+        }
+        // the Plasma panel layout (optional: it is applied now when Plasma is running, else at your next Plasma login) and the desktop count
+        if ( wantsPlasma && len( pick( a, "plasma_panels" ) ) ) {
+            var deskCount = pick( a, "workspaces", 4 );
+            if ( a.plasma_panels == "bxcachy" ) {
+                var ppArgv = [ "bxcachy", "plasma", "panels", "apply", "--desktops=" & deskCount ];
+                if ( !pick( a, "plasma_weather", true ) ) ppArgv.append( "--without-weather" );
+                if ( pick( a, "plasma_agenda", false ) ) ppArgv.append( "--agenda" );
+                out.steps.append( { id: "plasma-panels", title: "apply the BxCachy Plasma panel layout (backed up first; at your next Plasma login if Plasma is not running)", argv: ppArgv, optional: true } );
+            } else out.steps.append( { id: "plasma-desktops", title: "use " & deskCount & " virtual desktops", argv: [ "bxcachy", "plasma", "desktops", deskCount ], optional: true } );
         }
         // keyboard layouts for Plasma (Hyprland takes them through `setup hyprland --layouts`)
         if ( wantsPlasma && pick( a, "layouts", [] ).len() ) out.steps.append( { id: "plasma-keyboard", title: "set the Plasma keyboard layouts (" & a.layouts.toList( ", " ) & "; takes effect at your next login)", argv: [ "bxcachy", "setup", "keyboard", "--layouts=" & a.layouts.toList( "," ) ] } );

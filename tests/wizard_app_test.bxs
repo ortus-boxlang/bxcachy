@@ -5,7 +5,7 @@ function mk( preset = {} ) { return new bxcachy.WizardApp( jsonDeserialize( new 
 function started() { var a = mk(); a.onKey( "Enter" ); return a; }
 
 a = mk();
-check( "defaults come from the pages", a.answerString( "desktops" ) == "hyprland" && a.answerNumber( "workspaces" ) == 2 && !a.answerBool( "natural_scroll" ) && a.answerList( "layouts" ).toList() == "us-intl,es" );
+check( "defaults come from the pages", a.answerString( "desktops" ) == "hyprland" && a.answerNumber( "workspaces" ) == 4 && !a.answerBool( "natural_scroll" ) && a.answerList( "layouts" ).toList() == "us-intl,es" );
 b = mk( { desktops: "plasma", not_a_question: "x" } );
 check( "presets override defaults, unknown ids are ignored", b.answerString( "desktops" ) == "plasma" && !b.answers().keyExists( "not_a_question" ) );
 

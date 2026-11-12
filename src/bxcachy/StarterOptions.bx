@@ -1,7 +1,7 @@
 // The choices that shape the starter configs (the wizard's answers), with their defaults and checks. Pure.
 //   terminal   ghostty | kitty | alacritty | foot | konsole   Super+Enter
 //   layout     dwindle | master | scrolling | floating        default window layout
-//   workspaces 1 to 10                                        always-visible workspaces in the bar (default 2)
+//   workspaces 1 to 10                                        always-visible workspaces in the bar (default 4)
 //   naturalScroll true | false                                touchpad scrolling direction (default false, traditional)
 //   layouts    keyboard layouts, e.g. [ "us-intl", "es" ]     (default [ "us" ]); two or more switch with Alt+Shift
 //   theme      dark | light | auto                            Noctalia colour mode
@@ -21,7 +21,7 @@ class StarterOptions {
     function wallpapers() { return { box: "box.jpg", grid: "grid.jpg", aurora: "aurora.jpg", minimal: "minimal.png" }; }
 
     function defaults() {
-        return { terminal: "ghostty", layout: "dwindle", workspaces: 2, naturalScroll: false, layouts: [ "us" ], theme: "dark", wallpaper: "box" };
+        return { terminal: "ghostty", layout: "dwindle", workspaces: 4, naturalScroll: false, layouts: [ "us" ], theme: "dark", wallpaper: "box" };
     }
 
     // Defaults overlaid with the given values (empty or missing keep the default). Returns { value, errors }.
