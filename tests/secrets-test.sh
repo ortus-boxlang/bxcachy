@@ -164,7 +164,7 @@ grep -q 'pacman -S --needed --noconfirm libsecret age gnome-keyring' "$tmp/pacma
 su "$binary" secrets setup --keyring=none --yes >/dev/null; [[ "$(jq -r .backend "$tmp/cfg3/bxcachy/secrets.json")" == file ]] || fail '--keyring=none saves the file backend'
 rc3=0; su "$binary" secrets setup --keyring=bogus >/dev/null 2>&1 || rc3=$?; [[ "$rc3" == 4 ]] || fail 'an unknown keyring exits 4'
 # a keyring that is already there is kept, nothing but missing tools is installed
-: > "$tmp/pacman.log"; printf '#!/bin/sh\necho "org.freedesktop.secrets 1 kwalletd6"\n' > "$tmp/sbin/busctl"; printf '#!/bin/sh\n' > "$tmp/sbin/secret-tool"; printf '#!/bin/sh\n' > "$tmp/sbin/age"; chmod +x "$tmp/sbin"/*
+: > "$tmp/pacman.log"; printf '#!/bin/sh\necho "org.freedesktop.secrets 1 kwalletd6"\n' > "$tmp/sbin/busctl"; printf '#!/bin/sh\n' > "$tmp/sbin/secret-tool"; printf '#!/bin/sh\n' > "$tmp/sbin/age"; chmod +x "$tmp/sbin/busctl" "$tmp/sbin/secret-tool" "$tmp/sbin/age"
 su "$binary" secrets setup --yes --json | jq -e '.data.keyring_found == true and (.data.packages | length) == 0' >/dev/null || fail 'an existing keyring and tools need no install'
 [[ ! -s "$tmp/pacman.log" ]] || fail 'pacman ran although nothing was missing'
 
