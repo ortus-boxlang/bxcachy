@@ -257,6 +257,22 @@ class {
           println( "Usage: bxcachy setup plasma [--keys | --undo-keys] | hyprland [--terminal=ghostty|kitty|alacritty|foot|konsole] [--layout=dwindle|master|scrolling|floating] [--workspaces=N] [--natural-scroll] [--layouts=us-intl,es] [--theme=dark|light|auto] [--wallpaper=box|grid|aurora|minimal] | terminal [--default=ghostty] [--also=a,b] | shell [--shell=zsh|fish|bash] | keyboard [--layouts=us-intl,es] | xremap [--build=hypr|kde] | undo plasma|hyprland|xremap | status [--yes] [--dry-run] [--json]" );
           CLIExit( 2 );
           break;
+         case "containers":
+          // Podman helpers and docker compatibility. See COMMAND-CONTRACT.md 13.17.
+          ctSub = p.len() >= 2 ? p[2] : "";
+          ct = new bxcachy.Containers( cli );
+          if ( ctSub == "doctor" && p.len() == 2 ) CLIExit( ct.doctor( asJson ) );
+          if ( ctSub == "socket" && p.len() == 3 && p[3] == "enable" ) CLIExit( ct.socketEnable( structKeyExists( args.options, "yes" ), asJson ) );
+          if ( ctSub == "docker-compat" && p.len() == 2 ) CLIExit( ct.dockerCompat( structKeyExists( args.options, "yes" ), asJson ) );
+          println( "Usage: bxcachy containers doctor | socket enable [--yes] | docker-compat [--yes] [--json]" );
+          CLIExit( 2 );
+          break;
+         case "editor":
+          // The LazyVim starter for Neovim. See COMMAND-CONTRACT.md 13.17.
+          if ( p.len() == 2 && p[2] == "lazyvim" ) CLIExit( new bxcachy.Editor( cli ).lazyvim( structKeyExists( args.options, "yes" ), asJson ) );
+          println( "Usage: bxcachy editor lazyvim [--yes] [--json]" );
+          CLIExit( 2 );
+          break;
          case "menu":
           // The BxCachy control center on the runner's menu provider. See COMMAND-CONTRACT.md 13.16.
           if ( p.len() == 1 ) CLIExit( new bxcachy.Menu( cli ).run() );

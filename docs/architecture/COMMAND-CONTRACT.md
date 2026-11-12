@@ -485,6 +485,14 @@ Init rules for this page: a default agent that was not ticked is installed too; 
 - Terminals for `run` entries: the first installed of ghostty, kitty, foot, alacritty, konsole (`-e` for ghostty, alacritty, konsole). Exit 4 when there is no menu program, or no terminal for a `run` entry.
 - Hyprland binds it to `Super+Alt+Space` in the shortcut table. Tests: `tests/menu-test.sh` (fake Rofi and terminal).
 
+### 13.17 Podman helpers, docker compatibility and the LazyVim starter (decided with the owner 2026-11-12)
+
+- `containers doctor [--json]` reports six checks, each with the command that fixes it: Podman installed, rootless (`podman info --format '{{.Host.Security.Rootless}}'`), subuid and subgid ranges for the user (`/etc`, overridable with `BXCACHY_ETC` for tests), a compose tool (`podman-compose` or `docker-compose`), the user socket (`systemctl --user is-active podman.socket`), and a `docker` command that runs Podman. Exit 0 when all pass, 4 when something needs fixing (or Podman is missing).
+- `containers socket enable [--yes]` runs `systemctl --user enable --now podman.socket` and prints `DOCKER_HOST=unix://$XDG_RUNTIME_DIR/podman/podman.sock`.
+- `containers docker-compat [--yes]` installs `podman-docker` (ships `/usr/bin/docker`) and `podman-compose` with `sudo pacman -S --needed`. Refused with exit 4 while the `docker` package is installed (it conflicts). Real wrapper scripts are not written: the packages are the compatibility layer. The wizard asks `docker_compat` (default yes) when Podman is the engine; `init` runs it after the containers profile.
+- `editor lazyvim [--yes]` follows lazyvim.org/installation: installs `neovim git ripgrep fd lazygit` when missing, `git clone https://github.com/LazyVim/starter ~/.config/nvim`, removes its `.git`. An existing `~/.config/nvim` is **never** touched (exit 4 with the `mv` to run). Wizard: `editor_starter` (`none` default, `lazyvim`) on the Developer page.
+- Package names checked on archlinux.org 2026-11-12 (all in `extra`). Tests: `tests/containers-test.sh`.
+
 ## 14. Install and the setup wizard (decided with the owner 2026-11-10; install, wizard and the init engine are built, the pages' later commands are not)
 
 ### 14.1 Install

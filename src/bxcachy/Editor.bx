@@ -1,0 +1,44 @@
+// `bxcachy editor lazyvim [--yes]`: the LazyVim starter for Neovim.
+// Steps (from lazyvim.org/installation): git clone https://github.com/LazyVim/starter ~/.config/nvim, then remove its .git folder so
+// the config can go in your own repo. Neovim and the tools LazyVim's checks look for (git, ripgrep, fd, lazygit) are installed first
+// with pacman when missing. An existing ~/.config/nvim is NEVER touched: the command says so and stops (move it yourself).
+// Run `nvim`, then `:LazyHealth`. Exit: 0 done (or already there), 2 plan without --yes, 4 precondition, 6 a command failed.
+class Editor {
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.inst = new bxcachy.Installer( arguments.runner );
+        return this;
+    }
+
+    function say( command, code, data, asJson, lines = [] ) {
+        if ( arguments.asJson ) println( variables.cli.envelope( arguments.command, arguments.code, arguments.data, false ) );
+        else for ( var l in arguments.lines ) println( l );
+        return arguments.code;
+    }
+
+    function tryExec( argv, timeout = 60 ) {
+        try { return variables.inst.exec( arguments.argv, arguments.timeout ); } catch ( any e ) { return { exitCode: 127, output: e.message }; }
+    }
+
+    function target() { return getSystemSetting( "XDG_CONFIG_HOME", getSystemSetting( "HOME", "" ) & "/.config" ) & "/nvim"; }
+
+    function lazyvim( yes, asJson ) {
+        var cmd = "editor lazyvim";
+        var dir = target();
+        if ( directoryExists( dir ) || fileExists( dir ) ) return say( cmd, 4, { error: dir & " exists", target: dir }, arguments.asJson, [ "error: " & dir & " already exists, so it was left alone. Move it first (mv " & dir & " " & dir & ".bak) and run this again." ] );
+        var pkgs = [];
+        for ( var p in [ "neovim", "git", "ripgrep", "fd", "lazygit" ] ) if ( tryExec( [ "pacman", "-Q", p ], 15 ).exitCode != 0 ) pkgs.append( p );
+        var data = { target: dir, packages: pkgs };
+        if ( !arguments.yes ) return say( cmd, 2, data, arguments.asJson, [ "Plan:" & ( pkgs.len() ? " sudo pacman -S --needed " & pkgs.toList( " " ) & ";" : "" ) & " git clone https://github.com/LazyVim/starter " & dir & "; remove " & dir & "/.git", "Nothing was changed. Add --yes to apply." ] );
+        if ( pkgs.len() ) {
+            var argv = [ "sudo", "pacman", "-S", "--needed", "--noconfirm" ];
+            for ( var q in pkgs ) argv.append( q );
+            var ins = tryExec( argv, 1800 );
+            if ( ins.exitCode != 0 ) return say( cmd, 6, { error: trim( ins.output ) }, arguments.asJson, [ "error: could not install " & pkgs.toList( ", " ) & ": " & trim( ins.output ) ] );
+        }
+        var clone = tryExec( [ "git", "clone", "https://github.com/LazyVim/starter", dir ], 300 );
+        if ( clone.exitCode != 0 ) return say( cmd, 6, { error: trim( clone.output ) }, arguments.asJson, [ "error: git clone failed: " & trim( clone.output ) ] );
+        tryExec( [ "rm", "-rf", dir & "/.git" ], 30 );
+        return say( cmd, 0, data, arguments.asJson, [ "LazyVim starter is in " & dir & ". Start nvim; it installs its plugins on the first run. Then run :LazyHealth." ] );
+    }
+}

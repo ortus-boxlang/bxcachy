@@ -368,6 +368,25 @@ class WizardData {
           "label": "Create an SSH key",
           "default": true,
           "help": "An ed25519 key for GitHub and servers."
+        },
+        {
+          "type": "choice",
+          "id": "editor_starter",
+          "label": "Neovim setup",
+          "default": "none",
+          "help": "LazyVim is a ready-made Neovim configuration. An existing ~/.config/nvim is never touched.",
+          "options": [
+            {
+              "value": "none",
+              "label": "None",
+              "description": "Leave Neovim alone."
+            },
+            {
+              "value": "lazyvim",
+              "label": "LazyVim starter",
+              "description": "Installs Neovim and its tools, then the LazyVim starter."
+            }
+          ]
         }
       ]
     },
@@ -470,6 +489,17 @@ class WizardData {
               "description": "The most widely documented. Runs a root daemon; best if your team''s tooling expects Docker."
             }
           ]
+        },
+        {
+          "type": "confirm",
+          "id": "docker_compat",
+          "label": "Docker commands on Podman",
+          "default": true,
+          "help": "Installs podman-docker and podman-compose so `docker run` and `docker compose up` work on Podman.",
+          "when": {
+            "id": "container_engine",
+            "equals": "podman"
+          }
         },
         {
           "type": "multi",
