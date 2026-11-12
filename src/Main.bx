@@ -15,7 +15,7 @@ class {
         var config = new bxcachy.ConfigService();
         // One shared flag check for every command: unknown flags are usage errors and nothing runs.
         for ( var flag in args.options ) {
-            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider", "backend" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
+            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider", "backend", "dir" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
                 println( "Unknown option: --" & flag );
                 CLIExit( 2 );
             }
@@ -274,7 +274,28 @@ class {
           if ( aiSub == "default" && p.len() <= 3 ) CLIExit( ai.setDefault( p.len() == 3 ? p[3] : "", structKeyExists( args.options, "yes" ), asJson ) );
           if ( aiSub == "launch" && p.len() <= 3 ) CLIExit( ai.launch( p.len() == 3 ? p[3] : "", structKeyExists( args.options, "dry-run" ), asJson ) );
           if ( aiSub == "shell" && p.len() <= 3 ) CLIExit( new bxcachy.AiShell( cli ).run( p.len() == 3 ? p[3] : "toggle", args.options.backend ?: "", structKeyExists( args.options, "dry-run" ), asJson ) );
-          println( "Usage: bxcachy ai list | default [ID] [--yes] | launch [ID] [--dry-run] | shell [toggle|status] [--backend=hyprland|yakuake] [--dry-run] [--json]" );
+          if ( aiSub == "session" ) {
+            aiSes = new bxcachy.AiSession( cli );
+            aiAct = p.len() >= 3 ? p[3] : "";
+            if ( aiAct == "start" && p.len() <= 4 ) CLIExit( aiSes.start( p.len() == 4 ? p[4] : "", args.options.name ?: "", args.options.dir ?: "", structKeyExists( args.options, "dry-run" ), asJson ) );
+            if ( aiAct == "list" && p.len() == 3 ) CLIExit( aiSes.list( asJson ) );
+            if ( aiAct == "attach" && p.len() == 4 ) CLIExit( aiSes.attach( p[4], asJson ) );
+            if ( aiAct == "stop" && p.len() == 4 ) CLIExit( aiSes.stop( p[4], structKeyExists( args.options, "yes" ), asJson ) );
+            println( "Usage: bxcachy ai session start [ID] [--name=N] [--dir=PATH] [--dry-run] | list | attach NAME | stop NAME --yes [--json]" );
+            CLIExit( 2 );
+          }
+          if ( aiSub == "models" ) {
+            aiMod = new bxcachy.AiModels( cli );
+            aiAct2 = p.len() >= 3 ? p[3] : "";
+            if ( ( aiAct2 == "list" || aiAct2 == "ps" ) && p.len() == 3 ) CLIExit( aiMod.show( aiAct2, asJson ) );
+            if ( aiAct2 == "pull" && p.len() == 4 ) CLIExit( aiMod.pull( p[4], asJson ) );
+            if ( aiAct2 == "rm" && p.len() == 4 ) CLIExit( aiMod.remove( p[4], structKeyExists( args.options, "yes" ), asJson ) );
+            if ( aiAct2 == "status" && p.len() == 3 ) CLIExit( aiMod.status( asJson ) );
+            if ( aiAct2 == "enable" && p.len() == 3 ) CLIExit( aiMod.enable( structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
+            println( "Usage: bxcachy ai models list | ps | pull NAME | rm NAME --yes | status | enable [--yes] [--json]" );
+            CLIExit( 2 );
+          }
+          println( "Usage: bxcachy ai list | default [ID] [--yes] | launch [ID] [--dry-run] | session ... | models ... | shell [toggle|status] [--backend=hyprland|yakuake] [--dry-run] [--json]" );
           CLIExit( 2 );
           break;
          case "secrets":

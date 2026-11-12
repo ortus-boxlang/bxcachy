@@ -1005,6 +1005,29 @@ class WizardData {
               "description": "Adds ollama-rocm, which pulls in HIP/ROCm libraries."
             }
           ]
+        },
+        {
+          "type": "confirm",
+          "id": "ai_ollama_service",
+          "label": "Start Ollama at boot",
+          "default": true,
+          "help": "Enables the ollama service the package ships (needs sudo). Without it, start it yourself before pulling models.",
+          "when": {
+            "id": "ai_local",
+            "has": "ollama"
+          }
+        },
+        {
+          "type": "text",
+          "id": "ai_models",
+          "label": "Models to download",
+          "default": "",
+          "placeholder": "qwen3:8b, llama3.2",
+          "help": "Ollama model names, comma separated. Leave empty to download none now. Sizes are several GB each.",
+          "when": {
+            "id": "ai_local",
+            "has": "ollama"
+          }
         }
       ]
     },

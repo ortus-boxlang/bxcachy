@@ -27,7 +27,7 @@ p = ip.plan( { terminal: "ghostty", terminals_extra: [ "kitty", "foot" ] } );
 check( "terminals: default plus extras in one step", cmd( p, "terminal" ) == "bxcachy setup terminal --default=ghostty --also=kitty,foot" );
 
 p = ip.plan( { ai_orchestrators: [ "pane", "herdr" ], ai_agents: [ "claude-code" ] } );
-check( "apps: orchestrators and agents in one install", cmd( p, "apps" ) == "bxcachy install pane herdr claude-code" );
+check( "apps: orchestrators and agents in one install", cmd( p, "apps" ) == "bxcachy install pane herdr claude-code tmux" );
 check( "no apps chosen, no install step", find( "apps", ids( ip.plan( { ai_orchestrators: [], ai_agents: [] } ) ) ) == 0 );
 
 p = ip.plan( { git_name: "Ada Lovelace", git_email: "ada@example.com" } );
@@ -97,7 +97,7 @@ check( "the default terminal follows the terminal answer", cmd( ip.plan( { termi
 
 // ---- AI: agents, keys, default ----
 p = ip.plan( { ai_agents: [ "claude-code", "codex-cli" ], ai_default: "codex-cli", ai_keys: "later" } );
-check( "agents are installed, a keyring is checked, and the default is set", cmd( p, "apps" ) == "bxcachy install claude-code codex-cli" && cmd( p, "secrets-setup" ) == "bxcachy secrets setup" && cmd( p, "ai-default" ) == "bxcachy ai default codex-cli" );
+check( "agents are installed, a keyring is checked, and the default is set", cmd( p, "apps" ) == "bxcachy install claude-code codex-cli tmux" && cmd( p, "secrets-setup" ) == "bxcachy secrets setup" && cmd( p, "ai-default" ) == "bxcachy ai default codex-cli" );
 check( "keys 'later' asks for nothing", find( "key-", ids( p ) ) == 0 );
 check( "the keyring check comes after the install and before the default", ids( p ) == "apps,secrets-setup,ai-default" );
 p = ip.plan( { ai_agents: [ "claude-code", "gemini-cli" ], ai_keys: "now", ai_global_keys: [ "GEMINI_API_KEY", "OPENAI_API_KEY" ] } );
@@ -115,11 +115,18 @@ p = ip.plan( { ai_local: [ "ollama", "jan" ], ai_local_gpu: "nvidia" } );
 check( "local models are installed, with the GPU build of Ollama for your card", cmd( p, "apps" ) == "bxcachy install ollama jan ollama-cuda" );
 check( "AMD gets ROCm", cmd( ip.plan( { ai_local: [ "ollama" ], ai_local_gpu: "amd" } ), "apps" ) == "bxcachy install ollama ollama-rocm" );
 check( "no GPU build without Ollama or without an answer", cmd( ip.plan( { ai_local: [ "jan" ], ai_local_gpu: "nvidia" } ), "apps" ) == "bxcachy install jan" && cmd( ip.plan( { ai_local: [ "ollama" ] } ), "apps" ) == "bxcachy install ollama" );
-check( "Plasma with an agent also installs Yakuake for the pull-down AI shell", cmd( ip.plan( { desktops: "plasma", ai_agents: [ "claude-code" ] } ), "apps" ) == "bxcachy install claude-code yakuake" && cmd( ip.plan( { desktops: "both", ai_agents: [ "claude-code" ] } ), "apps" ) == "bxcachy install claude-code yakuake" );
-check( "Hyprland only, or Plasma without agents, adds no Yakuake", cmd( ip.plan( { desktops: "hyprland", ai_agents: [ "claude-code" ] } ), "apps" ) == "bxcachy install claude-code" && find( "apps", ids( ip.plan( { desktops: "plasma" } ) ) ) == 0 );
+check( "Plasma with an agent also installs Yakuake for the pull-down AI shell", cmd( ip.plan( { desktops: "plasma", ai_agents: [ "claude-code" ] } ), "apps" ) == "bxcachy install claude-code tmux yakuake" && cmd( ip.plan( { desktops: "both", ai_agents: [ "claude-code" ] } ), "apps" ) == "bxcachy install claude-code tmux yakuake" );
+check( "Hyprland only, or Plasma without agents, adds no Yakuake", cmd( ip.plan( { desktops: "hyprland", ai_agents: [ "claude-code" ] } ), "apps" ) == "bxcachy install claude-code tmux" && find( "apps", ids( ip.plan( { desktops: "plasma" } ) ) ) == 0 );
+p = ip.plan( { ai_local: [ "ollama" ], ai_ollama_service: true, ai_models: "qwen3:8b, llama3.2 ,," } );
+check( "Ollama: the service step, then one optional pull per model", ids( p ) == "apps,ollama-service,model-qwen3:8b,model-llama3.2" && cmd( p, "model-qwen3:8b" ) == "bxcachy ai models pull qwen3:8b" );
+optionalPull = true; for ( s in p.steps ) if ( left( s.id, 6 ) == "model-" && !( s.optional ?: false ) ) optionalPull = false;
+check( "model downloads are optional steps", optionalPull );
+check( "no service step unless asked, no model steps without Ollama", find( "ollama-service", ids( ip.plan( { ai_local: [ "ollama" ], ai_ollama_service: false } ) ) ) == 0 && find( "model-", ids( ip.plan( { ai_local: [ "jan" ], ai_models: "x" } ) ) ) == 0 );
+check( "a bad model name is an error", ip.plan( { ai_local: [ "ollama" ], ai_models: "a;b" } ).errors.len() == 1 );
+check( "tmux comes with the agents", cmd( ip.plan( { ai_agents: [ "claude-code" ] } ), "apps" ) == "bxcachy install claude-code tmux" );
 check( "no keys step without an answer", find( "key-", ids( ip.plan( { ai_agents: [ "claude-code" ] } ) ) ) == 0 );
 p = ip.plan( { ai_agents: [ "claude-code" ], ai_default: "gemini-cli" } );
-check( "a default agent that was not ticked is installed too", cmd( p, "apps" ) == "bxcachy install claude-code gemini-cli" );
+check( "a default agent that was not ticked is installed too", cmd( p, "apps" ) == "bxcachy install claude-code gemini-cli tmux" );
 check( "an unknown default agent is an error", ip.plan( { ai_default: "bogus" } ).errors.len() == 1 );
 check( "no agents, no keyring step", ip.plan( { ai_agents: [], ai_keys: "later" } ).steps.len() == 0 );
 

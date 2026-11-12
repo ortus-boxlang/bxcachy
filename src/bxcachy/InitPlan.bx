@@ -130,6 +130,8 @@ class InitPlan {
         }
         for ( var id in agentIds ) apps.append( id );
         // local models: the apps you ticked, and the GPU build of Ollama when you named your card
+        // agent sessions that survive closing the terminal are tmux sessions
+        if ( agentIds.len() ) apps.append( "tmux" );
         // the pull-down AI shell on Plasma is Yakuake (Hyprland needs nothing extra)
         if ( agentIds.len() && wantsPlasma ) apps.append( "yakuake" );
         var localAi = pick( a, "ai_local", [] );
@@ -194,6 +196,16 @@ class InitPlan {
             }
         }
         if ( isSet( aiDefault ) && !structIsEmpty( agentLib.find( aiDefault ) ) ) out.steps.append( { id: "ai-default", title: "make " & aiDefault & " your default coding agent", argv: [ "bxcachy", "ai", "default", aiDefault ] } );
+        // Ollama: the service at boot if you asked, then the models you named (optional steps: a failed download never stops the plan)
+        if ( arrayFind( localAi, "ollama" ) ) {
+            if ( pick( a, "ai_ollama_service", false ) == true ) out.steps.append( { id: "ollama-service", title: "start the Ollama service now and at boot (sudo)", argv: [ "bxcachy", "ai", "models", "enable" ] } );
+            for ( var mraw in listToArray( pick( a, "ai_models", "" ), "," ) ) {
+                var model = trim( mraw );
+                if ( !len( model ) ) continue;
+                if ( reFind( "^[A-Za-z0-9._:/-]{1,100}$", model ) == 0 ) out.errors.append( "ai_models: bad model name " & model );
+                else out.steps.append( { id: "model-" & model, title: "download the model " & model & " (several GB; you can skip it)", argv: [ "bxcachy", "ai", "models", "pull", model ], optional: true } );
+            }
+        }
         if ( len( pick( a, "launcher" ) ) ) out.steps.append( { id: "launcher", title: "use " & a.launcher & " as the app launcher (no shortcut is changed)", argv: [ "bxcachy", "runner", "set", a.launcher ] } );
         if ( len( pick( a, "menu" ) ) ) out.steps.append( { id: "menu", title: "use " & a.menu & " for BxCachy menus", argv: [ "bxcachy", "runner", "menu-set", a.menu ] } );
         var gname = pick( a, "git_name" );
