@@ -56,6 +56,19 @@ rm "$STATE/kwin"; : > "$LOG"
 out="$(run "$binary" tiling off)"; grep -Fq 'next Plasma login' <<<"$out" || fail 'the output says it takes effect at the next login'
 grep -Fq qdbus6 "$LOG" && fail 'no D-Bus calls without KWin'
 
+# layouts: `hyprkwinctl layout [NAME]` for the current workspace
+printf '#!/usr/bin/env bash\necho "hyprkwinctl $*" >> "$LOG"\n[[ -z "$2" ]] && echo "dwindle"\nexit 0\n' > "$tmp/bin/hyprkwinctl"; chmod +x "$tmp/bin/hyprkwinctl"
+[[ "$(code "$binary" tiling layout master)" == 4 ]] || fail 'layout without a running KWin exits 4'
+touch "$STATE/kwin"; : > "$LOG"
+run "$binary" tiling layout master | grep -q 'now uses the master layout' || fail 'layout NAME'
+grep -q '^hyprkwinctl layout master$' "$LOG" || fail "hyprkwinctl was run: $(cat "$LOG")"
+[[ "$(run "$binary" tiling layout)" == dwindle ]] || fail 'layout alone shows the current layout'
+for l in dwindle master monocle scrolling stage; do [[ "$(code "$binary" tiling layout $l)" == 0 ]] || fail "layout $l is accepted"; done
+[[ "$(code "$binary" tiling layout floating)" == 4 ]] || fail 'floating is not a HyprKwin layout (exit 4)'
+run "$binary" tiling layout stage --json | jq -e '.data.layout == "stage" and .data.set == true' >/dev/null || fail 'layout --json'
+mv "$tmp/bin/hyprkwinctl" "$tmp/hkc.off"; [[ "$(code "$binary" tiling layout master)" == 4 ]] || fail 'no hyprkwinctl exits 4'
+rm -f "$STATE/kwin"
+
 # usage
 [[ "$(code "$binary" tiling)" == 2 ]] || fail 'tiling alone is a usage error'
 [[ "$(code "$binary" tiling toggle)" == 2 ]] || fail 'unknown verb is a usage error'

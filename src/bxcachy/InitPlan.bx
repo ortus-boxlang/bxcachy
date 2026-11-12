@@ -225,6 +225,12 @@ class InitPlan {
             if ( len( gmail ) ) skArgv.append( "--email=" & gmail );
             out.steps.append( { id: "ssh-key", title: "create an SSH key (ed25519; an existing key is kept; you type a passphrase or leave it empty)", argv: skArgv, optional: true } );
         }
+        // the Plasma window layout of the workspace you are on (optional: it needs a running Plasma session; other workspaces start
+        // with HyprKwin's own default, set in System Settings)
+        if ( wantsPlasma && len( pick( a, "plasma_layout" ) ) ) {
+            if ( !arrayFind( [ "dwindle", "master", "monocle", "scrolling", "stage" ], a.plasma_layout ) ) out.errors.append( "plasma_layout: unknown layout " & a.plasma_layout );
+            else out.steps.append( { id: "plasma-layout", title: "use the " & a.plasma_layout & " window layout on this Plasma workspace (needs a running Plasma session)", argv: [ "bxcachy", "tiling", "layout", a.plasma_layout ], optional: true } );
+        }
         // keyboard layouts for Plasma (Hyprland takes them through `setup hyprland --layouts`)
         if ( wantsPlasma && pick( a, "layouts", [] ).len() ) out.steps.append( { id: "plasma-keyboard", title: "set the Plasma keyboard layouts (" & a.layouts.toList( ", " ) & "; takes effect at your next login)", argv: [ "bxcachy", "setup", "keyboard", "--layouts=" & a.layouts.toList( "," ) ] } );
         var sess = session( a );

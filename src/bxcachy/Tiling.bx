@@ -75,4 +75,35 @@ class Tiling {
         else println( "tiling " & ( on ? "on" : "off" ) & ( wasRunning ? "" : " (KWin is not running; it takes effect at the next Plasma login)" ) );
         return 0;
     }
+
+    // The layouts HyprKwin knows (its README, 2026-11-12).
+    function layouts() { return [ "dwindle", "master", "monocle", "scrolling", "stage" ]; }
+
+    // `tiling layout [NAME]`: show or set the layout of the CURRENT workspace with `hyprkwinctl layout [NAME]` (HyprKwin remembers a
+    // workspace's layout in ~/.config/hyprkwinrc). The default layout for workspaces you have not touched is HyprKwin's own setting
+    // (System Settings, Window Management, KWin Scripts, HyprKwin, Layout); its config key is not documented, so BxCachy does not write it.
+    // Exit: 0 done, 4 precondition (HyprKwin or hyprkwinctl missing, KWin not running, unknown layout), 6 hyprkwinctl failed.
+    function layout( name, asJson ) {
+        var command = "tiling layout";
+        var errors = [];
+        if ( len( arguments.name ) && !arrayFind( layouts(), arguments.name ) ) errors.append( "unknown layout " & arguments.name & " (use " & layouts().toList( ", " ) & ")" );
+        else if ( !installed() ) errors.append( "HyprKwin is not installed (bxcachy setup plasma)" );
+        else if ( !variables.inst.hasCommand( "hyprkwinctl" ) ) errors.append( "hyprkwinctl was not found (HyprKwin's command line tool)" );
+        else if ( !kwinRunning() ) errors.append( "KWin is not running: this needs a Plasma session" );
+        if ( errors.len() ) {
+            if ( arguments.asJson ) println( variables.cli.envelope( command, 4, { errors: errors } ) );
+            else println( "error: " & errors[ 1 ] );
+            return 4;
+        }
+        var argv = len( arguments.name ) ? [ "hyprkwinctl", "layout", arguments.name ] : [ "hyprkwinctl", "layout" ];
+        var r = variables.inst.exec( argv, 20 );
+        if ( r.exitCode != 0 ) {
+            if ( arguments.asJson ) println( variables.cli.envelope( command, 6, { error: trim( r.output ) } ) );
+            else println( "error: hyprkwinctl failed: " & trim( r.output ) );
+            return 6;
+        }
+        if ( arguments.asJson ) println( variables.cli.envelope( command, 0, { layout: len( arguments.name ) ? arguments.name : trim( r.output ), set: len( arguments.name ) > 0 } ) );
+        else println( len( arguments.name ) ? "This workspace now uses the " & arguments.name & " layout." : trim( r.output ) );
+        return 0;
+    }
 }

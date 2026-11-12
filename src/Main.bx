@@ -642,9 +642,10 @@ class {
           break;
          case "tiling":
           // HyprKwin on/off inside Plasma; on and off act at once (reversible user setting, see Tiling.bx).
-          tilingSub = p.len() == 2 ? p[2] : "";
-          if ( !arrayFind( [ "on", "off", "status" ], tilingSub ) ) {
-           println( "Usage: bxcachy tiling on|off|status [--json]" );
+          tilingSub = p.len() >= 2 ? p[2] : "";
+          if ( tilingSub == "layout" && p.len() <= 3 ) CLIExit( new bxcachy.Tiling( cli ).layout( p.len() == 3 ? p[3] : "", asJson ) );
+          if ( !arrayFind( [ "on", "off", "status" ], tilingSub ) || p.len() != 2 ) {
+           println( "Usage: bxcachy tiling on|off|status | layout [dwindle|master|monocle|scrolling|stage] [--json]" );
            CLIExit( 2 );
           }
           tl = new bxcachy.Tiling( cli );

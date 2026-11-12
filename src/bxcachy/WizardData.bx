@@ -122,6 +122,47 @@ class WizardData {
           ]
         },
         {
+          "type": "choice",
+          "id": "plasma_layout",
+          "label": "How should windows behave in KDE Plasma?",
+          "help": "HyprKwin''s layout for your workspaces. Each workspace can switch later with Meta+Shift+J.",
+          "default": "dwindle",
+          "when": {
+            "id": "desktops",
+            "in": [
+              "plasma",
+              "both"
+            ]
+          },
+          "options": [
+            {
+              "value": "dwindle",
+              "label": "Dwindle (recommended)",
+              "description": "Each new window splits the focused tile in half, along its longer side."
+            },
+            {
+              "value": "master",
+              "label": "Master",
+              "description": "One large window beside a stack of the others."
+            },
+            {
+              "value": "monocle",
+              "label": "Monocle",
+              "description": "One window at a time, filling the workspace."
+            },
+            {
+              "value": "scrolling",
+              "label": "Scrolling",
+              "description": "Windows form a horizontal strip of columns you move along."
+            },
+            {
+              "value": "stage",
+              "label": "Stage",
+              "description": "One main window with live previews of the others beside it, like macOS Stage Manager."
+            }
+          ]
+        },
+        {
           "type": "number",
           "id": "workspaces",
           "label": "Workspaces always shown",

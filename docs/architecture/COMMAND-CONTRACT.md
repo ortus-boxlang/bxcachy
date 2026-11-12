@@ -530,6 +530,13 @@ Bindings are built from their key combo (`Shortcuts.bindLine`), so changing the 
 - The wizard's answers live in `~/.config/bxcachy/answers.json` (mode 600, no secrets) and fill the wizard on the next run. `init --export=FILE [--force]` copies them (mode 600); on another machine `init --from=FILE` fills the wizard with them, and `init --answers=FILE --yes` runs them without asking.
 - Catalog: `btrfs-assistant` and `timeshift` (both `extra`, verified 2026-11-12) are in the default tier, so a plain `install` and Basic mode install them. **Btrfs Assistant is in the default set only when `/` is Btrfs**: the catalog entry has `filesystems: ["btrfs"]`, the resolver skips it elsewhere as `wrong_filesystem` (an unreadable filesystem counts as not Btrfs; `BXCACHY_ROOT_FS` overrides the detection, which is `findmnt -n -o FSTYPE /`), and naming it (`install btrfs-assistant`) still installs it. Timeshift has no such condition (it also works with rsync). Omarchy's base package list has none of restic, borg, snapper, snap-pac, timeshift or btrfs-assistant (checked in `install/omarchy-base.packages`, 2026-11-12).
 
+### 13.23 Layouts per desktop (decided with the owner 2026-11-12)
+
+The wizard asks the window layout once per desktop you set up: Hyprland (`layout`: dwindle, master, scrolling, floating) and KDE Plasma (`plasma_layout`: dwindle, master, monocle, scrolling, stage). "Both" asks twice. The Plasma list is HyprKwin's (README, 2026-11-12); floating is a per-window rule there, not a layout.
+- `tiling layout [NAME]` runs `hyprkwinctl layout [NAME]` for the **current workspace** (HyprKwin remembers each workspace's layout in `~/.config/hyprkwinrc`); without a name it shows the current one. Exit 4 for an unknown layout, no HyprKwin, no `hyprkwinctl`, or no running KWin; 6 when `hyprkwinctl` fails. `init` runs it as an **optional** step (it needs a Plasma session).
+- BxCachy does not write HyprKwin's default layout for the other workspaces: the settings page names a "Layout" setting (default dwindle) but its config key is not documented. Set it in System Settings, Window Management, KWin Scripts, HyprKwin. Workspace rules (`workspace = 2, layout:master`) are also entered on that settings page.
+- Tests: `tests/tiling-test.sh`, `tests/init_plan_test.bxs`.
+
 ## 14. Install and the setup wizard (decided with the owner 2026-11-10; install, wizard and the init engine are built, the pages' later commands are not)
 
 ### 14.1 Install
