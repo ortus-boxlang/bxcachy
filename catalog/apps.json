@@ -3575,32 +3575,6 @@
       }
     },
     {
-      "id": "flea",
-      "name": "Flea File Manager",
-      "description": "Fast, keyboard-first file manager for Omarchy",
-      "description_source": "pkgbuild",
-      "kind": "desktop",
-      "group": "desktop",
-      "category": "File Management",
-      "tier": "optional",
-      "source": "pkgbuild",
-      "targets": [
-        "flea"
-      ],
-      "pkgbuild": {
-        "repo": "omacom/omarchy-pkgs",
-        "path": "pkgbuilds/flea",
-        "ref": "65a4b0f646f7afe480fdebc7c0cf8cf2b56bf27f"
-      },
-      "homepage": "https://github.com/thisisgm/flea",
-      "macos": "Finder",
-      "origin": [
-        "omarchy-desktop"
-      ],
-      "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
-      "verified_on": "2026-11-09"
-    },
-    {
       "id": "nautilus",
       "name": "Nautilus (Files)",
       "description": "GNOME file manager",
@@ -3621,30 +3595,31 @@
       "verified_on": "2026-11-09"
     },
     {
+      "kind": "desktop",
+      "tier": "default",
+      "origin": [
+        "owner-pick"
+      ],
+      "verified_on": "2026-11-12",
       "id": "strata",
       "name": "Strata File Manager",
-      "description": "Fast, keyboard-first file manager for modern Linux desktops",
-      "description_source": "pkgbuild",
-      "kind": "desktop",
+      "description": "Keyboard-first file manager with Miller columns, previews and Send to",
+      "description_source": "curated",
       "group": "desktop",
       "category": "File Management",
-      "tier": "optional",
-      "source": "pkgbuild",
-      "targets": [
-        "strata"
-      ],
-      "pkgbuild": {
-        "repo": "omacom/omarchy-pkgs",
-        "path": "pkgbuilds/strata",
-        "ref": "65a4b0f646f7afe480fdebc7c0cf8cf2b56bf27f"
+      "source": "script",
+      "script": {
+        "url": "https://raw.githubusercontent.com/lgse/strata/5f17c9fdc8967e1b4ba8aaf8de113b46d824b0dd/install.sh",
+        "args": [
+          "--non-interactive"
+        ]
       },
       "homepage": "https://github.com/lgse/strata",
       "macos": "Finder",
-      "origin": [
-        "omarchy-desktop"
-      ],
-      "note": "Build from the Omarchy PKGBUILD (omacom/omarchy-pkgs)",
-      "verified_on": "2026-11-09"
+      "profiles": {
+        "files": "default"
+      },
+      "note": "Installed with the project installer, pinned to a commit; it also adds the folder handler, Open file location and the file chooser"
     },
     {
       "id": "fuzzel",
@@ -6086,6 +6061,72 @@
       ],
       "homepage": "https://github.com/linuxmint/timeshift",
       "macos": "Time Machine"
+    },
+    {
+      "kind": "desktop",
+      "tier": "optional",
+      "origin": [
+        "owner-pick"
+      ],
+      "verified_on": "2026-11-12",
+      "id": "kiview",
+      "name": "Kiview",
+      "description": "Quick Look style file preview for Dolphin",
+      "description_source": "aur",
+      "group": "desktop",
+      "category": "File Management",
+      "source": "aur",
+      "targets": [
+        "kiview"
+      ],
+      "macos": "Quick Look",
+      "profiles": {
+        "files": "optional"
+      }
+    },
+    {
+      "kind": "desktop",
+      "tier": "default",
+      "origin": [
+        "owner-pick"
+      ],
+      "verified_on": "2026-11-12",
+      "id": "kdeconnect",
+      "name": "KDE Connect",
+      "description": "Share files, clipboard and notifications with your phone",
+      "description_source": "arch",
+      "group": "network",
+      "category": "File Transfer",
+      "source": "pacman",
+      "repo": "extra",
+      "targets": [
+        "kdeconnect",
+        "sshfs",
+        "qt6-tools",
+        "python-gobject"
+      ],
+      "macos": "Continuity",
+      "homepage": "https://kdeconnect.kde.org",
+      "note": "sshfs and qt6-tools are its optional dependencies; python-gobject is needed by the Strata provider"
+    },
+    {
+      "kind": "desktop",
+      "tier": "optional",
+      "origin": [
+        "owner-pick"
+      ],
+      "verified_on": "2026-11-12",
+      "id": "wtype",
+      "name": "wtype",
+      "description": "Types text on Wayland (used by dictation)",
+      "description_source": "arch",
+      "group": "system",
+      "category": "Accessibility",
+      "source": "pacman",
+      "repo": "extra",
+      "targets": [
+        "wtype"
+      ]
     }
   ]
 }

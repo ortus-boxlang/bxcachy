@@ -84,8 +84,13 @@ class InitPlan {
         var profiles = { java: "jvm", php: "php", python: "python", go: "go" };
         var chosen = pick( a, "toolchains", [] );
         var jsApps = [];
-        for ( var tc in [ "java", "php", "python", "go", "javascript" ] ) {
+        for ( var tc in [ "java", "php", "python", "go", "rust", "javascript" ] ) {
             if ( !arrayFind( chosen, tc ) ) continue;
+            if ( tc == "rust" ) {
+                // rustup itself comes with the install; this picks the stable toolchain (a failure is skipped, the plan goes on)
+                out.steps.append( { id: "toolchain-rust", title: "set up Rust (rustup, stable toolchain)", argv: [ "rustup", "default", "stable" ], optional: true } );
+                continue;
+            }
             if ( tc == "javascript" ) {
                 // runtimes: Node comes through nvm (`toolchain node`); Bun and Deno are catalog apps
                 for ( var rt in pick( a, "js_runtimes", [ "node" ] ) ) {
@@ -113,6 +118,8 @@ class InitPlan {
         } else if ( mode == "custom" ) {
             for ( var cid in new bxcachy.AppPages().selected( a ) ) if ( shellOk( cid, desktops, arguments.shellMap ) ) chosenApps.append( cid );
         }
+        var fileManager = pick( a, "file_manager" );
+        if ( len( fileManager ) && !arrayFind( chosenApps, fileManager ) ) chosenApps.append( fileManager );
         var browser = pick( a, "default_browser" );
         if ( len( browser ) && !arrayFind( chosenApps, browser ) ) chosenApps.append( browser );
         // everything else that is one package each goes in a single install
@@ -168,6 +175,7 @@ class InitPlan {
         // NordVPN needs its service and your group after the install (sudo; optional so a missing password prompt never stops the plan)
         if ( vpn == "nordvpn" ) out.steps.append( { id: "vpn-nordvpn", title: "enable the NordVPN service and add you to the nordvpn group (sudo)", argv: [ "bxcachy", "vpn", "nordvpn", "setup" ], optional: true } );
         // defaults: the browser and the terminal you picked (both are installed by now)
+        if ( len( fileManager ) ) out.steps.append( { id: "default-filemanager", title: "make " & fileManager & " your default file manager", argv: [ "bxcachy", "default", "filemanager", fileManager ] } );
         if ( len( browser ) ) out.steps.append( { id: "default-browser", title: "make " & browser & " your default browser", argv: [ "bxcachy", "default", "browser", browser ] } );
         if ( len( terminal ) ) out.steps.append( { id: "default-terminal", title: "make " & terminal & " your default terminal", argv: [ "bxcachy", "default", "terminal", terminal ] } );
         // databases: remember the container engine, then start each chosen service (nothing is started unless it was picked)

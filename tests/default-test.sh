@@ -46,4 +46,15 @@ grep -q 'kwriteconfig6 --file kdeglobals --group General --key TerminalApplicati
 # show and usage
 d show | grep -q 'Default browser:  firefox.desktop' || fail 'show'
 [[ "$(code "$binary" default)" == 2 && "$(code "$binary" default bogus)" == 2 && "$(code "$binary" default browser)" == 2 ]] || fail 'usage exits 2'
+: > "$LOG"
+# file manager
+printf '#!/usr/bin/env bash\necho "xdg-mime $*" >> "$LOG"\ncase "$1" in query) echo "org.kde.dolphin.desktop" ;; esac\n' > "$tmp/bin/xdg-mime"; chmod +x "$tmp/bin/xdg-mime"
+[[ "$(code "$binary" default filemanager strata --yes)" == 4 ]] || fail 'a file manager that is not installed exits 4'
+touch "$tmp/apps/io.github.lgse.Strata.desktop"
+[[ "$(code "$binary" default filemanager strata)" == 2 ]] || fail 'filemanager without --yes exits 2'
+d filemanager strata --yes | grep -q 'strata is now your default file manager' || fail 'filemanager --yes'
+grep -q 'xdg-mime default io.github.lgse.Strata.desktop inode/directory' "$LOG" || fail "xdg-mime was not run: $(cat "$LOG")"
+[[ "$(code "$binary" default filemanager nautilus --yes)" == 4 ]] || fail 'an unknown file manager exits 4'
+d show --json | jq -e '.data.filemanager == "org.kde.dolphin.desktop"' >/dev/null || fail 'show reports the file manager'
+
 echo "default tests passed"

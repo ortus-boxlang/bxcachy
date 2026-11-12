@@ -1,5 +1,6 @@
 // `bxcachy default browser|terminal|show`: make an installed app your default web browser or terminal.
 //   browser   `xdg-settings set default-web-browser <app>.desktop` (works for Hyprland sessions and KDE alike)
+//   filemanager  `xdg-mime default <app>.desktop inode/directory` (Strata or Dolphin)
 //   terminal  ~/.config/xdg-terminals.list (the xdg-terminal-exec list, written through the config service, kept if you edited it)
 //             and, when kwriteconfig6 is there, KDE's own default terminal (kdeglobals [General] TerminalApplication/TerminalService)
 // An app must be installed first (its desktop file must exist). Exit: 0 done, 2 plan without --yes, 4 precondition, 6 the command failed.
@@ -83,12 +84,37 @@ class Defaults {
         return say( cmd, 0, data, arguments.asJson, lines );
     }
 
+    // Desktop entry ids of the file managers the catalog offers (Strata's is its application id).
+    function fileManagerDesktop( id ) {
+        var m = { strata: "io.github.lgse.Strata.desktop", dolphin: "org.kde.dolphin.desktop" };
+        return structKeyExists( m, arguments.id ) ? m[ arguments.id ] : "";
+    }
+
+    // `default filemanager ID`: the folder handler (`xdg-mime default <app>.desktop inode/directory`).
+    function filemanager( id, yes, dryRun, asJson ) {
+        var cmd = "default filemanager";
+        var file = fileManagerDesktop( arguments.id );
+        if ( !len( file ) ) return say( cmd, 4, { error: "Unknown file manager " & arguments.id }, arguments.asJson, [ "error: unknown file manager " & arguments.id & ". Known: strata, dolphin." ] );
+        if ( !desktopInstalled( file ) ) return say( cmd, 4, { error: arguments.id & " is not installed" }, arguments.asJson, [ "error: " & arguments.id & " is not installed (" & file & " not found). Install it first: bxcachy install " & arguments.id ] );
+        if ( !hasCommand( "xdg-mime" ) ) return say( cmd, 4, { error: "xdg-mime was not found" }, arguments.asJson, [ "error: xdg-mime was not found (install xdg-utils)" ] );
+        var data = { filemanager: arguments.id, desktop: file };
+        if ( !arguments.yes || arguments.dryRun ) {
+            var code = arguments.dryRun ? 0 : 2;
+            return say( cmd, code, data, arguments.asJson, [ ( arguments.dryRun ? "Dry run" : "Plan" ) & ": make " & arguments.id & " (" & file & ") your default file manager", arguments.dryRun ? "Nothing was changed." : "Nothing was changed. Add --yes to apply." ], arguments.dryRun );
+        }
+        var r = variables.inst.exec( [ "xdg-mime", "default", file, "inode/directory" ], 30 );
+        if ( r.exitCode != 0 ) return say( cmd, 6, { error: trim( r.output ) }, arguments.asJson, [ "error: " & trim( r.output ) ] );
+        return say( cmd, 0, data, arguments.asJson, [ arguments.id & " is now your default file manager." ] );
+    }
+
     // `default show`
     function show( asJson ) {
         var b = "";
         if ( hasCommand( "xdg-settings" ) ) b = trim( variables.inst.exec( [ "xdg-settings", "get", "default-web-browser" ], 20 ).output );
         var listFile = variables.config.cfgHome() & "/xdg-terminals.list";
         var t = fileExists( listFile ) ? trim( fileRead( listFile ) ) : "";
-        return say( "default show", 0, { browser: b, terminal: t }, arguments.asJson, [ "Default browser:  " & ( len( b ) ? b : "not set" ), "Default terminal: " & ( len( t ) ? t : "not set (" & listFile & ")" ) ] );
+        var fm = "";
+        if ( hasCommand( "xdg-mime" ) ) fm = trim( variables.inst.exec( [ "xdg-mime", "query", "default", "inode/directory" ], 20 ).output );
+        return say( "default show", 0, { browser: b, terminal: t, filemanager: fm }, arguments.asJson, [ "Default browser:  " & ( len( b ) ? b : "not set" ), "Default terminal: " & ( len( t ) ? t : "not set (" & listFile & ")" ), "Default file manager: " & ( len( fm ) ? fm : "not set" ) ] );
     }
 }

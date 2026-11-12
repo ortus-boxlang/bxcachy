@@ -446,7 +446,8 @@ class WizardData {
           "id": "toolchains",
           "label": "Add toolchains",
           "default": [
-            "java"
+            "java",
+            "rust"
           ],
           "options": [
             {
@@ -468,6 +469,11 @@ class WizardData {
               "value": "go",
               "label": "Go",
               "description": "The Go toolchain."
+            },
+            {
+              "value": "rust",
+              "label": "Rust",
+              "description": "rustup with the stable toolchain (also builds MatchBox)."
             },
             {
               "value": "javascript",
@@ -686,6 +692,25 @@ class WizardData {
               "value": "chromium",
               "label": "Chromium",
               "description": "The open source base of Chrome."
+            }
+          ]
+        },
+        {
+          "type": "choice",
+          "id": "file_manager",
+          "label": "File manager",
+          "help": "Set as your default folder handler. Strata also adds Open file location and Send to (LocalSend, KDE Connect).",
+          "default": "strata",
+          "options": [
+            {
+              "value": "strata",
+              "label": "Strata",
+              "description": "Keyboard-first, Miller columns, previews."
+            },
+            {
+              "value": "dolphin",
+              "label": "Dolphin",
+              "description": "The KDE file manager."
             }
           ]
         },

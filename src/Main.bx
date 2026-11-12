@@ -368,7 +368,8 @@ class {
           if ( dfltSub == "show" && p.len() == 2 ) CLIExit( dflt.show( asJson ) );
           if ( dfltSub == "browser" && p.len() == 3 ) CLIExit( dflt.browser( p[3], dfltYes, dfltDry, asJson ) );
           if ( dfltSub == "terminal" && p.len() == 3 ) CLIExit( dflt.terminal( p[3], dfltYes, dfltDry, asJson ) );
-          println( "Usage: bxcachy default show | browser ID | terminal ID [--yes] [--dry-run] [--json]" );
+          if ( dfltSub == "filemanager" && p.len() == 3 ) CLIExit( dflt.filemanager( p[3], dfltYes, dfltDry, asJson ) );
+          println( "Usage: bxcachy default show | browser ID | terminal ID | filemanager ID [--yes] [--dry-run] [--json]" );
           CLIExit( 2 );
           break;
          case "ai":

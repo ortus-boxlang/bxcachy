@@ -41,6 +41,11 @@ class Catalog {
       if ( a.source == "web" ) {
        if ( !structKeyExists( a, "url" ) || !reFind( "^https://[^/@\s]+(/\S*)?$", a.url ) ) errors.append( who & ": web url must be https without credentials" );
       }
+      if ( a.source == "script" ) {
+       if ( !structKeyExists( a, "script" ) || !structKeyExists( a.script, "url" ) || !reFind( "^https://[^/@\s]+(/\S*)?$", a.script.url ) ) errors.append( who & ": script needs an https url without credentials" );
+       if ( structKeyExists( a, "script" ) && structKeyExists( a.script, "shell" ) && !arrayFind( [ "sh", "bash" ], a.script.shell ) ) errors.append( who & ": script shell must be sh or bash" );
+       if ( structKeyExists( a, "script" ) && structKeyExists( a.script, "args" ) ) for ( sa in a.script.args ) if ( !reFind( "^[a-zA-Z0-9=._/:-]+$", sa ) ) errors.append( who & ": unsafe script argument " & sa );
+      }
       if ( a.source == "pkgbuild" ) {
        if ( !structKeyExists( a, "pkgbuild" ) || !structKeyExists( a.pkgbuild, "repo" ) || !structKeyExists( a.pkgbuild, "path" ) || !structKeyExists( a.pkgbuild, "ref" ) ) errors.append( who & ": pkgbuild needs repo, path and ref" );
        else if ( !reFind( "^[0-9a-f]{40}$", a.pkgbuild.ref ) ) errors.append( who & ": pkgbuild ref must be a full 40-character commit, found " & a.pkgbuild.ref );

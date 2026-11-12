@@ -41,5 +41,14 @@ for ( bad in [ "master", "main", "abc1234", "65A4B0F646F7AFE480FDEBC7C0CF8CF2B56
  expect( "pkgbuild ref '" & bad & "' is rejected", c, "full 40-character commit" );
 }
 
+for ( bad in [ "http://x.com/i.sh", "https://u:p@x.com/i.sh" ] ) {
+ c = copyOf( good ); c.apps[1].source = "script"; c.apps[1].script = { url: bad };
+ expect( "script url '" & bad & "' is rejected", c, "script needs an https url" );
+}
+c = copyOf( good ); c.apps[1].source = "script"; c.apps[1].script = { url: "https://x.com/i.sh", args: [ "a b;rm" ] };
+expect( "unsafe script argument", c, "unsafe script argument" );
+c = copyOf( good ); c.apps[1].source = "script"; c.apps[1].script = { url: "https://x.com/i.sh", shell: "zsh" };
+expect( "unknown script shell", c, "script shell must be sh or bash" );
+
 if ( failures > 0 ) { println( failures & " failed" ); CLIExit( 1 ); }
 println( "catalog check negative tests passed" );

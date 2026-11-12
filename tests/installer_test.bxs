@@ -66,6 +66,10 @@ check( "run: only aur failed gives exit 6", inst.exitCode( r ) == 6 );
 timeoutRunner = function( argv, timeout ) { return { exitCode: 0, timeout: true, output: "" }; };
 r = new bxcachy.Installer( timeoutRunner ).run( onlyPacman.steps );
 check( "run: a timeout is a failure", r.failed.len() == 1 && find( "timed out", r.failed[1].error ) );
+// script source: the vendor installer, URL and arguments passed as arguments
+scriptApp = { id: "strata", name: "Strata", source: "script", script: { url: "https://example.com/install.sh", args: [ "--non-interactive" ], shell: "sh" } };
+sb = inst.steps( [ scriptApp ], false );
+check( "script: one script step, URL and args are separate arguments", sb.steps.len() == 1 && sb.steps[1].kind == "script" && sb.steps[1].commands[1][5] == "https://example.com/install.sh" && sb.steps[1].commands[1][6] == "--non-interactive" && find( "| sh -s --", sb.steps[1].commands[1][3] ) );
 // root detection
 rootRunner = function( argv, timeout ) { return { exitCode: 0, timeout: false, output: "0" + chr( 10 ) }; };
 userRunner = function( argv, timeout ) { return { exitCode: 0, timeout: false, output: "1000" }; };

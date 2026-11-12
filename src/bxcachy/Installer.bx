@@ -83,7 +83,7 @@ class Installer {
     function steps( selected, asRoot, home = "" ) {
         var homeDir = len( home ) ? home : getSystemSetting( "HOME", "" );
         var pacmanIds = []; var pacmanTargets = [];
-        var aur = []; var builds = []; var webs = []; var blocked = [];
+        var aur = []; var builds = []; var webs = []; var scripts = []; var blocked = [];
         for ( var app in selected ) {
             var targets = structKeyExists( app, "targets" ) ? app.targets : [];
             if ( app.source == "pacman" ) {
@@ -97,6 +97,12 @@ class Installer {
                 var built = pkgbuildStep( app );
                 if ( structKeyExists( built, "blocked" ) ) blocked.append( built.blocked );
                 else builds.append( built.step );
+            } else if ( app.source == "script" ) {
+                // the vendor installer: downloaded and piped to its shell; URL and arguments travel as arguments, never interpolated
+                var shellName = structKeyExists( app.script, "shell" ) ? app.script.shell : "bash";
+                var argv2 = [ "bash", "-c", 'set -o pipefail; curl -fsSL "$1" | ' & shellName & ' -s -- "${@:2}"', "bxcachy-script", app.script.url ];
+                if ( structKeyExists( app.script, "args" ) ) for ( var sa in app.script.args ) argv2.append( sa );
+                scripts.append( { kind: "script", ids: [ app.id ], commands: [ argv2 ] } );
             } else if ( app.source == "web" ) {
                 webs.append( { kind: "web", ids: [ app.id ], commands: [], files: [ launcherFile( app, homeDir ) ] } );
             } else {
@@ -112,6 +118,7 @@ class Installer {
         }
         for ( var s in aur ) out.append( s );
         for ( var s in builds ) out.append( s );
+        for ( var s in scripts ) out.append( s );
         for ( var s in webs ) out.append( s );
         return { steps: out, blocked: blocked };
     }
