@@ -15,7 +15,7 @@ class {
         var config = new bxcachy.ConfigService();
         // One shared flag check for every command: unknown flags are usage errors and nothing runs.
         for ( var flag in args.options ) {
-            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider", "backend", "dir", "email", "region", "browser", "path", "from", "export", "from-system", "fresh", "rerun", "fix", "edit", "history", "out", "agenda", "without-weather", "desktops", "preset", "no-open", "location", "notify", "defaults", "tag", "mode", "keep-wallpaper", "version", "tag", "ram", "cpus", "disk", "memory", "share", "gpu", "web", "fullscreen" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
+            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider", "backend", "dir", "email", "region", "browser", "path", "from", "export", "from-system", "fresh", "rerun", "fix", "edit", "history", "out", "agenda", "without-weather", "desktops", "preset", "no-open", "location", "notify", "defaults", "tag", "mode", "keep-wallpaper", "version", "tag", "ram", "cpus", "disk", "memory", "share", "gpu", "web", "fullscreen", "limit", "explicit", "aur" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
                 println( "Unknown option: --" & flag );
                 CLIExit( 2 );
             }
@@ -438,6 +438,28 @@ class {
           if ( p.len() == 2 ) CLIExit( new bxcachy.Screenshot( cli ).qrMake( p[2], args.options.out ?: "", asJson ) );
           println( "Usage: bxcachy qr TEXT [--out=FILE.png] [--json]" );
           CLIExit( 2 );
+          break;
+         case "pkg":
+          // Any package from the repos or the AUR: search, info, install, remove. See COMMAND-CONTRACT.md 13.34.
+          pkSub = p.len() >= 2 ? p[2] : "";
+          pkx = new bxcachy.Pkg( cli );
+          pkYes = structKeyExists( args.options, "yes" );
+          pkDry = structKeyExists( args.options, "dry-run" );
+          pkNames = [];
+          for ( pki = 3; pki <= p.len(); pki++ ) pkNames.append( p[ pki ] );
+          if ( pkSub == "search" && p.len() >= 3 ) CLIExit( pkx.search( pkNames.toList( " " ), args.options.source ?: "all", int( val( args.options.limit ?: "40" ) ), asJson ) );
+          if ( pkSub == "info" && p.len() == 3 ) CLIExit( pkx.info( p[3], asJson ) );
+          if ( pkSub == "installed" && p.len() == 2 ) CLIExit( pkx.installed( structKeyExists( args.options, "explicit" ), asJson ) );
+          if ( pkSub == "install" ) CLIExit( pkx.install( pkNames, structKeyExists( args.options, "aur" ), pkYes, pkDry, asJson ) );
+          if ( pkSub == "remove" ) CLIExit( pkx.remove( pkNames, pkYes, pkDry, asJson ) );
+          println( "Usage: bxcachy pkg search TEXT [--source=all|repo|aur] [--limit=N] | info NAME | installed [--explicit] | install NAME... [--aur] [--yes] [--dry-run] | remove NAME... [--yes] [--dry-run] [--json]" );
+          CLIExit( 2 );
+          break;
+         case "remove":
+          // Uninstall catalog apps (their packages or web launchers) or any package. See COMMAND-CONTRACT.md 13.34.
+          rmIds = [];
+          for ( rmi = 2; rmi <= p.len(); rmi++ ) rmIds.append( p[ rmi ] );
+          CLIExit( new bxcachy.Pkg( cli ).removeApps( rmIds, structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
           break;
          case "vm":
           // Windows and Linux desktops in containers. See COMMAND-CONTRACT.md 13.33.
