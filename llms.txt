@@ -1,0 +1,25 @@
+# BxCachy
+
+> Your developer machine, set up in minutes. A CachyOS setup tool written in BoxLang.
+
+## Pages
+
+- [Command contract](https://bxcachy.boxlang.io/architecture/COMMAND-CONTRACT.md) ([HTML](https://bxcachy.boxlang.io/architecture/COMMAND-CONTRACT/index.html))
+- [Command reference](https://bxcachy.boxlang.io/reference/commands.md) ([HTML](https://bxcachy.boxlang.io/reference/commands/index.html))
+- [Home](https://bxcachy.boxlang.io/index.md) ([HTML](https://bxcachy.boxlang.io/index.html))
+- [The setup wizard](https://bxcachy.boxlang.io/guides/wizard.md) ([HTML](https://bxcachy.boxlang.io/guides/wizard/index.html))
+- [Files and folders](https://bxcachy.boxlang.io/reference/config-files.md) ([HTML](https://bxcachy.boxlang.io/reference/config-files/index.html))
+- [Getting started](https://bxcachy.boxlang.io/getting-started.md) ([HTML](https://bxcachy.boxlang.io/getting-started/index.html))
+- [MatchBox parity](https://bxcachy.boxlang.io/architecture/MATCHBOX-PARITY.md) ([HTML](https://bxcachy.boxlang.io/architecture/MATCHBOX-PARITY/index.html))
+- [The desktop](https://bxcachy.boxlang.io/guides/desktop.md) ([HTML](https://bxcachy.boxlang.io/guides/desktop/index.html))
+- [Shortcuts and Mac keys](https://bxcachy.boxlang.io/guides/shortcuts.md) ([HTML](https://bxcachy.boxlang.io/guides/shortcuts/index.html))
+- [The wizard program](https://bxcachy.boxlang.io/architecture/wizard.md) ([HTML](https://bxcachy.boxlang.io/architecture/wizard/index.html))
+- [Apps and web apps](https://bxcachy.boxlang.io/guides/apps.md) ([HTML](https://bxcachy.boxlang.io/guides/apps/index.html))
+- [AI agents and skills](https://bxcachy.boxlang.io/guides/ai.md) ([HTML](https://bxcachy.boxlang.io/guides/ai/index.html))
+- [BoxLang and MatchBox](https://bxcachy.boxlang.io/guides/boxlang.md) ([HTML](https://bxcachy.boxlang.io/guides/boxlang/index.html))
+- [Updates and channels](https://bxcachy.boxlang.io/guides/updates.md) ([HTML](https://bxcachy.boxlang.io/guides/updates/index.html))
+- [Move to another machine](https://bxcachy.boxlang.io/guides/settings.md) ([HTML](https://bxcachy.boxlang.io/guides/settings/index.html))
+- [Security](https://bxcachy.boxlang.io/guides/security.md) ([HTML](https://bxcachy.boxlang.io/guides/security/index.html))
+- [Troubleshooting](https://bxcachy.boxlang.io/guides/troubleshooting.md) ([HTML](https://bxcachy.boxlang.io/guides/troubleshooting/index.html))
+- [Contributing and docs versions](https://bxcachy.boxlang.io/guides/contributing.md) ([HTML](https://bxcachy.boxlang.io/guides/contributing/index.html))
+- [Architecture](https://bxcachy.boxlang.io/architecture/index.md) ([HTML](https://bxcachy.boxlang.io/architecture/index.html))

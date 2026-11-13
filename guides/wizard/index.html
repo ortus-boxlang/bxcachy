@@ -1,0 +1,402 @@
+
+
+
+
+
+
+
+
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>The setup wizard - BxCachy</title>
+	<meta property="og:type" content="website">
+	<meta property="og:site_name" content="BxCachy">
+	<meta property="og:title" content="The setup wizard">
+
+	
+	
+
+	
+	
+		<link rel="canonical" href="https&#x3a;&#x2f;&#x2f;bxcachy.boxlang.io&#x2f;guides&#x2f;wizard&#x2f;index.html">
+	
+
+	
+	
+		<meta name="description" content="One guided form for every choice. Re-run it any time.">
+		<meta property="og:description" content="One guided form for every choice. Re-run it any time.">
+	
+
+	
+	
+
+	
+	
+		<link rel="icon" href="/assets/favicon.png">
+	
+
+	
+	<script>
+		( function () {
+			var configuredMode = "dark";
+			var stored = localStorage.getItem( "bxsites-theme" );
+			var prefersDark = window.matchMedia( "(prefers-color-scheme: dark)" ).matches;
+			var wantsDark = stored ? stored === "dark" : ( configuredMode === "dark" || ( configuredMode === "auto" && prefersDark ) );
+			if ( wantsDark ) {
+				document.documentElement.setAttribute( "data-theme", "dark" );
+			}
+		} )();
+	</script>
+
+	
+	<link rel="stylesheet" href="/assets/vendor/bootstrap/bootstrap.min.css">
+	<link rel="stylesheet" href="/assets/vendor/highlight/github.min.css">
+	<link rel="stylesheet" href="/assets/theme/style.a70338f7.css">
+
+	
+	
+
+	
+	
+		<style>
+			
+			
+				:root {
+					--bxsites-accent: #00C853;
+					--bxsites-link: #00C853;
+					--bxsites-link-hover: color-mix( in srgb, #00C853 85%, black );
+				}
+			
+			
+			
+				[data-theme="dark"] {
+					--bxsites-accent: #00FF78;
+					--bxsites-link: #00FF78;
+					--bxsites-link-hover: color-mix( in srgb, #00FF78 85%, white );
+				}
+			
+		</style>
+	
+
+	
+	
+		<style>
+			.bxsites-nav-nested {
+				border-inline-start: 2px solid var(--bxsites-accent, var(--bxsites-border));
+				margin-inline-start: 0.2rem;
+				padding-inline-start: 0.85rem;
+			}
+		</style>
+	
+
+	
+	
+
+	
+	
+
+	
+	
+
+	
+	
+		<script>window.__BXSITES_BASE_PATH__ = "/";</script>
+		<script>window.__BXSITES_SEARCH_NO_RESULTS__ = "No\x20results\x20found.";</script>
+		<script src="/assets/vendor/minisearch/minisearch.js"></script>
+		<script src="/assets/search.f14e08a2.js" defer></script>
+	
+
+	
+	
+
+	
+	
+
+	<script src="/assets/vendor/alpine/cdn.min.js" defer></script>
+</head>
+
+
+<body
+	x-data="{ dark: document.documentElement.getAttribute( 'data-theme' ) === 'dark', navOpen: window.matchMedia( '(min-width: 992px)' ).matches ? ( localStorage.getItem( 'bxsites-nav-open' ) !== null ? localStorage.getItem( 'bxsites-nav-open' ) === 'true' : true ) : false }"
+	x-init="$watch( 'dark', v => { document.documentElement.setAttribute( 'data-theme', v ? 'dark' : 'light' ); localStorage.setItem( 'bxsites-theme', v ? 'dark' : 'light' ) } ); $watch( 'navOpen', v => { if ( window.matchMedia( '(min-width: 992px)' ).matches ) localStorage.setItem( 'bxsites-nav-open', v ) } )">
+	
+	<nav class="navbar navbar-expand-lg brand-navbar">
+		<div class="container-fluid navbar-row">
+			
+			<button
+				class="navbar-toggler"
+				type="button"
+				@click="navOpen = !navOpen"
+				:aria-expanded="navOpen.toString()"
+				aria-controls="bxsites-sidebar"
+				aria-label="Toggle navigation">
+				<span class="navbar-toggler-icon"></span>
+			</button>
+
+			
+			<a class="navbar-brand brand-mark" href="/"><img class="brand-logo" src="/assets/bxcachy-logo.svg" alt=""><span class="brand-name">BxCachy</span></a>
+
+			
+			<div class="navbar-controls">
+				
+				
+					
+
+	<div class="bxsites-search position-relative">
+		<input
+			type="search"
+			id="bxsites-search-input"
+			class="form-control"
+			placeholder="Search..."
+			aria-label="Search">
+		<kbd class="bxsites-search-kbd" aria-hidden="true">Ctrl K</kbd>
+		<ul id="bxsites-search-results" class="bxsites-search-results list-unstyled"></ul>
+	</div>
+
+
+
+				
+
+				
+				
+
+				
+				
+					<a
+						class="repo-link"
+						href="https://github.com/ortus-boxlang/bxcachy"
+						target="_blank"
+						rel="noopener noreferrer"
+						aria-label="Repository"
+						title="Repository">
+						<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.385-1.333-1.754-1.333-1.754-1.089-.744.083-.729.083-.729 1.205.084 1.84 1.237 1.84 1.237 1.07 1.834 2.807 1.304 3.492.997.108-.775.418-1.305.762-1.605-2.665-.303-5.467-1.332-5.467-5.93 0-1.31.468-2.38 1.235-3.22-.123-.303-.535-1.523.117-3.176 0 0 1.008-.322 3.301 1.23A11.5 11.5 0 0 1 12 5.803c1.02.005 2.045.138 3.003.404 2.29-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.873.118 3.176.77.84 1.235 1.91 1.235 3.22 0 4.61-2.807 5.625-5.48 5.92.43.372.823 1.102.823 2.222 0 1.606-.014 2.898-.014 3.293 0 .322.216.694.825.576C20.565 21.795 24 17.298 24 12c0-6.63-5.37-12-12-12"/></svg>
+					</a>
+				
+
+				
+				<button
+					type="button"
+					class="theme-toggle"
+					@click="dark = !dark"
+					aria-label="Toggle dark mode">
+					<span x-show="!dark"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg></span>
+					<span x-show="dark" x-cloak><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg></span>
+				</button>
+			</div>
+			
+		</div>
+		
+	</nav>
+
+	
+	<div class="container-fluid">
+		
+		<div class="row" :class="{ 'bxsites-nav-collapsed' : !navOpen }">
+			
+			<aside class="col-lg-3 col-xl-2 sidebar" id="bxsites-sidebar" x-show="navOpen" x-cloak>
+				
+				
+				<ul class="nav flex-column"><li class="nav-item"><a class="nav-link" href="/index.html">Home</a></li><li class="nav-item"><a class="nav-link" href="/getting-started/index.html">Getting started</a></li><li class="nav-item nav-item--group"><div class="nav-group-header"><a class="nav-link" href="/architecture/index.html">Architecture</a><button type="button" class="nav-toggle" aria-expanded="false" aria-label="Toggle Architecture section"><span class="nav-toggle__icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></span></button></div><ul class="nav flex-column nav--nested bxsites-nav-nested" hidden><li class="nav-item"><a class="nav-link" href="/architecture/COMMAND-CONTRACT/index.html">Command contract</a></li><li class="nav-item"><a class="nav-link" href="/architecture/MATCHBOX-PARITY/index.html">MatchBox parity</a></li><li class="nav-item"><a class="nav-link" href="/architecture/wizard/index.html">The wizard program</a></li></ul></li><li class="nav-item nav-item--group"><div class="nav-group-header"><span class="nav-link disabled">guides</span><button type="button" class="nav-toggle" aria-expanded="true" aria-label="Toggle guides section"><span class="nav-toggle__icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></span></button></div><ul class="nav flex-column nav--nested bxsites-nav-nested"><li class="nav-item"><a class="nav-link active" href="/guides/wizard/index.html">The setup wizard</a></li><li class="nav-item"><a class="nav-link" href="/guides/desktop/index.html">The desktop</a></li><li class="nav-item"><a class="nav-link" href="/guides/shortcuts/index.html">Shortcuts and Mac keys</a></li><li class="nav-item"><a class="nav-link" href="/guides/apps/index.html">Apps and web apps</a></li><li class="nav-item"><a class="nav-link" href="/guides/ai/index.html">AI agents and skills</a></li><li class="nav-item"><a class="nav-link" href="/guides/boxlang/index.html">BoxLang and MatchBox</a></li><li class="nav-item"><a class="nav-link" href="/guides/updates/index.html">Updates and channels</a></li><li class="nav-item"><a class="nav-link" href="/guides/settings/index.html">Move to another machine</a></li><li class="nav-item"><a class="nav-link" href="/guides/security/index.html">Security</a></li><li class="nav-item"><a class="nav-link" href="/guides/troubleshooting/index.html">Troubleshooting</a></li><li class="nav-item"><a class="nav-link" href="/guides/contributing/index.html">Contributing and docs versions</a></li></ul></li><li class="nav-item nav-item--group"><div class="nav-group-header"><span class="nav-link disabled">reference</span><button type="button" class="nav-toggle" aria-expanded="false" aria-label="Toggle reference section"><span class="nav-toggle__icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></span></button></div><ul class="nav flex-column nav--nested bxsites-nav-nested" hidden><li class="nav-item"><a class="nav-link" href="/reference/commands/index.html">Command reference</a></li><li class="nav-item"><a class="nav-link" href="/reference/config-files/index.html">Files and folders</a></li></ul></li></ul>
+				<a class="bxsites-powered-by" href="https://bxsites.io" target="_blank" rel="noopener noreferrer">
+					<img class="bxsites-powered-by__logo" src="/assets/bxsites-logo.svg" alt="" aria-hidden="true"> <span>Powered by BxSites</span>
+				</a>
+			</aside>
+
+			
+			<main class="col-lg-9 col-xl-8 content">
+					
+
+	
+	<article class="page-content">
+		
+		
+		
+		
+		
+		
+		
+		<h1 class="page-title" id="page-title">
+			<a href="#page-title" id="page-title" class="anchor"></a>
+			
+			The setup wizard
+		</h1>
+		
+		
+			<p class="page-summary">One guided form for every choice. Re-run it any time.</p>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+			<details class="bxsites-toc-mobile toc-mobile d-xl-none"><summary class="toc-mobile__summary"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4v16"/><path d="M6 8h6"/><path d="M6 14h9"/><path d="M6 20h4"/></svg> On this page</summary><ul class="list-unstyled"><li class="toc-level-2"><a href="#run-it-again">Run it again</a></li><li class="toc-level-2"><a href="#without-a-terminal">Without a terminal</a></li><li class="toc-level-2"><a href="#defaults-worth-knowing">Defaults worth knowing</a></li></ul></details>
+		
+
+		
+		<h1 id="the-setup-wizard"><a href="#the-setup-wizard" id="the-setup-wizard" name="the-setup-wizard" class="anchor"></a>The setup wizard</h1>
+<p><code>bxcachy init</code> opens a full-screen form with these pages: <strong>Desktop</strong>, <strong>Look</strong>, <strong>Input</strong>, <strong>Developer</strong>, <strong>Toolchains</strong>, <strong>Containers</strong>, <strong>Apps</strong>, <strong>AI</strong>, <strong>Extras</strong> and <strong>Import</strong>, then a review screen that lists exactly the commands it will run. Nothing runs until you confirm.</p>
+<h2 id="run-it-again"><a href="#run-it-again" id="run-it-again" name="run-it-again" class="anchor"></a>Run it again</h2>
+<p>On a machine that is already set up the wizard starts from your saved answers plus what it finds on the system, and marks installed options with <code>✓ installed</code>.</p>
+<div class="bxsites-table-wrap"><table class="table">
+<thead>
+<tr><th>Command</th><th>Starts from</th></tr>
+</thead>
+<tbody>
+<tr><td><code>bxcachy init</code></td><td>your saved answers and what the system has (tune)</td></tr>
+<tr><td><code>bxcachy init --rerun</code></td><td>your saved answers only</td></tr>
+<tr><td><code>bxcachy init --fresh</code></td><td>the defaults</td></tr>
+<tr><td><code>bxcachy init --from FILE</code></td><td>an answers file from another machine</td></tr>
+</tbody>
+</table></div>
+<p>Nothing the machine already has is ever removed. <code>bxcachy status</code> shows the same scan without opening the wizard.</p>
+<h2 id="without-a-terminal"><a href="#without-a-terminal" id="without-a-terminal" name="without-a-terminal" class="anchor"></a>Without a terminal</h2>
+<pre><code class="language-bash">bxcachy init --answers answers.json --yes     # apply an answers file
+bxcachy init --defaults --yes                  # the wizard's default answers
+bxcachy init --dry-run                         # show the plan only
+bxcachy init --export answers.json             # save your answers for another machine
+</code></pre>
+<p>Answers are saved in <code>~/.config/bxcachy/answers.json</code> (mode 600). They never contain secrets.</p>
+<h2 id="defaults-worth-knowing"><a href="#defaults-worth-knowing" id="defaults-worth-knowing" name="defaults-worth-knowing" class="anchor"></a>Defaults worth knowing</h2>
+<div class="bxsites-table-wrap"><table class="table">
+<thead>
+<tr><th>Question</th><th>Default</th></tr>
+</thead>
+<tbody>
+<tr><td>Desktop</td><td>Hyprland + Noctalia</td></tr>
+<tr><td>Workspaces</td><td>4</td></tr>
+<tr><td>Shell</td><td>zsh with the Starship prompt (Catppuccin Powerline)</td></tr>
+<tr><td>Terminal</td><td>Ghostty</td></tr>
+<tr><td>File manager</td><td>Strata</td></tr>
+<tr><td>Toolchains</td><td>Java and Rust</td></tr>
+<tr><td>Containers</td><td>Podman (with <code>docker</code> commands mapped to it)</td></tr>
+<tr><td>Dictation</td><td>Superwhisper (Voxtype is the alternative)</td></tr>
+<tr><td>Updates</td><td>stable channel, daily notification</td></tr>
+</tbody>
+</table></div>
+
+	
+
+	
+	
+		<div class="page-meta"><a href="https://github.com/ortus-boxlang/bxcachy/edit/development/docs/guides/wizard.md" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg> Edit this page</a><a href="/guides/wizard.md" download><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M8 15v-3l1.5 2 1.5-2v3"/><path d="M14.5 12v4M13 15.5l1.5 1.5 1.5-1.5"/></svg> Download Markdown</a><span class="page-meta__item"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Last updated Nov 13, 2026, 9&#x3a;07&#x3a;30 AM</span><a href="https://github.com/ortus-boxlang/bxcachy/issues/new?title=Issue%20with%3A%20The%20setup%20wizard&amp;body=Found%20on%3A%20https%3A%2F%2Fbxcachy.boxlang.io%2Fguides%2Fwizard%2Findex.html" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg> Report an issue</a></div>
+	
+</article>
+
+
+
+
+
+
+	<nav class="page-nav d-flex justify-content-between" aria-label="Page navigation">
+		
+		
+			<a class="page-nav__card page-nav__card--prev" href="/architecture/wizard/index.html">
+				<span class="page-nav__icon"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></span>
+				<span class="page-nav__text">
+					<span class="page-nav__label">Previous</span>
+					<span class="page-nav__title">The wizard program</span>
+				</span>
+			</a>
+		
+		
+		
+		
+		
+			<a class="page-nav__card page-nav__card--next" href="/guides/desktop/index.html">
+				<span class="page-nav__text">
+					<span class="page-nav__label">Next</span>
+					<span class="page-nav__title">The desktop</span>
+				</span>
+				<span class="page-nav__icon"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></span>
+			</a>
+		
+	</nav>
+
+
+
+
+
+
+			</main>
+
+			
+			
+				<aside class="col-xl-2 toc-sidebar d-none d-xl-block">
+					<nav class="toc bxsites-toc mb-4" aria-label="On this page"><div class="toc-title bxsites-toc__title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4v16"/><path d="M6 8h6"/><path d="M6 14h9"/><path d="M6 20h4"/></svg> On this page</div><ul class="list-unstyled"><li class="toc-level-2"><a href="#run-it-again">Run it again</a></li><li class="toc-level-2"><a href="#without-a-terminal">Without a terminal</a></li><li class="toc-level-2"><a href="#defaults-worth-knowing">Defaults worth knowing</a></li></ul></nav>
+				</aside>
+			
+		</div>
+		
+	</div>
+	
+
+	
+	
+		<footer class="bxsites-footer">
+			<div class="container-fluid bxsites-footer__inner">
+				
+				<div class="bxsites-footer__copy">&copy; 2026 BxCachy</div>
+				
+				
+					<div class="bxsites-footer__social"><a class="social-link" href="https://github.com/ortus-boxlang/BoxLang" target="_blank" rel="noopener noreferrer" aria-label="BoxLang on GitHub" title="BoxLang on GitHub"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.385-1.333-1.754-1.333-1.754-1.089-.744.083-.729.083-.729 1.205.084 1.84 1.237 1.84 1.237 1.07 1.834 2.807 1.304 3.492.997.108-.775.418-1.305.762-1.605-2.665-.303-5.467-1.332-5.467-5.93 0-1.31.468-2.38 1.235-3.22-.123-.303-.535-1.523.117-3.176 0 0 1.008-.322 3.301 1.23A11.5 11.5 0 0 1 12 5.803c1.02.005 2.045.138 3.003.404 2.29-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.873.118 3.176.77.84 1.235 1.91 1.235 3.22 0 4.61-2.807 5.625-5.48 5.92.43.372.823 1.102.823 2.222 0 1.606-.014 2.898-.014 3.293 0 .322.216.694.825.576C20.565 21.795 24 17.298 24 12c0-6.63-5.37-12-12-12"/></svg></a><a class="social-link" href="https://www.boxlang.io" target="_blank" rel="noopener noreferrer" aria-label="BoxLang" title="BoxLang"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></div>
+				
+				
+				<div class="bxsites-footer__credit">Built with <a href="https://bxsites.io" target="_blank" rel="noopener noreferrer">BxSites</a></div>
+			</div>
+		</footer>
+	
+
+	
+	<script src="/assets/vendor/bootstrap/bootstrap.bundle.min.js"></script>
+	<script src="/assets/vendor/highlight/highlight.min.js"></script>
+	<script src="/assets/highlight-boxlang.c59b5de4.js"></script>
+	<script>hljs.highlightAll();</script>
+	<script src="/assets/code-lines.66ad0c90.js"></script>
+	<script src="/assets/copy-code.a5acc8cc.js" defer></script>
+	<script src="/assets/admonition-collapse.df9b134e.js" defer></script>
+	<script src="/assets/nav-toggle.6bc5dbe8.js" defer></script>
+	<script src="/assets/toc-collapse.cb73e778.js" defer></script>
+	<script src="/assets/tabs.24dffad6.js" defer></script>
+	<script src="/assets/conditional-content-init.9ef1e0f9.js" defer></script>
+	<script src="/assets/course-progress.3813411a.js" defer></script>
+	<script src="/assets/prompt-init.774781de.js" defer></script>
+	<script src="/assets/contact-form-init.7f7be308.js" defer></script>
+
+	
+	
+
+	
+	
+		<script src="/assets/vendor/mermaid/mermaid.min.js"></script>
+		<script src="/assets/mermaid-init.b2f3ed5c.js"></script>
+	
+
+	
+	
+
+	
+	
+
+	
+	
+
+	
+	
+
+	
+	
+
+	
+	
+
+	
+	
+</body>
+</html>
+

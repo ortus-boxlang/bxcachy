@@ -1,0 +1,972 @@
+
+
+
+
+
+
+
+
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Command contract - BxCachy</title>
+	<meta property="og:type" content="website">
+	<meta property="og:site_name" content="BxCachy">
+	<meta property="og:title" content="Command contract">
+
+	
+	
+
+	
+	
+		<link rel="canonical" href="https&#x3a;&#x2f;&#x2f;bxcachy.boxlang.io&#x2f;architecture&#x2f;COMMAND-CONTRACT&#x2f;index.html">
+	
+
+	
+	
+		<meta name="description" content="Developer reference.">
+		<meta property="og:description" content="Developer reference.">
+	
+
+	
+	
+
+	
+	
+		<link rel="icon" href="/assets/favicon.png">
+	
+
+	
+	<script>
+		( function () {
+			var configuredMode = "dark";
+			var stored = localStorage.getItem( "bxsites-theme" );
+			var prefersDark = window.matchMedia( "(prefers-color-scheme: dark)" ).matches;
+			var wantsDark = stored ? stored === "dark" : ( configuredMode === "dark" || ( configuredMode === "auto" && prefersDark ) );
+			if ( wantsDark ) {
+				document.documentElement.setAttribute( "data-theme", "dark" );
+			}
+		} )();
+	</script>
+
+	
+	<link rel="stylesheet" href="/assets/vendor/bootstrap/bootstrap.min.css">
+	<link rel="stylesheet" href="/assets/vendor/highlight/github.min.css">
+	<link rel="stylesheet" href="/assets/theme/style.a70338f7.css">
+
+	
+	
+
+	
+	
+		<style>
+			
+			
+				:root {
+					--bxsites-accent: #00C853;
+					--bxsites-link: #00C853;
+					--bxsites-link-hover: color-mix( in srgb, #00C853 85%, black );
+				}
+			
+			
+			
+				[data-theme="dark"] {
+					--bxsites-accent: #00FF78;
+					--bxsites-link: #00FF78;
+					--bxsites-link-hover: color-mix( in srgb, #00FF78 85%, white );
+				}
+			
+		</style>
+	
+
+	
+	
+		<style>
+			.bxsites-nav-nested {
+				border-inline-start: 2px solid var(--bxsites-accent, var(--bxsites-border));
+				margin-inline-start: 0.2rem;
+				padding-inline-start: 0.85rem;
+			}
+		</style>
+	
+
+	
+	
+
+	
+	
+
+	
+	
+
+	
+	
+		<script>window.__BXSITES_BASE_PATH__ = "/";</script>
+		<script>window.__BXSITES_SEARCH_NO_RESULTS__ = "No\x20results\x20found.";</script>
+		<script src="/assets/vendor/minisearch/minisearch.js"></script>
+		<script src="/assets/search.f14e08a2.js" defer></script>
+	
+
+	
+	
+
+	
+	
+
+	<script src="/assets/vendor/alpine/cdn.min.js" defer></script>
+</head>
+
+
+<body
+	x-data="{ dark: document.documentElement.getAttribute( 'data-theme' ) === 'dark', navOpen: window.matchMedia( '(min-width: 992px)' ).matches ? ( localStorage.getItem( 'bxsites-nav-open' ) !== null ? localStorage.getItem( 'bxsites-nav-open' ) === 'true' : true ) : false }"
+	x-init="$watch( 'dark', v => { document.documentElement.setAttribute( 'data-theme', v ? 'dark' : 'light' ); localStorage.setItem( 'bxsites-theme', v ? 'dark' : 'light' ) } ); $watch( 'navOpen', v => { if ( window.matchMedia( '(min-width: 992px)' ).matches ) localStorage.setItem( 'bxsites-nav-open', v ) } )">
+	
+	<nav class="navbar navbar-expand-lg brand-navbar">
+		<div class="container-fluid navbar-row">
+			
+			<button
+				class="navbar-toggler"
+				type="button"
+				@click="navOpen = !navOpen"
+				:aria-expanded="navOpen.toString()"
+				aria-controls="bxsites-sidebar"
+				aria-label="Toggle navigation">
+				<span class="navbar-toggler-icon"></span>
+			</button>
+
+			
+			<a class="navbar-brand brand-mark" href="/"><img class="brand-logo" src="/assets/bxcachy-logo.svg" alt=""><span class="brand-name">BxCachy</span></a>
+
+			
+			<div class="navbar-controls">
+				
+				
+					
+
+	<div class="bxsites-search position-relative">
+		<input
+			type="search"
+			id="bxsites-search-input"
+			class="form-control"
+			placeholder="Search..."
+			aria-label="Search">
+		<kbd class="bxsites-search-kbd" aria-hidden="true">Ctrl K</kbd>
+		<ul id="bxsites-search-results" class="bxsites-search-results list-unstyled"></ul>
+	</div>
+
+
+
+				
+
+				
+				
+
+				
+				
+					<a
+						class="repo-link"
+						href="https://github.com/ortus-boxlang/bxcachy"
+						target="_blank"
+						rel="noopener noreferrer"
+						aria-label="Repository"
+						title="Repository">
+						<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.385-1.333-1.754-1.333-1.754-1.089-.744.083-.729.083-.729 1.205.084 1.84 1.237 1.84 1.237 1.07 1.834 2.807 1.304 3.492.997.108-.775.418-1.305.762-1.605-2.665-.303-5.467-1.332-5.467-5.93 0-1.31.468-2.38 1.235-3.22-.123-.303-.535-1.523.117-3.176 0 0 1.008-.322 3.301 1.23A11.5 11.5 0 0 1 12 5.803c1.02.005 2.045.138 3.003.404 2.29-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.873.118 3.176.77.84 1.235 1.91 1.235 3.22 0 4.61-2.807 5.625-5.48 5.92.43.372.823 1.102.823 2.222 0 1.606-.014 2.898-.014 3.293 0 .322.216.694.825.576C20.565 21.795 24 17.298 24 12c0-6.63-5.37-12-12-12"/></svg>
+					</a>
+				
+
+				
+				<button
+					type="button"
+					class="theme-toggle"
+					@click="dark = !dark"
+					aria-label="Toggle dark mode">
+					<span x-show="!dark"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg></span>
+					<span x-show="dark" x-cloak><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg></span>
+				</button>
+			</div>
+			
+		</div>
+		
+	</nav>
+
+	
+	<div class="container-fluid">
+		
+		<div class="row" :class="{ 'bxsites-nav-collapsed' : !navOpen }">
+			
+			<aside class="col-lg-3 col-xl-2 sidebar" id="bxsites-sidebar" x-show="navOpen" x-cloak>
+				
+				
+				<ul class="nav flex-column"><li class="nav-item"><a class="nav-link" href="/index.html">Home</a></li><li class="nav-item"><a class="nav-link" href="/getting-started/index.html">Getting started</a></li><li class="nav-item nav-item--group"><div class="nav-group-header"><a class="nav-link" href="/architecture/index.html">Architecture</a><button type="button" class="nav-toggle" aria-expanded="true" aria-label="Toggle Architecture section"><span class="nav-toggle__icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></span></button></div><ul class="nav flex-column nav--nested bxsites-nav-nested"><li class="nav-item"><a class="nav-link active" href="/architecture/COMMAND-CONTRACT/index.html">Command contract</a></li><li class="nav-item"><a class="nav-link" href="/architecture/MATCHBOX-PARITY/index.html">MatchBox parity</a></li><li class="nav-item"><a class="nav-link" href="/architecture/wizard/index.html">The wizard program</a></li></ul></li><li class="nav-item nav-item--group"><div class="nav-group-header"><span class="nav-link disabled">guides</span><button type="button" class="nav-toggle" aria-expanded="false" aria-label="Toggle guides section"><span class="nav-toggle__icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></span></button></div><ul class="nav flex-column nav--nested bxsites-nav-nested" hidden><li class="nav-item"><a class="nav-link" href="/guides/wizard/index.html">The setup wizard</a></li><li class="nav-item"><a class="nav-link" href="/guides/desktop/index.html">The desktop</a></li><li class="nav-item"><a class="nav-link" href="/guides/shortcuts/index.html">Shortcuts and Mac keys</a></li><li class="nav-item"><a class="nav-link" href="/guides/apps/index.html">Apps and web apps</a></li><li class="nav-item"><a class="nav-link" href="/guides/ai/index.html">AI agents and skills</a></li><li class="nav-item"><a class="nav-link" href="/guides/boxlang/index.html">BoxLang and MatchBox</a></li><li class="nav-item"><a class="nav-link" href="/guides/updates/index.html">Updates and channels</a></li><li class="nav-item"><a class="nav-link" href="/guides/settings/index.html">Move to another machine</a></li><li class="nav-item"><a class="nav-link" href="/guides/security/index.html">Security</a></li><li class="nav-item"><a class="nav-link" href="/guides/troubleshooting/index.html">Troubleshooting</a></li><li class="nav-item"><a class="nav-link" href="/guides/contributing/index.html">Contributing and docs versions</a></li></ul></li><li class="nav-item nav-item--group"><div class="nav-group-header"><span class="nav-link disabled">reference</span><button type="button" class="nav-toggle" aria-expanded="false" aria-label="Toggle reference section"><span class="nav-toggle__icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></span></button></div><ul class="nav flex-column nav--nested bxsites-nav-nested" hidden><li class="nav-item"><a class="nav-link" href="/reference/commands/index.html">Command reference</a></li><li class="nav-item"><a class="nav-link" href="/reference/config-files/index.html">Files and folders</a></li></ul></li></ul>
+				<a class="bxsites-powered-by" href="https://bxsites.io" target="_blank" rel="noopener noreferrer">
+					<img class="bxsites-powered-by__logo" src="/assets/bxsites-logo.svg" alt="" aria-hidden="true"> <span>Powered by BxSites</span>
+				</a>
+			</aside>
+
+			
+			<main class="col-lg-9 col-xl-8 content">
+					
+
+	
+	<article class="page-content">
+		
+		
+		
+		
+		
+		
+			<nav class="breadcrumb-nav mb-3" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="/architecture/index.html">Architecture</a></li><li class="breadcrumb-item active" aria-current="page">Command contract</li></ol></nav>
+		
+		
+		<h1 class="page-title" id="page-title">
+			<a href="#page-title" id="page-title" class="anchor"></a>
+			
+			Command contract
+		</h1>
+		
+		
+			<p class="page-summary">Developer reference.</p>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+			<details class="bxsites-toc-mobile toc-mobile d-xl-none"><summary class="toc-mobile__summary"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4v16"/><path d="M6 8h6"/><path d="M6 14h9"/><path d="M6 20h4"/></svg> On this page</summary><ul class="list-unstyled"><li class="toc-level-2"><a href="#1-grammar">1. Grammar</a></li><li class="toc-level-2"><a href="#2-mutation-rules-apply-to-every-mutating-verb">2. Mutation rules &#x28;apply to every mutating verb&#x29;</a></li><li class="toc-level-2"><a href="#3-exit-codes">3. Exit codes</a></li><li class="toc-level-2"><a href="#4---json">4. --json</a></li><li class="toc-level-2"><a href="#5-catalog-single-source-of-truth">5. Catalog &#x28;single source of truth&#x29;</a></li><li class="toc-level-2"><a href="#6-state-and-config-layout">6. State and config layout</a></li><li class="toc-level-2"><a href="#7-test-contract">7. Test contract</a></li><li class="toc-level-2"><a href="#8-catalog-check-validation-and-reporting">8. Catalog check, validation and reporting</a></li><li class="toc-level-2"><a href="#9-open-questions">9. Open questions</a></li><li class="toc-level-2"><a href="#10-implemented-so-far-2026-11-09">10. Implemented so far &#x28;2026-11-09&#x29;</a></li><li class="toc-level-2"><a href="#11-package-commands-on-the-catalog-b2-decided-2026-11-09">11. Package commands on the catalog &#x28;B2, decided 2026-11-09&#x29;</a></li><li class="toc-level-3"><a href="#selection">Selection</a></li><li class="toc-level-3"><a href="#per-source-steps">Per-source steps</a></li><li class="toc-level-3"><a href="#result-shape---json-inside-the-section-4-envelope">Result shape &#x28; --json , inside the section 4 envelope&#x29;</a></li><li class="toc-level-3"><a href="#open-questions">Open questions</a></li><li class="toc-level-2"><a href="#12-implemented-so-far-b2-2026-11-09">12. Implemented so far, B2 &#x28;2026-11-09&#x29;</a></li><li class="toc-level-2"><a href="#13-desktop-setup-decided-with-the-owner-2026-11-09-and-2026-11-10-all-built">13. Desktop setup &#x28;decided with the owner 2026-11-09 and 2026-11-10&#x3b; all built&#x29;</a></li><li class="toc-level-3"><a href="#131-commands">13.1 Commands</a></li><li class="toc-level-3"><a href="#132-setup-plasma-hyprkwin">13.2 setup plasma &#x28;HyprKwin&#x29;</a></li><li class="toc-level-3"><a href="#133-setup-hyprland">13.3 setup hyprland</a></li><li class="toc-level-3"><a href="#134-shortcuts-keys-and-setup-xremap">13.4 Shortcuts, keys and setup xremap</a></li><li class="toc-level-3"><a href="#135-look-and-starter-configs">13.5 Look and starter configs</a></li><li class="toc-level-3"><a href="#135b-shell-and-terminal-decided-2026-11-10">13.5b Shell and terminal &#x28;decided 2026-11-10&#x29;</a></li><li class="toc-level-3"><a href="#136-brand-assets">13.6 Brand assets</a></li><li class="toc-level-3"><a href="#137-session">13.7 session</a></li><li class="toc-level-3"><a href="#139-runner-the-launcher-abstraction-port-of-the-legacy-bxcachy-runner">13.9 runner &#x3a; the launcher abstraction &#x28;port of the legacy bxcachy-runner &#x29;</a></li><li class="toc-level-3"><a href="#1310-db-local-databases-and-search-engines-as-containers-port-of-the-legacy-bxcachy-db-and-bxcachy-vector">13.10 db &#x3a; local databases and search engines as containers &#x28;port of the legacy bxcachy-db and bxcachy-vector &#x29;</a></li><li class="toc-level-3"><a href="#1311-dotfiles-your-own-dotfiles-repository-decided-with-the-owner-2026-11-11">13.11 dotfiles &#x3a; your own dotfiles repository &#x28;decided with the owner 2026-11-11&#x29;</a></li><li class="toc-level-3"><a href="#1312-apps-basic-or-customize-and-your-defaults-decided-with-the-owner-2026-11-11">13.12 Apps&#x3a; Basic or Customize, and your defaults &#x28;decided with the owner 2026-11-11&#x29;</a></li><li class="toc-level-3"><a href="#138-tests-and-what-is-verified">13.8 Tests and what is verified</a></li><li class="toc-level-3"><a href="#1313-secrets-one-way-to-store-and-load-api-keys-decided-with-the-owner-2026-11-11">13.13 Secrets&#x3a; one way to store and load API keys &#x28;decided with the owner 2026-11-11&#x29;</a></li><li class="toc-level-3"><a href="#1314-ai-agents-decided-with-the-owner-2026-11-11">13.14 AI agents &#x28;decided with the owner 2026-11-11&#x29;</a></li><li class="toc-level-3"><a href="#1315-ssh-key-and-plasma-keyboard-layouts-decided-with-the-owner-2026-11-12">13.15 SSH key and Plasma keyboard layouts &#x28;decided with the owner 2026-11-12&#x29;</a></li><li class="toc-level-3"><a href="#1316-control-center-menu-decided-with-the-owner-2026-11-12">13.16 Control center menu &#x28;decided with the owner 2026-11-12&#x29;</a></li><li class="toc-level-3"><a href="#1317-podman-helpers-docker-compatibility-and-the-lazyvim-starter-decided-with-the-owner-2026-11-12">13.17 Podman helpers, docker compatibility and the LazyVim starter &#x28;decided with the owner 2026-11-12&#x29;</a></li><li class="toc-level-3"><a href="#1318-desktop-utilities-clipboard-history-and-screen-recording-decided-with-the-owner-2026-11-12">13.18 Desktop utilities&#x3a; clipboard history and screen recording &#x28;decided with the owner 2026-11-12&#x29;</a></li><li class="toc-level-3"><a href="#1319-shortcut-editor-decided-with-the-owner-2026-11-12">13.19 Shortcut editor &#x28;decided with the owner 2026-11-12&#x29;</a></li><li class="toc-level-3"><a href="#1320-web-apps-nordvpn-setup-and-remote-desktop-decided-with-the-owner-2026-11-12">13.20 Web apps, NordVPN setup and remote desktop &#x28;decided with the owner 2026-11-12&#x29;</a></li><li class="toc-level-3"><a href="#1321-runtime-controls-and-cloud-storage-decided-with-the-owner-2026-11-12">13.21 Runtime controls and cloud storage &#x28;decided with the owner 2026-11-12&#x29;</a></li><li class="toc-level-3"><a href="#1322-all-apps-window-answers-to-take-to-another-machine-snapshot-guis-decided-with-the-owner-2026-11-12">13.22 All apps window, answers to take to another machine, snapshot GUIs &#x28;decided with the owner 2026-11-12&#x29;</a></li><li class="toc-level-3"><a href="#1323-layouts-per-desktop-decided-with-the-owner-2026-11-12">13.23 Layouts per desktop &#x28;decided with the owner 2026-11-12&#x29;</a></li><li class="toc-level-3"><a href="#1324-system-aware-wizard-and-status">13.24 System-aware wizard and status</a></li><li class="toc-level-3"><a href="#1325-strata-dictation-quick-look-dolphin-doctor-decided-with-the-owner-2026-11-12">13.25 Strata, dictation, Quick Look, Dolphin doctor &#x28;decided with the owner 2026-11-12&#x29;</a></li><li class="toc-level-3"><a href="#1326-cheat-sheet-screenshots-notifications-decided-with-the-owner-2026-11-12">13.26 Cheat sheet, screenshots, notifications &#x28;decided with the owner 2026-11-12&#x29;</a></li><li class="toc-level-3"><a href="#1327-four-workspaces-and-the-plasma-panel-layout-decided-with-the-owner-2026-11-12">13.27 Four workspaces and the Plasma panel layout &#x28;decided with the owner 2026-11-12&#x29;</a></li><li class="toc-level-3"><a href="#1328-web-app-bundles-databases-boxlang-ecosystem-decided-with-the-owner-2026-11-13">13.28 Web app bundles, databases, BoxLang ecosystem &#x28;decided with the owner 2026-11-13&#x29;</a></li><li class="toc-level-3"><a href="#1329-mac-style-extras-decided-with-the-owner-2026-11-13">13.29 Mac-style extras &#x28;decided with the owner 2026-11-13&#x29;</a></li><li class="toc-level-3"><a href="#1330-one-line-installer-update-channels-updates-and-notifications-decided-with-the-owner-2026-11-13">13.30 One-line installer, update channels, updates and notifications &#x28;decided with the owner 2026-11-13&#x29;</a></li><li class="toc-level-3"><a href="#1331-agent-skills-and-the-documentation-site-decided-with-the-owner-2026-11-13">13.31 Agent skills and the documentation site &#x28;decided with the owner 2026-11-13&#x29;</a></li><li class="toc-level-2"><a href="#14-install-and-the-setup-wizard-decided-with-the-owner-2026-11-10-install-wizard-and-the-init-engine-are-built-the-pages-later-commands-are-not">14. Install and the setup wizard &#x28;decided with the owner 2026-11-10&#x3b; install, wizard and the init engine are built, the pages&#x27; later commands are not&#x29;</a></li><li class="toc-level-3"><a href="#141-install">14.1 Install</a></li><li class="toc-level-3"><a href="#142-bxcachy-init">14.2 bxcachy init</a></li><li class="toc-level-3"><a href="#143-pages-answers-and-what-they-run">14.3 Pages, answers and what they run</a></li><li class="toc-level-3"><a href="#144-rules">14.4 Rules</a></li><li class="toc-level-3"><a href="#145-tasks">14.5 Tasks</a></li></ul></details>
+		
+
+		
+		<h1 id="bxcachy-command-contract-a5-draft-v3"><a href="#bxcachy-command-contract-a5-draft-v3" id="bxcachy-command-contract-a5-draft-v3" name="bxcachy-command-contract-a5-draft-v3" class="anchor"></a>BxCachy command contract (A5 draft, v3)</h1>
+<p>Target (2026-11-09): Hyprland + Noctalia on CachyOS, KDE kept side by side; see plan.md section 19. <code>setup</code> is the headline command.</p>
+<p>Status: <strong>proposal, no code written.</strong> Note 2026-11-09: the legacy tree in <code>artifacts/legacy/original/</code> is the real v0.10.0 source. It is kept as is and never copied, backed up or modified. Decisions here are inputs to M0 hardening (tasks 1.2 to 1.5) and M1 catalog work. Legacy v0.10.0 is a feature reference only (<code>artifacts/legacy/original/</code>).</p>
+<h2 id="1-grammar"><a href="#1-grammar" id="1-grammar" name="1-grammar" class="anchor"></a>1. Grammar</h2>
+<pre><code>bxcachy &lt;group&gt; &lt;verb&gt; [args...] [--yes] [--dry-run] [--json] [--quiet]
+</code></pre>
+<ul>
+<li>Groups mirror the legacy dispatcher so users keep their muscle memory: <code>setup apps app-manager catalog profile base extras dev web podman ai vector db db-center vm network cloud cloud-center cloud-services files quicklook dictation integrations desktop desktop-keys mac-keys omarchy-base layout themes icons runner menu shortcuts system config first-run doctor setup</code>.</li>
+<li>Global verbs on every group: <code>plan</code> (read-only), <code>status</code> (read-only), <code>doctor</code> (read-only checks), <code>help</code>.</li>
+<li>Mutating verbs: <code>install</code>, <code>apply</code>, <code>remove</code>, <code>restore</code>, <code>enable</code>, <code>disable</code>. All require <code>--yes</code>.</li>
+<li>Existing flat commands (<code>install</code>, <code>optional-install</code>, <code>profile-install</code>, <code>package-status</code>, <code>package-source</code>, ...) stay as aliases until the grouped form ships, then print a deprecation note.</li>
+<li>Unknown flags, duplicate flags, empty arguments and extra positionals are usage errors (exit 2). Nothing runs.</li>
+<li>Note from M0 history: BoxLang <code>CLIGetArgs()</code> puts flags in <code>args.options</code>, not <code>args.positionals</code>. The parser is one shared function, tested once.</li>
+</ul>
+<h2 id="2-mutation-rules-apply-to-every-mutating-verb"><a href="#2-mutation-rules-apply-to-every-mutating-verb" id="2-mutation-rules-apply-to-every-mutating-verb" name="2-mutation-rules-apply-to-every-mutating-verb" class="anchor"></a>2. Mutation rules (apply to every mutating verb)</h2>
+<ol>
+<li>No <code>--yes</code>: print the exact plan, change nothing, exit 2.</li>
+<li><code>--dry-run</code> with <code>--yes</code>: print the exact plan, change nothing, exit 0.</li>
+<li>Preflight everything before the first mutation. A preflight failure means zero changes.</li>
+<li>Never escalate privilege silently. <code>sudo</code> is only called for pacman steps shown in the plan.</li>
+<li>Never run AUR builds as root (exit 4).</li>
+<li>Every config file touched goes through the config service (backup, atomic replace, journal). No direct writes.</li>
+<li>Output lists succeeded and failed items separately. No rollback is promised across pacman and yay.</li>
+<li>External installer scripts (bvm, mvm, <code>toolchain node</code>'s nvm, catalog <code>source: script</code>) are downloaded to a temp file, their url and sha256 are printed, and they run as the normal user (never root) with no confirmation gate and no flag: the typed <code>EXECUTE</code> and <code>--allow-external-scripts</code> were removed on 2026-11-10 (owner: running them is the point of the command). Decision 2026-11-09: no checksum pinning for these scripts.</li>
+<li>Subprocesses are launched with argument arrays, never through a shell string.</li>
+</ol>
+<h2 id="3-exit-codes"><a href="#3-exit-codes" id="3-exit-codes" name="3-exit-codes" class="anchor"></a>3. Exit codes</h2>
+<div class="bxsites-table-wrap" x-data="{ q: '' }"><input type="search" class="bxsites-table-filter" x-model="q" placeholder="Filter table..." aria-label="Filter table"><table class="table">
+<thead>
+<tr><th>Code</th><th>Meaning</th><th>Example</th></tr>
+</thead>
+<tbody>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>0</td><td>Success or no-op</td><td>already installed, or <code>--dry-run</code></td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>1</td><td>Check negative</td><td><code>package-status</code> says missing</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>2</td><td>Usage error or missing confirmation</td><td>no <code>--yes</code>, unknown flag</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>3</td><td>Timeout, or item unavailable</td><td>pacman lookup timed out, package not in any repo</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>4</td><td>Precondition failed</td><td>root with AUR, not Arch, Java missing, not KDE where required</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>5</td><td>Official (pacman) phase failed</td><td> </td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>6</td><td>AUR (yay) phase failed</td><td> </td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>7</td><td>Partial success</td><td>some items done, some failed; <code>--json</code> lists both</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>8</td><td>Config conflict</td><td>drift detected, symlink or special file at target, concurrent run lock</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>9</td><td>Internal error</td><td>bug, unexpected exception</td></tr>
+</tbody>
+</table></div>
+<p>Codes 0 to 6 match what the native CLI returns today (2, 3, 4, 5, 6 are already used). 1 is already used for check-negative. 7 to 9 are new. Codes are frozen once published and covered by a contract snapshot test.</p>
+<h2 id="4---json"><a href="#4---json" id="4---json" name="4---json" class="anchor"></a>4. <code>--json</code></h2>
+<p>One JSON object on stdout, nothing else on stdout. Human text goes to stderr.</p>
+<pre><code class="language-json">{
+  &quot;schema&quot;: 1,
+  &quot;command&quot;: &quot;profile install&quot;,
+  &quot;version&quot;: &quot;0.11.0-dev&quot;,
+  &quot;ok&quot;: false,
+  &quot;exit&quot;: 7,
+  &quot;dry_run&quot;: false,
+  &quot;plan&quot;:    [{&quot;id&quot;: &quot;jq&quot;, &quot;source&quot;: &quot;pacman&quot;, &quot;action&quot;: &quot;install&quot;}],
+  &quot;done&quot;:    [{&quot;id&quot;: &quot;jq&quot;, &quot;source&quot;: &quot;pacman&quot;}],
+  &quot;failed&quot;:  [{&quot;id&quot;: &quot;x&quot;, &quot;source&quot;: &quot;aur&quot;, &quot;reason&quot;: &quot;yay exited 1&quot;}],
+  &quot;skipped&quot;: [{&quot;id&quot;: &quot;git&quot;, &quot;reason&quot;: &quot;already installed&quot;}],
+  &quot;warnings&quot;: []
+}
+</code></pre>
+<p>Read-only commands use the same envelope with a <code>data</code> field.</p>
+<h2 id="5-catalog-single-source-of-truth"><a href="#5-catalog-single-source-of-truth" id="5-catalog-single-source-of-truth" name="5-catalog-single-source-of-truth" class="anchor"></a>5. Catalog (single source of truth)</h2>
+<p>Decision already made: import legacy <code>catalog/apps.json</code> (482 entries) as canonical, keeping its 61 default flags. It replaces the hardcoded lists in <code>src/bxcachy.bxs</code> and <code>scripts/package-manager.sh</code>.</p>
+<p>Entry schema (legacy fields kept, new fields marked):</p>
+<div class="bxsites-table-wrap" x-data="{ q: '' }"><input type="search" class="bxsites-table-filter" x-model="q" placeholder="Filter table..." aria-label="Filter table"><table class="table">
+<thead>
+<tr><th>Field</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>id</code>, <code>name</code>, <code>kind</code> (<code>desktop</code> <code>tui</code> <code>web</code>), <code>category</code>, <code>description</code></td><td>as legacy</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>source</code> (<code>pacman</code> <code>aur</code> <code>pkgbuild</code> <code>script</code> <code>manual</code> <code>web</code>), <code>target</code></td><td>package name, or URL for web and script</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>pkgbuild</code> source: <code>repo</code>, <code>path</code>, <code>ref</code></td><td>Build with <code>makepkg</code> as the normal user from a PKGBUILD in a public git repo, pinned to a full 40-character commit (<code>catalog check</code> rejects anything else), then install the result with pacman. Used for Omarchy 4.5 apps (<code>omacom/omarchy-pkgs</code>). The PKGBUILD is shown before it is built.</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>check</code> (for <code>script</code>)</td><td>argv array that exits 0 when installed, for example <code>[&quot;command&quot;,&quot;-v&quot;,&quot;pi&quot;]</code></td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>default</code></td><td>base tier flag</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>source_status</code>, <code>source_confirmed</code></td><td>legacy provenance flags, kept</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>profiles</code> (new)</td><td>list of profile ids</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>deps</code> (new)</td><td>other catalog ids</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>check</code> (new)</td><td>optional post-install check, argv array</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>verified_on</code> (new)</td><td>date the target was confirmed against real repos</td></tr>
+</tbody>
+</table></div>
+<p>Findings from the legacy data (decisions recorded 2026-11-09):</p>
+<ul>
+<li><strong>Unverified sources.</strong> 176 entries are <code>source: manual</code> (95 tui, 81 desktop). Their package names are unverified. Proposal: a CI job that checks every <code>pacman</code>/<code>aur</code> target against real repos (Arch container, AUR RPC) and fails on unknown names. <code>manual</code> entries stay installable only by explicit user action.</li>
+<li><strong>Default list mismatch.</strong> 61 flagged default (29 pacman, 18 aur, 14 web). <code>app-profile.json</code> <code>base</code> lists 46. 20 defaults are not in that base list (for example <code>ark dolphin dolphin-plugins kio-extras rclone fuse3 sshfs nfs-utils cifs-utils podman-desktop tabby beekeeper-studio google-docs google-sheets google-slides kompare filelight ffmpegthumbs kdegraphics-thumbnailers kimageformats</code>). 5 base entries are not flagged default (<code>dbeaver filezilla krdc podman-tui rustdesk</code>). The 61 flags win. The 5 dropped base entries are <code>dbeaver</code> (pacman), <code>filezilla</code> (pacman), <code>krdc</code> (pacman), <code>rustdesk</code> (aur) and <code>podman-tui</code> (manual). Pending: keep them as curated (not default), or re-flag any as default.</li>
+<li><strong>Browsers.</strong> <code>brave</code> is <code>aur</code> (<code>brave-bin</code>) and default. A fresh default install therefore needs yay on day one. Decision: bootstrap installs yay only if it is not already present.</li>
+<li><strong>Preserve list.</strong> Legacy <code>preserve</code> (CachyOS, KDE Plasma, Hyprland, Noctalia, existing user configs) becomes enforced rules, not just text.</li>
+</ul>
+<p>Named profiles keep the existing four (<code>core jvm containers terminal</code>) and are expressed as catalog <code>profiles</code> tags. Later profiles (<code>web backend ai ops desktop full</code>) are added only after package names are verified.</p>
+<p>Ship vs embed (pending confirmation): the default catalog is embedded in the binary at build time, so there is one file to ship and it always matches the code. An optional <code>~/.config/bxcachy/catalog.json</code> adds entries or sets <code>default</code>/<code>profiles</code> on existing ids. It is validated against the same schema and can never delete or replace an embedded entry's <code>target</code>, so a bad override cannot redirect an install.</p>
+<h2 id="6-state-and-config-layout"><a href="#6-state-and-config-layout" id="6-state-and-config-layout" name="6-state-and-config-layout" class="anchor"></a>6. State and config layout</h2>
+<pre><code>~/.config/bxcachy/            same root as legacy
+  bxcachy.json                global settings
+  catalog.json                optional user additions (merge-only)
+  ai.json menu.json shortcuts.json ...   one file per feature, as legacy
+~/.local/state/bxcachy/
+  journal/                    one record per apply: files, hashes, backup paths
+  backups/                    backups, indexed by the journal
+  lock                        single-writer lock
+</code></pre>
+<p><code>config list|diff|apply|restore</code> work from the journal, so restore needs only an id. Retention default: keep the last 20 per file. Open: this applies to the user's config files that BxCachy writes, not to the legacy source tree.</p>
+<h2 id="7-test-contract"><a href="#7-test-contract" id="7-test-contract" name="7-test-contract" class="anchor"></a>7. Test contract</h2>
+<ul>
+<li>A snapshot test freezes <code>bxcachy help</code>, the exit-code table and the <code>--json</code> schema.</li>
+<li>Every mutating verb needs these cases: success, no-op, invalid input, dependency failure, privilege rejection, partial failure, recovery.</li>
+<li>Real-system cases run in <code>tests/arch/</code> (non-root, real pacman). Cases needing KDE, Wayland or hardware are marked <code>manual</code> and tracked in the acceptance log.</li>
+</ul>
+<h2 id="8-catalog-check-validation-and-reporting"><a href="#8-catalog-check-validation-and-reporting" id="8-catalog-check-validation-and-reporting" name="8-catalog-check-validation-and-reporting" class="anchor"></a>8. Catalog check, validation and reporting</h2>
+<p><code>bxcachy catalog check [--json] [--online]</code> plus a CI job that runs it in the Arch container.</p>
+<p><strong>Offline validation (always, no network):</strong> schema version; unique ids; enums for <code>kind</code>/<code>source</code>; <code>web</code> targets are https with no credentials or control characters; package targets match <code>^[a-zA-Z0-9@._+-]+$</code>; <code>default</code> entries have a non-<code>manual</code> source; <code>profiles</code> and <code>deps</code> reference existing ids; no dependency cycles.</p>
+<p><strong>Online verification (<code>--online</code>, CI):</strong> every <code>pacman</code> target must resolve with <code>pacman -Si</code> (or <code>-Sg</code> for groups); every <code>aur</code> target must resolve through the AUR RPC (<code>/rpc/v5/info</code>); <code>manual</code> targets are probed against both and reported as promotable. Results are stored per entry as <code>verified_on</code> and a status: <code>ok</code>, <code>moved</code> (listed source is wrong but another source has it), <code>missing</code>, <code>unverified</code>.</p>
+<p><strong>Reporting:</strong> a table by status and source for the console, <code>--json</code> for tools, and a markdown report in the CI step summary and artifact. Policy: <code>missing</code> entries with <code>default: true</code> fail CI; <code>missing</code> non-default entries are warnings listed in the report; <code>moved</code> entries are warnings with the suggested fix.</p>
+<p><strong>First measurement (2026-11-09, stock Arch core/extra only, so CachyOS repos and multilib are not covered):</strong></p>
+<div class="bxsites-table-wrap"><table class="table">
+<thead>
+<tr><th>Check</th><th>Result</th></tr>
+</thead>
+<tbody>
+<tr><td><code>pacman</code> targets (118)</td><td>111 resolve, 7 do not: 5 exist in AUR (<code>git-cola insomnia localsend ulauncher wlogout</code>), 2 found nowhere (<code>intellij-idea-community-edition</code>, <code>swww</code>)</td></tr>
+<tr><td><code>aur</code> targets (64)</td><td>40 resolve in AUR, 11 are now official (<code>doggo impala nwg-dock-hyprland opencode podman-desktop rio spotify-launcher superfile television warehouse zenmap</code>), 13 found nowhere (<code>beeper ctop dbgate espanso grokbot herder inshellisense notion-desktop pi-agent tmog todoist upnote zap-whatsapp</code>)</td></tr>
+<tr><td><code>manual</code> targets (176)</td><td>93 are official packages today (promotable, for example <code>jq ripgrep-all tmux kitty starship terraform kubectl</code>), 83 are not</td></tr>
+</tbody>
+</table></div>
+<p>The check must also run against the CachyOS repos on a real CachyOS machine before any <code>missing</code> entry is removed.</p>
+<h2 id="9-open-questions"><a href="#9-open-questions" id="9-open-questions" name="9-open-questions" class="anchor"></a>9. Open questions</h2>
+<ol>
+<li>The 5 dropped base entries: keep as curated, or re-flag any as default?</li>
+<li>Catalog embed with merge-only user override: confirmed?</li>
+<li>Hyprland features (layout, runner, shortcuts, menus) are now in scope, not deferred.</li>
+</ol>
+<h2 id="10-implemented-so-far-2026-11-09"><a href="#10-implemented-so-far-2026-11-09" id="10-implemented-so-far-2026-11-09" name="10-implemented-so-far-2026-11-09" class="anchor"></a>10. Implemented so far (2026-11-09)</h2>
+<ul>
+<li><code>config list|diff|apply|restore|history</code> (section 6 design; lock is a file created with <code>fileWriteExclusive</code>, temp files and journal records are created exclusive with their mode).</li>
+<li>Global flag check and the <code>--json</code> envelope (sections 1 and 4) for the read-only commands.</li>
+<li><code>catalog list|show|groups|check|version</code>: the catalog is schema 3 (<code>catalog/README.md</code>) and is embedded in the binary by <code>bootstrap/gen-catalog.sh</code> (CI fails if <code>src/bxcachy.bxs</code> is stale). Filters use the <code>--name=value</code> form (<code>--tier=default --group=infra</code>), because MatchBox <code>CLIGetArgs</code> takes <code>--name value</code> as a flag plus a positional. <code>catalog check</code> is offline: errors exit 1, warnings (unpinned <code>pkgbuild</code> refs, default entries without a package) do not. The user override file is deliberately last (extensibility phase).</li>
+</ul>
+<h2 id="11-package-commands-on-the-catalog-b2-decided-2026-11-09"><a href="#11-package-commands-on-the-catalog-b2-decided-2026-11-09" id="11-package-commands-on-the-catalog-b2-decided-2026-11-09" name="11-package-commands-on-the-catalog-b2-decided-2026-11-09" class="anchor"></a>11. Package commands on the catalog (B2, decided 2026-11-09)</h2>
+<p>Applies to <code>plan</code>, <code>install-plan</code>, <code>install</code>, <code>optional-*</code>, <code>profile-*</code>, <code>package-status</code>, <code>package-source</code>. All read the embedded catalog (schema 3). Hardcoded lists in <code>Main.bx</code> go away.</p>
+<h3 id="selection"><a href="#selection" id="selection" name="selection" class="anchor"></a>Selection</h3>
+<pre><code>bxcachy install                       # tier default
+bxcachy install ID [ID...]            # exactly these apps
+bxcachy install --profile=NAME        # a profile
+bxcachy install --optional            # default tier plus optional tier
+</code></pre>
+<ul>
+<li>Naming an app is enough. There is <strong>no <code>--aur</code> flag</strong>: anything in the catalog installs from its <code>source</code> (<code>pacman</code>, <code>aur</code>, <code>pkgbuild</code>, <code>web</code>).</li>
+<li>Unknown id: usage error (exit 2), nothing runs.</li>
+<li>Skip reasons: <code>optional</code> (not selected), <code>wrong_shell</code> and <code>unresolved</code> (catalog has no installable source yet; a named <code>unresolved</code> app is reported <code>failed</code>, exit 3).</li>
+<li>Already installed apps are <code>skipped</code> with reason <code>installed</code>.</li>
+<li>Section 2 still applies: no <code>--yes</code> prints the plan and exits 2; <code>--dry-run --yes</code> prints it and exits 0. AUR and <code>pkgbuild</code> builds never run as root (exit 4).</li>
+<li>Profiles live in the catalog (0.3.0): a top-level <code>profiles</code> list and, per app, a map profile id to <code>default</code>/<code>optional</code>. <code>--profile=NAME</code> installs the profile's <code>default</code> members; <code>--optional</code> adds its <code>optional</code> ones. See <code>catalog/README.md</code>.</li>
+<li>Shells: an app may carry <code>shells</code> (<code>hyprland</code>, <code>plasma</code>). The running shell comes from <code>XDG_CURRENT_DESKTOP</code>, overridable with <code>--shell=hyprland|plasma|all</code>. Non-matching apps are <code>skipped: wrong_shell</code>; a named app still installs.</li>
+</ul>
+<h3 id="per-source-steps"><a href="#per-source-steps" id="per-source-steps" name="per-source-steps" class="anchor"></a>Per-source steps</h3>
+<div class="bxsites-table-wrap"><table class="table">
+<thead>
+<tr><th>source</th><th>step</th></tr>
+</thead>
+<tbody>
+<tr><td><code>pacman</code></td><td>one <code>pacman -S --needed</code> call for all pacman apps (sudo shown in the plan)</td></tr>
+<tr><td><code>aur</code></td><td>AUR helper (yay) as the normal user, apps one at a time</td></tr>
+<tr><td><code>pkgbuild</code></td><td>PKGBUILD shown, <code>makepkg</code> as the normal user, result installed with pacman</td></tr>
+<tr><td><code>web</code></td><td>a <code>.desktop</code> launcher in <code>~/.local/share/applications/bxcachy-&lt;id&gt;.desktop</code> running <code>brave --app=URL</code> (written atomically, no package). The resolver adds <code>brave</code> to the plan when a web app is selected and brave is not installed.</td></tr>
+</tbody>
+</table></div>
+<h3 id="result-shape---json-inside-the-section-4-envelope"><a href="#result-shape---json-inside-the-section-4-envelope" id="result-shape---json-inside-the-section-4-envelope" name="result-shape---json-inside-the-section-4-envelope" class="anchor"></a>Result shape (<code>--json</code>, inside the section 4 envelope)</h3>
+<p><code>data</code> for <code>plan</code>, <code>install-plan</code> and <code>install</code>:</p>
+<pre><code class="language-json">{
+  &quot;selection&quot;: { &quot;mode&quot;: &quot;default|ids|profile|optional&quot;, &quot;ids&quot;: [], &quot;profile&quot;: null },
+  &quot;would_install&quot;: [ { &quot;id&quot;: &quot;git&quot;, &quot;source&quot;: &quot;pacman&quot;, &quot;targets&quot;: [&quot;git&quot;] } ],
+  &quot;done&quot;:    [ { &quot;id&quot;: &quot;git&quot;, &quot;source&quot;: &quot;pacman&quot; } ],
+  &quot;failed&quot;:  [ { &quot;id&quot;: &quot;docker&quot;, &quot;source&quot;: &quot;pacman&quot;, &quot;error&quot;: &quot;target not found&quot; } ],
+  &quot;skipped&quot;: [ { &quot;id&quot;: &quot;jq&quot;, &quot;reason&quot;: &quot;optional&quot; } ]
+}
+</code></pre>
+<ul>
+<li><code>plan</code> and <code>--dry-run</code> fill <code>would_install</code> and leave <code>done</code>/<code>failed</code> empty. A real run fills <code>done</code>/<code>failed</code> and leaves <code>would_install</code> empty.</li>
+<li>Exit: 0 all done or nothing to do; 5 pacman phase failed, 6 AUR/pkgbuild phase failed (only when nothing succeeded); 7 some done and some failed.</li>
+<li><code>package-status ID</code> exits 0 when installed, 1 when missing; <code>data</code> is <code>{ &quot;id&quot;, &quot;source&quot;, &quot;installed&quot;: true|false }</code>.</li>
+<li><code>package-source ID</code> prints <code>{ &quot;id&quot;, &quot;source&quot;, &quot;targets&quot;, &quot;tier&quot;, &quot;group&quot; }</code>.</li>
+</ul>
+<p>Human output is the same lists, one app per line with its source.</p>
+<h3 id="open-questions"><a href="#open-questions" id="open-questions" name="open-questions" class="anchor"></a>Open questions</h3>
+<ol>
+<li>Decided: a <code>web</code> app counts as installed when its launcher file exists.</li>
+</ol>
+<h2 id="12-implemented-so-far-b2-2026-11-09"><a href="#12-implemented-so-far-b2-2026-11-09" id="12-implemented-so-far-b2-2026-11-09" name="12-implemented-so-far-b2-2026-11-09" class="anchor"></a>12. Implemented so far, B2 (2026-11-09)</h2>
+<ul>
+<li>Catalog 0.3.0: <code>profiles</code>, per-profile tier, <code>shells</code> (section 11, <code>catalog/README.md</code>).</li>
+<li><code>Resolver</code> class (selection) and <code>Packages</code> class (read-only commands). <code>plan</code>, <code>install-plan</code>, <code>optional-plan</code>, <code>profile-plan</code>, <code>profile-install-plan</code>, <code>package-status</code>, <code>package-source</code>, <code>profile-list</code>, <code>desktop-list</code>, <code>tui-list</code>, <code>web-list</code>, <code>optional-list</code> run on the catalog. Installed state comes from one <code>pacman -Qq</code> call (web apps: launcher file).</li>
+<li><code>install</code>, <code>optional-install</code>, <code>profile-install</code> run on the catalog through <code>Installer</code> (one <code>pacman -S</code> call, <code>yay</code> per AUR app, pinned PKGBUILDs via <code>git clone</code> + <code>makepkg -si</code>). Rules as in sections 2 and 11: no <code>--yes</code> prints the plan (exit 2), <code>--dry-run</code> exits 0, root with AUR or PKGBUILD builds exits 4 before any change, a named app without a source exits 3, partial results exit 7 (5 or 6 when nothing succeeded).</li>
+<li>Web apps install as launchers (see section 11 table). The 28 <code>pkgbuild</code> apps are pinned to one commit of <code>omacom/omarchy-pkgs</code> and install with <code>git clone</code>, <code>git checkout COMMIT</code>, <code>makepkg -si</code> as the normal user (root exits 4). All of them are optional, so a plain <code>bxcachy install</code> skips them.</li>
+<li>Not on the catalog: <code>apps-doctor</code>, <code>dev-plan</code>.</li>
+</ul>
+<h2 id="13-desktop-setup-decided-with-the-owner-2026-11-09-and-2026-11-10-all-built"><a href="#13-desktop-setup-decided-with-the-owner-2026-11-09-and-2026-11-10-all-built" id="13-desktop-setup-decided-with-the-owner-2026-11-09-and-2026-11-10-all-built" name="13-desktop-setup-decided-with-the-owner-2026-11-09-and-2026-11-10-all-built" class="anchor"></a>13. Desktop setup (decided with the owner 2026-11-09 and 2026-11-10; all built)</h2>
+<p>Builds on sections 2 to 4 (mutation rules, exit codes, <code>--json</code>), the config service (section 6) and the <code>Installer</code> (argument arrays, <code>done</code> / <code>failed</code> / <code>skipped</code>). Hyprland with Noctalia is installed beside KDE Plasma; KDE is never removed or reconfigured except what <code>--keys</code> hands over, which is backed up first.</p>
+<h3 id="131-commands"><a href="#131-commands" id="131-commands" name="131-commands" class="anchor"></a>13.1 Commands</h3>
+<pre><code>bxcachy setup hyprland [--yes] [--dry-run] [--json]    packages, images, starter configs, shortcut files
+bxcachy setup plasma   [--yes] [--dry-run] [--json]    HyprKwin tiling on KDE Plasma
+bxcachy setup plasma --keys | --undo-keys              hand Plasma's clashing keys over / back
+bxcachy setup hyprland --terminal=ghostty|kitty|alacritty|foot|konsole   Super+Enter terminal (ghostty default)
+bxcachy setup hyprland --layout=dwindle|master|scrolling|floating        default window layout in the starter hyprland.lua (dwindle default)
+bxcachy setup hyprland --workspaces=N --natural-scroll --layouts=us-intl,es --theme=dark|light|auto --wallpaper=box|grid|aurora|minimal   starter choices (defaults: 2, off, us, dark, box); two or more keyboard layouts switch with Alt+Shift
+bxcachy setup terminal [--default=ghostty] [--also=kitty,foot,...]       install terminals, starter configs with the Nerd Font
+bxcachy setup shell [--shell=zsh|fish|bash]                              Starship + shell init, login shell (zsh default)
+bxcachy setup xremap [--build=hypr|kde] [--yes]        Cmd-style keys: AUR package, input access, user service
+bxcachy setup undo hyprland|plasma|xremap [--yes]      remove only what setup added
+bxcachy setup status [--json]
+bxcachy tiling on|off|status                           HyprKwin inside Plasma, no logout
+bxcachy keys show | render xremap|hyprland|plasma | check | apply [--yes] [--dry-run] [--force]
+bxcachy assets list | install [--yes] [--dry-run]
+bxcachy session show | set hyprland|plasma [--yes] [--dry-run]
+bxcachy runner list | show | doctor | launch | select JSON | set P | menu-set P | launcher-command P JSON | menu-command P JSON   the launcher abstraction (13.9)
+</code></pre>
+<ul>
+<li>Every target runs, re-runs and undoes on its own; a re-run changes nothing when everything is in place. No <code>--yes</code> prints the plan (exit 2); <code>--dry-run</code> exits 0. Results as <code>install</code>: <code>done</code> / <code>failed</code> / <code>skipped</code>, exits 0, 2, 4 (precondition: root, wrong OS or CPU, no sudo, no Plasma, unsupported Plasma, X11, nothing to undo, session not installed), 5 (the pacman step failed), 6 (another step failed with nothing done), 7 (a step failed after earlier ones were done; later steps are skipped), 8 (config drift or lock). Never run as root: sudo is used only for the steps shown in the plan. <code>--json</code> is always one envelope on stdout (the config service has a quiet mode for that).</li>
+<li><strong>Exception to <code>--yes</code>:</strong> <code>tiling on|off</code> acts at once (a reversible user setting meant to sit behind a shortcut). <code>status</code> exits 0 on, 1 off, 4 not installed.</li>
+</ul>
+<h3 id="132-setup-plasma-hyprkwin"><a href="#132-setup-plasma-hyprkwin" id="132-setup-plasma-hyprkwin" name="132-setup-plasma-hyprkwin" class="anchor"></a>13.2 <code>setup plasma</code> (HyprKwin)</h3>
+<p>HyprKwin (<code>DGBooth/HyprKwin</code>) is a KWin script with Hyprland-style layouts and keys. It needs Plasma 6.6 or 6.8 on Wayland (6.7 warns, older or X11 exit 4). It is fetched <strong>pinned to a full commit</strong> (v1.2.0, <code>31abb63</code>, same rule as PKGBUILDs) into a temp directory and installed with its own <code>tools/install.sh</code> as the normal user, which backs up every global shortcut first. Plasma's keys stay Plasma's unless <code>--keys</code> (runs <code>tools/hyprkwin-shortcuts.py apply</code>; <code>--undo-keys</code> restores). The animations effect needs one logout. <code>setup undo plasma</code> runs HyprKwin's uninstall. <code>tiling on|off</code> sets <code>hyprkwinEnabled</code> in <code>kwinrc</code> <code>[Plugins]</code> and asks KWin to reconfigure over D-Bus (<code>off</code> also unloads the script).</p>
+<h3 id="133-setup-hyprland"><a href="#133-setup-hyprland" id="133-setup-hyprland" name="133-setup-hyprland" class="anchor"></a>13.3 <code>setup hyprland</code></h3>
+<p>Preconditions (exit 4): not root, pacman, CachyOS or Arch, x86_64, sudo. Steps, in order:</p>
+<ol>
+<li><code>packages</code>: the missing ones of 18 official packages in one <code>sudo pacman -S --needed</code> call: <code>hyprland</code>, native <code>noctalia</code>, <code>uwsm</code>, <code>hyprlock</code>, <code>hypridle</code>, <code>xdg-desktop-portal-hyprland</code>, <code>hyprpolkitagent</code>, <code>qt6ct</code>, <code>nwg-look</code>, <code>hyprpicker</code>, <code>grim</code>, <code>slurp</code>, <code>wl-clipboard</code>, <code>brightnessctl</code>, <code>kitty</code>, <code>adw-gtk-theme</code>, <code>noto-fonts</code>, <code>noto-fonts-emoji</code>. Individual packages, never the CachyOS meta-package <code>cachyos-hypr-noctalia</code> (it conflicts with <code>cachyos-desktop-settings</code>, which the KDE session may rely on). Noctalia is the native <code>noctalia</code> package; <code>noctalia-shell</code> + <code>noctalia-qs</code> are a different Quickshell-based variant that conflicts with <code>quickshell</code> (a warning, not an error, if installed). The packages added are remembered (<code>$XDG_STATE/bxcachy/setup-hyprland.json</code>, mode 600) so <code>setup undo hyprland</code> runs <code>sudo pacman -Rs</code> on exactly those.</li>
+<li><code>images</code>: the logo and wallpapers (13.6), missing ones only.</li>
+<li><code>starter</code>: the Noctalia config and palette, and a first <code>hyprland.lua</code> (13.5).</li>
+<li><code>keys</code>: the shared shortcut files (13.4).</li>
+</ol>
+<h3 id="134-shortcuts-keys-and-setup-xremap"><a href="#134-shortcuts-keys-and-setup-xremap" id="134-shortcuts-keys-and-setup-xremap" name="134-shortcuts-keys-and-setup-xremap" class="anchor"></a>13.4 Shortcuts, <code>keys</code> and <code>setup xremap</code></h3>
+<p>One embedded table (<code>Shortcuts.bx</code>) holds the shortcuts and is rendered per target. The same keys work on Hyprland and Plasma [owner]:</p>
+<div class="bxsites-table-wrap"><table class="table">
+<thead>
+<tr><th>Part</th><th>Hyprland</th><th>Plasma</th></tr>
+</thead>
+<tbody>
+<tr><td>Tiling and workspace keys</td><td>Hyprland's own keys</td><td>HyprKwin (same defaults)</td></tr>
+<tr><td>Cmd-style keys: Super+C, Super+V, Super+Tab</td><td>xremap</td><td>xremap</td></tr>
+<tr><td>Logout to the login screen, Super+Shift+Q</td><td><code>hl.bind(... &quot;uwsm stop&quot;)</code></td><td><code>kglobalshortcutsrc</code> <code>[ksmserver] Log Out</code> via kwriteconfig6</td></tr>
+</tbody>
+</table></div>
+<ul>
+<li>xremap, one shared YAML: Super+C/V send Ctrl+C/V, and Ctrl+Shift+C/V in terminals (a class list in the table); Super+Tab is a plain Alt+Tab remap [owner], answered on Hyprland by Noctalia's window switcher (<code>noctalia msg window-switcher hold</code>).</li>
+<li><code>keys render</code> prints a target's text (pure). <code>keys apply</code> writes <code>~/.config/xremap/config.yml</code>, <code>~/.config/hypr/bxcachy.lua</code> and <code>~/.config/systemd/user/xremap.service</code> through the config service (backup, journal; <code>config list|diff|apply|restore</code> cover them) and sets Plasma's Log Out with kwriteconfig6 when present. <code>keys check</code> reports clean / missing / outdated / drifted per piece (exit 0 or 1); a changed file is never overwritten without <code>--force</code>.</li>
+<li>Hyprland 0.55+ (Arch has 0.57) reads <code>hyprland.lua</code>; hyprlang <code>.conf</code> is deprecated, so bxcachy targets <strong>Lua only</strong> [owner]. <code>bxcachy.lua</code> holds the Noctalia autostart and panel binds, the Alt+Tab switcher, the logout bind and the window and layer rules, taken from Noctalia's v5 Hyprland docs. bxcachy <strong>never edits the user's <code>hyprland.lua</code></strong>: <code>keys check</code> reports <code>not-loaded</code> and <code>keys apply</code> prints the <code>require(&quot;bxcachy&quot;)</code> line to add (the starter file already has it).</li>
+<li><code>setup xremap</code> installs <code>xremap-hypr-bin</code> or <code>xremap-kde-bin</code> with <code>yay</code> (build from <code>--build</code>, else the running desktop), adds the udev rule for <code>/dev/uinput</code> and the user to the <code>input</code> group (both remembered in <code>setup-xremap.json</code>, mode 600), writes the shortcut files and enables the user service; <code>setup undo xremap</code> reverses only what it added. It needs one logout.</li>
+</ul>
+<h3 id="135-look-and-starter-configs"><a href="#135-look-and-starter-configs" id="135-look-and-starter-configs" name="135-look-and-starter-configs" class="anchor"></a>13.5 Look and starter configs</h3>
+<p>Ortus Brand Book 2025 palette (main <code>#00FF78</code>, second <code>#00DBFF</code>, accent <code>#FFF500</code>, dark <code>#303446</code>, which is also Catppuccin Frappé's base) on Frappé neutrals [owner]. <code>Starter.bx</code> writes, through the config service and only what is missing (a Noctalia file the user changed is kept; <code>hyprland.lua</code> is written only when none exists):</p>
+<ul>
+<li><code>~/.config/noctalia/config.toml</code> and <code>palettes/BxCachy.json</code> (<code>NoctaliaConfig.bx</code>): dark theme with the custom palette; a top bar with launcher, workspaces and active window on the left; the clock, four world clocks (LAX, NYC, LON, MAD, editable <code>clock</code> widgets with a <code>timezone</code>) and the media player in the centre; tray, network, bluetooth, volume, battery, notifications and control center on the right; the wallpaper folder.</li>
+<li><code>~/.config/hypr/hyprland.lua</code> from <code>templates/hyprland.lua</code> (embedded by <code>bootstrap/gen-templates.sh</code>), based on Hyprland's own example: brand-gradient borders, rounded corners, blur, Hyprland's default animations, two persistent workspaces, natural scrolling <strong>off</strong> [owner, &quot;inverse&quot;], Super+Q closes a window (Cmd+Q habit), Super+Return terminal, Super+B browser, Super+E files, Super+F fullscreen, Super+Shift+3/4 screenshots, Super+Ctrl+Q lock, media keys, and <code>require(&quot;bxcachy&quot;)</code>.</li>
+</ul>
+<h3 id="135b-shell-and-terminal-decided-2026-11-10"><a href="#135b-shell-and-terminal-decided-2026-11-10" id="135b-shell-and-terminal-decided-2026-11-10" name="135b-shell-and-terminal-decided-2026-11-10" class="anchor"></a>13.5b Shell and terminal (decided 2026-11-10)</h3>
+<ul>
+<li><strong>Starship is the one prompt for every shell.</strong> <code>setup shell</code> installs the shell's packages in one <code>sudo pacman</code> call, writes <code>~/.config/starship.toml</code> once (the official Catppuccin Powerline preset, Mocha palette, Nerd Font symbols; no question is asked, change it later with <code>starship preset NAME -o ~/.config/starship.toml</code>; yours afterwards), and makes the chosen shell the login shell with <code>sudo chsh</code>. No Oh My Zsh and no plugin manager: plugins are pacman packages.</li>
+<li><strong>zsh is the default</strong> (<code>zsh</code>, <code>zsh-autosuggestions</code>, <code>zsh-syntax-highlighting</code>, <code>zsh-completions</code>), then <code>fish</code> and <code>bash</code>. All get <code>starship</code>, <code>fzf</code> and <code>zoxide</code>, wired into the shell. zsh and bash load a managed <code>~/.config/bxcachy/shell.&lt;shell&gt;</code> from one marked block appended to <code>~/.zshrc</code> / <code>~/.bashrc</code> (the rest of the file is never touched; the block is added once); fish gets <code>~/.config/fish/conf.d/bxcachy.fish</code> (fish loads <code>conf.d</code> itself). The managed init is rewritten while unchanged and kept once you edit it.</li>
+<li><strong>Terminals:</strong> <code>ghostty</code> (default), <code>kitty</code>, <code>alacritty</code>, <code>foot</code>, <code>konsole</code>. The default is the Super+Enter terminal in the starter <code>hyprland.lua</code> and the one <code>setup hyprland</code> installs (no longer Kitty); extras install with <code>setup terminal --also=</code>. Each terminal with a config file gets a starter written once that sets the Nerd Font (<code>JetBrainsMono Nerd Font</code>), so Starship's symbols render in any of them. The xremap terminal list already covers all five.</li>
+<li>Wizard keys: <code>shell</code> (default <code>zsh</code>), <code>terminal</code> (default <code>ghostty</code>), <code>terminals_extra</code> (default none).</li>
+</ul>
+<h3 id="136-brand-assets"><a href="#136-brand-assets" id="136-brand-assets" name="136-brand-assets" class="anchor"></a>13.6 Brand assets</h3>
+<p><code>assets/</code> holds the sources (<code>build.py</code>, composed from the official BoxLang icon in <code>assets/brand/</code>, copied unchanged from Ortus-Solutions/ortus-artwork) and the rendered icon, logo and four wallpapers (box, grid, aurora, minimal). <code>bootstrap/gen-assets.sh</code> embeds them in <code>AssetData.bx</code>; <code>assets install</code> writes them to <code>~/Pictures/BxCachy</code> and <code>~/.local/share/bxcachy</code>, never overwriting a file the user changed. They are written as base64 text and decoded with <code>base64 -d</code> because MatchBox's <code>fileWrite</code> turns a binary value into a string (upstream gap).</p>
+<h3 id="137-session"><a href="#137-session" id="137-session" name="137-session" class="anchor"></a>13.7 <code>session</code></h3>
+<p><code>session show</code> lists the installed sessions, the one the login screen preselects, and any automatic login. <code>session set hyprland|plasma</code> makes that session the one SDDM preselects by rewriting <code>Session=</code> under <code>[Last]</code> in <code>/var/lib/sddm/state.conf</code> with sudo (a backup <code>state.conf.bxcachy.bak</code> is kept; the other lines stay). Hyprland prefers <code>hyprland-uwsm.desktop</code>. It never turns on automatic login (a warning if one is set, since it wins). There is no <code>ask</code> value: SDDM always remembers the last session. Log out with Super+Shift+Q to see the change.</p>
+<h3 id="139-runner-the-launcher-abstraction-port-of-the-legacy-bxcachy-runner"><a href="#139-runner-the-launcher-abstraction-port-of-the-legacy-bxcachy-runner" id="139-runner-the-launcher-abstraction-port-of-the-legacy-bxcachy-runner" name="139-runner-the-launcher-abstraction-port-of-the-legacy-bxcachy-runner" class="anchor"></a>13.9 <code>runner</code>: the launcher abstraction (port of the legacy <code>bxcachy-runner</code>)</h3>
+<p><strong>Design (owner, 2026-11-10): BxCachy is built on an abstraction so runners can be switched.</strong> The rest of BxCachy asks for two things and never names a launcher:</p>
+<pre><code>Runner.launch()                      open or toggle the launcher
+Runner.select( prompt, entries )     show [ { label, icon } ] in a menu, return the chosen position (0 = cancelled)
+</code></pre>
+<p><strong>Super+Space (Hyprland)</strong> is bound once, in the managed <code>bxcachy.lua</code>, to <code>bxcachy runner launch</code> (falling back to <code>noctalia msg panel-toggle launcher</code> when the chosen launcher cannot run), so <code>runner set</code> changes what Super+Space opens without ever editing a keybinding. Which launcher answers is a setting, recorded in <code>~/.config/bxcachy/runner.json</code> (written atomically); the launcher and the menu provider are chosen separately. <strong>The runner never changes a keybinding or a desktop file</strong> (<code>doctor</code> ends with <code>Shortcut ownership: unchanged</code>). <code>set</code> and <code>menu-set</code> are user settings that act at once (no <code>--yes</code>), like <code>tiling</code>.</p>
+<p>Providers are data in <code>RunnerProviders</code> (one descriptor each: <code>id</code>, <code>title</code>, <code>package</code>, <code>launch</code> argv, and <code>menu</code>: dmenu argv with <code>{prompt}</code>, <code>icons</code>, <code>returns</code>). Adding a launcher is adding one descriptor.</p>
+<div class="bxsites-table-wrap"><table class="table">
+<thead>
+<tr><th>Provider</th><th>Launch</th><th>Menu (dmenu mode)</th><th>Icons</th><th>Choice comes back as</th><th>Package</th></tr>
+</thead>
+<tbody>
+<tr><td><code>noctalia</code> (default on Hyprland)</td><td><code>noctalia msg panel-toggle launcher</code></td><td>none</td><td> </td><td> </td><td>with Noctalia</td></tr>
+<tr><td><code>walker</code></td><td><code>walker</code></td><td><code>walker --dmenu</code></td><td>no</td><td>label</td><td>Walker</td></tr>
+<tr><td><code>rofi</code> (default menu)</td><td><code>rofi -show drun</code></td><td><code>rofi -dmenu -i -show-icons -format i -p</code></td><td>yes</td><td>index</td><td><code>rofi</code></td></tr>
+<tr><td><code>fuzzel</code></td><td><code>fuzzel</code></td><td><code>fuzzel --dmenu --index --prompt</code></td><td>yes</td><td>index</td><td><code>fuzzel</code></td></tr>
+<tr><td><code>wofi</code></td><td><code>wofi --show drun</code></td><td><code>wofi --dmenu --insensitive --prompt</code></td><td>no</td><td>label</td><td><code>wofi</code></td></tr>
+<tr><td><code>vicinae</code></td><td><code>vicinae toggle</code></td><td><code>vicinae dmenu --prompt</code></td><td>no</td><td>label</td><td><code>vicinae-bin</code> (AUR)</td></tr>
+<tr><td><code>krunner</code></td><td><code>krunner</code></td><td>none</td><td> </td><td> </td><td>with KDE</td></tr>
+<tr><td><code>system</code></td><td>none (the desktop owns it)</td><td>none</td><td> </td><td> </td><td> </td></tr>
+<tr><td><code>custom</code></td><td>your <code>custom_command</code></td><td>none</td><td> </td><td> </td><td> </td></tr>
+</tbody>
+</table></div>
+<p><code>select</code> writes the labels (one per line, newlines inside a label become spaces) to a temporary file and runs the provider's command with it on stdin through <code>sh -c 'exec &quot;&#x24;&#x40;&quot; &lt; &quot;&#x24;f&quot;'</code>. Providers that understand Rofi's extended dmenu protocol (<code>label</code> NUL <code>icon</code> US <code>name</code>) get icons; the others get plain labels. A non-zero exit, an empty answer, an unknown label or an index out of range is a cancel, never a wrong choice.</p>
+<pre><code>bxcachy runner list | show | doctor | launch [--json]
+bxcachy runner set P | menu-set P
+bxcachy runner launcher-command P JSON_ARGV | menu-command P JSON_ARGV     JSON argument arrays, {prompt} allowed
+bxcachy runner select JSON_ENTRIES [--prompt=TEXT] [--json]                prints the 0-based index; exit 1 cancelled, 4 menu cannot run
+</code></pre>
+<p>Commands are JSON argument arrays, never shell strings (a string, an empty array or an empty part exits 4). <code>list</code> marks the current choice with <code>*</code> (<code>--json</code> adds each provider's title, package, icon support and answer format). <code>doctor</code> shows the commands and whether each executable is on PATH. <code>launch</code> starts the launcher detached (exit 4 for <code>system</code> or a missing program). The wizard offers Noctalia, Walker, Rofi, Fuzzel and Wofi; Vicinae, KRunner and <code>custom</code> work from the command line. <code>hyprrunner</code> was dropped (no package found, 2026-11-10). Fuzzel and Wofi flags are from their man pages.</p>
+<h3 id="1310-db-local-databases-and-search-engines-as-containers-port-of-the-legacy-bxcachy-db-and-bxcachy-vector"><a href="#1310-db-local-databases-and-search-engines-as-containers-port-of-the-legacy-bxcachy-db-and-bxcachy-vector" id="1310-db-local-databases-and-search-engines-as-containers-port-of-the-legacy-bxcachy-db-and-bxcachy-vector" name="1310-db-local-databases-and-search-engines-as-containers-port-of-the-legacy-bxcachy-db-and-bxcachy-vector" class="anchor"></a>13.10 <code>db</code>: local databases and search engines as containers (port of the legacy <code>bxcachy-db</code> and <code>bxcachy-vector</code>)</h3>
+<pre><code>bxcachy db engines | list [--json]
+bxcachy db start ENGINE [--name N] [--port P] [--password-file FILE | --ask-password] [--yes] [--dry-run]    create, or start a stopped one; never replaces a container
+bxcachy db stop|status|logs ENGINE [--name N]
+bxcachy db remove ENGINE [--name N] [--keep-data] --yes              removes the container AND its data (volume and password file); --keep-data keeps the data
+bxcachy db info ENGINE [--name N] [--show-password]                  where it listens and how to connect (password masked by default)
+bxcachy db engine [podman|docker]                                    which engine runs them (podman by default, saved in ~/.config/bxcachy/db.json)
+bxcachy db menu                                                      the control center, on the runner's menu provider (needs a terminal program)
+</code></pre>
+<p>Exit codes: 0 done, 2 usage or no <code>--yes</code> (the plan is printed; <code>--dry-run</code> exits 0), 4 precondition (no container engine, unknown or unsupported engine, bad name or port, <code>vm.max_map_count</code> too low), 6 the container command failed. <code>--json</code> gives the standard envelope.</p>
+<p><strong>Rules.</strong> Services listen on <code>127.0.0.1</code> only. A container that exists is never replaced (a stopped one is started; a running one is left alone). Containers are named <code>bxcachy-db-&lt;engine&gt;-&lt;name&gt;</code> (name defaults to <code>default</code>; letters, digits and hyphens) and labelled <code>io.bxcachy.database=true</code>. Data lives in a <strong>named volume</strong> with the container's name, not a host folder (<code>db remove</code> deletes it together with the container and the password files, so the next start is a clean database; <code>--keep-data</code> keeps them, and starting the same name again then reuses the volume and its password): rootless containers cannot write to a bind-mounted folder as the image's own user (OpenSearch, Elasticsearch and Meilisearch run as non-root). <strong>Choosing the password:</strong> by default one is generated. <code>--password-file FILE</code> uses the first line of a file you made; <code>--ask-password</code> asks twice at the terminal without echo (<code>/dev/tty</code>, so it needs a terminal; the plan never prompts). A password is <strong>never</strong> a command-line value, so it cannot land in shell history or the process list. It must be 8 to 128 characters with no whitespace (OpenSearch also needs upper and lower case, a digit and a special character). It applies only when the container is created (the image sets it on first start of the data volume): a second start never changes it, an existing container refuses one, and a kept data volume (from <code>remove --keep-data</code>) keeps the password it was made with (a different choice is refused). Engines without a password (Redis, Chroma, Qdrant, Weaviate) and Couchbase (set in its web console) refuse the options. The user name is fixed per engine (<code>postgres</code>, <code>root</code>, <code>admin</code>, <code>elastic</code>). Generated passwords (24 random bytes as hex) go in <code>~/.local/share/bxcachy/databases/&lt;container&gt;/</code> (<code>password</code> and <code>database.env</code>, mode 600, plus <code>meta.json</code> with the port) and reach the container through <code>--env-file</code>, never on a command line. Nothing changes system settings: when <code>vm.max_map_count</code> is too low <code>start</code> stops with the <code>sudo sysctl -w</code> line to run. Images are pinned and were checked on Docker Hub on 2026-11-10 (Elasticsearch's from Elastic's docs).</p>
+<div class="bxsites-table-wrap" x-data="{ q: '' }"><input type="search" class="bxsites-table-filter" x-model="q" placeholder="Filter table..." aria-label="Filter table"><table class="table">
+<thead>
+<tr><th>Engine</th><th>Image</th><th>Host port</th><th>Password</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>postgres</code></td><td><code>postgres:17</code></td><td>5432</td><td>generated (<code>postgres</code>)</td><td> </td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>mysql</code></td><td><code>mysql:8.4</code></td><td>3306</td><td>generated (<code>root</code>)</td><td> </td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>mariadb</code></td><td><code>mariadb:11.8</code></td><td>3306</td><td>generated (<code>root</code>)</td><td> </td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>redis</code></td><td><code>redis:7.4</code></td><td>6379</td><td>none (localhost only)</td><td><code>--appendonly yes</code></td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>mongodb</code></td><td><code>mongo:8.0</code></td><td>27017</td><td>generated (<code>root</code>)</td><td> </td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>couchbase</code></td><td><code>couchbase:community-8.0.2</code></td><td>8091</td><td><strong>none: set in the web console</strong></td><td>After <code>db start</code>, open <a href="http://127.0.0.1:8091">http://127.0.0.1:8091</a>, choose Setup New Cluster and set the administrator name and password there. Ports 8091-8096, 11210 and 11211 are fixed, so <code>--port</code> is refused and only one instance can run.</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>pgvector</code></td><td><code>pgvector/pgvector:pg17</code></td><td>5432</td><td>generated (<code>postgres</code>)</td><td>run <code>CREATE EXTENSION vector;</code></td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>chroma</code></td><td><code>chromadb/chroma:1.5.9</code></td><td>8000</td><td>none</td><td>data in <code>/data</code> (1.x images)</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>qdrant</code></td><td><code>qdrant/qdrant:v1.20.0</code></td><td>6333</td><td>none</td><td> </td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>weaviate</code></td><td><code>semitechnologies/weaviate:1.39.15</code></td><td>8080</td><td>none (anonymous access)</td><td>local only; never publish the port</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>meilisearch</code></td><td><code>getmeili/meilisearch:v1.56</code></td><td>7700</td><td>generated master key</td><td>runs with <code>MEILI_ENV=production</code>, which requires the key</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>opensearch</code></td><td><code>opensearchproject/opensearch:3.9.0</code></td><td>9200</td><td>generated (<code>admin</code>)</td><td>HTTPS, self-signed (use <code>curl -k</code>); single node; the password gets a <code>-Aa1!</code> suffix to meet OpenSearch's policy; needs <code>vm.max_map_count</code> 262144</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>elasticsearch</code></td><td><code>docker.elastic.co/elasticsearch/elasticsearch:9.5.6</code></td><td>9200</td><td>generated (<code>elastic</code>)</td><td>HTTPS, self-signed; single node; <code>-Xms1g -Xmx1g</code>; needs <code>vm.max_map_count</code> 262144</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>milvus</code></td><td>none</td><td> </td><td> </td><td><strong>not supported</strong>: it needs several services (etcd, object storage); <code>db start milvus</code> exits 4</td></tr>
+</tbody>
+</table></div>
+<p><strong>Docker</strong> works through the same commands (<code>db engine docker</code>): only <code>run</code>, <code>start</code>, <code>stop</code>, <code>rm</code>, <code>logs</code>, <code>ps</code>, <code>container inspect</code> and <code>volume rm</code> are used, which both engines share.</p>
+<p><strong>Verified and not.</strong> Tested end to end against a fake Podman/Docker (arguments, files, modes, exit codes, the menu), never against real containers. Not confirmed from the docs fetched: that the Elasticsearch image reads <code>ELASTIC_PASSWORD</code> (the page showed a password printed at first start instead) and its data path <code>/usr/share/elasticsearch/data</code>; OpenSearch's data path; Couchbase's <code>/opt/couchbase/var</code>. A real <code>db start</code> of each engine on Podman is part of the acceptance run on a real machine.</p>
+<h3 id="1311-dotfiles-your-own-dotfiles-repository-decided-with-the-owner-2026-11-11"><a href="#1311-dotfiles-your-own-dotfiles-repository-decided-with-the-owner-2026-11-11" id="1311-dotfiles-your-own-dotfiles-repository-decided-with-the-owner-2026-11-11" name="1311-dotfiles-your-own-dotfiles-repository-decided-with-the-owner-2026-11-11" class="anchor"></a>13.11 <code>dotfiles</code>: your own dotfiles repository (decided with the owner 2026-11-11)</h3>
+<pre><code>bxcachy dotfiles plan REPO [--method=chezmoi|yadm|stow|links] [--json]    clones the repo into BxCachy's data folder; changes nothing in your home
+bxcachy dotfiles apply REPO [--method=M] [--overwrite] [--yes] [--dry-run] [--json]
+bxcachy dotfiles status | undo [--yes] [--dry-run] [--json]
+</code></pre>
+<p><code>REPO</code> is a git URL or a local path. <strong>The method is detected</strong> (<code>--method</code> overrides): <code>chezmoi</code> (<code>.chezmoiroot</code>, <code>.chezmoiignore</code>, or <code>dot_</code> / <code>.chezmoi*</code> names), then <code>yadm</code> (<code>.config/yadm/</code>, or <code>##</code> alternate names), then <code>stow</code> (<code>.stowrc</code>, <code>.stow-local-ignore</code>, or only top-level package folders that hold dotfiles), else <code>links</code>.</p>
+<p><strong>Your dotfiles win, but nothing is replaced unasked.</strong> The plan splits the repo's files into new, already in place (a link to the repo, or an identical file) and <strong>conflicts</strong> (files you already have that would be replaced; chezmoi templates always count). <code>apply --yes</code> needs your approval of the conflicts: <code>--overwrite</code>, or a <code>y</code> at the prompt (read from <code>/dev/tty</code>, so a headless run without <code>--overwrite</code> exits 2 and changes nothing). Every replaced file is first moved into <code>~/.local/state/bxcachy/backups/dotfiles/&lt;time&gt;/</code>; if a step then fails (exit 6) the originals are put back. <code>status</code> shows what was applied; <code>undo --yes</code> removes the links BxCachy made (<code>stow -D</code> for stow) and restores the originals (for chezmoi and yadm only the originals come back: the files those tools created stay, remove them with the tool).</p>
+<div class="bxsites-table-wrap"><table class="table">
+<thead>
+<tr><th>Method</th><th>Files go to your home by</th><th>Applied with</th></tr>
+</thead>
+<tbody>
+<tr><td><code>links</code></td><td>one symlink per file (folders are never replaced by a link)</td><td><code>ln -s</code></td></tr>
+<tr><td><code>stow</code></td><td>each top-level folder is a package</td><td><code>stow -d CLONE -t HOME -R PACKAGES</code></td></tr>
+<tr><td><code>chezmoi</code></td><td><code>dot_</code>, <code>private_</code>, <code>executable_</code>, ... prefixes and <code>.tmpl</code> are mapped to the plain path for the conflict list</td><td><code>chezmoi apply --source CLONE --force</code></td></tr>
+<tr><td><code>yadm</code></td><td><code>##</code> alternate suffixes are mapped to the plain name</td><td><code>yadm clone -f --no-bootstrap REPO</code> (<code>yadm pull</code> when it is already set up)</td></tr>
+</tbody>
+</table></div>
+<p>Repo-only files (<code>.git</code>, <code>README*</code>, <code>LICENSE*</code>, <code>.gitignore</code>, <code>.stow-local-ignore</code>...) are never linked. A missing tool (<code>chezmoi</code>, <code>yadm</code>, <code>stow</code>; Arch <code>extra</code>) is installed with <code>sudo pacman -S --needed</code> as the first step of <code>apply</code> (the plan says so). One repository can be set up at a time: a second one is refused (exit 4) until <code>undo</code>. Exits: 0 done, 2 no <code>--yes</code> or conflicts not approved, 4 precondition (cannot clone, unknown method, nothing to apply, tool not installable), 6 a step failed. The wizard's Import page asks for the repository (empty skips); <code>init</code> runs <code>dotfiles apply REPO</code> <strong>last</strong>, so your files win over the starter configs, and the conflict question appears at the terminal.</p>
+<p>Tested against real git repositories and fake tools (<code>stow</code>, <code>chezmoi</code>, <code>yadm</code>, <code>pacman</code>); the real tools have not been run. Private repositories and credentials are git's business (SSH keys or a credential helper must already work).</p>
+<h3 id="1312-apps-basic-or-customize-and-your-defaults-decided-with-the-owner-2026-11-11"><a href="#1312-apps-basic-or-customize-and-your-defaults-decided-with-the-owner-2026-11-11" id="1312-apps-basic-or-customize-and-your-defaults-decided-with-the-owner-2026-11-11" name="1312-apps-basic-or-customize-and-your-defaults-decided-with-the-owner-2026-11-11" class="anchor"></a>13.12 Apps: Basic or Customize, and your defaults (decided with the owner 2026-11-11)</h3>
+<p>The wizard's Apps page asks <strong>how you want your apps</strong>: <strong>Basic</strong> (the default: an opinionated, recommended set) or <strong>Customize</strong>.</p>
+<ul>
+<li><strong>Basic</strong> runs <code>bxcachy install --shell=hyprland|plasma|all</code> for the desktop(s) you chose: the catalog's <strong>default tier</strong> (64 apps), desktop-specific ones only for their desktop. Nothing is asked.</li>
+<li><strong>Customize</strong> shows one extra page per catalog group (11, built from the catalog by <code>AppPages</code>, after the Apps page): a multi-choice list per category with the default apps ticked, each option showing its description and the macOS equivalent. Only what is ticked is installed (<code>bxcachy install ID...</code>, one command), minus apps that belong to a desktop you did not choose. Categories the wizard asks about itself are not repeated: AI &quot;Coding orchestration&quot;, Desktop &quot;Launchers&quot;, Terminal &quot;Terminal&quot; and Development &quot;Shell&quot;. Answer keys: <code>apps_&lt;group&gt;_&lt;category&gt;</code> (a list of app ids). Web apps are one of the groups, like any other.</li>
+<li><strong>Default browser</strong> (<code>default_browser</code>, asked in both modes, default Brave): installed if needed, then set with <code>bxcachy default browser ID</code>.</li>
+<li><strong>Default terminal:</strong> the terminal you picked is set with <code>bxcachy default terminal ID</code>.</li>
+</ul>
+<pre><code>bxcachy default show | browser ID | terminal ID [--yes] [--dry-run] [--json]
+</code></pre>
+<p><code>browser</code> runs <code>xdg-settings set default-web-browser &lt;app&gt;.desktop</code> (needs <code>xdg-utils</code> and the app installed). Desktop entries: firefox <code>firefox.desktop</code> and chromium <code>chromium.desktop</code> were read from the Arch packages; brave <code>brave-browser.desktop</code>, google-chrome <code>google-chrome.desktop</code> and edge <code>microsoft-edge.desktop</code> are the vendors' usual names (not verified here); other browsers exit 4 (set those in your system settings). <code>terminal</code> writes <code>~/.config/xdg-terminals.list</code> (the xdg-terminal-exec list; kept if you edited it) with the terminal's desktop entry (ghostty <code>com.mitchellh.ghostty.desktop</code>, kitty <code>kitty.desktop</code>, alacritty <code>Alacritty.desktop</code>, foot <code>foot.desktop</code>, konsole <code>org.kde.konsole.desktop</code>, all from the Arch packages) and, when <code>kwriteconfig6</code> is present, KDE's own setting (<code>kdeglobals</code> <code>[General]</code> <code>TerminalApplication</code> and <code>TerminalService</code>; the key names are not verified on a real KDE). Exit codes: 0 done, 2 no <code>--yes</code>, 4 precondition (not installed, unknown, no <code>xdg-settings</code>), 6 the command failed.</p>
+<p>Wizard pages (and questions) may carry <code>when</code>; a hidden page is skipped by Next and Back, left out of the sidebar, the step count and the review, and its answers are not in the result.</p>
+<h3 id="138-tests-and-what-is-verified"><a href="#138-tests-and-what-is-verified" id="138-tests-and-what-is-verified" name="138-tests-and-what-is-verified" class="anchor"></a>13.8 Tests and what is verified</h3>
+<ul>
+<li>Pure <code>SetupPlan</code>, <code>Shortcuts</code>, <code>NoctaliaConfig</code> classes with script tests; native tests with fake <code>pacman</code>, <code>yay</code>, <code>git</code>, <code>qdbus6</code>, <code>kwriteconfig6</code>, <code>sudo</code>, <code>systemctl</code> (plan output, <code>--yes</code> gating, root refusal, partial failure, re-run, undo, drift, one clean <code>--json</code> envelope); the starter TOML and JSON are parsed.</li>
+<li>The real Arch container (<code>tests/arch/suite.sh</code>) runs the xremap plan, checks the AUR package names, runs the whole <code>setup hyprland</code>, checks the written files, byte-identical wallpapers, <code>keys check</code>, and has Hyprland verify the starter config.</li>
+<li>Not verifiable in CI: HyprKwin's installer (needs a running KWin), xremap's per-app rules on both builds, Noctalia accepting every config key, and the exact Hyprland bind strings on a running session. These are covered by the owner's acceptance run on a real CachyOS KDE machine.</li>
+</ul>
+<h3 id="1313-secrets-one-way-to-store-and-load-api-keys-decided-with-the-owner-2026-11-11"><a href="#1313-secrets-one-way-to-store-and-load-api-keys-decided-with-the-owner-2026-11-11" id="1313-secrets-one-way-to-store-and-load-api-keys-decided-with-the-owner-2026-11-11" name="1313-secrets-one-way-to-store-and-load-api-keys-decided-with-the-owner-2026-11-11" class="anchor"></a>13.13 Secrets: one way to store and load API keys (decided with the owner 2026-11-11)</h3>
+<p><code>bxcachy secrets</code> is the single way to keep API keys and tokens. Every machine uses the same commands; <code>export</code>/<code>import</code> (later) moves them between machines.</p>
+<div class="bxsites-table-wrap"><table class="table">
+<thead>
+<tr><th>Command</th><th>Does</th></tr>
+</thead>
+<tbody>
+<tr><td><code>secrets status</code></td><td>backend in use, whether a keyring is available, how many secrets are stored</td></tr>
+<tr><td><code>secrets set NAME [--from-file=F]</code></td><td>stores a value: typed hidden at the terminal, or read from a file. Never a command-line value. Replaces an existing one</td></tr>
+<tr><td><code>secrets list</code></td><td>names only, with the coding agent that reads each known key</td></tr>
+<tr><td><code>secrets get NAME [--show]</code></td><td>says whether it is set and its length; <code>--show</code> prints the value</td></tr>
+<tr><td><code>secrets unset NAME --yes</code></td><td>deletes a value (plan without <code>--yes</code>, exit 2)</td></tr>
+<tr><td><code>secrets run [NAMES...] [--strict] -- CMD...</code></td><td>runs CMD with those secrets in its own environment only; exit code is CMD's. A name that is not set is skipped, <code>--strict</code> exits 4</td></tr>
+<tr><td><code>secrets env [NAMES...]</code></td><td>prints <code>export NAME='value'</code> lines for <code>eval</code> (all stored names when none given)</td></tr>
+</tbody>
+</table></div>
+<ul>
+<li>Names are environment variable names: capital letters, digits, underscores (<code>ANTHROPIC_API_KEY</code>, <code>OPENAI_API_KEY</code>, <code>GEMINI_API_KEY</code>).</li>
+<li>Backend: the desktop keyring through <code>secret-tool</code> (libsecret) when <code>secret-tool</code> exists and <code>org.freedesktop.secrets</code> is on the user D-Bus (running or activatable); otherwise private files (<code>~/.local/share/bxcachy/secrets/NAME</code>, mode 600 in a mode 700 folder). The choice is saved in <code>~/.config/bxcachy/secrets.json</code> and shown by <code>status</code>. Keyring entries carry the attributes <code>service=bxcachy name=NAME</code>.</li>
+<li>Values are passed to <code>secret-tool</code> and to programs through standard input and the process environment, never through a command line, a temp file, a log, or <code>answers.json</code>.</li>
+<li><code>set</code> is interactive on purpose and needs no <code>--yes</code>.</li>
+<li>Exit codes: 0 done, 2 usage or plan without <code>--yes</code>, 4 precondition (bad name, secret not set, no value), 6 the store failed.
+Loading into shells (default is per command, global is opt-in per key):</li>
+<li><code>secrets apply [--yes]</code> writes <code>~/.config/bxcachy/secrets.sh</code> (bash, zsh) and <code>secrets.fish</code>. They hold no values: one wrapper per agent command whose key is stored (<code>claude() { bxcachy secrets run ANTHROPIC_API_KEY -- command claude &quot;$@&quot;; }</code>). <code>secrets set</code> runs it automatically. The shell init templates source these files.</li>
+<li><code>secrets global on NAME --yes | off NAME | show</code>: exports a key to every new shell. <code>on</code> prints a warning first (every program, including AI agents and what they run, can read it). The values go to a session cache, <code>$XDG_RUNTIME_DIR/bxcachy-secrets.env</code> and <code>.fish</code> (mode 600, tmpfs, wiped at logout), never to a config file. The loader files call <code>secrets unlock</code> once per login when the cache is missing (the keyring's single unlock prompt); <code>secrets lock</code> removes the cache. A globally exported key gets no wrapper.
+Moving machines and the keyring:</li>
+<li><code>secrets export FILE [--plain] [--force] --yes</code>: all stored secrets as <code>export NAME='value'</code> lines, encrypted with a passphrase by <code>age -p</code> (age asks on the terminal; the file is mode 600). <code>--plain</code> writes a readable .env instead (mode 600; the plan says so). An existing file is kept unless <code>--force</code>.</li>
+<li><code>secrets import FILE [--overwrite] --yes</code>: reads an age file or a .env file; the plan lists each name as new, same or differs. A name that already has a different value is kept unless <code>--overwrite</code>. New machine: <code>install.sh</code>, <code>init --answers answers.json</code>, <code>secrets import</code>, <code>dotfiles apply</code>.</li>
+<li><code>secrets setup [--keyring=kwallet|gnome-keyring|none] [--yes] [--dry-run]</code>: checks for a Secret Service on the user D-Bus (running or activatable). Installs <code>libsecret</code> (<code>secret-tool</code>, repo core) and <code>age</code> (repo extra) when missing; when no keyring exists, also <code>kwallet</code> on Plasma or <code>gnome-keyring</code> elsewhere, or the one named. <code>--keyring=none</code> installs no keyring and saves the file backend. The plan names what it installs. Package names and <code>secret-tool</code> in libsecret were checked on archlinux.org on 2026-11-11.
+Secret types and providers (decided with the owner 2026-11-11):</li>
+<li>Every secret has a <strong>type</strong>: <code>ai</code> (a key for an AI provider) or <code>other</code> (a GitHub token and so on). A name in the provider registry is <code>ai</code> automatically; any other name is <code>other</code> unless <code>secrets set NAME --type=ai [--provider=ID]</code> says otherwise. The type and provider are kept in <code>secrets.json</code> (<code>meta</code>, names only, never values). <code>secrets list [--type=ai|other]</code> filters; <code>secrets run --type=ai -- CMD</code> loads every AI key and no other secret.</li>
+<li>The provider registry (<code>AiProviders</code>) maps providers to environment variables: anthropic <code>ANTHROPIC_API_KEY</code>, openai <code>OPENAI_API_KEY</code>, google <code>GEMINI_API_KEY</code>, openrouter <code>OPENROUTER_API_KEY</code>, novita <code>NOVITA_API_KEY</code>, opencode <code>OPENCODE_API_KEY</code>, groq, mistral, deepseek, xai, together (<code>GROQ_API_KEY</code>, <code>MISTRAL_API_KEY</code>, <code>DEEPSEEK_API_KEY</code>, <code>XAI_API_KEY</code>, <code>TOGETHER_API_KEY</code>). Names are from models.dev (the registry OpenCode uses), checked 2026-11-11.</li>
+<li>Each agent declares the providers it accepts (<code>AiAgents</code>): Claude Code anthropic, Codex openai, Gemini CLI google, OpenCode all of the above. <strong>An agent is only ever given keys from its own list.</strong> Its wrapper carries the stored ones among them (<code>opencode() { bxcachy secrets run ANTHROPIC_API_KEY OPENAI_API_KEY -- command opencode &quot;$@&quot;; }</code>); nothing else is loaded.</li>
+<li>Tests: <code>tests/secrets-test.sh</code> (fake <code>secret-tool</code> and <code>busctl</code>). The registry of agent key names is from the vendors' documentation and the user can store any other valid name.</li>
+</ul>
+<h3 id="1314-ai-agents-decided-with-the-owner-2026-11-11"><a href="#1314-ai-agents-decided-with-the-owner-2026-11-11" id="1314-ai-agents-decided-with-the-owner-2026-11-11" name="1314-ai-agents-decided-with-the-owner-2026-11-11" class="anchor"></a>13.14 AI agents (decided with the owner 2026-11-11)</h3>
+<p><code>bxcachy ai</code> knows four coding agents (<code>AiAgents</code>): <code>claude-code</code> (command <code>claude</code>), <code>codex-cli</code> (<code>codex</code>), <code>gemini-cli</code> (<code>gemini</code>), <code>opencode-cli</code> (<code>opencode</code>), each with the providers whose keys it accepts (see 13.13). Command names were checked in the Arch packages (<code>openai-codex</code> ships <code>/usr/bin/codex</code>, <code>gemini-cli</code> ships <code>/usr/bin/gemini</code>; <code>claude-code</code> comes from the CachyOS repo). The key names are from the vendors' documentation.</p>
+<div class="bxsites-table-wrap"><table class="table">
+<thead>
+<tr><th>Command</th><th>Does</th></tr>
+</thead>
+<tbody>
+<tr><td><code>ai list</code></td><td>each agent: installed, key stored, default</td></tr>
+<tr><td><code>ai default [ID] [--yes]</code></td><td>shows the default, or sets it (the agent must be installed; plan without <code>--yes</code>, exit 2). Saved in <code>~/.config/bxcachy/ai.json</code></td></tr>
+<tr><td><code>ai launch [ID] [--dry-run]</code></td><td>opens the agent (the default when no ID) in your default terminal as <code>TERMINAL [-e] bxcachy secrets run KEY -- COMMAND</code>, detached. The terminal is the first line of <code>~/.config/xdg-terminals.list</code> if it names a terminal BxCachy knows and it is installed, else the first installed one. ghostty, alacritty and konsole get <code>-e</code>; kitty and foot get the command directly (foot and konsole flags are from memory, not verified here)</td></tr>
+<tr><td><code>ai shell [toggle\|status] [--backend=hyprland\|yakuake] [--dry-run]</code></td><td>the pull-down AI shell: one shortcut shows and hides a terminal running your default agent (your shell when none is set); it keeps its session while hidden</td></tr>
+</tbody>
+</table></div>
+<p><strong>Pull-down AI shell.</strong> The backend follows the desktop: a Hyprland session (<code>HYPRLAND_INSTANCE_SIGNATURE</code>) uses a special workspace, KDE Plasma uses Yakuake; <code>--backend</code> overrides. Exit 4 when neither applies, when no terminal can carry a window class, or when Yakuake is missing.</p>
+<ul>
+<li><strong>Hyprland:</strong> the first call starts a terminal with the window class <code>com.bxcachy.ai</code> (ghostty <code>--class=</code>, kitty and alacritty <code>--class</code>, foot <code>--app-id</code>; konsole cannot) running <code>bxcachy secrets run KEYS -- AGENT</code>, then sizes it to 100% x 45% and moves it to the top with <code>hyprctl dispatch resizewindowpixel</code> / <code>movewindowpixel</code> (best effort). The Hyprland module (<code>keys apply</code>) holds <code>hl.window_rule({ name = &quot;bxcachy-ai&quot;, match = { class = &quot;^com.bxcachy.ai$&quot; }, workspace = &quot;special:ai&quot;, float = true })</code> and the shortcut <code>Super+\`` running</code>bxcachy ai shell<code>. Later calls toggle the workspace:</code>hyprctl dispatch togglespecialworkspace ai<code>, and if that fails the Lua form</code>hl.dsp.workspace.toggle_special(&quot;ai&quot;)<code>. Window class is the ghostty config option</code>class` (GTK builds), and it must look like a GTK application id, hence the dotted name.</li>
+<li><strong>Plasma (Yakuake):</strong> the first call starts Yakuake, waits for its D-Bus name, adds a tab (<code>org.kde.yakuake.addSession</code> on <code>/yakuake/sessions</code>), types the agent command (<code>runCommand</code>) and shows the window (<code>toggleWindowState</code> on <code>/yakuake/window</code>); later calls only toggle. The tab is remembered in <code>$XDG_RUNTIME_DIR/bxcachy-ai-shell</code>. <code>init</code> installs <code>yakuake</code> (official <code>extra</code>) when Plasma and an agent are chosen. The Plasma shortcut is not written by BxCachy: bind <code>bxcachy ai shell</code> in System Settings, Shortcuts (Yakuake also has its own open/retract key).</li>
+<li><strong>Not verified on a real desktop:</strong> the Hyprland window rule and dispatchers in Lua mode, the percentage resize and move, the special-workspace slide direction, and Yakuake's <code>runCommand</code> (its changelog mentions a security prompt). They are on the acceptance checklist.</li>
+<li>Tests: <code>tests/ai-shell-test.sh</code> (fake <code>hyprctl</code>, <code>dbus-send</code>, <code>yakuake</code> and terminals).</li>
+</ul>
+<p><strong>Agent sessions (tmux).</strong> <code>ai session start [ID] [--name=N] [--dir=PATH] [--dry-run]</code> starts a detached tmux session <code>bxcachy-AGENT[-N]</code> running the agent (the default when no ID) in PATH (the current folder by default) through <code>secrets run</code>, so it keeps working after you close the terminal. A session that already exists is reported, not replaced. <code>ai session list</code> shows only <code>bxcachy-</code> sessions. <code>ai session attach NAME</code> joins one (NAME is the full name or what follows <code>bxcachy-</code>; needs a terminal; detach with the tmux prefix then <code>d</code>). <code>ai session stop NAME --yes</code> ends one (plan without <code>--yes</code>, exit 2). Names are letters, digits, <code>-</code>, <code>_</code> (up to 40). Exit 4: tmux or the agent missing, bad name, no such session; 6: a tmux command failed. <code>init</code> installs <code>tmux</code> when an agent is chosen. Tests: <code>tests/ai-session-test.sh</code>.</p>
+<p><strong>Local models (Ollama).</strong> <code>ai models list</code> and <code>ai models ps</code> run <code>ollama list</code> and <code>ollama ps</code>; <code>ai models pull NAME</code> downloads a model with Ollama's own progress (the service must be running); <code>ai models rm NAME --yes</code> deletes one; <code>ai models status</code> says whether Ollama is installed and its service active; <code>ai models enable [--yes] [--dry-run]</code> runs <code>sudo systemctl enable --now ollama</code> (the package ships <code>ollama.service</code>, checked in the Arch file list 2026-11-11). Model names are letters, digits and <code>. _ : / -</code> and are passed as one argument, never through a shell. Exit 4: Ollama missing or bad name; otherwise Ollama's exit code. Wizard: <code>ai_ollama_service</code> (confirm, default yes) and <code>ai_models</code> (text, comma separated, empty by default) appear when Ollama is ticked; <code>init</code> runs <code>ai models enable</code>, then one <strong>optional</strong> <code>ai models pull</code> per name, so a failed or skipped download never stops the plan. Model names are not checked against Ollama's library (they change), only for safe characters.</p>
+<p>Exit codes: 0 done, 2 usage or plan without <code>--yes</code>, 4 precondition (unknown or missing agent, no default, no terminal), 6 failed. Tests: <code>tests/ai-test.sh</code>, <code>tests/init_plan_test.bxs</code>, <code>tests/init-test.sh</code>.</p>
+<p>Local models: AUR names were checked on 2026-11-11 (<code>lmstudio-bin</code>, <code>jan-bin</code>, <code>koboldcpp</code>, <code>gpt4all-chat</code>); Ollama is in <code>extra</code>, with <code>ollama-cuda</code> and <code>ollama-rocm</code> as add-ons that depend on <code>ollama</code>. Open WebUI is left out: its AUR package is flagged out of date. Starting the Ollama service and pulling models is later work.</p>
+<p>Init rules for this page: a default agent that was not ticked is installed too; <code>secrets setup</code> runs whenever an agent is chosen (it installs a keyring only if none exists); the key steps are <strong>optional</strong>, so one that cannot run (no terminal, you press Enter to skip) is reported as skipped with the command to run later and the plan goes on.</p>
+<h3 id="1315-ssh-key-and-plasma-keyboard-layouts-decided-with-the-owner-2026-11-12"><a href="#1315-ssh-key-and-plasma-keyboard-layouts-decided-with-the-owner-2026-11-12" id="1315-ssh-key-and-plasma-keyboard-layouts-decided-with-the-owner-2026-11-12" name="1315-ssh-key-and-plasma-keyboard-layouts-decided-with-the-owner-2026-11-12" class="anchor"></a>13.15 SSH key and Plasma keyboard layouts (decided with the owner 2026-11-12)</h3>
+<ul>
+<li><code>ssh key [--email=ADDRESS] [--yes] [--dry-run]</code> creates <code>~/.ssh/id_ed25519</code> with <code>ssh-keygen -t ed25519 [-C ADDRESS]</code> (<code>~/.ssh</code> is made mode 700). An existing key is <strong>never</strong> replaced: it is reported with its public half and exit 0. ssh-keygen asks for the passphrase itself on the terminal (empty means none), so it needs a terminal; the public key is printed for GitHub. Exit 2 plan without <code>--yes</code>, 4 no ssh-keygen, 6 ssh-keygen failed. The wizard's <code>ssh_key</code> answer runs it as an <strong>optional</strong> init step with the git email as the comment.</li>
+<li><code>setup keyboard --layouts=us-intl,es [--yes] [--dry-run]</code> writes the layouts of a Plasma session with <code>kwriteconfig6 --file kxkbrc --group Layout</code> (<code>Use=true</code>, <code>LayoutList=us,es</code>, <code>VariantList=intl,</code>, <code>Options=grp:alt_shift_toggle</code> when there are two or more, else empty). Layout names are the wizard's (<code>StarterOptions.keyboards</code>). Plasma reads the file at login. The key names are from KDE's <code>kxkbrc</code>; not run on a real Plasma here. Hyprland takes the same answer through <code>setup hyprland --layouts</code>. <code>init</code> runs it when Plasma is chosen, so <code>layouts</code> is no longer pending there. Locale (<code>LANG</code>) is a system setting and is not changed. Tests: <code>tests/ssh-keyboard-test.sh</code>.</li>
+</ul>
+<h3 id="1316-control-center-menu-decided-with-the-owner-2026-11-12"><a href="#1316-control-center-menu-decided-with-the-owner-2026-11-12" id="1316-control-center-menu-decided-with-the-owner-2026-11-12" name="1316-control-center-menu-decided-with-the-owner-2026-11-12" class="anchor"></a>13.16 Control center menu (decided with the owner 2026-11-12)</h3>
+<p><code>bxcachy menu</code> shows the BxCachy control center with the menu provider you chose (<code>runner menu-set</code>). <code>menu items [--json]</code> prints the same tree as data.</p>
+<ul>
+<li><strong>AI:</strong> open the default agent and the pull-down AI shell (both start detached, no window); agent session start and list, local models list and running, API keys list (these open in a terminal window and wait for Enter).</li>
+<li><strong>Databases:</strong> opens the existing <code>db menu</code>.</li>
+<li><strong>Web apps</strong> (Omarchy's &quot;create web app&quot;): <em>Create web app</em> asks for a name and a URL typed into the menu, then runs <code>web add NAME URL --yes</code> and shows the result; <em>List web apps</em>; <em>Remove a web app</em> (pick, confirm, <code>web rm NAME --yes</code>). Typed text is supported by Rofi (<code>rofi -dmenu -l 0</code> with empty input prints what you type); for Walker, Fuzzel, Wofi and Vicinae, where typed text is not verified, <em>Create</em> opens a terminal that runs <code>web add</code> with no arguments, which asks for the name, URL and browser itself (the typing is the consent). <code>web add</code> with no arguments does the same on its own. Menu order is now AI, Databases, All apps, Web apps, Settings.</li>
+<li><strong>Settings:</strong> defaults, shortcuts, launcher check, setup status, dotfiles status (read-only views in a terminal).</li>
+<li>Every entry is started without <code>--yes</code>, so nothing is changed by the menu itself; the commands keep their own plan/<code>--yes</code> rules. Back and Exit are the last entry of each level; cancelling the provider (empty answer) leaves the menu with exit 0.</li>
+<li>Terminals for <code>run</code> entries: the first installed of ghostty, kitty, foot, alacritty, konsole (<code>-e</code> for ghostty, alacritty, konsole). Exit 4 when there is no menu program, or no terminal for a <code>run</code> entry.</li>
+<li>Hyprland binds it to <code>Super+Alt+M</code> in the shortcut table (<code>Super+Alt+Space</code> is the all-apps window, 13.22). Tests: <code>tests/menu-test.sh</code> (fake Rofi and terminal).</li>
+</ul>
+<h3 id="1317-podman-helpers-docker-compatibility-and-the-lazyvim-starter-decided-with-the-owner-2026-11-12"><a href="#1317-podman-helpers-docker-compatibility-and-the-lazyvim-starter-decided-with-the-owner-2026-11-12" id="1317-podman-helpers-docker-compatibility-and-the-lazyvim-starter-decided-with-the-owner-2026-11-12" name="1317-podman-helpers-docker-compatibility-and-the-lazyvim-starter-decided-with-the-owner-2026-11-12" class="anchor"></a>13.17 Podman helpers, docker compatibility and the LazyVim starter (decided with the owner 2026-11-12)</h3>
+<ul>
+<li><code>containers doctor [--json]</code> reports six checks, each with the command that fixes it: Podman installed, rootless (<code>podman info --format '{{.Host.Security.Rootless}}'</code>), subuid and subgid ranges for the user (<code>/etc</code>, overridable with <code>BXCACHY_ETC</code> for tests), a compose tool (<code>podman-compose</code> or <code>docker-compose</code>), the user socket (<code>systemctl --user is-active podman.socket</code>), and a <code>docker</code> command that runs Podman. Exit 0 when all pass, 4 when something needs fixing (or Podman is missing).</li>
+<li><code>containers socket enable [--yes]</code> runs <code>systemctl --user enable --now podman.socket</code> and prints <code>DOCKER_HOST=unix://$XDG_RUNTIME_DIR/podman/podman.sock</code>.</li>
+<li><code>containers docker-compat [--yes]</code> installs <code>podman-docker</code> (ships <code>/usr/bin/docker</code>) and <code>podman-compose</code> with <code>sudo pacman -S --needed</code>. Refused with exit 4 while the <code>docker</code> package is installed (it conflicts). Real wrapper scripts are not written: the packages are the compatibility layer. The wizard asks <code>docker_compat</code> (default yes) when Podman is the engine; <code>init</code> runs it after the containers profile.</li>
+<li><code>editor lazyvim [--yes]</code> follows lazyvim.org/installation: installs <code>neovim git ripgrep fd lazygit</code> when missing, <code>git clone https://github.com/LazyVim/starter ~/.config/nvim</code>, removes its <code>.git</code>. An existing <code>~/.config/nvim</code> is <strong>never</strong> touched (exit 4 with the <code>mv</code> to run). Wizard: <code>editor_starter</code> (<code>none</code> default, <code>lazyvim</code>) on the Developer page.</li>
+<li>Package names checked on archlinux.org 2026-11-12 (all in <code>extra</code>). Tests: <code>tests/containers-test.sh</code>.</li>
+</ul>
+<h3 id="1318-desktop-utilities-clipboard-history-and-screen-recording-decided-with-the-owner-2026-11-12"><a href="#1318-desktop-utilities-clipboard-history-and-screen-recording-decided-with-the-owner-2026-11-12" id="1318-desktop-utilities-clipboard-history-and-screen-recording-decided-with-the-owner-2026-11-12" name="1318-desktop-utilities-clipboard-history-and-screen-recording-decided-with-the-owner-2026-11-12" class="anchor"></a>13.18 Desktop utilities: clipboard history and screen recording (decided with the owner 2026-11-12)</h3>
+<p>Packages are catalog entries (all <code>extra</code>, checked 2026-11-12): <code>cliphist</code>, <code>wf-recorder</code>, <code>pavucontrol</code>, <code>wiremix</code>, <code>nwg-displays</code>, <code>playerctl</code>. <code>grim</code>, <code>slurp</code>, <code>wl-clipboard</code>, <code>brightnessctl</code> and <code>hyprpicker</code> already come with <code>setup hyprland</code>. The wizard's Extras page asks <code>desktop_utilities</code> (Hyprland and Both only; <code>cliphist</code> and <code>wf-recorder</code> preselected); the answers go into the single <code>install</code> step.</p>
+<ul>
+<li><code>clipboard pick</code> lists the history with your menu provider, decodes the chosen entry (<code>cliphist decode</code>, entry line on standard input) and copies it with <code>wl-copy</code>. Text entries only (binary entries are left out of the menu). <code>clipboard clear [--yes]</code> runs <code>cliphist wipe</code> (plan without <code>--yes</code>); <code>clipboard status</code> shows the tools and the entry count. Exit 4 when <code>cliphist</code>, <code>wl-clipboard</code> or the menu program is missing.</li>
+<li>The Hyprland module (<code>keys apply</code>) starts the history at login: <code>wl-paste --type text --watch cliphist store</code> and the same for images, and binds <code>Super+Shift+V</code> to <code>clipboard pick</code>.</li>
+<li><code>record [toggle|start|stop|status] [--region] [--dry-run]</code> (default toggle) runs <code>wf-recorder -f ~/Videos/bxcachy-YYYYMMDD-HHMMSS.mp4</code> detached (<code>BXCACHY_VIDEOS</code> changes the folder); <code>--region</code> adds <code>-g &quot;$(slurp)&quot;</code>. Stop sends SIGINT (<code>pkill -INT -x wf-recorder</code>) so the file is finished. Hyprland binds <code>Super+Shift+R</code> (toggle) and <code>Super+Alt+Shift+R</code> (a region). Exit 4 when <code>wf-recorder</code> or, for a region, <code>slurp</code> is missing. <code>wf-recorder</code> has no GPU encoding by default; <code>gpu-screen-recorder</code> (already in the catalog) is the faster option and is not wired here.</li>
+<li>Tests: <code>tests/utilities-test.sh</code>. The <code>wl-paste --watch</code> autostart and the shortcuts are not verified on a real Hyprland session.</li>
+</ul>
+<h3 id="1319-shortcut-editor-decided-with-the-owner-2026-11-12"><a href="#1319-shortcut-editor-decided-with-the-owner-2026-11-12" id="1319-shortcut-editor-decided-with-the-owner-2026-11-12" name="1319-shortcut-editor-decided-with-the-owner-2026-11-12" class="anchor"></a>13.19 Shortcut editor (decided with the owner 2026-11-12)</h3>
+<p>Bindings are built from their key combo (<code>Shortcuts.bindLine</code>), so changing the keys changes the rendered Hyprland line and the Plasma text together.</p>
+<ul>
+<li><code>keys set ID KEYS [--yes] [--force]</code> (for example <code>keys set ai-shell Super+Alt+A</code>): one or more modifiers (Super, Shift, Alt, Ctrl) plus a letter, a digit, or a named key (Space, Tab, Return, Escape, <code>`</code>, comma, period, slash, minus, equal, arrows, Print, F1-F12). Exit 4 when the binding is unknown or is a Cmd-style remap (those are xremap's), the combo is invalid, another BxCachy binding uses it (never overridable), or a line in your own <code>~/.config/hypr/*.lua</code> already binds it (<code>--force</code> allows that one). Plan without <code>--yes</code> (exit 2). The override is saved in <code>~/.config/bxcachy/shortcuts.json</code> through the config service; it takes effect with <code>keys apply --yes</code>.</li>
+<li><code>keys reset ID [--yes]</code> removes the override.</li>
+<li><code>keys conflicts [--json]</code> reports combos used twice inside the table and clashes with your own <code>hl.bind(</code> lines (best effort: it reads <code>mainMod</code> and the quoted names on the line, it is not a Lua parser; <code>bxcachy.lua</code> is skipped).</li>
+<li><code>keys show</code> marks changed rows (<code>custom</code>). The screen-record region shortcut is its own row (<code>screen-record-region</code>). Tests: <code>tests/keys-editor-test.sh</code>.</li>
+</ul>
+<h3 id="1320-web-apps-nordvpn-setup-and-remote-desktop-decided-with-the-owner-2026-11-12"><a href="#1320-web-apps-nordvpn-setup-and-remote-desktop-decided-with-the-owner-2026-11-12" id="1320-web-apps-nordvpn-setup-and-remote-desktop-decided-with-the-owner-2026-11-12" name="1320-web-apps-nordvpn-setup-and-remote-desktop-decided-with-the-owner-2026-11-12" class="anchor"></a>13.20 Web apps, NordVPN setup and remote desktop (decided with the owner 2026-11-12)</h3>
+<ul>
+<li><code>web add NAME URL [--browser=brave|chromium|google-chrome|edge|firefox] [--yes]</code> writes <code>~/.local/share/applications/bxcachy-web-NAME.desktop</code> (<code>XDG_DATA_HOME</code> is honored). Chromium-family browsers get <code>Exec=BROWSER --app=URL</code> (a window without tabs or address bar); Firefox has no app mode, so it gets <code>--new-window URL</code>. The browser is <code>--browser</code>, else your default (<code>xdg-settings get default-web-browser</code>) when it is one of those and installed, else the first installed. NAME is letters, digits, <code>-</code>, <code>_</code>; the URL must be http(s) without spaces or quotes. Written through the config service: the same text again is fine, an entry you edited is kept (exit 4). <code>web list</code> shows the apps BxCachy made (the URL is stored as <code>X-BxCachy-Web=</code>); <code>web rm NAME [--yes]</code> deletes one. Plan without <code>--yes</code> (exit 2). Browser commands: <code>chromium</code>; <code>brave</code>, <code>google-chrome-stable</code>, <code>microsoft-edge-stable</code>, <code>firefox</code> are the vendors' usual names, not verified here. No icon is fetched (<code>Icon=web-browser</code>).</li>
+<li><code>vpn nordvpn setup [--yes]</code> runs the two steps the <code>nordvpn-bin</code> AUR package prints in its install notes (checked 2026-11-12): <code>sudo systemctl enable --now nordvpnd</code> and <code>sudo gpasswd -a $USER nordvpn</code> (log out and in afterwards), then <code>nordvpn login</code> by hand. NordLayer is not covered. The wizard's VPN question offers NordVPN (catalog <code>nordvpn</code>); <code>init</code> installs it and runs the setup as an <strong>optional</strong> step.</li>
+<li>Remote desktop: the wizard's <code>remote_desktop</code> multi-choice (Remmina, RustDesk, Moonlight, Sunshine; nothing preselected) installs catalog apps in the single <code>install</code> step. These were already in the catalog; there is no command of their own.</li>
+<li>Tests: <code>tests/web-vpn-test.sh</code>.</li>
+</ul>
+<h3 id="1321-runtime-controls-and-cloud-storage-decided-with-the-owner-2026-11-12"><a href="#1321-runtime-controls-and-cloud-storage-decided-with-the-owner-2026-11-12" id="1321-runtime-controls-and-cloud-storage-decided-with-the-owner-2026-11-12" name="1321-runtime-controls-and-cloud-storage-decided-with-the-owner-2026-11-12" class="anchor"></a>13.21 Runtime controls and cloud storage (decided with the owner 2026-11-12)</h3>
+<ul>
+<li><code>layout [toggle|float|tile|status] [--dry-run]</code> (default toggle). <strong>Hyprland:</strong> the windows of the active workspace come from <code>hyprctl activeworkspace -j</code> and <code>hyprctl clients -j</code>; each one that is not already there gets <code>hyprctl dispatch setfloating address:ADDR</code> or <code>settiled address:ADDR</code>. <code>toggle</code> floats everything when at least one window is tiled, otherwise tiles everything. <strong>Plasma:</strong> HyprKwin is a session-wide switch, so toggle flips <code>tiling on|off</code> (float = off, tile = on). Exit 4 without a Hyprland or Plasma session. The dispatchers are the documented legacy ones and are not verified on a Hyprland 0.55+ Lua session; there is no keyboard shortcut yet (bind it with the editor or by hand).</li>
+<li><code>keys mac [on|off|status] [--yes]</code> enables or disables the user service <code>xremap</code> that <code>setup xremap</code> wrote (<code>systemctl --user enable|disable --now xremap</code>), so Super+C, Super+V and Super+Tab go back to plain Super shortcuts without uninstalling anything. Exit 4 when the unit is not set up.</li>
+<li><strong>Not done:</strong> a theme manager (Omarchy themes to Noctalia palettes). It needs Noctalia's runtime theme interface, which has not been verified; <code>setup hyprland --theme=dark|light|auto</code> still picks the theme of the starter.</li>
+<li><code>cloud remotes | configure | mount NAME [--path=DIR] [--yes] | unmount NAME [--yes] | status</code>: rclone remotes as folders. <code>configure</code> hands your terminal to <code>rclone config</code> (BxCachy never sees the logins). <code>mount</code> writes <code>~/.config/systemd/user/bxcachy-cloud-NAME.service</code> through the config service (<code>Type=notify</code>, <code>rclone mount NAME: DIR --vfs-cache-mode writes</code>, <code>ExecStop=fusermount3 -u DIR</code>, <code>WantedBy=default.target</code>), reloads systemd and runs <code>enable --now</code>; DIR is <code>~/Cloud/NAME</code>, absolute, without spaces or quotes. An edited unit is never overwritten (exit 4). <code>unmount</code> disables and stops it and deletes the unit only while it is still the text BxCachy wrote. Exit 4: rclone or fuse3 missing, unknown remote. The wizard's <code>cloud_storage</code> (default no) installs <code>rclone</code> and <code>fuse3</code>. Package facts checked on archlinux.org 2026-11-12. Not run against a real remote here. Tests: <code>tests/runtime-cloud-test.sh</code>.</li>
+</ul>
+<h3 id="1322-all-apps-window-answers-to-take-to-another-machine-snapshot-guis-decided-with-the-owner-2026-11-12"><a href="#1322-all-apps-window-answers-to-take-to-another-machine-snapshot-guis-decided-with-the-owner-2026-11-12" id="1322-all-apps-window-answers-to-take-to-another-machine-snapshot-guis-decided-with-the-owner-2026-11-12" name="1322-all-apps-window-answers-to-take-to-another-machine-snapshot-guis-decided-with-the-owner-2026-11-12" class="anchor"></a>13.22 All apps window, answers to take to another machine, snapshot GUIs (decided with the owner 2026-11-12)</h3>
+<ul>
+<li><code>apps</code> shows every installed application in one window with your menu provider and starts the choice; <code>apps list [--json]</code> prints them. This is Omarchy 4.5's app grid, which opens on <code>Super+Alt+Space</code> (source: the Omarchy 4.5 release write-up on starryhope.com: type to filter, arrows to move, Esc closes). The list is the <code>*.desktop</code> entries of <code>/usr/share/applications</code>, <code>~/.local/share/applications</code> and the Flatpak exports (<code>BXCACHY_APPS_DIRS</code> overrides, colon separated). A later folder wins for the same file name, so <code>Hidden=true</code> in your own folder removes an app. Only <code>Type=Application</code> entries without <code>NoDisplay</code> or <code>Hidden</code> are listed, sorted by name; icons are passed to providers that take them. An entry starts with its <code>Exec</code> line, field codes (<code>%U</code> and the like) removed, detached. Exit 4 when no menu program or no application is found. There is no press-again-to-close: Esc cancels. Omarchy's dock is not part of this.</li>
+<li><strong>Shortcut change:</strong> <code>Super+Alt+Space</code> is now <code>all-apps</code>. The control center moved to <code>Super+Alt+M</code> (change either with <code>keys set</code>). <code>menu</code> has an &quot;All apps&quot; entry. Plasma has its own menu on the Meta key, so nothing is added there. Tests: <code>tests/apps-test.sh</code>.</li>
+<li>The wizard's answers live in <code>~/.config/bxcachy/answers.json</code> (mode 600, no secrets) and fill the wizard on the next run. <code>init --export=FILE [--force]</code> copies them (mode 600); on another machine <code>init --from=FILE</code> fills the wizard with them, and <code>init --answers=FILE --yes</code> runs them without asking.</li>
+<li>Catalog: <code>btrfs-assistant</code> and <code>timeshift</code> (both <code>extra</code>, verified 2026-11-12) are in the default tier, so a plain <code>install</code> and Basic mode install them. <strong>Btrfs Assistant is in the default set only when <code>/</code> is Btrfs</strong>: the catalog entry has <code>filesystems: [&quot;btrfs&quot;]</code>, the resolver skips it elsewhere as <code>wrong_filesystem</code> (an unreadable filesystem counts as not Btrfs; <code>BXCACHY_ROOT_FS</code> overrides the detection, which is <code>findmnt -n -o FSTYPE /</code>), and naming it (<code>install btrfs-assistant</code>) still installs it. Timeshift has no such condition (it also works with rsync). Omarchy's base package list has none of restic, borg, snapper, snap-pac, timeshift or btrfs-assistant (checked in <code>install/omarchy-base.packages</code>, 2026-11-12).</li>
+</ul>
+<h3 id="1323-layouts-per-desktop-decided-with-the-owner-2026-11-12"><a href="#1323-layouts-per-desktop-decided-with-the-owner-2026-11-12" id="1323-layouts-per-desktop-decided-with-the-owner-2026-11-12" name="1323-layouts-per-desktop-decided-with-the-owner-2026-11-12" class="anchor"></a>13.23 Layouts per desktop (decided with the owner 2026-11-12)</h3>
+<p>The wizard asks the window layout once per desktop you set up: Hyprland (<code>layout</code>: dwindle, master, scrolling, floating) and KDE Plasma (<code>plasma_layout</code>: dwindle, master, monocle, scrolling, stage). &quot;Both&quot; asks twice. The Plasma list is HyprKwin's (README, 2026-11-12); floating is a per-window rule there, not a layout.</p>
+<ul>
+<li><code>tiling layout [NAME]</code> runs <code>hyprkwinctl layout [NAME]</code> for the <strong>current workspace</strong> (HyprKwin remembers each workspace's layout in <code>~/.config/hyprkwinrc</code>); without a name it shows the current one. Exit 4 for an unknown layout, no HyprKwin, no <code>hyprkwinctl</code>, or no running KWin; 6 when <code>hyprkwinctl</code> fails. <code>init</code> runs it as an <strong>optional</strong> step (it needs a Plasma session).</li>
+<li>BxCachy does not write HyprKwin's default layout for the other workspaces: the settings page names a &quot;Layout&quot; setting (default dwindle) but its config key is not documented. Set it in System Settings, Window Management, KWin Scripts, HyprKwin. Workspace rules (<code>workspace = 2, layout:master</code>) are also entered on that settings page.</li>
+<li>Tests: <code>tests/tiling-test.sh</code>, <code>tests/init_plan_test.bxs</code>.</li>
+</ul>
+<h3 id="1324-system-aware-wizard-and-status"><a href="#1324-system-aware-wizard-and-status" id="1324-system-aware-wizard-and-status" name="1324-system-aware-wizard-and-status" class="anchor"></a>13.24 System-aware wizard and <code>status</code></h3>
+<p><code>bxcachy status [--json]</code> (read-only, exit 0) shows what the machine already has in the wizard's terms: detected answers per question (desktops from installed packages, shell from <code>$SHELL</code>, default terminal from <code>xdg-terminals.list</code>, default browser from <code>xdg-settings</code>, AI default, runner, container engine, installed apps per question) and the default apps still missing (the Resolver with the shell and root filesystem). <code>--json</code> data: <code>detected</code> (id, label, page, value), <code>installed_catalog_apps</code>, <code>default_apps_missing</code>.</p>
+<p><code>bxcachy init</code> on a set-up machine starts from your saved answers merged with that scan (<code>tune</code>, the default): lists are joined, single choices follow the system when it says something, installed options show <code>✓ installed</code>. <code>--rerun</code> uses the saved answers only, <code>--fresh</code> the defaults, <code>--from=FILE</code> replaces the saved answers with a file (answers exported on another machine). Nothing the machine has is ever removed. The plan output splits <code>apps</code> into to install and already installed. <code>init --from-system --print-answers [--json]</code> prints the scan merged over the saved answers.</p>
+<h3 id="1325-strata-dictation-quick-look-dolphin-doctor-decided-with-the-owner-2026-11-12"><a href="#1325-strata-dictation-quick-look-dolphin-doctor-decided-with-the-owner-2026-11-12" id="1325-strata-dictation-quick-look-dolphin-doctor-decided-with-the-owner-2026-11-12" name="1325-strata-dictation-quick-look-dolphin-doctor-decided-with-the-owner-2026-11-12" class="anchor"></a>13.25 Strata, dictation, Quick Look, Dolphin doctor (decided with the owner 2026-11-12)</h3>
+<ul>
+<li><strong>Catalog source <code>script</code>:</strong> <code>script: { url, args, shell }</code> runs a vendor installer (<code>curl -fsSL URL | bash -s -- ARGS</code>); the URL and arguments are passed as arguments, never interpolated. The URL must be https without credentials, arguments match <code>[A-Za-z0-9=._/:-]+</code>, <code>shell</code> is <code>sh</code> or <code>bash</code>. Strata uses it with <code>--non-interactive</code>, pinned to a commit of <code>lgse/strata</code>.</li>
+<li><strong>File manager:</strong> the wizard asks <code>file_manager</code> (<code>strata</code> default, <code>dolphin</code>) on both desktops. <code>flea</code> is removed. <code>default filemanager strata|dolphin [--yes] [--dry-run]</code> runs <code>xdg-mime default &lt;app&gt;.desktop inode/directory</code>; <code>default show</code> reports it. Strata's installer also sets the folder handler, &quot;Open file location&quot; and the file chooser itself.</li>
+<li><strong>Send to providers:</strong> <code>strata integrations [--dry-run] [--json]</code> puts Strata's LocalSend and KDE Connect providers in <code>~/.config/strata/providers/&lt;id&gt;/</code> (<code>provider.py</code>, <code>messages.json</code>, <code>LICENSE</code>, and a <code>provider.json</code> naming python3), downloaded from the pinned Strata commit. An existing provider folder is kept. Exit 4 without curl or python3, 6 on a failed download. The <code>kdeconnect</code> catalog app installs <code>kdeconnect</code>, <code>sshfs</code>, <code>qt6-tools</code> (its optional dependencies) and <code>python-gobject</code> (the provider needs it); <code>localsend</code> is already a default app.</li>
+<li><strong>Rust:</strong> <code>rust</code> is a Toolchains option, on by default with Java. <code>rustup</code> itself comes with <code>install.sh</code>; the plan step is <code>rustup default stable</code> (optional).</li>
+<li><strong>Dictation:</strong> <code>dictation setup [superwhisper|voxtype] [--yes] [--dry-run]</code>, <code>dictation status</code>, <code>dictation key [ENGINE]</code>. Superwhisper is the default (hold Right Alt to talk, release to paste; changed in its own Configuration). Voxtype is the alternative (Omarchy's choice: hold F9; <code>voxtype setup model</code>; <code>~/.config/voxtype/config.toml</code>) and installs <code>wtype</code> too. BxCachy adds no shortcut of its own and does not rebind them. A double tap of Fn or Ctrl is not built: Fn often never reaches Linux and Hyprland cannot bind a double tap. The wizard asks <code>dictation</code> (<code>superwhisper</code> default, <code>voxtype</code>, <code>none</code>).</li>
+<li><strong>Quick Look:</strong> <code>quicklook [PATH] [--dry-run]</code> runs <code>kiview -s PATH</code> (a folder with no path given: <code>kiview DIR</code>). Kiview's README says it has no Dolphin integration yet, so there is no Space key in Dolphin; Dolphin's Preview panel (F11) and Strata's built-in preview exist. <code>kiview</code> is an optional AUR app.</li>
+<li><strong>Dolphin doctor:</strong> <code>dolphin doctor [--fix] [--json]</code> checks the applications menu file (an empty &quot;Open with&quot; menu), <code>XDG_MENU_PREFIX</code>, the KDE helper packages (<code>kio-extras</code>, thumbnailers, <code>kimageformats</code>, <code>ffmpegthumbs</code>), a default folder handler and a polkit agent. <code>--fix</code> runs <code>kbuildsycoca6 --noincremental</code>. Exit 0, 4 when something needs fixing, 6 when <code>--fix</code> failed. Unverified on a real machine: that these are the only causes.</li>
+<li>Tests: <code>tests/strata-test.sh</code>, <code>tests/extras-test.sh</code>, <code>tests/default-test.sh</code>, <code>installer_test.bxs</code> (script source), <code>catalog_check.bxs</code>, <code>init_plan_test.bxs</code>.</li>
+</ul>
+<h3 id="1326-cheat-sheet-screenshots-notifications-decided-with-the-owner-2026-11-12"><a href="#1326-cheat-sheet-screenshots-notifications-decided-with-the-owner-2026-11-12" id="1326-cheat-sheet-screenshots-notifications-decided-with-the-owner-2026-11-12" name="1326-cheat-sheet-screenshots-notifications-decided-with-the-owner-2026-11-12" class="anchor"></a>13.26 Cheat sheet, screenshots, notifications (decided with the owner 2026-11-12)</h3>
+<ul>
+<li><strong>Noctalia has its own commands</strong> (Noctalia docs, v5.4, <code>noctalia msg ...</code>): <code>screenshot-region|fullscreen|window|annotate</code> (with built-in annotation), <code>notification-dnd-set on|off</code>, <code>notification-dnd-toggle</code>, <code>notification-dnd-status</code>, <code>notification-clear-active</code>, <code>notification-clear-history</code>, plus clipboard, wallpaper (<code>wallpaper-set</code>) and theme (<code>theme-mode-set</code>, <code>color-scheme-set</code>, <code>templates-apply</code>) commands. BxCachy wraps them; this also removes the Noctalia theme blocker for the theme manager.</li>
+<li><strong><code>keys sheet [--json]</code>:</strong> the shortcut cheat sheet (Hyprland <code>Super+K</code>, like Omarchy), every row of the shared table with its action and how it is bound, in your menu program (searchable); without one it prints the list. Read-only.</li>
+<li><strong><code>screenshot screen|region|window [--edit] [--dry-run]</code>:</strong> Hyprland with Noctalia: <code>noctalia msg screenshot-fullscreen|region|window</code> (<code>--edit</code> adds <code>--annotate</code>); Hyprland without Noctalia: grim and slurp into the clipboard; Plasma: Spectacle (<code>-f</code>, <code>-r</code>, <code>-a</code>). The desktop is read from <code>XDG_CURRENT_DESKTOP</code> (<code>BXCACHY_DESKTOP</code> overrides). <code>screenshot ocr</code> drags a region and copies its text (tesseract); <code>screenshot qr</code> reads a QR code from a region (zbarimg) and copies it; <code>screenshot menu</code> is the Cmd+Shift+5 style picker (Screen, Region, Window, OCR, QR, Record). <code>qr TEXT [--out=FILE.png]</code> makes a QR code (qrencode). Exit 0, 4 tool missing, 6 failed.</li>
+<li><strong>Mac shortcuts (Hyprland):</strong> <code>Super+Shift+3</code> screen, <code>Super+Shift+4</code> region, <code>Super+Shift+5</code> menu (the starter no longer binds the first two itself). On Plasma Spectacle's own shortcuts apply; BxCachy does not rebind them (the <code>kglobalshortcutsrc</code> keys are not verified). Flameshot is now optional; Spectacle (Plasma only), grim, slurp, tesseract, zbar and qrencode are catalog apps; VLC is optional.</li>
+<li><strong><code>notify dnd on|off|toggle|status</code>, <code>notify snooze [30m|2h|90s|MINUTES|off]</code>, <code>notify clear [--history]</code>:</strong> Do Not Disturb through Noctalia. Snooze turns Do Not Disturb on and starts a transient user timer (<code>systemd-run --user --unit=bxcachy-snooze --on-active=Ns noctalia msg notification-dnd-set off</code>); <code>snooze off</code> stops the timer and turns it off; the default is 30 minutes. Noctalia has no command that opens its history panel, so there is none here. Shortcut <code>Super+Alt+N</code> toggles Do Not Disturb; the menu has a Notifications submenu and a Screenshot entry. Exit 0, 4 no noctalia or systemd-run or a bad duration, 6 failed.</li>
+<li>Tests: <code>tests/capture-notify-test.sh</code> (fake tools), <code>shortcuts_test.bxs</code> (15 rows), <code>menu-test.sh</code>, <code>keys-test.sh</code>.</li>
+</ul>
+<h3 id="1327-four-workspaces-and-the-plasma-panel-layout-decided-with-the-owner-2026-11-12"><a href="#1327-four-workspaces-and-the-plasma-panel-layout-decided-with-the-owner-2026-11-12" id="1327-four-workspaces-and-the-plasma-panel-layout-decided-with-the-owner-2026-11-12" name="1327-four-workspaces-and-the-plasma-panel-layout-decided-with-the-owner-2026-11-12" class="anchor"></a>13.27 Four workspaces and the Plasma panel layout (decided with the owner 2026-11-12)</h3>
+<ul>
+<li><strong>Four workspaces by default:</strong> the wizard's &quot;Workspaces always shown&quot; and the Hyprland starter default to 4 (was 2). On Plasma the same number is the virtual desktop count: <code>plasma desktops N [--yes]</code> writes <code>kwinrc [Desktops] Number=N, Rows=1</code> and asks KWin to reconfigure.</li>
+<li><strong><code>plasma panels apply|undo|status [--agenda] [--without-weather] [--desktops=N] [--preset=NAME] [--yes] [--dry-run] [--json]</code>:</strong> replaces your Plasma panels with the BxCachy layout through Plasma's scripting (<code>qdbus6 org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript</code>). Top panel, status only, left to right: Application Launcher (<code>org.kde.plasma.kickoff</code>), Virtual Desktop Pager (<code>org.kde.plasma.pager</code>), Active Window Title (<code>org.kde.windowtitle</code>), flexible spacer, Digital Clock (<code>org.kde.plasma.digitalclock</code>; with <code>--agenda</code> Event Calendar <code>org.kde.plasma.eventcalendar</code>), flexible spacer, Weather Report (<code>org.kde.plasma.weather</code>, off with <code>--without-weather</code>), Media Controller (<code>org.kde.plasma.mediacontroller</code>), KVitals (<code>org.kde.plasma.kvitals</code>), System Tray (<code>org.kde.plasma.systemtray</code>, notifications are inside it) and Panel Colorizer (<code>luisbocanegra.panel.colorizer</code>). Panel Colorizer's islands are switched on (<code>islandsEnabled</code>, <code>islandSeparatorWidget</code>) and its islands separator sits between Launcher + Pager, Window, Clock, Media + KVitals and Tray; the built-in preset (default Rounded Widgets) is applied with the Colorizer D-Bus signal <code>luisbocanegra.panel.colorizer.all.preset</code>. Bottom panel: a dock with the icons-only Task Manager (<code>org.kde.plasma.icontasks</code>). Plugin ids come from each widget's <code>metadata.json</code>.</li>
+<li><strong>Backup and undo:</strong> the first <code>apply</code> copies <code>plasma-org.kde.plasma.desktop-appletsrc</code> to <code>~/.config/bxcachy/plasma-panels/backup/</code> and keeps that first copy; <code>undo --yes</code> puts it back (log out and in). Without a running Plasma session (for example from Hyprland) the script is saved and a one-time autostart entry applies it at the next Plasma login and is removed once applied. Exit 0, 2 plan without <code>--yes</code>, 4 precondition, 6 Plasma refused the script.</li>
+<li><strong>Wizard (Plasma or Both):</strong> <code>plasma_panels</code> (<code>bxcachy</code> default, or <code>keep</code>), <code>plasma_weather</code> (default on), <code>plasma_agenda</code> (default off). The plan installs the widget apps (Plasma-only catalog entries <code>panel-colorizer</code>, <code>panel-colorizer-islands</code>, <code>window-title</code>, <code>kvitals</code>, <code>kdeplasma-addons</code>, <code>event-calendar</code>) and runs the optional step <code>plasma panels apply --desktops=&lt;workspaces&gt;</code> (or <code>plasma desktops N</code> when you keep your panels). <code>kvitals</code> is only packaged as a git build.</li>
+<li><strong>Not verified on a real Plasma session:</strong> the Panel property names (<code>location</code>, <code>height</code>, <code>lengthMode</code>), Panel Colorizer's config group and keys beyond what its <code>main.xml</code> declares, and that applying the preset by D-Bus reaches the new instance. The layout is reversible through the backup.</li>
+<li>Tests: <code>tests/plasma-panels-test.sh</code> (fake qdbus6, kwriteconfig6, dbus-send), <code>init_plan_test.bxs</code>, <code>wizard_app_test.bxs</code>.</li>
+</ul>
+<h3 id="1328-web-app-bundles-databases-boxlang-ecosystem-decided-with-the-owner-2026-11-13"><a href="#1328-web-app-bundles-databases-boxlang-ecosystem-decided-with-the-owner-2026-11-13" id="1328-web-app-bundles-databases-boxlang-ecosystem-decided-with-the-owner-2026-11-13" name="1328-web-app-bundles-databases-boxlang-ecosystem-decided-with-the-owner-2026-11-13" class="anchor"></a>13.28 Web app bundles, databases, BoxLang ecosystem (decided with the owner 2026-11-13)</h3>
+<ul>
+<li><strong>Catalog:</strong> DBeaver (<code>dbeaver</code>, extra) and HeidiSQL (<code>heidisql-qt6-bin</code>, AUR native Qt6 build; HeidiSQL's download page lists Linux x64 and arm64) are optional; TablePlus was dropped. RClone Browser (<code>rclone-browser</code>, AUR) is the optional GUI for S3 and other clouds (the Transmit and Cyberduck role). Apple web apps (iCloud, Mail, Calendar, Notes, Photos, Pages, Numbers, Keynote, Apple Music, Apple TV) and Try BoxLang (default) are web apps. Catalog apps may carry a <code>bundle</code> (<code>google</code>, <code>microsoft</code>, <code>apple</code>, <code>boxlang</code>).</li>
+<li><strong><code>web install google|microsoft|apple|boxlang|all [--yes] [--dry-run] [--json]</code>:</strong> adds every web app of the bundle as a launcher entry (the catalog's web source). Exit 0, 2 plan without <code>--yes</code>, 4 unknown bundle, 6 an entry failed. The menu has &quot;Install all Google, Microsoft, Apple apps&quot; under Web apps and the wizard asks <code>web_bundles</code> (a multi-select).</li>
+<li><strong><code>boxlang status|use VERSION|matchbox use VERSION|modules ...|vscode|links|welcome [--json]</code>:</strong> on top of what <code>install.sh</code> installs (Java 21, <code>bvm</code>, <code>mvm</code>, BoxLang, MatchBox). <code>use</code> runs <code>bvm install</code> when the version is missing then <code>bvm use</code> (<code>latest</code>, <code>snapshot</code> or a number); <code>matchbox use</code> does the same with <code>mvm</code>. <code>modules list|search TEXT</code> reads ForgeBox's public API as implemented in saas-forgebox <code>modules_app/api-v1</code> (<code>https://forgebox.io/api/v1/entries/boxlang-modules?orderBy=popular&amp;max=50&amp;offset=N[&amp;searchTerm=]</code>; <code>max</code> is capped at 50 per call, so the pages are followed until one is short, at most 20); <code>modules install SLUG...|installed|outdated|update</code> wrap <code>bx-module</code>. <code>vscode</code> runs <code>code --install-extension ortus-solutions.vscode-boxlang</code> and <code>ortus-solutions.vscode-boxlang-developer-pack</code> (names from Ortus's docs; VS Code is a default app). <code>links</code> lists the BoxLang sites; <code>welcome</code> writes <code>~/.config/bxcachy/welcome.html</code> (Try BoxLang, MatchBox, the ecosystem links) and opens it. The wizard (Toolchains page) asks <code>boxlang_modules</code> and <code>boxlang_vscode</code>; the menu has a BoxLang submenu. Exit 0, 4 tool missing or bad name, 6 failed. <code>boxlang new APP</code> is deliberately not built (later).</li>
+<li>Tests: <code>tests/boxlang-test.sh</code> (fake bvm, mvm, bx-module, code, curl), <code>web-vpn-test.sh</code>, <code>init_plan_test.bxs</code>, <code>menu-test.sh</code>.</li>
+</ul>
+<h3 id="1329-mac-style-extras-decided-with-the-owner-2026-11-13"><a href="#1329-mac-style-extras-decided-with-the-owner-2026-11-13" id="1329-mac-style-extras-decided-with-the-owner-2026-11-13" name="1329-mac-style-extras-decided-with-the-owner-2026-11-13" class="anchor"></a>13.29 Mac-style extras (decided with the owner 2026-11-13)</h3>
+<ul>
+<li><strong>Cmd keys:</strong> the shared shortcut table now remaps <code>Super+Z X A S F T N O P R W L B I U Comma</code> to their Ctrl versions in apps (undo, cut, select all, save, find, new tab, new window, open, print, reload, close tab, address bar, bold, italic, underline, preferences). In terminals <code>Super+T N W F</code> become <code>Ctrl+Shift+T N W F</code> and <code>Z X A S ...</code> pass through unchanged so shell shortcuts keep working. <code>Super+Q</code> closes the window (starter), <code>Super+M</code> minimizes and <code>Super+Shift+M</code> shows minimized windows (<code>window minimize|restore</code>: <code>hyprctl dispatch movetoworkspacesilent special:minimized</code> and <code>togglespecialworkspace minimized</code>). <code>Super+Ctrl+E</code> emoji picker, <code>Super+Alt+Escape</code> force quit, <code>Super+Ctrl+Up</code> overview, <code>Super+Ctrl+X</code> dictation toggle (<code>voxtype record toggle</code>, from the Voxtype README), <code>Super+Alt+Shift+N</code> night shift toggle.</li>
+<li><strong><code>emoji</code>:</strong> <code>rofimoji</code> (Omarchy uses Walker's symbols mode on <code>Super+Ctrl+E</code>). <strong><code>forcequit</code>:</strong> Hyprland <code>hyprctl kill</code> (click the window); Plasma <code>qdbus6 org.kde.KWin /KWin org.kde.KWin.killWindow</code>. <strong><code>overview [setup]</code>:</strong> Hyprland <code>hyprctl dispatch hyprexpo:expo toggle</code> (<code>setup</code> runs <code>hyprpm update</code>, <code>hyprpm add https://github.com/hyprwm/hyprland-plugins</code>, <code>hyprpm enable hyprexpo</code>); Plasma <code>org.kde.kglobalaccel /component/kwin invokeShortcut Overview</code>. Hot corners are not built: KWin's <code>[Effect-overview] BorderActivate</code> values could not be verified (set them in System Settings &gt; Screen Edges).</li>
+<li><strong><code>nightshift [on|off|toggle|status] [--location=LAT,LON]</code>:</strong> Hyprland: a user service <code>bxcachy-wlsunset.service</code> running <code>wlsunset -l LAT -L LON -t 3500 -T 6500</code>; the coordinates come offline from your time zone in <code>/usr/share/zoneinfo/zone.tab</code> or <code>zone1970.tab</code> (<code>BXCACHY_ZONEINFO</code> overrides the folder); an edited unit is kept. Plasma: <code>kwinrc [NightColor] Active=true, Mode=Automatic</code> (the Mode value is unverified). The wizard (Input page) asks <code>night_shift</code>, default on.</li>
+<li><strong><code>gpu doctor</code>:</strong> <code>lspci</code> vendors (NVIDIA, AMD, Intel) and the driver packages that are missing (<code>nvidia-utils</code>, <code>libva-nvidia-driver</code>; <code>mesa</code>, <code>vulkan-radeon</code>, <code>libva-mesa-driver</code>; <code>mesa</code>, <code>vulkan-intel</code>, <code>intel-media-driver</code>), with <code>ollama-cuda</code> or <code>ollama-rocm</code> for local AI. Exit 4 when something is missing. CachyOS normally installs the driver itself.</li>
+<li><strong><code>input doctor</code> and <code>input gestures [--yes]</code>:</strong> Magic Mouse and Trackpad checks (kernel <code>hid_magicmouse</code>, the <code>bluetooth</code> service, the <code>input</code> group) and <code>~/.config/libinput-gestures.conf</code> with three-finger swipes (left and right: <code>hyprctl dispatch workspace e+1</code> and <code>e-1</code>; up: overview; down: previous workspace), then <code>libinput-gestures-setup autostart</code> and <code>start</code>. The wizard asks <code>gestures</code> (Hyprland, default on) and installs <code>libinput-gestures</code> and <code>bluez</code>.</li>
+<li><strong><code>airplay on|off|status</code>:</strong> UxPlay as <code>bxcachy-airplay.service</code> (<code>uxplay -n BxCachy</code>); it needs <code>avahi-daemon</code>. Wizard question <code>airplay</code>, default off.</li>
+<li><strong>Keyboard:</strong> the layout <code>us-mac</code> (English, Macintosh variant, Option-key characters) is a wizard choice for Hyprland and Plasma.</li>
+<li><strong><code>settings export FILE.tar.gz [--force]</code> and <code>settings import FILE.tar.gz [--yes]</code>:</strong> the BxCachy settings (not secrets, backups or state); import backs up each existing file as <code>NAME.bak-STAMP</code> and refuses archives with paths outside <code>bxcachy/</code>. The menu has a Cloud storage submenu (remotes, configure, mounted status).</li>
+<li>Not verified on a real machine: hyprexpo with the Lua config era, KWin <code>killWindow</code>, kwinrc NightColor, UxPlay, libinput-gestures with a Magic Trackpad.</li>
+<li>Tests: <code>tests/macextras-test.sh</code>, <code>shortcuts_test.bxs</code>, <code>menu-test.sh</code>, <code>keys-test.sh</code>.</li>
+</ul>
+<h3 id="1330-one-line-installer-update-channels-updates-and-notifications-decided-with-the-owner-2026-11-13"><a href="#1330-one-line-installer-update-channels-updates-and-notifications-decided-with-the-owner-2026-11-13" id="1330-one-line-installer-update-channels-updates-and-notifications-decided-with-the-owner-2026-11-13" name="1330-one-line-installer-update-channels-updates-and-notifications-decided-with-the-owner-2026-11-13" class="anchor"></a>13.30 One-line installer, update channels, updates and notifications (decided with the owner 2026-11-13)</h3>
+<ul>
+<li><strong>One line:</strong> <code>curl -fsSL https://downloads.ortussolutions.com/ortussolutions/bxcachy/install.sh | bash</code> (<code>bootstrap/web-install.sh</code> is published as <code>install.sh</code>). It shows the BxCachy wordmark in the cyan to green gradient, the tagline and &quot;Powered by BoxLang&quot;, checks the machine (CachyOS or Arch, not root, x86_64, sudo), downloads the channel's <code>bxcachy-linux-x86_64</code> and <code>bootstrap.tar.gz</code>, verifies the Ed25519 signature of the release information (<code>version-latest.properties.sig</code>, OpenSSL, public key embedded in the published script) and the SHA-256 of both files against it, runs the stages of <code>bootstrap/install.sh</code> (<code>packages</code>, <code>toolchains</code>, <code>binary --binary</code>, <code>core</code>) behind spinners, then the setup wizard. There is no custom menu: it installs everything the wizard's defaults call for. Log: <code>~/.cache/bxcachy/install.log</code>.</li>
+<li><strong>No human input:</strong> <code>... | bash -s -- --yes [--answers FILE] [--channel stable|beta] [--no-wizard]</code>. <code>--yes</code> never asks (it needs passwordless sudo or a primed <code>sudo -v</code>), the wizard then runs <code>bxcachy init --answers FILE --yes</code> or, without a file, <code>bxcachy init --defaults --yes</code> (the wizard's default answers). <code>--dry-run</code> shows the banner and checks and does nothing. <code>--base-url</code> or <code>BXCACHY_BASE_URL</code> points elsewhere. Exit 1 on any failure (nothing is installed after a failed checksum), 2 when you decline.</li>
+<li><strong>Channels and S3 (<code>downloads.ortussolutions.com/ortussolutions/bxcachy/</code>):</strong> <code>stable/</code> (a <code>v*</code> tag), <code>beta/</code> (every push to <code>development</code>, the bleeding edge), each with <code>bxcachy-linux-x86_64</code>, <code>.sha256</code>, <code>bootstrap.tar.gz</code>, <code>.sha256</code> and <code>version-latest.properties</code> (<code>version</code>, <code>commit</code>, <code>sha256</code>, <code>channel</code>, <code>builtAt</code>); <code>snapshots/&lt;version&gt;-&lt;sha&gt;/</code> keeps every beta build and <code>releases/&lt;version&gt;/</code> every stable one (uploads never delete). CI job 6 publishes when the AWS secrets exist (<code>AWS_ACCESS_KEY</code>, <code>AWS_ACCESS_SECRET</code>).</li>
+<li><strong><code>update check [--notify]</code>:</strong> compares the running binary's SHA-256 with the channel's <code>version-latest.properties</code>; exit 10 when an update is available, 0 when current, 5 when the server is unreachable; also counts pending system updates (<code>checkupdates</code>). <code>update apply [--yes]</code> downloads the channel's binary, verifies its SHA-256 against its <code>.sha256</code> and the signed release information, and replaces the installed binary atomically (exit 5 on a mismatch or a bad signature, the old binary stays). <code>update channel [stable|beta]</code> shows or sets the channel (<code>~/.config/bxcachy/update.json</code>; the wizard asks <code>update_channel</code>, default stable). <code>update notifications on|off|status</code> manages a daily user timer <code>bxcachy-update-check.timer</code> that runs <code>update check --notify</code> and shows a notification (<code>noctalia msg notification-show</code>, else <code>notify-send</code>); the wizard asks <code>update_notifications</code>, default on. <code>system update [--yes]</code> takes a snapshot first when snapper or timeshift is present, then <code>sudo pacman -Syu --noconfirm</code> and, with yay, <code>yay -Sua --noconfirm</code>. The menu has Settings entries for check, apply, both channels, notifications on and off, and system update.</li>
+<li><strong>Signing (owner decision 2026-11-13: sign the installer and update):</strong> CI signs every <code>version-latest.properties</code> and <code>install.sh</code> with Ed25519 (<code>openssl pkeyutl -sign -rawin</code>) using the secret <code>BXCACHY_SIGNING_KEY</code>; the properties carry <code>sha256</code> (binary) and <code>bootstrap_sha256</code> (bundle). The public key is <code>keys/release.pub</code> (made with <code>scripts/gen-signing-key.sh</code>), embedded into the binary (<code>bootstrap/gen-releasekey.sh</code> writes <code>src/bxcachy/ReleaseKey.bx</code>) and into the published <code>install.sh</code> (CI replaces <code>@@PUBKEY_B64@@</code>). With a key a missing or invalid signature, or a file that does not match the signed hash, stops the install or update before anything changes (exit 1 for the installer, 5 for <code>update</code>); without a key (a development build) only SHA-256 is checked. Limit: the very first <code>curl | bash</code> still trusts the script it downloads (TLS and the bucket), so the signature protects the files the script fetches and every later update; verify <code>install.sh.sig</code> by hand with <code>keys/release.pub</code> for a stricter first install.</li>
+<li>Tests: <code>tests/web-install-test.sh</code> (fake server and stages, signed and unsigned), <code>tests/update-test.sh</code>, <code>init_plan_test.bxs</code>.</li>
+</ul>
+<h3 id="1331-agent-skills-and-the-documentation-site-decided-with-the-owner-2026-11-13"><a href="#1331-agent-skills-and-the-documentation-site-decided-with-the-owner-2026-11-13" id="1331-agent-skills-and-the-documentation-site-decided-with-the-owner-2026-11-13" name="1331-agent-skills-and-the-documentation-site-decided-with-the-owner-2026-11-13" class="anchor"></a>13.31 Agent skills and the documentation site (decided with the owner 2026-11-13)</h3>
+<ul>
+<li><strong>Skills:</strong> <code>skills list [--tag=T]|search TEXT|show REF|install [NAME|REF]... [--yes]|installed|update [--yes]|remove NAME [--yes]|status|link</code>. The store is <code>~/.agents/skills</code> (<code>BXCACHY_SKILLS_DIR</code>); each skill folder is linked (a symlink, never over something of yours) into the skills folder of every agent present: <code>~/.claude/skills</code>, <code>~/.codex/skills</code>, <code>~/.gemini/skills</code>, <code>~/.config/opencode/skills</code> (the last three are best effort). <code>~/.config/bxcachy/skills.json</code> records what BxCachy installed (<code>embedded</code> or <code>hub</code>, the reference, the SHA-256). Names: <code>bxcachy</code> (five skills embedded in the binary from <code>skills/*/SKILL.md</code> by <code>bootstrap/gen-skills.sh</code>: <code>bxcachy</code>, <code>bxcachy-install-update</code>, <code>bxcachy-desktop</code>, <code>bxcachy-apps</code>, <code>bxcachy-ai</code>), <code>boxlang</code> (<code>ortus-boxlang/skills/boxlang-developer~language-fundamentals</code>) and <code>matchbox</code> (<code>.../boxlang-developer~runtime-matchbox</code>). A reference is <code>OWNER/REPO/SLUG</code> (SLUG is <code>CATEGORY~NAME</code>) or <code>OWNER/REPO/CATEGORY/NAME</code>. The hub is <code>https://skills.boxlang.io</code> (<code>BXCACHY_SKILLS_URL</code>), whose API (sites-skills.boxlang.io, <code>app/handlers/api/Skills.bx</code>) is <code>GET /api/skills?search=&amp;tag=&amp;perPage=&amp;sort=</code>, <code>GET /api/skills/:owner/:repo/:slug</code>, and <code>POST /api/install {owner,repo,skill}</code> which returns the SKILL.md with its audit; a skill that failed its audit is refused (403). Exit 0, 2 plan without <code>--yes</code>, 4 bad reference or unknown name, 5 the hub did not answer or refused, 6 a write failed. The wizard (AI page) asks <code>agent_skills</code> (default <code>bxcachy</code>, <code>boxlang</code>, <code>matchbox</code>; optional) and runs one optional step; the menu has Settings entries.</li>
+<li><strong>Docs:</strong> built with bxSites (<code>bxsites.yaml</code>, <code>docs/</code>) and published to GitHub Pages at <code>https://bxcachy.boxlang.io</code> by <code>.github/workflows/docs.yml</code> (a pull request builds and audits only). <code>docs/</code> is the version being written (1.0.x); <code>bxSites version:new --name=1.0.x</code> freezes it and <code>versions.default</code> then serves it at the root with <code>docs/</code> at <code>/next/</code>. i18n is configured for English only (<code>i18n.defaultLocale</code>). <code>docs/reference/commands.md</code> is generated from the usage text in <code>src/Main.bx</code> by <code>bootstrap/gen-docs.sh</code> (CI checks it). The bxSites agent skills (<code>ortus-boxlang/bx-sites-skills</code>) are installed in <code>.agents/skills</code> (<code>skills-lock.json</code>).</li>
+<li>Tests: <code>tests/skills-test.sh</code> (fake hub and agents), <code>init_plan_test.bxs</code>.</li>
+</ul>
+<h2 id="14-install-and-the-setup-wizard-decided-with-the-owner-2026-11-10-install-wizard-and-the-init-engine-are-built-the-pages-later-commands-are-not"><a href="#14-install-and-the-setup-wizard-decided-with-the-owner-2026-11-10-install-wizard-and-the-init-engine-are-built-the-pages-later-commands-are-not" id="14-install-and-the-setup-wizard-decided-with-the-owner-2026-11-10-install-wizard-and-the-init-engine-are-built-the-pages-later-commands-are-not" name="14-install-and-the-setup-wizard-decided-with-the-owner-2026-11-10-install-wizard-and-the-init-engine-are-built-the-pages-later-commands-are-not" class="anchor"></a>14. Install and the setup wizard (decided with the owner 2026-11-10; install, wizard and the init engine are built, the pages' later commands are not)</h2>
+<h3 id="141-install"><a href="#141-install" id="141-install" name="141-install" class="anchor"></a>14.1 Install</h3>
+<p><code>bootstrap/install.sh [--yes] [--dry-run]</code> is the one install command. It prints the plan, asks one <code>Proceed? [Y/n]</code> at a terminal (without a terminal it needs <code>--yes</code>, else exit 2; <code>--dry-run</code> exits 0), then runs, in order: packages with yay and Rust, toolchains (mvm, bvm, BoxLang, nvm and Node, MatchBox), the bxcachy binary, and the core apps (<code>bxcachy profile-install core --yes</code>). External installer scripts run without a gate (section 2, rule 8). <code>install.sh check</code> is the read-only report; <code>packages|toolchains|binary|core --yes</code> re-run one stage. When the wizard exists the install ends by starting it at a terminal.</p>
+<p><strong>Required vs optional toolchains (decided 2026-11-10):</strong> the install always adds BoxLang (Java 21, bvm, mvm, MatchBox, Rust). nvm and Node.js are no longer part of it; they are the optional JavaScript toolchain: <code>bxcachy toolchain node [--yes] [--dry-run] [--json]</code> runs the pinned nvm installer from <code>box.json</code> <code>toolchain.nvm</code> (an external script: its URL is in the plan, it adds nvm to your shell startup files) and <code>nvm install lts/*</code>, skipping what is already there. Bun and Deno are catalog apps (<code>install bun deno</code>).</p>
+<h3 id="142-bxcachy-init"><a href="#142-bxcachy-init" id="142-bxcachy-init" name="142-bxcachy-init" class="anchor"></a>14.2 <code>bxcachy init</code></h3>
+<p>A full-screen terminal wizard that asks the questions below, shows a review screen, then runs the matching commands. Answers are saved to <code>~/.config/bxcachy/answers.json</code> (mode 600, written atomically); a re-run starts from the saved answers.</p>
+<pre><code>bxcachy init                          the wizard (needs a terminal)
+bxcachy init --answers FILE [--yes] [--dry-run] [--json]    headless: no TUI, the plan from FILE; same --yes / --dry-run rules as every mutating verb
+bxcachy init --print-answers          the saved answers
+</code></pre>
+<p>Exits: as <code>setup</code> (0, 2, 4, 5, 6, 7, 8); 4 also for no terminal without <code>--answers</code>. The wizard is only a front end: every answer becomes an ordinary command, so anything it does can be run by hand.</p>
+<h3 id="143-pages-answers-and-what-they-run"><a href="#143-pages-answers-and-what-they-run" id="143-pages-answers-and-what-they-run" name="143-pages-answers-and-what-they-run" class="anchor"></a>14.3 Pages, answers and what they run</h3>
+<p><strong>Default desktop (decided 2026-11-10):</strong> Hyprland + Noctalia. KDE Plasma stays installed whatever is chosen but is configured (HyprKwin tiling, shared keys) only for <code>both</code> or <code>plasma</code>. The login session follows the choice: <code>hyprland</code> starts Hyprland, <code>plasma</code> starts Plasma, and <code>both</code> asks (<code>login_session</code>, default Hyprland). <code>session set</code> runs for the resulting session. A question may carry <code>when: { id, in: [...] }</code> (or <code>equals</code>); hidden questions are not asked, not reviewed and not in the answers file.</p>
+<div class="bxsites-table-wrap" x-data="{ q: '' }"><input type="search" class="bxsites-table-filter" x-model="q" placeholder="Filter table..." aria-label="Filter table"><table class="table">
+<thead>
+<tr><th>Page</th><th>Answers (keys in <code>answers.json</code>)</th><th>Runs or writes</th></tr>
+</thead>
+<tbody>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Desktop</td><td><code>desktops</code> (<code>hyprland</code> default, <code>both</code>, <code>plasma</code>), <code>layout</code> (<code>dwindle</code> tiling default, <code>master</code>, <code>scrolling</code> carousel, <code>floating</code>; asked for Hyprland and Both), <code>workspaces</code> (persistent count), <code>login_session</code> (<code>hyprland</code> or <code>plasma</code>, asked only when <code>desktops</code> is <code>both</code>)</td><td><code>setup hyprland</code>, <code>setup plasma</code>, <code>tiling on|off</code>, <code>session set</code></td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Look</td><td><code>theme</code> (<code>dark</code>, <code>light</code>, <code>auto</code>), <code>wallpaper</code>, <code>bar_position</code>, <code>world_clocks</code> (IANA zones with labels)</td><td>Noctalia config</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Input and languages</td><td><code>keyboard_layouts</code> (e.g. <code>us</code> variant <code>intl</code>, <code>es</code>), <code>locale</code>, <code>natural_scroll</code>, <code>mac_keys</code></td><td>Hyprland <code>kb_layout</code>, KDE keyboard config, locale, <code>setup xremap</code></td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Developer identity</td><td><code>git_name</code>, <code>git_email</code>, <code>ssh_key</code>, <code>shell</code> (<code>zsh</code> default, <code>fish</code>, <code>bash</code>; Starship always), <code>terminal</code> (<code>ghostty</code> default), <code>terminals_extra</code>, <code>editor</code></td><td><code>git config</code>, <code>ssh-keygen</code>, <code>setup shell</code>, <code>setup terminal</code>, <code>setup hyprland --terminal</code></td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Toolchains</td><td><code>toolchains</code> (<code>java</code> with gradle and maven, <code>php</code> with composer and laravel, <code>python</code>, <code>go</code>, <code>javascript</code>), <code>js_runtimes</code> (<code>node</code> with nvm default, <code>bun</code>, <code>deno</code>; asked only when <code>javascript</code> is chosen). BoxLang is always installed (shown as a note)</td><td>catalog profiles, <code>toolchain node</code>, <code>install bun deno</code></td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Containers</td><td><code>container_engine</code> (<code>podman</code> default, <code>docker</code>)</td><td>package and service setup</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Databases</td><td><code>databases</code> (PostgreSQL, MySQL, MariaDB, Redis, MongoDB, Couchbase, pgvector, Chroma, Qdrant, Weaviate, Meilisearch, OpenSearch, Elasticsearch; none preselected; Milvus is not supported)</td><td><code>db engine</code>, <code>db start</code> per service</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>AI (own page, after Apps)</td><td><code>ai_agents</code> (claude-code, codex-cli, gemini-cli), <code>ai_default</code>, <code>ai_orchestrators</code> (<code>pane</code> default, <code>orca</code>, <code>herdr</code>), <code>ai_local</code> (ollama, lm-studio, jan, koboldcpp, gpt4all; nothing preselected), <code>ai_local_gpu</code> (<code>none</code>, <code>nvidia</code>, <code>amd</code>; only with Ollama), <code>ai_keys</code> (<code>later</code> default, <code>now</code>), <code>ai_global_keys</code> (only with <code>now</code>; default none)</td><td>installs through <code>install</code>; then <code>secrets setup</code>, one optional <code>secrets set KEY</code> per single-provider agent plus per ticked provider (<code>ai_providers</code>) when <code>now</code> (typed hidden at the terminal, skippable; never saved in answers.json), optional <code>secrets global on KEY</code>, and <code>ai default ID</code></td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>VPN</td><td><code>vpn</code> (Tailscale, WireGuard, OpenVPN, Mullvad, Proton)</td><td>catalog and services</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Password manager</td><td><code>password_manager</code> (Bitwarden, 1Password, KeePassXC)</td><td>catalog</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Gaming</td><td><code>gaming</code> (<code>none</code>, <code>steam</code>, <code>bundle</code>)</td><td>catalog (CachyOS gaming bundle)</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Apps</td><td><code>app_mode</code> (<code>defaults</code> = Basic, or <code>custom</code> = Customize), <code>apps_&lt;group&gt;_&lt;category&gt;</code> lists (Customize only), <code>default_browser</code> (the terminal you picked becomes the default terminal), <code>launcher</code> (<code>noctalia</code> default, <code>walker</code>, <code>rofi</code>, <code>fuzzel</code>, <code>wofi</code>; asked for Hyprland and Both), <code>menu</code> (<code>rofi</code> default, <code>walker</code>, <code>fuzzel</code>, <code>wofi</code>)</td><td><code>install</code> (the provider's package), <code>runner set</code>, <code>runner menu-set</code></td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Backups and storage</td><td><code>snapshots</code>, <code>backup_target</code> (restic or borg), <code>mounts</code>, <code>cache_cleanup</code></td><td>snapper, timers</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Import</td><td><code>dotfiles_repo</code> (the method is detected, not asked)</td><td><code>dotfiles apply</code> (last step)</td></tr>
+</tbody>
+</table></div>
+<p>Fonts are not a question: the install always adds JetBrains Mono, JetBrains Mono Nerd, the Powerline fonts and the Nerd Fonts symbols (with the Noto fonts <code>setup hyprland</code> already installs).</p>
+<p><strong>Built (W4):</strong> <code>init</code>, <code>init --answers</code>, <code>init --print-answers</code>. The planner (<code>InitPlan</code>, pure) turns answers into this ordered list, one ordinary command each, run through the program itself with <code>--yes</code>: <code>setup hyprland [--terminal --layout]</code>, <code>setup plasma</code>, <code>setup terminal</code>, <code>setup shell</code>, <code>setup xremap</code>, <code>install</code> (AI orchestrators and agents), <code>git config --global</code> (name, email), and last <code>session set</code>. A missing answer adds no step. A step that fails stops the rest (exit 7 when some were done, else that step's exit code; the others are <code>skipped</code>). Also run: <code>profile-install jvm|php|python|go</code> per toolchain (<code>composer global require laravel/installer</code> after PHP; JavaScript runs <code>toolchain node</code> for Node.js with nvm, and Bun and Deno join the <code>install</code>), <code>profile-install containers</code> (Podman) or <code>install docker</code>, <code>profile-install gaming</code> (bundle) or <code>install steam</code>, and one <code>install</code> for the AI tools, VPN (<code>tailscale</code>, <code>wireguard</code>, <code>openvpn</code>, <code>mullvad</code>, <code>proton-vpn</code>), password manager and backup tools (<code>snapper</code> with <code>snap-pac</code>, <code>restic</code>, <code>borg</code>). Databases: <code>db engine</code> remembers the container engine (<code>container_engine</code>), then <code>db start ENGINE</code> runs for each picked service (none is preselected); <code>database_passwords</code> (<code>generate</code> default: &quot;Generated (recommended)&quot;, or <code>ask</code>: &quot;My own password&quot;; the question appears once a database is picked) adds <code>--ask-password</code> for the engines that have a password (the typed password is never stored in <code>answers.json</code>; asking needs a terminal, so a headless <code>init</code> with <code>ask</code> fails that step with exit 4). Apps: Basic runs <code>install --shell=...</code>; Customize runs one <code>install</code> with the ticked apps (filtered by desktop); then <code>default browser</code> and <code>default terminal</code>. Answers whose command does not exist yet (<code>ssh_key</code>; and <code>workspaces</code>, <code>natural_scroll</code>, <code>layouts</code>, <code>theme</code>, <code>wallpaper</code> when Hyprland is not being set up, because only the Hyprland starter takes them) are saved and listed as <code>pending</code>, never dropped silently. <code>init</code> at a terminal runs the wizard, saves <code>answers.json</code>, then runs the plan (the review screen is the confirmation; <code>--dry-run</code> only prints). <code>install.sh</code> ends with <code>bxcachy init</code> at a terminal and prints a hint otherwise.</p>
+<h3 id="144-rules"><a href="#144-rules" id="144-rules" name="144-rules" class="anchor"></a>14.4 Rules</h3>
+<ul>
+<li>Every answer is optional; an unanswered page does nothing. The review screen lists exactly the commands that will run.</li>
+<li><code>init</code> never runs a step the user did not choose, and never overwrites a file the user changed (the config service rules of section 6 apply).</li>
+<li>Starter configs are parametrized by the answers (workspaces, window style, layouts, theme, wallpaper, bar position, world clocks, natural scroll); the defaults are the current starters.</li>
+<li>Databases follow the earlier plan (<code>plan.md</code> section 7): Podman is the default engine and Docker is an explicit choice; services run as containers with start, stop, status and logs, persistent volumes and generated passwords kept in a mode-600 file.</li>
+<li>Runner integration (legacy <code>bxcachy-runner</code>): launcher providers <code>system</code>, <code>noctalia</code>, <code>rofi</code>, <code>walker</code>, <code>krunner</code>, <code>vicinae</code>, <code>hyprrunner</code>, <code>custom</code>; menu providers <code>rofi</code>, <code>walker</code>, <code>vicinae</code>, <code>hyprrunner</code>; commands are JSON argument arrays, never shell strings; keybindings are never changed. Default on Hyprland is Noctalia (Super+Space).</li>
+<li>The TUI needs MatchBox's <code>bif-tui</code> in the native runner (task W2). Until then <code>init --answers</code> is the only form.</li>
+</ul>
+<h3 id="145-tasks"><a href="#145-tasks" id="145-tasks" name="145-tasks" class="anchor"></a>14.5 Tasks</h3>
+<p>W1 this section; W2 native TUI in MatchBox; W3 <code>install.sh</code> (done); W4 init engine (planner and headless run); W5 catalog additions; W6 parametrized starters; W7 TUI pages; W8 CI and docs; W9 <code>bxcachy db</code>; W10 dotfiles import; W11 <code>bxcachy runner</code>.</p>
+
+	
+
+	
+	
+		<div class="page-meta"><a href="https://github.com/ortus-boxlang/bxcachy/edit/development/docs/architecture/COMMAND-CONTRACT.md" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg> Edit this page</a><a href="/architecture/COMMAND-CONTRACT.md" download><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M8 15v-3l1.5 2 1.5-2v3"/><path d="M14.5 12v4M13 15.5l1.5 1.5 1.5-1.5"/></svg> Download Markdown</a><span class="page-meta__item"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Last updated Nov 13, 2026, 9&#x3a;07&#x3a;30 AM</span><a href="https://github.com/ortus-boxlang/bxcachy/issues/new?title=Issue%20with%3A%20Command%20contract&amp;body=Found%20on%3A%20https%3A%2F%2Fbxcachy.boxlang.io%2Farchitecture%2FCOMMAND-CONTRACT%2Findex.html" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg> Report an issue</a></div>
+	
+</article>
+
+
+
+
+
+
+	<nav class="page-nav d-flex justify-content-between" aria-label="Page navigation">
+		
+		
+			<a class="page-nav__card page-nav__card--prev" href="/architecture/index.html">
+				<span class="page-nav__icon"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></span>
+				<span class="page-nav__text">
+					<span class="page-nav__label">Previous</span>
+					<span class="page-nav__title">Architecture</span>
+				</span>
+			</a>
+		
+		
+		
+		
+		
+			<a class="page-nav__card page-nav__card--next" href="/architecture/MATCHBOX-PARITY/index.html">
+				<span class="page-nav__text">
+					<span class="page-nav__label">Next</span>
+					<span class="page-nav__title">MatchBox parity</span>
+				</span>
+				<span class="page-nav__icon"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></span>
+			</a>
+		
+	</nav>
+
+
+
+
+
+
+			</main>
+
+			
+			
+				<aside class="col-xl-2 toc-sidebar d-none d-xl-block">
+					<nav class="toc bxsites-toc mb-4" aria-label="On this page"><div class="toc-title bxsites-toc__title"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4v16"/><path d="M6 8h6"/><path d="M6 14h9"/><path d="M6 20h4"/></svg> On this page</div><ul class="list-unstyled"><li class="toc-level-2"><a href="#1-grammar">1. Grammar</a></li><li class="toc-level-2"><a href="#2-mutation-rules-apply-to-every-mutating-verb">2. Mutation rules &#x28;apply to every mutating verb&#x29;</a></li><li class="toc-level-2"><a href="#3-exit-codes">3. Exit codes</a></li><li class="toc-level-2"><a href="#4---json">4. --json</a></li><li class="toc-level-2"><a href="#5-catalog-single-source-of-truth">5. Catalog &#x28;single source of truth&#x29;</a></li><li class="toc-level-2"><a href="#6-state-and-config-layout">6. State and config layout</a></li><li class="toc-level-2"><a href="#7-test-contract">7. Test contract</a></li><li class="toc-level-2"><a href="#8-catalog-check-validation-and-reporting">8. Catalog check, validation and reporting</a></li><li class="toc-level-2"><a href="#9-open-questions">9. Open questions</a></li><li class="toc-level-2"><a href="#10-implemented-so-far-2026-11-09">10. Implemented so far &#x28;2026-11-09&#x29;</a></li><li class="toc-level-2"><a href="#11-package-commands-on-the-catalog-b2-decided-2026-11-09">11. Package commands on the catalog &#x28;B2, decided 2026-11-09&#x29;</a></li><li class="toc-level-3"><a href="#selection">Selection</a></li><li class="toc-level-3"><a href="#per-source-steps">Per-source steps</a></li><li class="toc-level-3"><a href="#result-shape---json-inside-the-section-4-envelope">Result shape &#x28; --json , inside the section 4 envelope&#x29;</a></li><li class="toc-level-3"><a href="#open-questions">Open questions</a></li><li class="toc-level-2"><a href="#12-implemented-so-far-b2-2026-11-09">12. Implemented so far, B2 &#x28;2026-11-09&#x29;</a></li><li class="toc-level-2"><a href="#13-desktop-setup-decided-with-the-owner-2026-11-09-and-2026-11-10-all-built">13. Desktop setup &#x28;decided with the owner 2026-11-09 and 2026-11-10&#x3b; all built&#x29;</a></li><li class="toc-level-3"><a href="#131-commands">13.1 Commands</a></li><li class="toc-level-3"><a href="#132-setup-plasma-hyprkwin">13.2 setup plasma &#x28;HyprKwin&#x29;</a></li><li class="toc-level-3"><a href="#133-setup-hyprland">13.3 setup hyprland</a></li><li class="toc-level-3"><a href="#134-shortcuts-keys-and-setup-xremap">13.4 Shortcuts, keys and setup xremap</a></li><li class="toc-level-3"><a href="#135-look-and-starter-configs">13.5 Look and starter configs</a></li><li class="toc-level-3"><a href="#135b-shell-and-terminal-decided-2026-11-10">13.5b Shell and terminal &#x28;decided 2026-11-10&#x29;</a></li><li class="toc-level-3"><a href="#136-brand-assets">13.6 Brand assets</a></li><li class="toc-level-3"><a href="#137-session">13.7 session</a></li><li class="toc-level-3"><a href="#139-runner-the-launcher-abstraction-port-of-the-legacy-bxcachy-runner">13.9 runner &#x3a; the launcher abstraction &#x28;port of the legacy bxcachy-runner &#x29;</a></li><li class="toc-level-3"><a href="#1310-db-local-databases-and-search-engines-as-containers-port-of-the-legacy-bxcachy-db-and-bxcachy-vector">13.10 db &#x3a; local databases and search engines as containers &#x28;port of the legacy bxcachy-db and bxcachy-vector &#x29;</a></li><li class="toc-level-3"><a href="#1311-dotfiles-your-own-dotfiles-repository-decided-with-the-owner-2026-11-11">13.11 dotfiles &#x3a; your own dotfiles repository &#x28;decided with the owner 2026-11-11&#x29;</a></li><li class="toc-level-3"><a href="#1312-apps-basic-or-customize-and-your-defaults-decided-with-the-owner-2026-11-11">13.12 Apps&#x3a; Basic or Customize, and your defaults &#x28;decided with the owner 2026-11-11&#x29;</a></li><li class="toc-level-3"><a href="#138-tests-and-what-is-verified">13.8 Tests and what is verified</a></li><li class="toc-level-3"><a href="#1313-secrets-one-way-to-store-and-load-api-keys-decided-with-the-owner-2026-11-11">13.13 Secrets&#x3a; one way to store and load API keys &#x28;decided with the owner 2026-11-11&#x29;</a></li><li class="toc-level-3"><a href="#1314-ai-agents-decided-with-the-owner-2026-11-11">13.14 AI agents &#x28;decided with the owner 2026-11-11&#x29;</a></li><li class="toc-level-3"><a href="#1315-ssh-key-and-plasma-keyboard-layouts-decided-with-the-owner-2026-11-12">13.15 SSH key and Plasma keyboard layouts &#x28;decided with the owner 2026-11-12&#x29;</a></li><li class="toc-level-3"><a href="#1316-control-center-menu-decided-with-the-owner-2026-11-12">13.16 Control center menu &#x28;decided with the owner 2026-11-12&#x29;</a></li><li class="toc-level-3"><a href="#1317-podman-helpers-docker-compatibility-and-the-lazyvim-starter-decided-with-the-owner-2026-11-12">13.17 Podman helpers, docker compatibility and the LazyVim starter &#x28;decided with the owner 2026-11-12&#x29;</a></li><li class="toc-level-3"><a href="#1318-desktop-utilities-clipboard-history-and-screen-recording-decided-with-the-owner-2026-11-12">13.18 Desktop utilities&#x3a; clipboard history and screen recording &#x28;decided with the owner 2026-11-12&#x29;</a></li><li class="toc-level-3"><a href="#1319-shortcut-editor-decided-with-the-owner-2026-11-12">13.19 Shortcut editor &#x28;decided with the owner 2026-11-12&#x29;</a></li><li class="toc-level-3"><a href="#1320-web-apps-nordvpn-setup-and-remote-desktop-decided-with-the-owner-2026-11-12">13.20 Web apps, NordVPN setup and remote desktop &#x28;decided with the owner 2026-11-12&#x29;</a></li><li class="toc-level-3"><a href="#1321-runtime-controls-and-cloud-storage-decided-with-the-owner-2026-11-12">13.21 Runtime controls and cloud storage &#x28;decided with the owner 2026-11-12&#x29;</a></li><li class="toc-level-3"><a href="#1322-all-apps-window-answers-to-take-to-another-machine-snapshot-guis-decided-with-the-owner-2026-11-12">13.22 All apps window, answers to take to another machine, snapshot GUIs &#x28;decided with the owner 2026-11-12&#x29;</a></li><li class="toc-level-3"><a href="#1323-layouts-per-desktop-decided-with-the-owner-2026-11-12">13.23 Layouts per desktop &#x28;decided with the owner 2026-11-12&#x29;</a></li><li class="toc-level-3"><a href="#1324-system-aware-wizard-and-status">13.24 System-aware wizard and status</a></li><li class="toc-level-3"><a href="#1325-strata-dictation-quick-look-dolphin-doctor-decided-with-the-owner-2026-11-12">13.25 Strata, dictation, Quick Look, Dolphin doctor &#x28;decided with the owner 2026-11-12&#x29;</a></li><li class="toc-level-3"><a href="#1326-cheat-sheet-screenshots-notifications-decided-with-the-owner-2026-11-12">13.26 Cheat sheet, screenshots, notifications &#x28;decided with the owner 2026-11-12&#x29;</a></li><li class="toc-level-3"><a href="#1327-four-workspaces-and-the-plasma-panel-layout-decided-with-the-owner-2026-11-12">13.27 Four workspaces and the Plasma panel layout &#x28;decided with the owner 2026-11-12&#x29;</a></li><li class="toc-level-3"><a href="#1328-web-app-bundles-databases-boxlang-ecosystem-decided-with-the-owner-2026-11-13">13.28 Web app bundles, databases, BoxLang ecosystem &#x28;decided with the owner 2026-11-13&#x29;</a></li><li class="toc-level-3"><a href="#1329-mac-style-extras-decided-with-the-owner-2026-11-13">13.29 Mac-style extras &#x28;decided with the owner 2026-11-13&#x29;</a></li><li class="toc-level-3"><a href="#1330-one-line-installer-update-channels-updates-and-notifications-decided-with-the-owner-2026-11-13">13.30 One-line installer, update channels, updates and notifications &#x28;decided with the owner 2026-11-13&#x29;</a></li><li class="toc-level-3"><a href="#1331-agent-skills-and-the-documentation-site-decided-with-the-owner-2026-11-13">13.31 Agent skills and the documentation site &#x28;decided with the owner 2026-11-13&#x29;</a></li><li class="toc-level-2"><a href="#14-install-and-the-setup-wizard-decided-with-the-owner-2026-11-10-install-wizard-and-the-init-engine-are-built-the-pages-later-commands-are-not">14. Install and the setup wizard &#x28;decided with the owner 2026-11-10&#x3b; install, wizard and the init engine are built, the pages&#x27; later commands are not&#x29;</a></li><li class="toc-level-3"><a href="#141-install">14.1 Install</a></li><li class="toc-level-3"><a href="#142-bxcachy-init">14.2 bxcachy init</a></li><li class="toc-level-3"><a href="#143-pages-answers-and-what-they-run">14.3 Pages, answers and what they run</a></li><li class="toc-level-3"><a href="#144-rules">14.4 Rules</a></li><li class="toc-level-3"><a href="#145-tasks">14.5 Tasks</a></li></ul></nav>
+				</aside>
+			
+		</div>
+		
+	</div>
+	
+
+	
+	
+		<footer class="bxsites-footer">
+			<div class="container-fluid bxsites-footer__inner">
+				
+				<div class="bxsites-footer__copy">&copy; 2026 BxCachy</div>
+				
+				
+					<div class="bxsites-footer__social"><a class="social-link" href="https://github.com/ortus-boxlang/BoxLang" target="_blank" rel="noopener noreferrer" aria-label="BoxLang on GitHub" title="BoxLang on GitHub"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.385-1.333-1.754-1.333-1.754-1.089-.744.083-.729.083-.729 1.205.084 1.84 1.237 1.84 1.237 1.07 1.834 2.807 1.304 3.492.997.108-.775.418-1.305.762-1.605-2.665-.303-5.467-1.332-5.467-5.93 0-1.31.468-2.38 1.235-3.22-.123-.303-.535-1.523.117-3.176 0 0 1.008-.322 3.301 1.23A11.5 11.5 0 0 1 12 5.803c1.02.005 2.045.138 3.003.404 2.29-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.873.118 3.176.77.84 1.235 1.91 1.235 3.22 0 4.61-2.807 5.625-5.48 5.92.43.372.823 1.102.823 2.222 0 1.606-.014 2.898-.014 3.293 0 .322.216.694.825.576C20.565 21.795 24 17.298 24 12c0-6.63-5.37-12-12-12"/></svg></a><a class="social-link" href="https://www.boxlang.io" target="_blank" rel="noopener noreferrer" aria-label="BoxLang" title="BoxLang"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></div>
+				
+				
+				<div class="bxsites-footer__credit">Built with <a href="https://bxsites.io" target="_blank" rel="noopener noreferrer">BxSites</a></div>
+			</div>
+		</footer>
+	
+
+	
+	<script src="/assets/vendor/bootstrap/bootstrap.bundle.min.js"></script>
+	<script src="/assets/vendor/highlight/highlight.min.js"></script>
+	<script src="/assets/highlight-boxlang.c59b5de4.js"></script>
+	<script>hljs.highlightAll();</script>
+	<script src="/assets/code-lines.66ad0c90.js"></script>
+	<script src="/assets/copy-code.a5acc8cc.js" defer></script>
+	<script src="/assets/admonition-collapse.df9b134e.js" defer></script>
+	<script src="/assets/nav-toggle.6bc5dbe8.js" defer></script>
+	<script src="/assets/toc-collapse.cb73e778.js" defer></script>
+	<script src="/assets/tabs.24dffad6.js" defer></script>
+	<script src="/assets/conditional-content-init.9ef1e0f9.js" defer></script>
+	<script src="/assets/course-progress.3813411a.js" defer></script>
+	<script src="/assets/prompt-init.774781de.js" defer></script>
+	<script src="/assets/contact-form-init.7f7be308.js" defer></script>
+
+	
+	
+
+	
+	
+		<script src="/assets/vendor/mermaid/mermaid.min.js"></script>
+		<script src="/assets/mermaid-init.b2f3ed5c.js"></script>
+	
+
+	
+	
+
+	
+	
+
+	
+	
+
+	
+	
+
+	
+	
+
+	
+	
+
+	
+	
+</body>
+</html>
+
