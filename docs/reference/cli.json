@@ -825,14 +825,21 @@
       "backup config list | show ID | diff ID",
       "backup config restore ID [--only=PATH] [--packages] [--yes] [--dry-run]",
       "backup config auto on|off|status | prune [--keep=N] [--yes]",
-      "backup config paths | add PATH | remove PATH"
+      "backup config paths | add PATH | remove PATH",
+      "backup snapshots status | list [--json]",
+      "backup snapshots setup [--home] [--yes]",
+      "backup snapshots create [--description=TEXT] [--yes]",
+      "backup snapshots delete ID | changes ID | restore ID PATH [--yes]"
      ],
      "examples": [
       "bxcachy backup config now",
       "bxcachy backup config list",
       "bxcachy backup config diff 20261113T153000",
       "bxcachy backup config restore 20261113T153000 --dry-run",
-      "bxcachy backup config restore 20261113T153000 --only=.config/hypr --yes"
+      "bxcachy backup config restore 20261113T153000 --only=.config/hypr --yes",
+      "bxcachy backup snapshots setup --yes",
+      "bxcachy backup snapshots list",
+      "bxcachy backup snapshots restore 12 /home/me/projects/app --dry-run"
      ],
      "mutates": true,
      "note": "A config snapshot is taken by itself before update, system update, init, reinstall and refresh (turn it off with backup config auto off). Secrets and SSH keys are never in it unless you add --with-secrets, which stores your secrets export, encrypted with a passphrase you type."
