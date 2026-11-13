@@ -1,0 +1,266 @@
+// `bxcachy theme list | show NAME | set NAME [--mode=M] [--keep-wallpaper] | mode theme|dark|light|auto | status | random | next`.
+// A theme is an Omarchy-format folder (colors.toml, optional neovim.lua, optional backgrounds/). Where they come from, first match wins:
+//   ~/.config/bxcachy/themes/NAME   installed or imported by the user
+//   ~/.config/omarchy/themes/NAME   Omarchy user themes found on disk
+//   ~/.local/share/omarchy/themes/NAME   Omarchy's own themes found on disk
+//   bundled in the binary           10 from Omarchy and 5 BxCachy themes (themes/NOTICE.md)
+// `set` rewrites these generated files (through the config service: atomic, backed up, journalled) and then tells the running desktop:
+//   Noctalia palette  ~/.config/noctalia/palettes/BxCachyTheme.json, then `noctalia msg color-scheme-set custom BxCachyTheme` and `theme-mode-set` (+ `wallpaper-set`)
+//   terminals         ~/.config/bxcachy/theme/{ghostty,kitty.conf,alacritty.toml,foot.ini}, included from the terminal starter configs
+//   btop              ~/.config/btop/themes/bxcachy.theme
+//   Hyprland accent   ~/.config/bxcachy/theme/hypr.lua (read by the managed bxcachy.lua), then `hyprctl reload`
+//   Neovim            ~/.local/state/bxcachy/current/theme/neovim.lua (nvim's lua/plugins/theme.lua links to it)
+//   Plasma            `plasma-apply-colorscheme BreezeDark|BreezeLight`
+// Like `runner set` these are settings: they act at once (no --yes) and take --dry-run. User config files are never edited.
+// Exit: 0 done, 2 bad usage, 4 precondition (unknown or invalid theme), 6 a file could not be written.
+class Theme {
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.inst = new bxcachy.Installer( arguments.runner );
+        variables.cfgSvc = new bxcachy.ConfigService().quiet( true );
+        variables.tc = new bxcachy.ThemeColors();
+        variables.td = new bxcachy.ThemeData();
+        return this;
+    }
+
+    function say( code, data, asJson, lines = [], dry = false ) {
+        if ( arguments.asJson ) println( variables.cli.envelope( "theme", arguments.code, arguments.data, arguments.dry ) );
+        else for ( var l in arguments.lines ) println( l );
+        return arguments.code;
+    }
+
+    function tryExec( argv, timeout = 30 ) {
+        try { return variables.inst.exec( arguments.argv, arguments.timeout ); } catch ( any e ) { return { exitCode: 127, output: e.message }; }
+    }
+
+    function has( name ) { return tryExec( [ "sh", "-c", 'command -v "$1"', "_", arguments.name ], 10 ).exitCode == 0; }
+
+    function cfg() { return variables.cfgSvc.cfgHome(); }
+    function home() { return getSystemSetting( "HOME", "" ); }
+    function outDir() { return cfg() & "/bxcachy/theme"; }
+    function stateFile() { return cfg() & "/bxcachy/theme.json"; }
+    function modes() { return [ "theme", "dark", "light", "auto" ]; }
+
+    // Directories that hold themes, with where they come from.
+    function sources() {
+        return [ { origin: "user", dir: cfg() & "/bxcachy/themes" },
+                 { origin: "omarchy", dir: cfg() & "/omarchy/themes" },
+                 { origin: "omarchy", dir: home() & "/.local/share/omarchy/themes" } ];
+    }
+
+    // name -> { name, origin, dir } (dir is "" for a bundled theme); the first source that has a name wins.
+    function discover() {
+        var found = {};
+        for ( var s in sources() ) {
+            if ( !directoryExists( s.dir ) ) continue;
+            for ( var n in directoryList( s.dir, false, "name" ) ) {
+                if ( structKeyExists( found, n ) || !fileExists( s.dir & "/" & n & "/colors.toml" ) ) continue;
+                found[ n ] = { name: n, origin: s.origin, dir: s.dir & "/" & n };
+            }
+        }
+        for ( var b in variables.td.names() ) if ( !structKeyExists( found, b ) ) found[ b ] = { name: b, origin: variables.td.origin( b ) == "bxcachy" ? "bundled" : "bundled", dir: "" };
+        return found;
+    }
+
+    function names() {
+        var out = [];
+        for ( var k in discover() ) out.append( k );
+        arraySort( out, "textnocase" );
+        return out;
+    }
+
+    // The wallpaper each bundled BxCachy theme goes with (files in ~/Pictures/BxCachy); other bundled themes keep your wallpaper.
+    function bundledWallpaper( name ) {
+        var m = { bxcachy: "box.jpg", "bxcachy-light": "minimal.png", "bxcachy-midnight": "grid.jpg", "bxcachy-cyan": "aurora.jpg", "bxcachy-forest": "box.jpg" };
+        return structKeyExists( m, arguments.name ) ? home() & "/Pictures/BxCachy/" & m[ arguments.name ] : "";
+    }
+
+    // { found, name, origin, colorsText, neovimText, wallpaper }
+    function find( name ) {
+        var all = discover();
+        if ( !structKeyExists( all, arguments.name ) ) return { found: false };
+        var t = all[ arguments.name ];
+        var out = { found: true, name: t.name, origin: t.origin, colorsText: "", neovimText: "", wallpaper: "" };
+        if ( len( t.dir ) ) {
+            out.colorsText = fileRead( t.dir & "/colors.toml" );
+            if ( fileExists( t.dir & "/neovim.lua" ) ) out.neovimText = fileRead( t.dir & "/neovim.lua" );
+            if ( directoryExists( t.dir & "/backgrounds" ) ) {
+                var pics = directoryList( t.dir & "/backgrounds", false, "name" );
+                arraySort( pics, "textnocase" );
+                if ( pics.len() ) out.wallpaper = t.dir & "/backgrounds/" & pics[ 1 ];
+            }
+        } else {
+            out.colorsText = variables.td.colors( t.name );
+            out.neovimText = variables.td.neovim( t.name );
+            out.wallpaper = bundledWallpaper( t.name );
+        }
+        return out;
+    }
+
+    function readState() {
+        var st = { name: "", mode: "theme" };
+        if ( fileExists( stateFile() ) ) {
+            try {
+                var j = jsonDeserialize( fileRead( stateFile() ) );
+                if ( structKeyExists( j, "name" ) ) st.name = j.name;
+                if ( structKeyExists( j, "mode" ) && arrayFind( modes(), j.mode ) ) st.mode = j.mode;
+            } catch ( any e ) {}
+        }
+        return st;
+    }
+
+    function writeState( name, mode ) {
+        directoryCreate( getDirectoryFromPath( stateFile() ), true, true );
+        fileWrite( stateFile(), jsonSerialize( { name: arguments.name, mode: arguments.mode } ) & chr( 10 ) );
+    }
+
+    // The mode Noctalia and Plasma are set to: the theme's own unless pinned (or auto).
+    function resolveMode( stateMode, c ) {
+        if ( arguments.stateMode == "theme" ) return variables.tc.isLight( arguments.c ) ? "light" : "dark";
+        return arguments.stateMode;
+    }
+
+    // The generated files for a parsed theme, in the config service entry shape.
+    function files( c, neovimText ) {
+        var d = outDir();
+        var out = [
+            { name: "theme-palette", target: cfg() & "/noctalia/palettes/BxCachyTheme.json", mode: "644", content: variables.tc.palette( arguments.c ) },
+            { name: "theme-ghostty", target: d & "/ghostty", mode: "644", content: variables.tc.ghostty( arguments.c ) },
+            { name: "theme-kitty", target: d & "/kitty.conf", mode: "644", content: variables.tc.kitty( arguments.c ) },
+            { name: "theme-alacritty", target: d & "/alacritty.toml", mode: "644", content: variables.tc.alacritty( arguments.c ) },
+            { name: "theme-foot", target: d & "/foot.ini", mode: "644", content: variables.tc.foot( arguments.c ) },
+            { name: "theme-btop", target: cfg() & "/btop/themes/bxcachy.theme", mode: "644", content: variables.tc.btop( arguments.c ) },
+            { name: "theme-hypr", target: d & "/hypr.lua", mode: "644", content: hyprAccent( arguments.c ) }
+        ];
+        if ( len( arguments.neovimText ) ) out.append( { name: "theme-neovim", target: variables.cfgSvc.stateDir() & "/current/theme/neovim.lua", mode: "644", content: arguments.neovimText } );
+        return out;
+    }
+
+    // What the managed hypr/bxcachy.lua reads: the focused border runs from the accent to the bright cyan, unfocused is muted.
+    function hyprAccent( c ) {
+        return "-- Generated by `bxcachy theme set`. Rewritten on every theme change; do not edit." & chr( 10 ) &
+               'return { active = { colors = { "' & variables.tc.rgba( arguments.c.accent ) & '", "' & variables.tc.rgba( arguments.c.color14 ) & '" }, angle = 45 }, inactive = "' & variables.tc.rgba( arguments.c.color8, "aa" ) & '" }' & chr( 10 );
+    }
+
+    // ---- commands ----
+    function list( asJson ) {
+        var cur = readState().name;
+        var rows = [];
+        var lines = [];
+        for ( var n in names() ) {
+            var t = find( n );
+            var p = variables.tc.parse( t.colorsText );
+            var row = { name: n, origin: t.origin, valid: p.ok, light: p.ok ? variables.tc.isLight( p.colors ) : false, current: n == cur };
+            rows.append( row );
+            lines.append( ( row.current ? "* " : "  " ) & n & "  (" & t.origin & ", " & ( !p.ok ? "invalid" : ( row.light ? "light" : "dark" ) ) & ")" );
+        }
+        return say( 0, { themes: rows, current: cur }, arguments.asJson, lines );
+    }
+
+    function show( name, asJson ) {
+        var t = find( arguments.name );
+        if ( !t.found ) return say( 4, { error: "unknown theme " & arguments.name }, arguments.asJson, [ "error: unknown theme " & arguments.name & " (bxcachy theme list)" ] );
+        var p = variables.tc.parse( t.colorsText );
+        if ( !p.ok ) return say( 4, { error: "invalid theme", errors: p.errors }, arguments.asJson, [ "error: " & arguments.name & " is not a valid theme: " & p.errors.toList( ", " ) ] );
+        var c = p.colors;
+        var data = { name: t.name, origin: t.origin, light: variables.tc.isLight( c ), accent: c.accent, background: c.background, foreground: c.foreground, neovim: len( t.neovimText ) > 0, wallpaper: t.wallpaper };
+        return say( 0, data, arguments.asJson, [ t.name & " (" & t.origin & ", " & ( data.light ? "light" : "dark" ) & ")", "accent " & c.accent & "  background " & c.background & "  foreground " & c.foreground, "neovim colourscheme: " & ( data.neovim ? "yes" : "no" ) ] );
+    }
+
+    // Tells the running desktop. Returns { noctalia, plasma, hyprland, notes }.
+    function notify( mode, wallpaper ) {
+        var out = { noctalia: "skipped", plasma: "skipped", hyprland: "skipped", notes: [] };
+        if ( has( "noctalia" ) ) {
+            var a = tryExec( [ "noctalia", "msg", "color-scheme-set", "custom", "BxCachyTheme" ], 30 );
+            var b = tryExec( [ "noctalia", "msg", "theme-mode-set", arguments.mode ], 30 );
+            if ( a.exitCode == 0 && b.exitCode == 0 ) {
+                out.noctalia = "applied";
+                if ( len( arguments.wallpaper ) && fileExists( arguments.wallpaper ) ) {
+                    var w = tryExec( [ "noctalia", "msg", "wallpaper-set", arguments.wallpaper ], 30 );
+                    if ( w.exitCode != 0 ) out.notes.append( "wallpaper not changed: " & trim( w.output ) );
+                }
+            } else {
+                out.noctalia = "not running";
+                out.notes.append( "Noctalia did not answer (" & trim( a.output & " " & b.output ) & "). The palette file is written; run `bxcachy theme set` again from the session." );
+            }
+        }
+        if ( findNoCase( "KDE", getSystemSetting( "XDG_CURRENT_DESKTOP", "" ) ) && has( "plasma-apply-colorscheme" ) ) {
+            var kp = tryExec( [ "plasma-apply-colorscheme", arguments.mode == "light" ? "BreezeLight" : "BreezeDark" ], 30 );
+            out.plasma = kp.exitCode == 0 ? "applied" : "failed";
+        }
+        if ( len( getSystemSetting( "HYPRLAND_INSTANCE_SIGNATURE", "" ) ) && has( "hyprctl" ) ) {
+            out.hyprland = tryExec( [ "hyprctl", "reload" ], 20 ).exitCode == 0 ? "reloaded" : "failed";
+        }
+        return out;
+    }
+
+    function set( name, mode = "", keepWallpaper = false, dry = false, asJson = false ) {
+        var t = find( arguments.name );
+        if ( !t.found ) return say( 4, { error: "unknown theme " & arguments.name }, arguments.asJson, [ "error: unknown theme " & arguments.name & " (bxcachy theme list)" ] );
+        var p = variables.tc.parse( t.colorsText );
+        if ( !p.ok ) return say( 4, { error: "invalid theme", errors: p.errors }, arguments.asJson, [ "error: " & arguments.name & " is not a valid theme: " & p.errors.toList( ", " ) ] );
+        if ( len( arguments.mode ) && !arrayFind( modes(), arguments.mode ) ) return say( 2, { error: "bad mode " & arguments.mode }, arguments.asJson, [ "error: mode must be theme, dark, light or auto" ] );
+        var st = readState();
+        var stateMode = len( arguments.mode ) ? arguments.mode : st.mode;
+        var m = resolveMode( stateMode, p.colors );
+        var wall = arguments.keepWallpaper ? "" : t.wallpaper;
+        var entries = files( p.colors, t.neovimText );
+        var data = { theme: t.name, origin: t.origin, light: variables.tc.isLight( p.colors ), mode: stateMode, applied_mode: m, wallpaper: wall, files: entries.map( function( e ) { return e.target; } ) };
+        if ( arguments.dry ) return say( 0, data, arguments.asJson, [ "Plan: theme " & t.name & " (" & ( data.light ? "light" : "dark" ) & ", mode " & m & ")", "Files: " & entries.map( function( e ) { return e.target; } ).toList( ", " ), "Nothing was changed." ], true );
+        data.written = []; data.unchanged = []; data.failed = [];
+        for ( var e in entries ) {
+            if ( variables.cfgSvc.configState( e ) == "clean" ) { data.unchanged.append( e.name ); continue; }
+            if ( variables.cfgSvc.configWrite( e, e.content, "theme", true, false ) == 0 ) data.written.append( e.name ); else data.failed.append( e.name );
+        }
+        if ( data.failed.len() ) return say( 6, data, arguments.asJson, [ "error: could not write " & data.failed.toList( ", " ) ] );
+        writeState( t.name, stateMode );
+        var n = notify( m, wall );
+        data.noctalia = n.noctalia; data.plasma = n.plasma; data.hyprland = n.hyprland; data.notes = n.notes;
+        var lines = [ "Theme: " & t.name & " (" & t.origin & ", " & ( data.light ? "light" : "dark" ) & ", mode " & m & ")", "Files: " & data.written.len() & " written, " & data.unchanged.len() & " unchanged" ];
+        lines.append( "Noctalia: " & n.noctalia & "  Plasma: " & n.plasma & "  Hyprland: " & n.hyprland );
+        for ( var note in n.notes ) lines.append( "note: " & note );
+        if ( !len( t.neovimText ) ) lines.append( "note: this theme has no neovim.lua, so Neovim keeps its colourscheme" );
+        return say( 0, data, arguments.asJson, lines );
+    }
+
+    // `mode`: how light or dark follows. theme = the theme's own; dark or light = pinned; auto = Noctalia switches by itself.
+    function mode( value, dry = false, asJson = false ) {
+        if ( !arrayFind( modes(), arguments.value ) ) return say( 2, { error: "bad mode " & arguments.value }, arguments.asJson, [ "Usage: bxcachy theme mode theme|dark|light|auto" ] );
+        var st = readState();
+        var t = len( st.name ) ? find( st.name ) : { found: false };
+        var c = t.found ? variables.tc.parse( t.colorsText ) : { ok: false };
+        var m = c.ok ? resolveMode( arguments.value, c.colors ) : ( arguments.value == "theme" ? "dark" : arguments.value );
+        if ( arguments.dry ) return say( 0, { mode: arguments.value, applied_mode: m }, arguments.asJson, [ "Plan: theme mode " & arguments.value & " (applies " & m & ")", "Nothing was changed." ], true );
+        writeState( st.name, arguments.value );
+        var n = notify( m, "" );
+        return say( 0, { mode: arguments.value, applied_mode: m, noctalia: n.noctalia, plasma: n.plasma }, arguments.asJson, [ "Theme mode: " & arguments.value & " (applies " & m & "). Noctalia: " & n.noctalia & "  Plasma: " & n.plasma ] );
+    }
+
+    function status( asJson ) {
+        var st = readState();
+        var data = { name: st.name, mode: st.mode, files: [] };
+        var lines = [ "Theme: " & ( len( st.name ) ? st.name : "(none set)" ) & "  mode: " & st.mode ];
+        if ( len( st.name ) ) {
+            var t = find( st.name );
+            var p = t.found ? variables.tc.parse( t.colorsText ) : { ok: false };
+            if ( p.ok ) for ( var e in files( p.colors, t.neovimText ) ) {
+                var s = variables.cfgSvc.configState( e );
+                data.files.append( { name: e.name, target: e.target, state: s } );
+                lines.append( "  " & e.name & ": " & s );
+            }
+        }
+        return say( 0, data, arguments.asJson, lines );
+    }
+
+    // The next theme after the current one (wrapping), or a random other one.
+    function pick( how ) {
+        var all = names();
+        var cur = readState().name;
+        var i = arrayFind( all, cur );
+        if ( arguments.how == "next" ) return all[ i >= all.len() || i == 0 ? 1 : i + 1 ];
+        if ( all.len() == 1 ) return all[ 1 ];
+        var n = all[ randRange( 1, all.len() ) ];
+        while ( n == cur ) n = all[ randRange( 1, all.len() ) ];
+        return n;
+    }
+}

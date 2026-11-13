@@ -15,7 +15,7 @@ class {
         var config = new bxcachy.ConfigService();
         // One shared flag check for every command: unknown flags are usage errors and nothing runs.
         for ( var flag in args.options ) {
-            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider", "backend", "dir", "email", "region", "browser", "path", "from", "export", "from-system", "fresh", "rerun", "fix", "edit", "history", "out", "agenda", "without-weather", "desktops", "preset", "no-open", "location", "notify", "defaults", "tag" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
+            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider", "backend", "dir", "email", "region", "browser", "path", "from", "export", "from-system", "fresh", "rerun", "fix", "edit", "history", "out", "agenda", "without-weather", "desktops", "preset", "no-open", "location", "notify", "defaults", "tag", "mode", "keep-wallpaper" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
                 println( "Unknown option: --" & flag );
                 CLIExit( 2 );
             }
@@ -432,6 +432,20 @@ class {
          case "qr":
           if ( p.len() == 2 ) CLIExit( new bxcachy.Screenshot( cli ).qrMake( p[2], args.options.out ?: "", asJson ) );
           println( "Usage: bxcachy qr TEXT [--out=FILE.png] [--json]" );
+          CLIExit( 2 );
+          break;
+         case "theme":
+          // Themes (Omarchy format): Noctalia palette, terminals, btop, Hyprland accent, Neovim. See COMMAND-CONTRACT.md 13.32.
+          thSub = p.len() >= 2 ? p[2] : "";
+          th = new bxcachy.Theme( cli );
+          thDry = structKeyExists( args.options, "dry-run" );
+          if ( thSub == "list" && p.len() == 2 ) CLIExit( th.list( asJson ) );
+          if ( thSub == "show" && p.len() == 3 ) CLIExit( th.show( p[3], asJson ) );
+          if ( thSub == "status" && p.len() == 2 ) CLIExit( th.status( asJson ) );
+          if ( thSub == "set" && p.len() == 3 ) CLIExit( th.set( p[3], args.options.mode ?: "", structKeyExists( args.options, "keep-wallpaper" ), thDry, asJson ) );
+          if ( ( thSub == "random" || thSub == "next" ) && p.len() == 2 ) CLIExit( th.set( th.pick( thSub ), args.options.mode ?: "", structKeyExists( args.options, "keep-wallpaper" ), thDry, asJson ) );
+          if ( thSub == "mode" && p.len() == 3 ) CLIExit( th.mode( p[3], thDry, asJson ) );
+          println( "Usage: bxcachy theme list | show NAME | set NAME [--mode=theme|dark|light|auto] [--keep-wallpaper] | random | next | mode theme|dark|light|auto | status [--dry-run] [--json]" );
           CLIExit( 2 );
           break;
          case "notify":
