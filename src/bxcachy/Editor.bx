@@ -1,12 +1,26 @@
-// `bxcachy editor lazyvim [--yes]`: the LazyVim starter for Neovim.
-// Steps (from lazyvim.org/installation): git clone https://github.com/LazyVim/starter ~/.config/nvim, then remove its .git folder so
-// the config can go in your own repo. Neovim and the tools LazyVim's checks look for (git, ripgrep, fd, lazygit) are installed first
-// with pacman when missing. An existing ~/.config/nvim is NEVER touched: the command says so and stops (move it yourself).
-// Run `nvim`, then `:LazyHealth`. Exit: 0 done (or already there), 2 plan without --yes, 4 precondition, 6 a command failed.
+// `bxcachy editor lazyvim [--yes] | boxlang [--yes] | status | refresh [--force] [--yes]`: Neovim with LazyVim, the BxCachy layer and BoxLang.
+//   lazyvim  Steps from lazyvim.org/installation: git clone https://github.com/LazyVim/starter ~/.config/nvim, then remove its .git folder.
+//            Neovim and the tools LazyVim's checks look for (git, ripgrep, fd, lazygit) are installed first with pacman when missing.
+//            Then the BxCachy layer goes on top (see layer()). An existing ~/.config/nvim is NEVER touched: the command says so and stops.
+//   boxlang  Only the BoxLang plugin spec (lua/plugins/boxlang.lua), for a LazyVim config you already have. Adds that one file, edits nothing.
+//   refresh  Rewrites the layer files that are still as BxCachy wrote them (missing, clean or outdated); files you changed are kept
+//            unless --force (a backup is taken either way, through the config service).
+// The layer (modelled on what Omarchy's omarchy-nvim package adds to the starter, written by us):
+//   lua/config/bxcachy.lua                 relativenumber off, autoformat off, OSC 52 clipboard over SSH (loaded from options.lua)
+//   lua/plugins/bxcachy.lua                no news popups, no scroll animation, transparent status line
+//   plugin/after/bxcachy-transparency.lua  the editor shows the terminal background, reapplied after every colourscheme change
+//   lua/plugins/boxlang.lua                ortus-boxlang/vim-boxlang (BoxLang syntax: .bx .bxs boxlang, .bxm boxlangTemplate)
+//   lua/plugins/bxcachy-themes.lua         every theme's colourscheme plugin listed lazily (no clone when you switch themes)
+//   lua/plugins/bxcachy-theme-reload.lua   watches the current theme file and re-applies the colourscheme live
+//   lua/plugins/theme.lua                  a link to ~/.local/state/bxcachy/current/theme/neovim.lua, which `bxcachy theme set` rewrites
+//   lazyvim.json                           the neo-tree extra is added to what the starter has
+// Exit: 0 done (or already there), 2 plan without --yes, 4 precondition, 6 a command failed.
 class Editor {
     function init( cli, runner = "" ) {
         variables.cli = arguments.cli;
         variables.inst = new bxcachy.Installer( arguments.runner );
+        variables.cfgSvc = new bxcachy.ConfigService().quiet( true );
+        variables.td = new bxcachy.TemplateData();
         return this;
     }
 
@@ -22,14 +36,86 @@ class Editor {
 
     function target() { return getSystemSetting( "XDG_CONFIG_HOME", getSystemSetting( "HOME", "" ) & "/.config" ) & "/nvim"; }
 
+    // The relative path in the nvim folder of each layer file, and the template that holds its text.
+    function layerFiles() {
+        return [ "lua/config/bxcachy.lua", "lua/plugins/bxcachy.lua", "plugin/after/bxcachy-transparency.lua", "lua/plugins/boxlang.lua",
+                 "lua/plugins/bxcachy-themes.lua", "lua/plugins/bxcachy-theme-reload.lua" ];
+    }
+
+    function entryFor( dir, rel ) {
+        return { name: "nvim-" & replace( arguments.rel, "/", "-", "all" ), target: arguments.dir & "/" & arguments.rel, mode: "644", content: variables.td.text( "nvim/" & arguments.rel ) };
+    }
+
+    function neoTree() { return "lazyvim.plugins.extras.editor.neo-tree"; }
+
+    // Writes entries: missing, clean and outdated files are written; drifted (you changed them) are kept unless force.
+    // Returns { written, kept, failed } (entry names).
+    function applyEntries( entries, force ) {
+        var out = { written: [], kept: [], failed: [] };
+        for ( var e in arguments.entries ) {
+            var st = variables.cfgSvc.configState( e );
+            if ( st == "clean" ) { out.kept.append( e.name ); continue; }
+            if ( ( st == "drifted" && !arguments.force ) || st == "blocked" ) { out.kept.append( e.name ); continue; }
+            if ( variables.cfgSvc.configWrite( e, e.content, "apply", true, false ) == 0 ) out.written.append( e.name ); else out.failed.append( e.name );
+        }
+        return out;
+    }
+
+    // Adds the neo-tree extra to lazyvim.json (keeps whatever the starter has); true when the file changed.
+    function ensureExtras( dir ) {
+        var f = arguments.dir & "/lazyvim.json";
+        var j = {};
+        if ( fileExists( f ) ) { try { j = jsonDeserialize( fileRead( f ) ); } catch ( any e ) { return false; } }
+        var extras = structKeyExists( j, "extras" ) && isArray( j.extras ) ? j.extras : [];
+        if ( arrayFind( extras, neoTree() ) ) return false;
+        extras.append( neoTree() );
+        j.extras = extras;
+        fileWrite( f, jsonSerialize( j ) & chr( 10 ) );
+        return true;
+    }
+
+    // options.lua loads the layer's options file (one line, added once).
+    function ensureOptionsHook( dir ) {
+        var f = arguments.dir & "/lua/config/options.lua";
+        var line = 'require("config.bxcachy")';
+        var text = fileExists( f ) ? fileRead( f ) : "";
+        if ( find( line, text ) ) return false;
+        directoryCreate( getDirectoryFromPath( f ), true, true );
+        fileWrite( f, text & ( len( text ) && right( text, 1 ) != chr( 10 ) ? chr( 10 ) : "" ) & line & chr( 10 ) );
+        return true;
+    }
+
+    // lua/plugins/theme.lua links to the current theme's neovim.lua (only when nothing is there: never replaces a real file).
+    function ensureThemeLink( dir ) {
+        var link = arguments.dir & "/lua/plugins/theme.lua";
+        if ( variables.cfgSvc.pathKind( link ) != "none" ) return false;
+        var th = new bxcachy.Theme( variables.cli );
+        th.ensure();
+        directoryCreate( getDirectoryFromPath( link ), true, true );
+        return tryExec( [ "ln", "-s", variables.cfgSvc.stateDir() & "/current/theme/neovim.lua", link ], 15 ).exitCode == 0;
+    }
+
+    // Everything the layer puts in dir. Returns { written, kept, failed, extras, hook, link }.
+    function layer( dir, force = false ) {
+        var th = new bxcachy.Theme( variables.cli );
+        th.ensure();
+        var entries = [];
+        for ( var rel in layerFiles() ) entries.append( entryFor( arguments.dir, rel ) );
+        var out = applyEntries( entries, arguments.force );
+        out.extras = ensureExtras( arguments.dir );
+        out.hook = ensureOptionsHook( arguments.dir );
+        out.link = ensureThemeLink( arguments.dir );
+        return out;
+    }
+
     function lazyvim( yes, asJson ) {
         var cmd = "editor lazyvim";
         var dir = target();
-        if ( directoryExists( dir ) || fileExists( dir ) ) return say( cmd, 4, { error: dir & " exists", target: dir }, arguments.asJson, [ "error: " & dir & " already exists, so it was left alone. Move it first (mv " & dir & " " & dir & ".bak) and run this again." ] );
+        if ( directoryExists( dir ) || fileExists( dir ) ) return say( cmd, 4, { error: dir & " exists", target: dir }, arguments.asJson, [ "error: " & dir & " already exists, so it was left alone. Move it first (mv " & dir & " " & dir & ".bak) and run this again.", "To add only the BoxLang plugin to it: bxcachy editor boxlang --yes" ] );
         var pkgs = [];
         for ( var p in [ "neovim", "git", "ripgrep", "fd", "lazygit" ] ) if ( tryExec( [ "pacman", "-Q", p ], 15 ).exitCode != 0 ) pkgs.append( p );
-        var data = { target: dir, packages: pkgs };
-        if ( !arguments.yes ) return say( cmd, 2, data, arguments.asJson, [ "Plan:" & ( pkgs.len() ? " sudo pacman -S --needed " & pkgs.toList( " " ) & ";" : "" ) & " git clone https://github.com/LazyVim/starter " & dir & "; remove " & dir & "/.git", "Nothing was changed. Add --yes to apply." ] );
+        var data = { target: dir, packages: pkgs, layer: layerFiles() };
+        if ( !arguments.yes ) return say( cmd, 2, data, arguments.asJson, [ "Plan:" & ( pkgs.len() ? " sudo pacman -S --needed " & pkgs.toList( " " ) & ";" : "" ) & " git clone https://github.com/LazyVim/starter " & dir & "; remove " & dir & "/.git; add the BxCachy layer (" & layerFiles().len() & " files: transparency, BoxLang syntax, theme following, no news popups) and the neo-tree extra", "Nothing was changed. Add --yes to apply." ] );
         if ( pkgs.len() ) {
             var argv = [ "sudo", "pacman", "-S", "--needed", "--noconfirm" ];
             for ( var q in pkgs ) argv.append( q );
@@ -39,6 +125,51 @@ class Editor {
         var clone = tryExec( [ "git", "clone", "https://github.com/LazyVim/starter", dir ], 300 );
         if ( clone.exitCode != 0 ) return say( cmd, 6, { error: trim( clone.output ) }, arguments.asJson, [ "error: git clone failed: " & trim( clone.output ) ] );
         tryExec( [ "rm", "-rf", dir & "/.git" ], 30 );
-        return say( cmd, 0, data, arguments.asJson, [ "LazyVim starter is in " & dir & ". Start nvim; it installs its plugins on the first run. Then run :LazyHealth." ] );
+        var l = layer( dir );
+        data.layer_result = l;
+        if ( l.failed.len() ) return say( cmd, 6, data, arguments.asJson, [ "error: the starter is in " & dir & " but these layer files could not be written: " & l.failed.toList( ", " ) ] );
+        return say( cmd, 0, data, arguments.asJson, [ "LazyVim starter is in " & dir & " with the BxCachy layer (" & l.written.len() & " files) and BoxLang syntax.", "Start nvim; it installs its plugins on the first run. Then run :LazyHealth." ] );
+    }
+
+    function boxlang( yes, asJson ) {
+        var cmd = "editor boxlang";
+        var dir = target();
+        if ( !directoryExists( dir & "/lua/plugins" ) ) return say( cmd, 4, { error: "no LazyVim config", target: dir }, arguments.asJson, [ "error: " & dir & "/lua/plugins was not found, so there is no LazyVim config to add the plugin to. Run `bxcachy editor lazyvim --yes` for a new one." ] );
+        var e = entryFor( dir, "lua/plugins/boxlang.lua" );
+        var st = variables.cfgSvc.configState( e );
+        var data = { target: e.target, state: st };
+        if ( st == "clean" ) return say( cmd, 0, data, arguments.asJson, [ "Already in place: " & e.target ] );
+        if ( st == "drifted" || st == "blocked" ) return say( cmd, 4, data, arguments.asJson, [ "error: " & e.target & " exists and is not the BxCachy file, so it was left alone." ] );
+        if ( !arguments.yes ) return say( cmd, 2, data, arguments.asJson, [ "Plan: write " & e.target & " (ortus-boxlang/vim-boxlang). Nothing else changes.", "Nothing was changed. Add --yes to apply." ] );
+        if ( variables.cfgSvc.configWrite( e, e.content, "apply", true, false ) != 0 ) return say( cmd, 6, data, arguments.asJson, [ "error: could not write " & e.target ] );
+        return say( cmd, 0, data, arguments.asJson, [ "BoxLang plugin added: " & e.target & ". Restart nvim; it installs the plugin on the first run." ] );
+    }
+
+    function status( asJson ) {
+        var cmd = "editor status";
+        var dir = target();
+        var data = { target: dir, present: directoryExists( dir ), files: [] };
+        var lines = [ "Neovim config: " & dir & ( data.present ? "" : " (not there)" ) ];
+        if ( data.present ) {
+            for ( var rel in layerFiles() ) {
+                var e = entryFor( dir, rel );
+                var st = variables.cfgSvc.configState( e );
+                data.files.append( { file: rel, state: st } );
+                lines.append( "  " & rel & ": " & st );
+            }
+            var link = dir & "/lua/plugins/theme.lua";
+            data.theme_link = variables.cfgSvc.pathKind( link );
+            lines.append( "  lua/plugins/theme.lua: " & data.theme_link );
+        }
+        return say( cmd, 0, data, arguments.asJson, lines );
+    }
+
+    function refresh( force, yes, asJson ) {
+        var cmd = "editor refresh";
+        var dir = target();
+        if ( !directoryExists( dir ) ) return say( cmd, 4, { error: "no nvim config", target: dir }, arguments.asJson, [ "error: " & dir & " was not found (bxcachy editor lazyvim --yes creates it)" ] );
+        if ( !arguments.yes ) return say( cmd, 2, { target: dir, force: arguments.force }, arguments.asJson, [ "Plan: rewrite the BxCachy layer files in " & dir & " that are unchanged" & ( arguments.force ? ", and the ones you changed too (backed up first)" : " (files you changed are kept)" ), "Nothing was changed. Add --yes to apply." ] );
+        var l = layer( dir, arguments.force );
+        return say( cmd, l.failed.len() ? 6 : 0, l, arguments.asJson, [ "Layer: " & l.written.len() & " written, " & l.kept.len() & " kept" & ( l.failed.len() ? ", failed: " & l.failed.toList( ", " ) : "" ) ] );
     }
 }

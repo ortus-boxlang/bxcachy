@@ -207,6 +207,13 @@ class Shortcuts {
         ];
         for ( var r in table() ) if ( r.kind == "bind" || r.kind == "hypr-bind" ) out.append( bindLine( r ) );
         out.append( '' );
+        out.append( '-- Theme accent: `bxcachy theme set` writes ~/.config/bxcachy/theme/hypr.lua (the focused and unfocused border colours)' );
+        out.append( 'do' );
+        out.append( '  local cfgdir = os.getenv("BXCACHY_CONFIG_HOME") or ((os.getenv("HOME") or "") .. "/.config")' );
+        out.append( '  local ok, accent = pcall(dofile, cfgdir .. "/bxcachy/theme/hypr.lua")' );
+        out.append( '  if ok and type(accent) == "table" then hl.config({ general = { col = { active_border = accent.active, inactive_border = accent.inactive } } }) end' );
+        out.append( 'end' );
+        out.append( '' );
         out.append( '-- The pull-down AI shell (bxcachy ai shell) lives on the special workspace "ai"; its window class is set by the terminal it starts' );
         out.append( 'hl.window_rule({ name = "bxcachy-ai", match = { class = "^com.bxcachy.ai$" }, workspace = "special:ai", float = true })' );
         out.append( '' );

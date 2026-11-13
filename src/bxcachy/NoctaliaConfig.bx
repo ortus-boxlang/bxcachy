@@ -13,23 +13,10 @@ class NoctaliaConfig {
         return "BxCachy";
     }
 
-    // One palette variant as JSON text lines (indented two levels deep).
+    // One palette variant as JSON text lines (indented two levels deep). The writer lives in ThemeColors, which the theme manager uses too
+    // (keeping it there keeps NoctaliaConfig out of ThemeColors, so there is no class cycle through StarterOptions and TerminalConfig).
     function variant( name, c, t ) {
-        var q = function( k, v ) { return '    "' & k & '": "' & v & '"'; };
-        var role = [ q( "primary", c.primary ), q( "on_primary", c.on_primary ), q( "secondary", c.secondary ), q( "on_secondary", c.on_secondary ),
-                     q( "tertiary", c.tertiary ), q( "on_tertiary", c.on_primary ), q( "error", c.error ), q( "on_error", c.on_primary ),
-                     q( "surface", c.surface ), q( "on_surface", c.on_surface ), q( "surface_container", c.surface_container ),
-                     q( "on_surface_variant", c.on_surface_variant ), q( "outline_variant", c.outline_variant ), q( "shadow", c.shadow ),
-                     q( "hover", c.hover ), q( "on_hover", c.on_surface ) ];
-        var tq = function( k, v ) { return '      "' & k & '": "' & v & '"'; };
-        var norm = [ "black", "red", "green", "yellow", "blue", "magenta", "cyan", "white" ].map( function( k ) { return '        "' & k & '": "' & t.normal[k] & '"'; } );
-        var bright = [ "black", "red", "green", "yellow", "blue", "magenta", "cyan", "white" ].map( function( k ) { return '        "' & k & '": "' & t.bright[k] & '"'; } );
-        var term = [ '    "terminal": {',
-                     tq( "background", c.surface ) & ",", tq( "foreground", c.on_surface ) & ",", tq( "cursor", c.primary ) & ",", tq( "cursor_text", c.on_primary ) & ",",
-                     tq( "selection_bg", c.surface_container ) & ",", tq( "selection_fg", c.on_surface ) & ",",
-                     '      "normal": {', norm.toList( "," & chr( 10 ) ), '      },',
-                     '      "bright": {', bright.toList( "," & chr( 10 ) ), '      }', '    }' ];
-        return '  "' & name & '": {' & chr( 10 ) & role.toList( "," & chr( 10 ) ) & "," & chr( 10 ) & term.toList( chr( 10 ) ) & chr( 10 ) & "  }";
+        return new bxcachy.ThemeColors().variant( arguments.name, arguments.c, arguments.t );
     }
 
     // The palette file: dark = Frappe neutrals with the brand greens, light = Latte neutrals with darker greens for contrast.

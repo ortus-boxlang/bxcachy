@@ -45,14 +45,19 @@ class TerminalConfig {
         return {};
     }
 
-    // The starter config text for a terminal ("" when it has none).
-    function starter( id ) {
+    // The starter config text for a terminal ("" when it has none). It includes the generated theme file
+    // (~/.config/bxcachy/theme/..., written by `bxcachy theme set`), so a theme change reaches the terminal without editing this file.
+    // ghostty: config-file with the ? prefix (no error when missing); kitty: include; alacritty: [general] import; foot: include in [main].
+    function starter( id, cfgHome = "" ) {
         var f = fontFamily();
+        var th = arguments.cfgHome & "/bxcachy/theme";
+        var nl = chr( 10 );
+        var head = "# BxCachy starter. Written once; from here on it is yours." & nl;
         switch ( arguments.id ) {
-            case "ghostty":   return "# BxCachy starter. Written once; from here on it is yours." & chr( 10 ) & "font-family = " & f & chr( 10 );
-            case "kitty":     return "# BxCachy starter. Written once; from here on it is yours." & chr( 10 ) & "font_family " & f & chr( 10 );
-            case "alacritty": return "# BxCachy starter. Written once; from here on it is yours." & chr( 10 ) & "[font.normal]" & chr( 10 ) & 'family = "' & f & '"' & chr( 10 );
-            case "foot":      return "# BxCachy starter. Written once; from here on it is yours." & chr( 10 ) & "[main]" & chr( 10 ) & "font=" & f & ":size=11" & chr( 10 );
+            case "ghostty":   return head & "font-family = " & f & nl & "config-file = ?" & th & "/ghostty" & nl;
+            case "kitty":     return head & "font_family " & f & nl & "include " & th & "/kitty.conf" & nl;
+            case "alacritty": return head & "[general]" & nl & 'import = ["' & th & '/alacritty.toml"]' & nl & nl & "[font.normal]" & nl & 'family = "' & f & '"' & nl;
+            case "foot":      return head & "include=" & th & "/foot.ini" & nl & nl & "[main]" & nl & "font=" & f & ":size=11" & nl;
         }
         return "";
     }
@@ -62,7 +67,7 @@ class TerminalConfig {
         var out = [];
         for ( var id in arguments.ids ) {
             var t = find( id );
-            if ( structKeyExists( t, "id" ) && len( t.config ) ) out.append( { name: "terminal-" & id, target: arguments.cfgHome & "/" & t.config, mode: "644", content: starter( id ) } );
+            if ( structKeyExists( t, "id" ) && len( t.config ) ) out.append( { name: "terminal-" & id, target: arguments.cfgHome & "/" & t.config, mode: "644", content: starter( id, arguments.cfgHome ) } );
         }
         return out;
     }
@@ -74,6 +79,7 @@ class TerminalConfig {
             if ( variables.config.configState( e ) != "missing" ) { out.kept.append( e.name ); continue; }
             if ( variables.config.configWrite( e, e.content, "apply", true, false ) == 0 ) out.written.append( e.name ); else out.failed.append( e.name );
         }
+        if ( out.written.len() ) new bxcachy.Theme( {} ).ensure();
         return out;
     }
 }

@@ -142,6 +142,33 @@ class Theme {
                'return { active = { colors = { "' & variables.tc.rgba( arguments.c.accent ) & '", "' & variables.tc.rgba( arguments.c.color14 ) & '" }, angle = 45 }, inactive = "' & variables.tc.rgba( arguments.c.color8, "aa" ) & '" }' & chr( 10 );
     }
 
+    // Every theme's neovim.lua goes to ~/.config/bxcachy/nvim-themes/NAME.lua, where the Neovim layer's bxcachy-themes.lua reads them, so a
+    // switch never has to clone a colourscheme plugin. Returns how many files were written.
+    function syncNvim() {
+        var n = 0;
+        for ( var name in names() ) {
+            var t = find( name );
+            if ( !len( t.neovimText ) ) continue;
+            var e = { name: "nvim-theme-" & name, target: cfg() & "/bxcachy/nvim-themes/" & name & ".lua", mode: "644", content: t.neovimText };
+            if ( variables.cfgSvc.configState( e ) != "clean" && variables.cfgSvc.configWrite( e, e.content, "theme", true, false ) == 0 ) n++;
+        }
+        return n;
+    }
+
+    // Writes the generated files of the current theme (the default `bxcachy` when none was set) that are missing, without telling the
+    // desktop or touching the state, so terminal starters that include them never point at nothing. Returns how many were written.
+    function ensure() {
+        var st = readState();
+        var t = find( len( st.name ) ? st.name : "bxcachy" );
+        if ( !t.found ) t = find( "bxcachy" );
+        var p = variables.tc.parse( t.colorsText );
+        var n = 0;
+        if ( !p.ok ) return 0;
+        for ( var e in files( p.colors, t.neovimText ) ) if ( variables.cfgSvc.configState( e ) == "missing" && variables.cfgSvc.configWrite( e, e.content, "theme", true, false ) == 0 ) n++;
+        syncNvim();
+        return n;
+    }
+
     // ---- commands ----
     function list( asJson ) {
         var cur = readState().name;
@@ -214,6 +241,7 @@ class Theme {
         }
         if ( data.failed.len() ) return say( 6, data, arguments.asJson, [ "error: could not write " & data.failed.toList( ", " ) ] );
         writeState( t.name, stateMode );
+        syncNvim();
         var n = notify( m, wall );
         data.noctalia = n.noctalia; data.plasma = n.plasma; data.hyprland = n.hyprland; data.notes = n.notes;
         var lines = [ "Theme: " & t.name & " (" & t.origin & ", " & ( data.light ? "light" : "dark" ) & ", mode " & m & ")", "Files: " & data.written.len() & " written, " & data.unchanged.len() & " unchanged" ];

@@ -36,6 +36,9 @@ grep -q 'pacman -S --needed --noconfirm ghostty kitty foot konsole' "$LOG" || fa
 grep -q 'font-family = JetBrainsMono Nerd Font' "$tmp/cfg/ghostty/config" || fail 'ghostty font written'
 grep -q 'font=JetBrainsMono Nerd Font' "$tmp/cfg/foot/foot.ini" || fail 'foot font written'
 [[ "$(cat "$tmp/cfg/kitty/kitty.conf")" == mine ]] || fail 'existing kitty.conf was overwritten'
+grep -q "config-file = ?$tmp/cfg/bxcachy/theme/ghostty" "$tmp/cfg/ghostty/config" || fail 'ghostty includes the theme file'
+grep -q "include=$tmp/cfg/bxcachy/theme/foot.ini" "$tmp/cfg/foot/foot.ini" || fail 'foot includes the theme file'
+[[ -s "$tmp/cfg/bxcachy/theme/ghostty" && -s "$tmp/cfg/bxcachy/theme/foot.ini" && -s "$tmp/cfg/bxcachy/theme/kitty.conf" ]] || fail 'the default theme files exist so the includes never point at nothing'
 [[ ! -e "$tmp/cfg/konsole" ]] || fail 'konsole has no starter config'
 
 # hyprland uses the chosen terminal on Super+Enter and installs it instead of the default
