@@ -1,0 +1,40 @@
+// ThemeColors and ThemeData: parse, light/dark, Noctalia palette, terminal and btop files. Run from src/: (cd src && matchbox ../tests/theme_colors_test.bxs)
+failures = 0;
+function check( label, ok ) { if ( ok ) println( "ok   " & label ); else { println( "FAIL " & label ); failures++; } }
+tc = new bxcachy.ThemeColors();
+td = new bxcachy.ThemeData();
+names = td.names();
+check( "data: 15 themes (10 omarchy + 5 bxcachy)", names.len() == 15 && names.filter( function( n ) { return td.origin( n ) == "bxcachy"; } ).len() == 5 );
+allOk = true; badRoles = [];
+roleNames = [ "primary", "on_primary", "secondary", "on_secondary", "tertiary", "on_tertiary", "error", "on_error", "surface", "on_surface", "surface_container", "on_surface_variant", "outline_variant", "shadow", "hover", "on_hover" ];
+for ( n in names ) {
+    r = tc.parse( td.colors( n ) );
+    if ( !r.ok ) { allOk = false; badRoles.append( n & ": " & r.errors.toList( "," ) ); continue; }
+    p = jsonDeserialize( tc.palette( r.colors ) );
+    for ( v in [ "dark", "light" ] ) for ( k in roleNames ) if ( !structKeyExists( p[ v ], k ) || !reFind( "^##[0-9a-fA-F]{6}$", p[ v ][ k ] ) ) badRoles.append( n & " " & v & " " & k );
+    if ( lCase( p.dark.primary ) != r.colors.accent || lCase( p.dark.surface ) != r.colors.background ) badRoles.append( n & " mapping" );
+    if ( structCount( p.dark.terminal.normal ) != 8 || structCount( p.dark.terminal.bright ) != 8 ) badRoles.append( n & " terminal" );
+    if ( tc.contrast( p.dark.primary, p.dark.on_primary ) < 3 ) badRoles.append( n & " on_primary contrast " & tc.contrast( p.dark.primary, p.dark.on_primary ) );
+}
+check( "every bundled theme parses and maps to a complete palette (" & badRoles.toList( "; " ) & ")", allOk && !badRoles.len() );
+light = [];
+for ( n in names ) if ( tc.isLight( tc.parse( td.colors( n ) ).colors ) ) light.append( n );
+check( "light themes are detected by luminance: " & light.toList( "," ), light.len() == 4 && arrayFind( light, "catppuccin-latte" ) > 0 && arrayFind( light, "rose-pine" ) > 0 && arrayFind( light, "flexoki-light" ) > 0 && arrayFind( light, "bxcachy-light" ) > 0 );
+check( "maths: mix endpoints and middle", tc.mix( "##000000", "##ffffff", 0 ) == "##000000" && tc.mix( "##000000", "##ffffff", 1 ) == "##ffffff" && tc.mix( "##000000", "##ffffff", 0.5 ) == "##808080" );
+check( "maths: luminance of black and white, contrast 21", tc.lum( "##000000" ) == 0 && abs( tc.lum( "##ffffff" ) - 1 ) < 0.001 && round( tc.contrast( "##000000", "##ffffff" ) ) == 21 );
+bad = tc.parse( 'accent = "#zzz"' & chr( 10 ) & 'foreground = "#ffffff"' );
+check( "parse: a bad colour and missing keys are errors, not a half theme", !bad.ok && bad.errors.len() > 3 );
+c = tc.parse( td.colors( "bxcachy" ) ).colors;
+g = tc.ghostty( c );
+check( "ghostty: 16 palette lines, background, header", reFind( "palette = 15=##[0-9a-f]{6}", g ) && find( "palette = 0=", g ) > 0 && find( "background = ##303446", g ) > 0 && left( g, 1 ) == "##" );
+k = tc.kitty( c );
+check( "kitty: colors 0..15 and the selection", find( "color15 ##c6d0f5", k ) > 0 && find( "color0 ##51576d", k ) > 0 && find( "selection_background ##51576d", k ) > 0 );
+a = tc.alacritty( c );
+check( "alacritty: primary, normal and bright tables", find( "[colors.primary]", a ) > 0 && find( "[colors.normal]", a ) > 0 && find( "[colors.bright]", a ) > 0 && find( 'white = "##c6d0f5"', a ) > 0 );
+f = tc.foot( c );
+check( "foot: colors-dark without hashes", find( "[colors-dark]", f ) > 0 && find( "background=303446", f ) > 0 && find( "regular7=b5bfe2", f ) > 0 && find( "bright7=c6d0f5", f ) > 0 && !reFind( "=##", f ) );
+b = tc.btop( c );
+check( "btop: main_bg, the box colours and the 8 gradient steps", find( 'theme[main_bg] = "##303446"', b ) > 0 && find( "theme[gradient_color_7]", b ) > 0 && find( "theme[proc_box]", b ) > 0 );
+check( "hyprland: rgba border colour", tc.rgba( "##00ff78" ) == "rgba(00ff78ee)" );
+if ( failures > 0 ) { println( failures & " failed" ); exit( 1 ); }
+println( "all passed" );

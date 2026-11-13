@@ -1,0 +1,221 @@
+// Theme colours (pure, no I/O): parse an Omarchy colors.toml, derive what a desktop needs, and render the files each target reads.
+//   Noctalia palette: version 2 JSON (docs.noctalia.dev/noctalia/theming/palette); the 16 roles are derived from the theme (accent = primary,
+//   background = surface, foreground = on_surface, color6/color5/color1 = secondary/tertiary/error, the rest mixed), colour0..15 = the terminal block.
+//   Terminal files follow Omarchy's own templates (default/themed/*.tpl): ghostty palette = N=#hex, kitty colorN #hex, alacritty [colors.*],
+//   foot [colors-dark] without the #. btop uses the theme[...] file format.
+class ThemeColors {
+    function init() {
+        return this;
+    }
+
+    function nl() { return chr( 10 ); }
+    function names8() { return [ "black", "red", "green", "yellow", "blue", "magenta", "cyan", "white" ]; }
+
+    // Two colors.toml shapes exist, and both are read:
+    //   named (Omarchy 4 master): accent background foreground selection muted red green yellow blue magenta cyan bright_* bright_foreground, plus mode = "dark"|"light"
+    //   ansi  (older Omarchy):    accent background foreground cursor selection_* color0..color15
+    // The named shape maps to the 16 ANSI slots the way Omarchy's own terminal templates do (0 = background, 7 = foreground, 8 = muted, 15 = bright_foreground).
+    function ansiNames() { return [ "background", "red", "green", "yellow", "blue", "magenta", "cyan", "foreground", "muted", "bright_red", "bright_green", "bright_yellow", "bright_blue", "bright_magenta", "bright_cyan", "bright_foreground" ]; }
+
+    // Parses colors.toml text. Returns { ok, colors, errors }; colors always has accent, background, foreground, cursor, selection_foreground,
+    // selection_background and color0..color15, plus mode when the file says so. A missing required key or a value that is not #rrggbb
+    // is an error (the theme is rejected, never half applied).
+    function parse( text ) {
+        var out = { ok: true, colors: {}, errors: [] };
+        var body = replace( replace( replace( arguments.text, chr( 13 ), "", "all" ), '"', "", "all" ), "'", "", "all" );
+        var c = {};
+        for ( var rawLine in listToArray( body, chr( 10 ) ) ) {
+            var line = trim( rawLine );
+            if ( !len( line ) || left( line, 1 ) == "##" ) continue;
+            var m = reFind( "^([a-z_0-9]+)[ ]*=[ ]*(.*)$", line, 1, true );
+            if ( !m.pos[ 1 ] ) continue;
+            var key = mid( line, m.pos[ 2 ], m.len[ 2 ] );
+            var value = trim( listFirst( trim( mid( line, m.pos[ 3 ], m.len[ 3 ] ) ), " " ) );
+            if ( key == "mode" ) { c.mode = lCase( value ); continue; }
+            if ( left( value, 1 ) != "##" ) continue;
+            if ( !reFind( "^[##][0-9a-fA-F]{6}$", value ) ) { out.errors.append( key & " is not #rrggbb: " & value ); continue; }
+            c[ key ] = lCase( value );
+        }
+        for ( var k in [ "accent", "foreground", "background" ] ) if ( !structKeyExists( c, k ) ) out.errors.append( "missing " & k );
+        var hasAnsi = structKeyExists( c, "color0" );
+        if ( hasAnsi ) {
+            for ( var i = 0; i < 16; i++ ) if ( !structKeyExists( c, "color" & i ) ) out.errors.append( "missing color" & i );
+        } else {
+            for ( var n in [ "red", "green", "yellow", "blue", "magenta", "cyan" ] ) if ( !structKeyExists( c, n ) ) out.errors.append( "missing " & n );
+        }
+        if ( out.errors.len() ) { out.ok = false; return out; }
+        if ( !hasAnsi ) {
+            if ( !structKeyExists( c, "muted" ) ) c.muted = mix( c.background, c.foreground, 0.45 );
+            if ( !structKeyExists( c, "bright_foreground" ) ) c.bright_foreground = c.foreground;
+            for ( var b in [ "red", "green", "yellow", "blue", "magenta", "cyan" ] ) if ( !structKeyExists( c, "bright_" & b ) ) c[ "bright_" & b ] = c[ b ];
+            var slots = ansiNames();
+            for ( var j = 1; j <= 16; j++ ) c[ "color" & ( j - 1 ) ] = c[ slots[ j ] ];
+            if ( !structKeyExists( c, "cursor" ) ) c.cursor = c.bright_foreground;
+            if ( !structKeyExists( c, "selection_background" ) && structKeyExists( c, "selection" ) ) c.selection_background = c.selection;
+        }
+        if ( !structKeyExists( c, "cursor" ) ) c.cursor = c.foreground;
+        if ( !structKeyExists( c, "selection_foreground" ) ) c.selection_foreground = c.foreground;
+        if ( !structKeyExists( c, "selection_background" ) ) c.selection_background = mix( c.background, c.foreground, 0.25 );
+        out.colors = c;
+        return out;
+    }
+
+    // ---- colour maths ----
+    function toRgb( h ) {
+        return [ inputBaseN( mid( arguments.h, 2, 2 ), 16 ), inputBaseN( mid( arguments.h, 4, 2 ), 16 ), inputBaseN( mid( arguments.h, 6, 2 ), 16 ) ];
+    }
+
+    function hex2( n ) {
+        var v = max( 0, min( 255, round( arguments.n ) ) );
+        return right( "0" & formatBaseN( v, 16 ), 2 );
+    }
+
+    function toHex( r, g, b ) { return "##" & hex2( arguments.r ) & hex2( arguments.g ) & hex2( arguments.b ); }
+
+    // a mixed with b: t = 0 is a, t = 1 is b.
+    function mix( a, b, t ) {
+        var x = toRgb( arguments.a );
+        var y = toRgb( arguments.b );
+        return toHex( x[ 1 ] + ( y[ 1 ] - x[ 1 ] ) * arguments.t, x[ 2 ] + ( y[ 2 ] - x[ 2 ] ) * arguments.t, x[ 3 ] + ( y[ 3 ] - x[ 3 ] ) * arguments.t );
+    }
+
+    function channel( v ) {
+        var s = arguments.v / 255;
+        return s <= 0.03928 ? s / 12.92 : ( ( s + 0.055 ) / 1.055 ) ^ 2.4;
+    }
+
+    // WCAG relative luminance, 0 (black) to 1 (white).
+    function lum( h ) {
+        var r = toRgb( arguments.h );
+        return 0.2126 * channel( r[ 1 ] ) + 0.7152 * channel( r[ 2 ] ) + 0.0722 * channel( r[ 3 ] );
+    }
+
+    function contrast( a, b ) {
+        var la = lum( arguments.a );
+        var lb = lum( arguments.b );
+        return ( max( la, lb ) + 0.05 ) / ( min( la, lb ) + 0.05 );
+    }
+
+    // The file's own mode wins; without one a bright background (luminance above 0.4) means light.
+    function isLight( c ) {
+        if ( structKeyExists( arguments.c, "mode" ) ) return arguments.c.mode == "light";
+        return lum( arguments.c.background ) > 0.4;
+    }
+
+    // The readable text colour on bg: the theme's own background or foreground when either reaches 4.5:1, else black or white.
+    function onColor( bg, c ) {
+        var best = "";
+        var bestRatio = 0;
+        for ( var cand in [ arguments.c.background, arguments.c.foreground, "##000000", "##ffffff" ] ) {
+            var r = contrast( arguments.bg, cand );
+            if ( r >= 4.5 ) return cand;
+            if ( r > bestRatio ) { bestRatio = r; best = cand; }
+        }
+        return best;
+    }
+
+    // ---- Noctalia ----
+    function terminal( c ) {
+        var n = names8();
+        var out = { normal: {}, bright: {} };
+        for ( var i = 1; i <= 8; i++ ) {
+            out.normal[ n[ i ] ] = arguments.c[ "color" & ( i - 1 ) ];
+            out.bright[ n[ i ] ] = arguments.c[ "color" & ( i + 7 ) ];
+        }
+        return out;
+    }
+
+    function roles( c ) {
+        var light = isLight( arguments.c );
+        return {
+            primary: arguments.c.accent, on_primary: onColor( arguments.c.accent, arguments.c ),
+            secondary: arguments.c.color6, on_secondary: onColor( arguments.c.color6, arguments.c ),
+            tertiary: arguments.c.color5, error: arguments.c.color1,
+            surface: arguments.c.background, on_surface: arguments.c.foreground,
+            surface_container: mix( arguments.c.background, arguments.c.foreground, 0.10 ),
+            on_surface_variant: mix( arguments.c.foreground, arguments.c.background, 0.30 ),
+            outline_variant: mix( arguments.c.background, arguments.c.foreground, 0.30 ),
+            shadow: light ? mix( arguments.c.background, arguments.c.foreground, 0.15 ) : mix( arguments.c.background, "##000000", 0.50 ),
+            hover: mix( arguments.c.background, arguments.c.foreground, 0.18 )
+        };
+    }
+
+    // The palette file text. Both variants carry the same colours: the theme decides, and `theme-mode-set` picks the variant.
+    function palette( c ) {
+        var nc = new bxcachy.NoctaliaConfig();
+        var r = roles( arguments.c );
+        var t = terminal( arguments.c );
+        return "{" & nl() & '  "version": 2,' & nl() & nc.variant( "dark", r, t ) & "," & nl() & nc.variant( "light", r, t ) & nl() & "}" & nl();
+    }
+
+    // ---- terminals and btop ----
+    function ansi( c, i ) { return arguments.c[ "color" & arguments.i ]; }
+
+    function ghostty( c ) {
+        var out = [ "background = " & c.background, "foreground = " & c.foreground, "cursor-color = " & c.cursor,
+                    "selection-background = " & c.selection_background, "selection-foreground = " & c.selection_foreground, "" ];
+        for ( var i = 0; i < 16; i++ ) out.append( "palette = " & i & "=" & ansi( arguments.c, i ) );
+        return header( "##" ) & out.toList( nl() ) & nl();
+    }
+
+    function kitty( c ) {
+        var out = [ "foreground " & c.foreground, "background " & c.background, "selection_foreground " & c.selection_foreground,
+                    "selection_background " & c.selection_background, "cursor " & c.cursor, "cursor_text_color " & c.background,
+                    "active_border_color " & c.accent, "active_tab_background " & c.accent, "" ];
+        for ( var i = 0; i < 16; i++ ) out.append( "color" & i & " " & ansi( arguments.c, i ) );
+        return header( "##" ) & out.toList( nl() ) & nl();
+    }
+
+    function alacritty( c ) {
+        var n = names8();
+        var out = [ "[colors.primary]", 'background = "' & c.background & '"', 'foreground = "' & c.foreground & '"', "",
+                    "[colors.cursor]", 'text = "' & c.background & '"', 'cursor = "' & c.cursor & '"', "",
+                    "[colors.selection]", 'text = "' & c.selection_foreground & '"', 'background = "' & c.selection_background & '"', "",
+                    "[colors.normal]" ];
+        for ( var i = 1; i <= 8; i++ ) out.append( n[ i ] & ' = "' & ansi( arguments.c, i - 1 ) & '"' );
+        out.append( "" );
+        out.append( "[colors.bright]" );
+        for ( var j = 1; j <= 8; j++ ) out.append( n[ j ] & ' = "' & ansi( arguments.c, j + 7 ) & '"' );
+        return header( "##" ) & out.toList( nl() ) & nl();
+    }
+
+    function strip( h ) { return replace( arguments.h, "##", "", "all" ); }
+
+    function foot( c ) {
+        var out = [ "[colors-dark]", "foreground=" & strip( c.foreground ), "background=" & strip( c.background ),
+                    "selection-foreground=" & strip( c.selection_foreground ), "selection-background=" & strip( c.selection_background ),
+                    "cursor=" & strip( c.background ) & " " & strip( c.cursor ), "" ];
+        for ( var i = 0; i < 8; i++ ) out.append( "regular" & i & "=" & strip( ansi( arguments.c, i ) ) );
+        out.append( "" );
+        for ( var j = 0; j < 8; j++ ) out.append( "bright" & j & "=" & strip( ansi( arguments.c, j + 8 ) ) );
+        return header( "##" ) & out.toList( nl() ) & nl();
+    }
+
+    // btop theme[...] keys. The gradient runs from the background to the foreground through mixes.
+    function btop( c ) {
+        var t = function( k, v ) { return "theme[" & k & '] = "' & v & '"'; };
+        var muted = mix( c.background, c.foreground, 0.45 );
+        var out = [ t( "main_bg", c.background ), t( "main_fg", c.foreground ), t( "title", c.foreground ), t( "hi_fg", c.accent ),
+                    t( "selected_bg", c.selection_background ), t( "selected_fg", c.accent ), t( "inactive_fg", muted ),
+                    t( "graph_text", c.foreground ), t( "meter_bg", c.selection_background ), t( "proc_misc", c.foreground ),
+                    t( "cpu_box", c.color5 ), t( "mem_box", c.color2 ), t( "net_box", c.color1 ), t( "proc_box", c.accent ), t( "div_line", muted ),
+                    t( "temp_start", c.color2 ), t( "temp_mid", c.color3 ), t( "temp_end", c.color1 ),
+                    t( "cpu_start", c.color6 ), t( "cpu_mid", c.color4 ), t( "cpu_end", c.color5 ),
+                    t( "free_start", c.color5 ), t( "free_mid", c.color4 ), t( "free_end", c.color6 ),
+                    t( "cached_start", c.color4 ), t( "cached_mid", c.color6 ), t( "cached_end", c.color5 ),
+                    t( "available_start", c.color3 ), t( "available_mid", c.color1 ), t( "available_end", c.color1 ),
+                    t( "used_start", c.color2 ), t( "used_mid", c.color6 ), t( "used_end", c.color4 ),
+                    t( "download_start", c.color3 ), t( "download_mid", c.color1 ), t( "download_end", c.color1 ),
+                    t( "upload_start", c.color2 ), t( "upload_mid", c.color6 ), t( "upload_end", c.color4 ),
+                    t( "process_start", c.color6 ), t( "process_mid", c.color4 ), t( "process_end", c.color5 ) ];
+        for ( var i = 0; i < 8; i++ ) out.append( t( "gradient_color_" & i, mix( c.background, c.foreground, i / 7 ) ) );
+        return header( "##" ) & out.toList( nl() ) & nl();
+    }
+
+    // Hyprland rgba() colour (with alpha ee) for the active border.
+    function rgba( h, alpha = "ee" ) { return "rgba(" & strip( arguments.h ) & arguments.alpha & ")"; }
+
+    function header( mark ) {
+        return arguments.mark & " Generated by `bxcachy theme set`. Rewritten on every theme change; do not edit." & nl();
+    }
+}
