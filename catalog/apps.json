@@ -6736,7 +6736,10 @@
       "shells": [
         "hyprland"
       ],
-      "macos": "Emoji and Symbols"
+      "macos": "Emoji and Symbols",
+      "profiles": {
+        "editors": "default"
+      }
     },
     {
       "id": "wlsunset",
