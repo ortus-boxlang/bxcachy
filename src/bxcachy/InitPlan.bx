@@ -74,6 +74,15 @@ class InitPlan {
             if ( extras.len() ) targv.append( "--also=" & extras.toList( "," ) );
             out.steps.append( { id: "terminal", title: "install and configure terminals (" & ( len( terminal ) ? terminal : "default" ) & ( extras.len() ? " and " & extras.toList( ", " ) : "" ) & ")", argv: targv } );
         }
+        // the colour theme goes after the terminals, so their starter configs and the generated theme files exist; a Dark/Light answer
+        // of Light with the default theme picks the light BxCachy theme. Optional: the desktop may not be running during the install.
+        var themeName = pick( a, "theme_name" );
+        if ( themeName == "bxcachy" && pick( a, "theme" ) == "light" ) themeName = "bxcachy-light";
+        if ( ( wantsHypr || wantsPlasma ) && len( themeName ) && themeName != "bxcachy" ) {
+            var thargv = [ "bxcachy", "theme", "set", themeName ];
+            if ( pick( a, "theme" ) == "auto" ) thargv.append( "--mode=auto" );
+            out.steps.append( { id: "theme", title: "apply the " & themeName & " colour theme", argv: thargv, optional: true } );
+        }
         var shell = pick( a, "shell" );
         if ( len( shell ) ) out.steps.append( { id: "shell", title: "set up " & shell & " with the Starship prompt", argv: [ "bxcachy", "setup", "shell", "--shell=" & shell ] } );
         if ( isSet( pick( a, "mac_keys", false ) ) ) {
@@ -200,7 +209,7 @@ class InitPlan {
             for ( var id in apps ) iargv.append( id );
             out.steps.append( { id: "apps", title: "install " & apps.toList( ", " ), argv: iargv } );
         }
-        if ( pick( a, "editor_starter" ) == "lazyvim" ) out.steps.append( { id: "editor-lazyvim", title: "install the LazyVim starter for Neovim (an existing ~/.config/nvim is left alone)", argv: [ "bxcachy", "editor", "lazyvim" ] } );
+        if ( pick( a, "editor_starter" ) == "lazyvim" ) out.steps.append( { id: "editor-lazyvim", title: "install the LazyVim starter for Neovim with the BxCachy layer and BoxLang syntax (an existing ~/.config/nvim is left alone)", argv: [ "bxcachy", "editor", "lazyvim" ] } );
         // NordVPN needs its service and your group after the install (sudo; optional so a missing password prompt never stops the plan)
         if ( vpn == "nordvpn" ) out.steps.append( { id: "vpn-nordvpn", title: "enable the NordVPN service and add you to the nordvpn group (sudo)", argv: [ "bxcachy", "vpn", "nordvpn", "setup" ], optional: true } );
         // defaults: the browser and the terminal you picked (both are installed by now)

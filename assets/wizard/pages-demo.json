@@ -254,6 +254,90 @@
               "description": "Almost nothing. The mono icon."
             }
           ]
+        },
+        {
+          "type": "choice",
+          "id": "theme_name",
+          "label": "Color theme",
+          "default": "bxcachy",
+          "help": "Colors the shell, terminals, btop, Neovim and window borders. Change it any time: bxcachy theme set NAME. Dark/Light above is overridden by the theme unless you chose Auto.",
+          "options": [
+            {
+              "value": "bxcachy",
+              "label": "BxCachy",
+              "description": "Catppuccin Frappe neutrals with the BoxLang greens (the default)."
+            },
+            {
+              "value": "bxcachy-light",
+              "label": "BxCachy Light",
+              "description": "Latte neutrals with deeper greens."
+            },
+            {
+              "value": "bxcachy-midnight",
+              "label": "BxCachy Midnight",
+              "description": "Near-black, easy on OLED screens."
+            },
+            {
+              "value": "bxcachy-cyan",
+              "label": "BxCachy Cyan",
+              "description": "Macchiato neutrals with the BoxLang cyan accent."
+            },
+            {
+              "value": "bxcachy-forest",
+              "label": "BxCachy Forest",
+              "description": "Muted, low-contrast greens."
+            },
+            {
+              "value": "catppuccin",
+              "label": "Catppuccin",
+              "description": "Mocha. From Omarchy."
+            },
+            {
+              "value": "catppuccin-latte",
+              "label": "Catppuccin Latte",
+              "description": "Light. From Omarchy."
+            },
+            {
+              "value": "tokyo-night",
+              "label": "Tokyo Night",
+              "description": "From Omarchy."
+            },
+            {
+              "value": "gruvbox",
+              "label": "Gruvbox",
+              "description": "From Omarchy."
+            },
+            {
+              "value": "nord",
+              "label": "Nord",
+              "description": "From Omarchy."
+            },
+            {
+              "value": "rose-pine",
+              "label": "Rose Pine",
+              "description": "Dawn, light. From Omarchy."
+            },
+            {
+              "value": "kanagawa",
+              "label": "Kanagawa",
+              "description": "From Omarchy."
+            },
+            {
+              "value": "everforest",
+              "label": "Everforest",
+              "description": "From Omarchy."
+            },
+            {
+              "value": "matte-black",
+              "label": "Matte Black",
+              "description": "From Omarchy."
+            },
+            {
+              "value": "flexoki-light",
+              "label": "Flexoki Light",
+              "description": "From Omarchy."
+            }
+          ]
         }
       ]
     },
@@ -475,7 +559,7 @@
           "id": "editor_starter",
           "label": "Neovim setup",
           "default": "none",
-          "help": "LazyVim is a ready-made Neovim configuration. An existing ~/.config/nvim is never touched.",
+          "help": "LazyVim is a ready-made Neovim configuration. BxCachy adds transparency, BoxLang syntax and theme following. An existing ~/.config/nvim is never touched.",
           "options": [
             {
               "value": "none",
@@ -485,7 +569,7 @@
             {
               "value": "lazyvim",
               "label": "LazyVim starter",
-              "description": "Installs Neovim and its tools, then the LazyVim starter."
+              "description": "Installs Neovim and its tools, then the LazyVim starter with the BxCachy layer and BoxLang syntax."
             }
           ]
         }

@@ -55,6 +55,21 @@ class Menu {
                 { label: "List web apps", kind: "run", argv: [ "web", "list" ] },
                 { label: "Remove a web app", kind: "webrm" }
             ] },
+            { label: "Themes", kind: "sub", children: [
+                { label: "Next theme", kind: "spawn", argv: [ "theme", "next" ] },
+                { label: "Random theme", kind: "spawn", argv: [ "theme", "random" ] },
+                { label: "BxCachy", kind: "spawn", argv: [ "theme", "set", "bxcachy" ] },
+                { label: "BxCachy Light", kind: "spawn", argv: [ "theme", "set", "bxcachy-light" ] },
+                { label: "BxCachy Midnight", kind: "spawn", argv: [ "theme", "set", "bxcachy-midnight" ] },
+                { label: "BxCachy Cyan", kind: "spawn", argv: [ "theme", "set", "bxcachy-cyan" ] },
+                { label: "BxCachy Forest", kind: "spawn", argv: [ "theme", "set", "bxcachy-forest" ] },
+                { label: "All themes (then: bxcachy theme set NAME)", kind: "run", argv: [ "theme", "list" ] },
+                { label: "Mode: follow the theme", kind: "spawn", argv: [ "theme", "mode", "theme" ] },
+                { label: "Mode: dark", kind: "spawn", argv: [ "theme", "mode", "dark" ] },
+                { label: "Mode: light", kind: "spawn", argv: [ "theme", "mode", "light" ] },
+                { label: "Mode: auto (day and night)", kind: "spawn", argv: [ "theme", "mode", "auto" ] },
+                { label: "Theme status", kind: "run", argv: [ "theme", "status" ] }
+            ] },
             { label: "Settings", kind: "sub", children: [
                 { label: "Defaults (browser, terminal)", kind: "run", argv: [ "default", "show" ] },
                 { label: "Shortcuts", kind: "run", argv: [ "keys", "show" ] },

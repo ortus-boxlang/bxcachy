@@ -280,6 +280,73 @@ class Theme {
         return say( 0, data, arguments.asJson, lines );
     }
 
+    function userDir() { return cfg() & "/bxcachy/themes"; }
+
+    // A theme name: lower case letters, digits and dashes (it becomes a folder name).
+    function validName( name ) { return reFind( "^[a-z0-9][a-z0-9-]{0,40}$", arguments.name ) > 0; }
+
+    // omarchy-NAME-theme (the repository naming Omarchy asks for) becomes NAME.
+    function nameFromSource( src ) {
+        var base = listLast( arguments.src, "/" );
+        if ( right( base, 4 ) == ".git" ) base = left( base, len( base ) - 4 );
+        base = lCase( base );
+        if ( left( base, 8 ) == "omarchy-" ) base = mid( base, 9, len( base ) );
+        if ( right( base, 6 ) == "-theme" ) base = left( base, len( base ) - 6 );
+        return base;
+    }
+
+    // Copies a theme folder (colors.toml and friends, no .git, no symlinks) into the user themes. Returns the exit code.
+    function adopt( dir, name, force, asJson, via ) {
+        if ( !validName( arguments.name ) ) return say( 2, { error: "bad theme name " & arguments.name }, arguments.asJson, [ "error: the theme name must be lower case letters, digits and dashes (use --name=NAME)" ] );
+        if ( !fileExists( arguments.dir & "/colors.toml" ) ) return say( 4, { error: "no colors.toml" }, arguments.asJson, [ "error: " & arguments.dir & " has no colors.toml, so it is not a theme" ] );
+        var p = variables.tc.parse( fileRead( arguments.dir & "/colors.toml" ) );
+        if ( !p.ok ) return say( 4, { error: "invalid theme", errors: p.errors }, arguments.asJson, [ "error: not a valid theme: " & p.errors.toList( ", " ) ] );
+        var links = tryExec( [ "find", arguments.dir, "-name", ".git", "-prune", "-o", "-type", "l", "-print" ], 30 );
+        if ( len( trim( links.output ) ) ) return say( 4, { error: "symlinks in theme" }, arguments.asJson, [ "error: the theme contains symlinks, which are not copied: " & trim( links.output ) ] );
+        var dest = userDir() & "/" & arguments.name;
+        if ( directoryExists( dest ) && !arguments.force ) return say( 4, { error: dest & " exists" }, arguments.asJson, [ "error: " & dest & " already exists (--force replaces it)" ] );
+        directoryCreate( userDir(), true, true );
+        if ( directoryExists( dest ) ) tryExec( [ "rm", "-rf", dest ], 30 );
+        var cp = tryExec( [ "cp", "-r", arguments.dir, dest ], 60 );
+        if ( cp.exitCode != 0 ) return say( 6, { error: trim( cp.output ) }, arguments.asJson, [ "error: could not copy the theme: " & trim( cp.output ) ] );
+        tryExec( [ "rm", "-rf", dest & "/.git" ], 30 );
+        syncNvim();
+        return say( 0, { theme: arguments.name, path: dest, via: arguments.via }, arguments.asJson, [ "Installed theme " & arguments.name & " in " & dest, "Apply it with: bxcachy theme set " & arguments.name ] );
+    }
+
+    // `install URL`: a git repository (https only) with an Omarchy-format theme at its top.
+    function install( url, name = "", force = false, asJson = false ) {
+        if ( !reFind( "^https://[A-Za-z0-9._~/-]+$", arguments.url ) ) return say( 2, { error: "bad url" }, arguments.asJson, [ "error: the source must be an https git URL, for example https://github.com/someone/omarchy-name-theme" ] );
+        var nm = len( arguments.name ) ? arguments.name : nameFromSource( arguments.url );
+        if ( !has( "git" ) ) return say( 4, { error: "git was not found" }, arguments.asJson, [ "error: git was not found" ] );
+        var tmp = cfgTmp();
+        var cl = tryExec( [ "git", "clone", "--depth", "1", arguments.url, tmp ], 300 );
+        if ( cl.exitCode != 0 ) { tryExec( [ "rm", "-rf", tmp ], 30 ); return say( 6, { error: trim( cl.output ) }, arguments.asJson, [ "error: git clone failed: " & trim( cl.output ) ] ); }
+        var code = adopt( tmp, nm, arguments.force, arguments.asJson, arguments.url );
+        tryExec( [ "rm", "-rf", tmp ], 30 );
+        return code;
+    }
+
+    function cfgTmp() { return variables.cfgSvc.stateDir() & "/theme-clone-" & createUUID(); }
+
+    // `import PATH`: a local folder in the same format.
+    function importDir( path, name = "", force = false, asJson = false ) {
+        if ( !directoryExists( arguments.path ) ) return say( 4, { error: "not a folder" }, arguments.asJson, [ "error: " & arguments.path & " is not a folder" ] );
+        var nm = len( arguments.name ) ? arguments.name : lCase( listLast( replace( arguments.path, chr( 92 ), "/", "all" ), "/" ) );
+        return adopt( arguments.path, nm, arguments.force, arguments.asJson, arguments.path );
+    }
+
+    // `remove NAME`: only a theme in your own folder; bundled and Omarchy ones cannot be removed, and neither can the current one.
+    function remove( name, asJson ) {
+        var all = discover();
+        if ( !validName( arguments.name ) || !structKeyExists( all, arguments.name ) ) return say( 4, { error: "unknown theme" }, arguments.asJson, [ "error: unknown theme " & arguments.name ] );
+        if ( all[ arguments.name ].origin != "user" || all[ arguments.name ].dir != userDir() & "/" & arguments.name ) return say( 4, { error: "not one of your themes" }, arguments.asJson, [ "error: " & arguments.name & " is " & all[ arguments.name ].origin & ", not one you installed, so it cannot be removed here" ] );
+        if ( readState().name == arguments.name ) return say( 4, { error: "current theme" }, arguments.asJson, [ "error: " & arguments.name & " is the current theme; set another one first" ] );
+        tryExec( [ "rm", "-rf", userDir() & "/" & arguments.name ], 30 );
+        tryExec( [ "rm", "-f", cfg() & "/bxcachy/nvim-themes/" & arguments.name & ".lua" ], 30 );
+        return say( 0, { removed: arguments.name }, arguments.asJson, [ "Removed theme " & arguments.name ] );
+    }
+
     // The next theme after the current one (wrapping), or a random other one.
     function pick( how ) {
         var all = names();

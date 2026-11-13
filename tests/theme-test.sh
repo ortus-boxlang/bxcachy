@@ -82,4 +82,40 @@ run "$binary" theme list --json | jq -e '.data.themes | map(select(.name == "min
 grep -q "wallpaper-set $tmp/cfg/omarchy/themes/mine/backgrounds/1.png" "$LOG" || fail 'its own backgrounds are used'
 echo "accent = nope" > "$tmp/cfg/omarchy/themes/mine/colors.toml"
 [[ "$(code "$binary" theme set mine)" == 4 ]] || fail 'an invalid theme is rejected before anything is written'
+
+# install from git (fake git: the clone is an Omarchy-format folder), import from a folder, remove
+cat > "$tmp/bin/git" <<'FAKE'
+#!/usr/bin/env bash
+echo "git $*" >> "$LOG"
+if [[ "$1" == clone ]]; then
+  dest="${@: -1}"; mkdir -p "$dest/.git" "$dest/backgrounds"
+  printf 'accent = "#ff8800"\nbackground = "#101010"\nforeground = "#eeeeee"\nred = "#ff0000"\ngreen = "#00ff00"\nyellow = "#ffff00"\nblue = "#0000ff"\nmagenta = "#ff00ff"\ncyan = "#00ffff"\n' > "$dest/colors.toml"
+  echo 'return { { "LazyVim/LazyVim", opts = { colorscheme = "habamax" } } }' > "$dest/neovim.lua"
+  [[ -n "${THEME_FAKE_BAD:-}" ]] && echo 'accent = nope' > "$dest/colors.toml"
+  [[ -n "${THEME_FAKE_LINK:-}" ]] && ln -s /etc/passwd "$dest/evil"
+  true
+fi
+FAKE
+chmod +x "$tmp/bin/git"
+[[ "$(code "$binary" theme install http://example.com/omarchy-x-theme)" == 2 ]] || fail 'only https urls'
+[[ "$(code "$binary" theme install 'https://example.com/a;rm -rf')" == 2 ]] || fail 'url characters are checked'
+run "$binary" theme install https://github.com/someone/omarchy-sunset-theme --json | jq -e '.ok and .data.theme == "sunset"' >/dev/null || fail 'install names the theme from the repository'
+[[ -s "$tmp/cfg/bxcachy/themes/sunset/colors.toml" && ! -e "$tmp/cfg/bxcachy/themes/sunset/.git" ]] || fail 'the theme is copied without .git'
+[[ -s "$tmp/cfg/bxcachy/nvim-themes/sunset.lua" ]] || fail 'its neovim.lua is synced for the editor'
+run "$binary" theme list --json | jq -e '.data.themes | map(select(.name == "sunset" and .origin == "user")) | length == 1' >/dev/null || fail 'installed theme is listed as yours'
+[[ "$(code "$binary" theme install https://github.com/someone/omarchy-sunset-theme)" == 4 ]] || fail 'installing over an existing theme exits 4'
+run "$binary" theme install https://github.com/someone/omarchy-sunset-theme --force >/dev/null || fail '--force replaces it'
+THEME_FAKE_BAD=1 run "$binary" theme install https://github.com/someone/omarchy-bad-theme >/dev/null 2>&1 && fail 'an invalid theme must be rejected'
+[[ ! -e "$tmp/cfg/bxcachy/themes/bad" ]] || fail 'an invalid theme was copied'
+[[ "$(THEME_FAKE_LINK=1 bash -c '. /dev/null; set +e; env HOME="$0" BXCACHY_CONFIG_HOME="$1" BXCACHY_STATE_HOME="$2" PATH="$3:$PATH" LOG="$4" THEME_FAKE_LINK=1 "$5" theme install https://github.com/someone/omarchy-link-theme >/dev/null 2>&1; echo $?' "$tmp/home" "$tmp/cfg" "$tmp/state" "$tmp/bin" "$LOG" "$binary")" == 4 ]] || fail 'symlinks in a theme are rejected'
+run "$binary" theme set sunset >/dev/null; grep -q 'ff8800' "$tmp/cfg/noctalia/palettes/BxCachyTheme.json" || fail 'the installed theme can be set'
+[[ "$(code "$binary" theme remove sunset)" == 4 ]] || fail 'the current theme cannot be removed'
+run "$binary" theme set nord >/dev/null
+mkdir -p "$tmp/mine2"; cp "$tmp/cfg/bxcachy/themes/sunset/colors.toml" "$tmp/mine2/"
+run "$binary" theme import "$tmp/mine2" --name=ember >/dev/null; [[ -s "$tmp/cfg/bxcachy/themes/ember/colors.toml" ]] || fail 'import'
+[[ "$(code "$binary" theme import "$tmp/mine2" --name='Bad Name')" == 2 ]] || fail 'bad names exit 2'
+[[ "$(code "$binary" theme import "$tmp/nope")" == 4 ]] || fail 'import of a missing folder exits 4'
+run "$binary" theme remove sunset >/dev/null; [[ ! -e "$tmp/cfg/bxcachy/themes/sunset" && ! -e "$tmp/cfg/bxcachy/nvim-themes/sunset.lua" ]] || fail 'remove'
+[[ "$(code "$binary" theme remove nord)" == 4 ]] || fail 'a bundled theme cannot be removed'
+[[ "$(code "$binary" theme remove nope)" == 4 ]] || fail 'unknown theme exits 4'
 echo "theme tests passed"
