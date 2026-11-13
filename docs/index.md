@@ -24,6 +24,10 @@ It checks your machine, downloads and verifies the release, installs everything,
 Hyprland and Noctalia, or Plasma with tiling and a status panel. Mac-style keys, screenshots, notifications, night shift.
 :::
 
+::: card title="One menu for everything" href="guides/menu.md"
+The control center: search every setting, install any package, change the look, monitors, power, time zone and DNS.
+:::
+
 ::: card title="Every app, your choice" href="guides/apps.md"
 A curated catalog of 280 apps and web apps, with one-click Google, Microsoft and Apple suites.
 :::

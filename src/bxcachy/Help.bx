@@ -1,0 +1,55 @@
+// `bxcachy help` (every command by group) and `bxcachy help NAME` (usage, examples, notes). The data is docs/reference/cli.json,
+// embedded in HelpData.bx by bootstrap/gen-docs.sh, so the terminal and the docs site say the same thing.
+// Exit: 0 shown, 2 unknown command.
+class Help {
+    function init( cli ) {
+        variables.cli = arguments.cli;
+        variables.data = jsonDeserialize( new bxcachy.HelpData().json() );
+        return this;
+    }
+
+    function find( name ) {
+        for ( var g in variables.data.groups ) for ( var c in g.commands ) if ( c.name == arguments.name ) return { group: g, command: c };
+        return {};
+    }
+
+    function pad( text, width ) {
+        var t = arguments.text;
+        while ( len( t ) < arguments.width ) t &= " ";
+        return t;
+    }
+
+    function run( words, asJson = false ) {
+        if ( !arguments.words.len() ) {
+            if ( arguments.asJson ) { println( variables.cli.envelope( "help", 0, variables.data ) ); return 0; }
+            var width = 0;
+            for ( var g in variables.data.groups ) for ( var c in g.commands ) if ( len( c.name ) > width ) width = len( c.name );
+            println( "BxCachy: your developer machine, set up in minutes. Usage: bxcachy COMMAND [OPTIONS]" );
+            println( "Every command takes --json. Changes to the system need --yes; --dry-run shows the plan." );
+            for ( var gr in variables.data.groups ) {
+                println( "" );
+                println( gr.title & ": " & gr.blurb );
+                for ( var cm in gr.commands ) println( "  " & pad( cm.name, width + 2 ) & listFirst( cm.summary, "." ) & "." );
+            }
+            println( "" );
+            println( "More: bxcachy help COMMAND    https://bxcachy.boxlang.io/reference/commands/" );
+            return 0;
+        }
+        var hit = find( arguments.words[ 1 ] );
+        if ( structIsEmpty( hit ) ) {
+            if ( arguments.asJson ) println( variables.cli.envelope( "help", 2, { error: "unknown command " & arguments.words[ 1 ] } ) );
+            else { println( "error: unknown command " & arguments.words[ 1 ] ); println( "Run bxcachy help to list the commands." ); }
+            return 2;
+        }
+        var cmd = hit.command;
+        if ( arguments.asJson ) { println( variables.cli.envelope( "help", 0, { group: hit.group.title, command: cmd } ) ); return 0; }
+        println( "bxcachy " & cmd.name & ": " & cmd.summary );
+        println( "" );
+        println( "Usage:" );
+        for ( var u in cmd.usage ) println( "  bxcachy " & u );
+        if ( cmd.mutates ) { println( "" ); println( "Changes the system: needs --yes (without it you get the plan, exit 2; --dry-run shows it and exits 0)." ); }
+        if ( cmd.examples.len() ) { println( "" ); println( "Examples:" ); for ( var e in cmd.examples ) println( "  " & e ); }
+        if ( structKeyExists( cmd, "note" ) ) { println( "" ); println( cmd.note ); }
+        return 0;
+    }
+}

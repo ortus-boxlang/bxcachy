@@ -26,4 +26,5 @@ BxCachy turns a CachyOS install into a finished developer machine: Hyprland with
 - `bxcachy status`: what this machine already has. `bxcachy init`: the setup wizard (`--rerun`, `--fresh`, `--defaults --yes`, `--answers FILE --yes`).
 - `bxcachy menu`: the control center (also `Super+Alt+M`). `bxcachy keys sheet`: every shortcut (`Super+K`).
 - `bxcachy doctor`, `bxcachy gpu doctor`, `bxcachy input doctor`, `bxcachy dolphin doctor`: checks that print a fix for each problem.
-- More: skills `bxcachy-install-update`, `bxcachy-desktop`, `bxcachy-apps`, `bxcachy-ai`.
+- `bxcachy help` lists every command by group, `bxcachy help NAME` shows its usage and examples (the same text as the docs site's command reference).
+- More: skills `bxcachy-install-update`, `bxcachy-desktop`, `bxcachy-system`, `bxcachy-apps`, `bxcachy-ai`.

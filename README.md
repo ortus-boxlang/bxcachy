@@ -28,6 +28,8 @@ Add `--channel beta` for the bleeding-edge snapshots. Update later with `bxcachy
 |---|---|
 | Toolchains | Java 21, bvm, mvm, BoxLang, MatchBox, Rust. Optional: PHP, Python, Go, JavaScript runtimes |
 | Desktop | Hyprland and Noctalia, KDE Plasma with HyprKwin tiling, one shared shortcut table (including Mac-style Cmd remaps), key cheat sheet |
+| Control center | `bxcachy menu`: every command as one searchable menu on your launcher (Rofi, Walker, Wofi, Fuzzel, Vicinae) |
+| Appearance and hardware | Bar, dock, windows, fonts, backgrounds, monitors, laptop power, time zone and DNS, each one command (`appearance`, `display`, `power`, `time`, `dns`) |
 | Themes | 15 color themes in the Omarchy format (10 from Omarchy, 5 of ours); follows into terminals, btop, window borders and Neovim |
 | Shell and editor | zsh, fish or bash with Starship (shows the BoxLang version), Ghostty and other terminals, Neovim with LazyVim and BoxLang syntax |
 | Apps | A curated catalog of about 290 apps by category, chosen in the wizard |
@@ -43,6 +45,10 @@ bxcachy init                    # the wizard
 bxcachy menu                    # the control center
 bxcachy status                  # what is set up on this machine
 bxcachy theme set tokyo-night   # change the look
+bxcachy appearance bar position bottom
+bxcachy display scale DP-2 1.5
+bxcachy time sync --yes         # after you travel
+bxcachy help                    # every command, or: bxcachy help appearance
 bxcachy vm create linux dev     # a Linux desktop in a container
 bxcachy db start postgres --yes
 bxcachy skills install --yes    # BxCachy, BoxLang and MatchBox skills for your agents

@@ -49,7 +49,7 @@ run "$binary" skills show ortus-boxlang/skills/boxlang-developer/language-fundam
 [[ "$(code "$binary" skills install bxcachy)" == 2 ]] || fail 'install without --yes exits 2'
 [[ ! -d "$tmp/home/.agents" ]] || fail 'a plan wrote something'
 run "$binary" skills install bxcachy boxlang matchbox --yes | grep -q 'Installed skills' || fail 'install'
-for n in bxcachy bxcachy-ai bxcachy-apps bxcachy-desktop bxcachy-install-update boxlang-language-fundamentals boxlang-runtime-matchbox; do [[ -f "$tmp/home/.agents/skills/$n/SKILL.md" ]] || fail "$n was not stored"; done
+for n in bxcachy bxcachy-ai bxcachy-apps bxcachy-desktop bxcachy-system bxcachy-install-update boxlang-language-fundamentals boxlang-runtime-matchbox; do [[ -f "$tmp/home/.agents/skills/$n/SKILL.md" ]] || fail "$n was not stored"; done
 head -2 "$tmp/home/.agents/skills/bxcachy/SKILL.md" | grep -q '^name: bxcachy$' || fail 'the embedded skill has its frontmatter'
 grep -q 'audit' "$tmp/cfg/bxcachy/skills.json" && jq -e '.skills.bxcachy.source == "embedded" and .skills["boxlang-runtime-matchbox"].source == "hub"' "$tmp/cfg/bxcachy/skills.json" >/dev/null || fail 'manifest'
 # linked into the agents that exist (claude and codex here), as symlinks to the store
@@ -64,7 +64,7 @@ run "$binary" skills link >/dev/null; grep -q '^mine$' "$tmp/home/.claude/skills
 [[ "$(code "$binary" skills install ortus-boxlang/skills/cat~missing --yes)" == 5 ]] || fail 'a missing skill exits 5'
 # installed, status, update, remove
 run "$binary" skills installed | grep -q 'boxlang-runtime-matchbox  (hub: ortus-boxlang/skills/boxlang-developer~runtime-matchbox)' || fail 'installed'
-run "$binary" skills status --json | jq -e '.data.skills == 7 and (.data.agents | map(select(.present)) | length) == 2' >/dev/null || fail 'status'
+run "$binary" skills status --json | jq -e '.data.skills == 8 and (.data.agents | map(select(.present)) | length) == 2' >/dev/null || fail 'status'
 : > "$LOG"; run "$binary" skills update --yes >/dev/null; grep -q 'api/install' "$LOG" || fail 'update fetches the hub skills again'
 [[ "$(code "$binary" skills remove bxcachy)" == 2 ]] || fail 'remove without --yes exits 2'
 run "$binary" skills remove boxlang-runtime-matchbox --yes >/dev/null

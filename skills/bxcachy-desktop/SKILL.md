@@ -22,4 +22,5 @@ description: "Use this skill when working with the BxCachy desktop: Hyprland and
 - Themes: `theme list|show NAME|set NAME [--mode=theme|dark|light|auto]|random|next|mode M|install GIT_URL|import PATH|remove NAME|status`. Omarchy-format themes (15 bundled, others found on disk or installed from git) colour Noctalia, terminals, btop, Hyprland borders and Neovim; it acts at once, `--dry-run` shows the plan.
 - Notifications: `notify dnd on|off|toggle`, `notify snooze 30m`, `notify clear`. Night shift: `nightshift on|off|toggle`.
 - `emoji`, `forcequit`, `window minimize|restore`, `overview`, `input gestures --yes`, `airplay on|off`.
-- `bxcachy menu` is the control center; `bxcachy apps` the all-apps window; `bxcachy runner` chooses the launcher and menu program.
+- Bar, dock, windows, fonts, monitors, power, time zone: see the `bxcachy-system` skill.
+- `bxcachy menu` is the control center (`menu search TEXT` finds an entry); `bxcachy apps` the all-apps window; `bxcachy runner` chooses the launcher and menu program.

@@ -125,6 +125,12 @@ class Menu {
             var pk2 = new bxcachy.Packages( variables.cli, cat2 );
             var names2 = pk2.installedNames();
             for ( var b in cat2.apps ) if ( pk2.isInstalled( b, names2 ) ) out.append( { label: b.name & "  (" & b.id & ")", value: b.id, current: false } );
+        } else if ( src == "agents" ) {
+            var ar = exec( [ self(), "ai", "list", "--json" ], 30 );
+            try { for ( var ag in jsonDeserialize( ar.output ).data.agents ) if ( ag.installed ) out.append( { label: ag.name, value: ag.id, current: ag.default } ); } catch ( any e ) {}
+        } else if ( src == "zones" ) {
+            var zr = exec( [ self(), "time", "zone", "--list" ], 30 );
+            for ( var zn in listToArray( trim( zr.output ), chr( 10 ) ) ) out.append( { label: zn, value: zn, current: false } );
         } else if ( src == "vms" ) {
             for ( var v in new bxcachy.Vm( variables.cli ).allRecords() ) out.append( { label: v.name & "  (" & v.kind & ")", value: v.name, current: false } );
         } else if ( src == "fonts" || src == "fonts-uninstalled" ) {

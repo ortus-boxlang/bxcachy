@@ -1,0 +1,190 @@
+// `bxcachy security ...`: fingerprint, security key, SSH server and passwordless sudo, with guards because some of it touches PAM.
+//   security status [--json]
+//   security fingerprint on|off|enroll [--yes]      fprintd; `on` adds one PAM line to /etc/pam.d/sudo, `enroll` runs fprintd-enroll
+//   security fido2 on|off|register [--yes]          pam-u2f; `register` runs pamu2fcfg (touch the key); `on` refuses until a key is registered
+//   security ssh-server on|off [--yes]              openssh: enable --now or disable --now sshd.service
+//   security passwordless-sudo on|off [--yes]       a sudoers.d file for your user (validated with visudo before it is installed)
+// The guards (why none of this can lock you out):
+//   * PAM: only /etc/pam.d/sudo is ever changed, never login, SDDM or the lock screen; the line is `auth sufficient`, so your password still works
+//     when the reader or key is missing; the file is checked (our line once, the original auth lines intact) before it is installed; the first
+//     time, the original is kept as /etc/pam.d/sudo.bxcachy-backup; `off` removes exactly our line.
+//   * sudoers: the new file is checked with `visudo -cf` first and only installed when it passes (a broken sudoers file locks sudo out).
+//   * everything is a plan (exit 2) without --yes; --dry-run prints it and the exact PAM or sudoers text.
+// Test overrides: BXCACHY_PAM_DIR (default /etc/pam.d), BXCACHY_SUDOERS_DIR (default /etc/sudoers.d), BXCACHY_U2F_FILE.
+// Exit: 0 ok, 2 bad usage or a plan without --yes, 4 precondition, 5 6 7 from installs and commands.
+class Security {
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.inst = new bxcachy.Installer( arguments.runner );
+        return this;
+    }
+
+    function env( name, fallback ) {
+        var v = getSystemSetting( arguments.name, "" );
+        return len( v ) ? v : arguments.fallback;
+    }
+
+    function tryExec( argv, timeout = 30 ) {
+        try { return variables.inst.exec( arguments.argv, arguments.timeout ); } catch ( any e ) { return { exitCode: 127, output: e.message }; }
+    }
+
+    function has( name ) { return tryExec( [ "sh", "-c", 'command -v "$1"', "_", arguments.name ], 10 ).exitCode == 0; }
+    function say( code, data, asJson, lines = [], dry = false ) {
+        if ( arguments.asJson ) println( variables.cli.envelope( "security", arguments.code, arguments.data, arguments.dry ) );
+        else for ( var l in arguments.lines ) println( l );
+        return arguments.code;
+    }
+    function fail( code, msg, asJson ) { return say( arguments.code, { error: arguments.msg }, arguments.asJson, [ "error: " & arguments.msg ] ); }
+
+    function pamFile() { return env( "BXCACHY_PAM_DIR", "/etc/pam.d" ) & "/sudo"; }
+    function sudoersFile() { return env( "BXCACHY_SUDOERS_DIR", "/etc/sudoers.d" ) & "/50-bxcachy-nopasswd"; }
+    function u2fFile() { return env( "BXCACHY_U2F_FILE", getSystemSetting( "HOME", "" ) & "/.config/Yubico/u2f_keys" ); }
+    function user() { return getSystemSetting( "USER", "" ); }
+
+    function pamLine( kind ) { return arguments.kind == "fingerprint" ? "auth sufficient pam_fprintd.so" : "auth sufficient pam_u2f.so cue"; }
+    function pamMarker( kind ) { return " # bxcachy " & arguments.kind; }
+
+    // ---- PAM text (pure, so it is tested without touching /etc) ----
+    function pamHas( text, kind ) { return find( pamMarker( arguments.kind ), arguments.text ) > 0; }
+
+    // Adds our line before the first `auth` line. Returns "" when the file does not look like a sudo PAM file.
+    function pamAdd( text, kind ) {
+        if ( pamHas( arguments.text, arguments.kind ) ) return arguments.text;
+        var lines = listToArray( arguments.text, chr( 10 ), true );
+        var out = [];
+        var done = false;
+        for ( var l in lines ) {
+            if ( !done && reFind( "^auth\s", l ) ) { out.append( pamLine( arguments.kind ) & pamMarker( arguments.kind ) ); done = true; }
+            out.append( l );
+        }
+        return done ? out.toList( chr( 10 ) ) : "";
+    }
+
+    function pamRemove( text, kind ) {
+        var out = [];
+        for ( var l in listToArray( arguments.text, chr( 10 ), true ) ) if ( find( pamMarker( arguments.kind ), l ) == 0 ) out.append( l );
+        return out.toList( chr( 10 ) );
+    }
+
+    function pamState( kind ) { return fileExists( pamFile() ) && pamHas( fileRead( pamFile() ), arguments.kind ); }
+
+    // ---- a plan, or the commands ----
+    function finish( title, shown, cmds, yes, dry, asJson, data = {} ) {
+        var d = arguments.data;
+        d.commands = arguments.cmds.map( function( c ) { return c.toList( " " ); } );
+        if ( !arguments.yes || arguments.dry ) {
+            var lines = [ ( arguments.dry ? "Dry run: " : "Plan: " ) & arguments.title ];
+            for ( var s in arguments.shown ) lines.append( "  " & s );
+            for ( var c in arguments.cmds ) lines.append( "  " & c.toList( " " ) );
+            lines.append( arguments.dry ? "Nothing was changed." : "Nothing was changed. Add --yes to apply." );
+            return say( arguments.dry ? 0 : 2, d, arguments.asJson, lines, arguments.dry );
+        }
+        for ( var x in arguments.cmds ) {
+            var r = tryExec( x, 900 );
+            if ( r.exitCode != 0 ) return say( 6, { error: trim( r.output ), step: x.toList( " " ) }, arguments.asJson, [ "error: " & x.toList( " " ) & ": " & trim( r.output ) ] );
+        }
+        return say( 0, d, arguments.asJson, [ arguments.title & ": done" ] );
+    }
+
+    function installFirst( pkg, yes, dry ) {
+        if ( has( arguments.pkg == "fprintd" ? "fprintd-enroll" : "pamu2fcfg" ) ) return [];
+        return [ [ "sudo", "pacman", "-S", "--needed", "--noconfirm", arguments.pkg ] ];
+    }
+
+    // The PAM change for fingerprint and fido2.
+    function pamCmd( kind, args, yes, dry, asJson ) {
+        var v = arguments.args.len() ? arguments.args[ 1 ] : "";
+        var pkg = arguments.kind == "fingerprint" ? "fprintd" : "pam-u2f";
+        var extra = arguments.kind == "fingerprint" ? "enroll" : "register";
+        if ( arguments.args.len() != 1 || !arrayFind( [ "on", "off", extra ], v ) ) return fail( 2, "Usage: bxcachy security " & arguments.kind & " on|off|" & extra, arguments.asJson );
+        if ( v == extra ) {
+            var tool = arguments.kind == "fingerprint" ? [ "fprintd-enroll" ] : [ "sh", "-c", 'mkdir -p "$(dirname "$1")" && pamu2fcfg > "$1"', "_", u2fFile() ];
+            if ( !has( arguments.kind == "fingerprint" ? "fprintd-enroll" : "pamu2fcfg" ) ) return fail( 4, pkg & " is not installed (bxcachy security " & arguments.kind & " on)", arguments.asJson );
+            return finish( arguments.kind == "fingerprint" ? "enroll a fingerprint (follow the prompts and swipe)" : "register your security key (touch it when it blinks)", [], [ tool ], arguments.yes, arguments.dry, arguments.asJson );
+        }
+        if ( !fileExists( pamFile() ) ) return fail( 4, pamFile() & " was not found", arguments.asJson );
+        var text = fileRead( pamFile() );
+        var tmp = getTempDirectory() & "/bxcachy-pam-" & createUUID();
+        var cmds = [];
+        var shown = [];
+        if ( v == "on" ) {
+            if ( arguments.kind == "fido2" && !fileExists( u2fFile() ) ) return fail( 4, "no security key is registered yet: run `bxcachy security fido2 register --yes` first (so the PAM line has a key to check)", arguments.asJson );
+            var next = pamAdd( text, arguments.kind );
+            if ( !len( next ) ) return fail( 4, pamFile() & " has no auth line, so it was left alone", arguments.asJson );
+            if ( next == text ) return say( 0, { already: true }, arguments.asJson, [ arguments.kind & " is already on for sudo." ] );
+            for ( var ic in installFirst( pkg, arguments.yes, arguments.dry ) ) cmds.append( ic );
+            if ( !fileExists( pamFile() & ".bxcachy-backup" ) ) cmds.append( [ "sudo", "cp", "-p", pamFile(), pamFile() & ".bxcachy-backup" ] );
+            cmds.append( [ "sudo", "install", "-Dm644", tmp, pamFile() ] );
+            shown.append( "adds this line before the first auth line of " & pamFile() & ":" );
+            shown.append( "    " & pamLine( arguments.kind ) );
+            shown.append( "sufficient: your password still works if the " & ( arguments.kind == "fingerprint" ? "reader" : "key" ) & " is missing. Only sudo is changed." );
+            if ( arguments.yes && !arguments.dry ) fileWrite( tmp, next );
+        } else {
+            var prev = pamRemove( text, arguments.kind );
+            if ( prev == text ) return say( 0, { already: true }, arguments.asJson, [ arguments.kind & " is already off for sudo." ] );
+            cmds.append( [ "sudo", "install", "-Dm644", tmp, pamFile() ] );
+            shown.append( "removes the bxcachy " & arguments.kind & " line from " & pamFile() );
+            if ( arguments.yes && !arguments.dry ) fileWrite( tmp, prev );
+        }
+        var code = finish( ( v == "on" ? "turn " & arguments.kind & " on for sudo" : "turn " & arguments.kind & " off for sudo" ), shown, cmds, arguments.yes, arguments.dry, arguments.asJson, { kind: arguments.kind, pam: pamFile() } );
+        try { if ( fileExists( tmp ) ) fileDelete( tmp ); } catch ( any e ) {}
+        if ( code == 0 && v == "on" && arguments.yes && !arguments.dry && !arguments.asJson ) println( arguments.kind == "fingerprint" ? "Enroll a finger with: bxcachy security fingerprint enroll --yes" : "Test it in a new terminal: sudo -k && sudo true" );
+        return code;
+    }
+
+    function sshCmd( args, yes, dry, asJson ) {
+        var v = arguments.args.len() == 1 ? arguments.args[ 1 ] : "";
+        if ( v != "on" && v != "off" ) return fail( 2, "Usage: bxcachy security ssh-server on|off", arguments.asJson );
+        var cmds = [];
+        if ( v == "on" ) {
+            if ( !has( "sshd" ) ) cmds.append( [ "sudo", "pacman", "-S", "--needed", "--noconfirm", "openssh" ] );
+            cmds.append( [ "sudo", "systemctl", "enable", "--now", "sshd.service" ] );
+        } else cmds.append( [ "sudo", "systemctl", "disable", "--now", "sshd.service" ] );
+        return finish( "turn the SSH server " & v & ( v == "on" ? " (it listens on port 22: only password-less keys or strong passwords belong there)" : "" ), [], cmds, arguments.yes, arguments.dry, arguments.asJson, { ssh_server: v == "on" } );
+    }
+
+    function sudoCmd( args, yes, dry, asJson ) {
+        var v = arguments.args.len() == 1 ? arguments.args[ 1 ] : "";
+        if ( v != "on" && v != "off" ) return fail( 2, "Usage: bxcachy security passwordless-sudo on|off", arguments.asJson );
+        var u = user();
+        if ( !reFind( "^[a-z_][a-z0-9_-]*$", u ) ) return fail( 4, "could not read a safe user name from $USER", arguments.asJson );
+        if ( v == "off" ) return finish( "turn passwordless sudo off", [ "removes " & sudoersFile() ], [ [ "sudo", "rm", "-f", sudoersFile() ] ], arguments.yes, arguments.dry, arguments.asJson, { passwordless_sudo: false } );
+        var tmp = getTempDirectory() & "/bxcachy-sudoers-" & createUUID();
+        var text = "## Written by `bxcachy security passwordless-sudo on`. Remove with `bxcachy security passwordless-sudo off`." & chr( 10 ) & u & " ALL=(ALL:ALL) NOPASSWD: ALL" & chr( 10 );
+        var shown = [ "writes " & sudoersFile() & ":", "    " & u & " ALL=(ALL:ALL) NOPASSWD: ALL", "Anyone who can run a command as you (a malicious script, a stolen session) gets root without a password." ];
+        if ( arguments.yes && !arguments.dry ) {
+            fileWrite( tmp, text );
+            var chk = tryExec( [ "visudo", "-cf", tmp ], 15 );
+            if ( chk.exitCode != 0 ) { try { fileDelete( tmp ); } catch ( any e ) {} return say( 6, { error: "visudo rejected the file: " & trim( chk.output ) }, arguments.asJson, [ "error: visudo rejected the file, nothing was installed: " & trim( chk.output ) ] ); }
+        }
+        var code = finish( "turn passwordless sudo on for " & u, shown, [ [ "visudo", "-cf", tmp ], [ "sudo", "install", "-Dm440", "-o", "root", "-g", "root", tmp, sudoersFile() ] ], arguments.yes, arguments.dry, arguments.asJson, { passwordless_sudo: true } );
+        try { if ( fileExists( tmp ) ) fileDelete( tmp ); } catch ( any e ) {}
+        return code;
+    }
+
+    function statusCmd( asJson ) {
+        var data = {
+            fingerprint: { installed: has( "fprintd-enroll" ), sudo: pamState( "fingerprint" ) },
+            fido2: { installed: has( "pamu2fcfg" ), sudo: pamState( "fido2" ), key_registered: fileExists( u2fFile() ) },
+            ssh_server: tryExec( [ "systemctl", "is-active", "--quiet", "sshd.service" ], 10 ).exitCode == 0,
+            passwordless_sudo: fileExists( sudoersFile() )
+        };
+        var yn = function( b ) { return b ? "on" : "off"; };
+        var lines = [ "fingerprint for sudo: " & yn( data.fingerprint.sudo ) & ( data.fingerprint.installed ? "" : " (fprintd not installed)" ),
+            "security key for sudo: " & yn( data.fido2.sudo ) & ( data.fido2.key_registered ? ", key registered" : ", no key registered" ),
+            "ssh server: " & yn( data.ssh_server ), "passwordless sudo: " & yn( data.passwordless_sudo ) ];
+        return say( 0, data, arguments.asJson, lines );
+    }
+
+    function run( words, dry = false, yes = false, asJson = false ) {
+        var verb = arguments.words.len() ? arguments.words[ 1 ] : "";
+        var rest = [];
+        for ( var i = 2; i <= arguments.words.len(); i++ ) rest.append( arguments.words[ i ] );
+        if ( verb == "" || verb == "status" ) return statusCmd( arguments.asJson );
+        if ( verb == "fingerprint" ) return pamCmd( "fingerprint", rest, arguments.yes, arguments.dry, arguments.asJson );
+        if ( verb == "fido2" ) return pamCmd( "fido2", rest, arguments.yes, arguments.dry, arguments.asJson );
+        if ( verb == "ssh-server" ) return sshCmd( rest, arguments.yes, arguments.dry, arguments.asJson );
+        if ( verb == "passwordless-sudo" ) return sudoCmd( rest, arguments.yes, arguments.dry, arguments.asJson );
+        return fail( 2, "Usage: bxcachy security status | fingerprint on|off|enroll | fido2 on|off|register | ssh-server on|off | passwordless-sudo on|off", arguments.asJson );
+    }
+}

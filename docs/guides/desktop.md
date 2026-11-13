@@ -18,6 +18,8 @@ BxCachy sets up **Hyprland with Noctalia** as the main desktop. **KDE Plasma** s
 - **Panels:** `bxcachy plasma panels apply` replaces your panels with a top status panel (launcher, workspace pager, active window, clock, weather, media, system vitals, tray, in rounded islands with Panel Colorizer) and a bottom dock. Your old layout is backed up first: `bxcachy plasma panels undo --yes` restores it. From Hyprland it is applied at your next Plasma login.
 - **Virtual desktops:** `bxcachy plasma desktops 4`.
 
+Look and hardware have their own pages: [Appearance](appearance.md) for the bar, dock, windows and fonts, and [Displays, power and time](system.md) for monitors, laptop power and the time zone. The [control center](menu.md) has all of it as one menu.
+
 ## Everyday tools
 
 | Do | Command | Shortcut |

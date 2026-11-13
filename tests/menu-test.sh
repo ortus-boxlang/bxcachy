@@ -28,25 +28,28 @@ play() { rm -f "$FAKE/n" "$FAKE/spawn.log" "$FAKE/terminal.log" "$FAKE/open.log"
 flatidx() { run "$binary" menu items --json | jq -r --arg p "$1" 'def f($pre): if .kind == "sub" then (.label as $l | .children[] | f($pre + $l + " > ")) else $pre + .label end; [.data.menu[] | f("")] | index($p)'; }
 
 # ---- the tree as data (Omarchy's skeleton plus Develop) ----
-run "$binary" menu items --json | jq -e '(.data.menu | map(.label)) == ["Apps","Install","Remove","Appearance","Trigger","Setup","Update","Develop","Agent","Learn","About","System"] and .data.entries >= 120' >/dev/null || fail "menu sections: $(run "$binary" menu items --json | jq -c '.data.menu | map(.label)')"
+run "$binary" menu items --json | jq -e '(.data.menu | map(.label)) == ["Apps","Install","Remove","Appearance","Trigger","Setup","Update","Develop","Agent","Learn","About","System"] and .data.entries >= 200' >/dev/null || fail "menu sections: $(run "$binary" menu items --json | jq -c '.data.menu | map(.label)')"
 run "$binary" menu items --json | jq -e '[.data.menu[] | select(.label == "Install") | .children[] | .label] | index("Package (repos and AUR)") == 0 and index("Catalog") == 2' >/dev/null || fail 'Install starts with package search and the catalog'
 run "$binary" menu items | grep -q 'Next theme   (opens: bxcachy theme next)' || fail 'menu items text, nested'
 run "$binary" menu items | grep -q '    Development   (lists the Development apps' || fail 'catalog groups are in the tree'
 run "$binary" menu search 'next theme' | grep -q 'Appearance > Next theme   (opens: bxcachy theme next)' || fail 'menu search finds an entry and its command'
 run "$binary" menu search zzzznothing | grep -q 'No menu entry matches' || fail 'menu search without a match'
 run "$binary" menu search lock --json | jq -e '.data.results | map(.path) | index("System > Lock") != null' >/dev/null || fail 'menu search json'
+for q in 'Setup > Time > Set the time zone' 'Setup > DNS > Cloudflare' 'Setup > Kernel > Installed and available' 'Setup > Security > Passwordless sudo > Turn on' 'Setup > Power > Profile > Balanced' 'Setup > Display > Monitors' 'Trigger > Toggle > Stay awake' 'Agent > Open an agent' 'Appearance > Bar > Position > Top'; do
+  run "$binary" menu search "${q##* > }" --json | jq -e --arg p "$q" '.data.results | map(.path) | index($p) != null' >/dev/null || fail "the menu has no entry: $q"
+done
 # every spawn and run entry names a real command (the first word must be a known route)
 run "$binary" menu items --json | jq -r 'def f: if .kind == "sub" then .children[] | f else select(.argv != null) | .argv[0] end; [.data.menu[] | f] | unique | .[]' | while read -r w; do
   c="$(set +e; run "$binary" "$w" >/dev/null 2>&1 < /dev/null; echo $?)"; [[ "$c" != 127 ]] || fail "the menu runs an unknown command: $w"
 done
 run "$binary" runner menu-set rofi >/dev/null
 
-# ---- Agent (9) -> Open the default agent (0): detached, no terminal; Back (8), Exit (13) ----
-play 9 0 8 13; wait_for "$FAKE/spawn.log" || fail 'the spawn entry did not start'
+# ---- Agent (9) -> Open the default agent (0): detached, no terminal; Back (9), Exit (13) ----
+play 9 0 9 13; wait_for "$FAKE/spawn.log" || fail 'the spawn entry did not start'
 grep -q 'bxcachy ai launch' "$FAKE/spawn.log" || fail "spawn: $(cat "$FAKE/spawn.log")"
-[[ ! -s "$FAKE/terminal.log" ]] || fail 'a spawn entry opened a terminal'
+[[ ! -s "$FAKE/terminal.log" ]] || fail "a spawn entry opened a terminal: $(cat "$FAKE/terminal.log")"
 # a run entry opens a terminal and waits for Enter
-play 9 4 8 13; wait_for "$FAKE/terminal.log" || fail 'the run entry did not open a terminal'
+play 9 5 9 13; wait_for "$FAKE/terminal.log" || fail 'the run entry did not open a terminal'
 grep -q "terminal -e sh -c .* _ $tmp/self ai models list" "$FAKE/terminal.log" || fail "run entry: $(cat "$FAKE/terminal.log")"
 # Apps (1) starts the app grid
 play 1 13; wait_for "$FAKE/spawn.log"; grep -q 'bxcachy apps' "$FAKE/spawn.log" || fail "apps: $(cat "$FAKE/spawn.log")"
@@ -101,7 +104,7 @@ wait_for "$FAKE/terminal.log" || fail 'the terminal fallback did not open'; grep
 run "$binary" runner menu-set rofi >/dev/null
 
 # ---- no terminal: a run entry is a precondition error; no menu program: exit 4 ----
-rm -f "$FAKE/n"; rm "$tmp/bin/ghostty"; printf '9\n4\n' > "$FAKE/answers"
+rm -f "$FAKE/n"; rm "$tmp/bin/ghostty"; printf '9\n5\n' > "$FAKE/answers"
 mkdir -p "$tmp/nobin"; ln -sf "$(command -v sh)" "$tmp/nobin/sh"; ln -sf "$(command -v cat)" "$tmp/nobin/cat"; ln -sf "$(command -v sed)" "$tmp/nobin/sed"
 printf '#!/bin/sh\ncat > /dev/null\nn=$(( $(cat "$FAKE/n" 2>/dev/null || echo 0) + 1 )); echo $n > "$FAKE/n"\nsed -n "${n}p" "$FAKE/answers"\n' > "$tmp/nobin/rofi"; chmod +x "$tmp/nobin/rofi"
 set +e; env HOME="$tmp/home" BXCACHY_CONFIG_HOME="$tmp/cfg" BXCACHY_STATE_HOME="$tmp/state" BXCACHY_SELF="$tmp/self" FAKE="$FAKE" PATH="$tmp/nobin" "$binary" menu >/dev/null 2>&1; rc=$?; set -e
