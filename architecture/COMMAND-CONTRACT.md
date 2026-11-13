@@ -669,6 +669,14 @@ The wizard asks the window layout once per desktop you set up: Hyprland (`layout
 - **Menu:** Setup > Display. **Verified:** `tests/display-test.sh` (fake hyprctl JSON, kscreen-doctor, brightnessctl, noctalia).
 - **Developer defaults:** Meld (`pacman`, `extra`, verified) is a default of the `editors` profile.
 
+### 13.37 Power (decided with the owner 2026-11-13)
+
+- **`bxcachy power status|profile|lid|setup|doctor`.** `profile [performance|balanced|saver]` uses `powerprofilesctl get|set` (`saver` is `power-saver`). `lid suspend|lock|ignore` writes the logind drop-in `/etc/systemd/logind.conf.d/50-bxcachy-lid.conf` (`HandleLidSwitch` and `HandleLidSwitchExternalPower` set to the action, `HandleLidSwitchDocked=ignore`) with `sudo install -Dm644`; it is a plan (exit 2) without `--yes`, and logind reads it from the next login or reboot (logind is not restarted: that would end the session).
+- **`setup`** installs and enables `power-profiles-daemon` and `upower` (`sudo pacman -S --needed --noconfirm`, `sudo systemctl enable --now`). **On a machine without a battery it does nothing** (exit 0, `skipped: "no battery"`) unless `--force`. The init plan has an optional `power-setup` step behind the answer `power_setup`; no wizard question exists yet.
+- **`doctor`** checks battery, the two daemons, the lid action, zram, and (laptops only) disk swap at least the size of RAM for hibernation. Problems are reported, never fixed silently.
+- **Not built:** hibernation configuration (resume offset, mkinitcpio hook) and TLP; battery display and brightness stay with Noctalia and powerdevil. CachyOS ships no laptop power tooling (`cachyos-settings` pulls zram, ananicy, inxi, iw, wireless-regdb), so this is ours.
+- **Menu:** Setup > Power. **Verified:** `tests/power-test.sh` (fake sysfs, meminfo, powerprofilesctl, systemctl, sudo, pacman). Not verified on a real laptop.
+
 ## 14. Install and the setup wizard (decided with the owner 2026-11-10; install, wizard and the init engine are built, the pages' later commands are not)
 
 ### 14.1 Install
