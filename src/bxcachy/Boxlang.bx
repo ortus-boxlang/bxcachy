@@ -2,7 +2,7 @@
 //   status                      what is installed: boxlang, bvm, mvm, matchbox, bx-module, VS Code and the BoxLang extension
 //   use VERSION                 `bvm install VERSION` when missing, then `bvm use VERSION` (latest, snapshot or a number)
 //   matchbox use VERSION        the same with mvm for MatchBox
-//   modules list|search TEXT    the BoxLang modules on ForgeBox (its public API: /api/v1/entries?type=boxlang-modules)
+//   modules list|search TEXT    the BoxLang modules on ForgeBox (its public API: /api/v1/entries/boxlang-modules, paged 50 at a time)
 //   modules install SLUG...     `bx-module install SLUG...`; modules installed|outdated|update wrap bx-module
 //   vscode                      `code --install-extension ortus-solutions.vscode-boxlang` and the developer pack
 //   links                       the BoxLang sites (docs, AI, Sites, Agents, MatchBox, ForgeBox, Skills, Try BoxLang...)
@@ -92,17 +92,22 @@ class Boxlang {
         return say( 0, { tool: arguments.tool, version: arguments.version }, arguments.asJson, [ arguments.tool & " now uses " & arguments.version ] );
     }
 
-    // ForgeBox: [ { slug, title, version, description } ]
+    // ForgeBox: [ { slug, title, version, description } ]. The API (saas-forgebox, api-v1): /entries/<typeSlug>?max=&offset=&searchTerm=;
+    // max is capped at 50 per call, so the pages are followed until one comes back short (at most 20 pages).
     function forgeboxModules( term ) {
-        var url = variables.forgebox & "/entries?type=boxlang-modules&maxrows=100" & ( len( arguments.term ) ? "&searchTerm=" & urlEncodedFormat( arguments.term ) : "" );
-        var r = tryExec( [ "curl", "-fsSL", "--max-time", "30", url ], 60 );
-        if ( r.exitCode != 0 ) return { ok: false, error: "ForgeBox did not answer", rows: [] };
-        try {
-            var j = jsonDeserialize( r.output );
-            var rows = [];
-            for ( var e in j.data.results ) rows.append( { slug: e.slug, title: e.title ?: e.slug, version: e.latestVersion.version ?: "", description: left( replace( e.summary ?: "", chr( 10 ), " ", "all" ), 100 ) } );
-            return { ok: true, rows: rows };
-        } catch ( any e ) { return { ok: false, error: "unexpected answer from ForgeBox", rows: [] }; }
+        var rows = [];
+        for ( var page = 0; page < 20; page++ ) {
+            var url = variables.forgebox & "/entries/boxlang-modules?orderBy=popular&max=50&offset=" & ( page * 50 ) & ( len( arguments.term ) ? "&searchTerm=" & urlEncodedFormat( arguments.term ) : "" );
+            var r = tryExec( [ "curl", "-fsSL", "--max-time", "30", url ], 60 );
+            if ( r.exitCode != 0 ) return { ok: rows.len() > 0, error: "ForgeBox did not answer", rows: rows };
+            try {
+                var j = jsonDeserialize( r.output );
+                var got = j.data.results;
+                for ( var e in got ) rows.append( { slug: e.slug, title: e.title ?: e.slug, version: e.latestVersion.version ?: "", description: left( replace( e.summary ?: "", chr( 10 ), " ", "all" ), 100 ) } );
+                if ( got.len() < 50 ) break;
+            } catch ( any e2 ) { return { ok: rows.len() > 0, error: "unexpected answer from ForgeBox", rows: rows }; }
+        }
+        return { ok: true, rows: rows };
     }
 
     function modules( action, args, asJson ) {

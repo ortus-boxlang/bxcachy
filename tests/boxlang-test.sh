@@ -27,7 +27,7 @@ grep -q '^bvm use 1.19.0' "$LOG" && ! grep -q '^bvm install 1.19.0' "$LOG" || fa
 [[ "$(code "$binary" boxlang use 'a;b')" == 4 ]] || fail 'a bad version exits 4'
 # modules: the live ForgeBox list, then bx-module
 run "$binary" boxlang modules list | grep -q 'bx-ai  3.7.0  AI integration' || fail 'forgebox list'
-grep -q 'type=boxlang-modules' "$LOG" || fail 'forgebox api url'
+grep -q 'entries/boxlang-modules?orderBy=popular&max=50&offset=0' "$LOG" || fail 'forgebox api url'
 : > "$LOG"; run "$binary" boxlang modules search ai >/dev/null; grep -q 'searchTerm=ai' "$LOG" || fail 'search term'
 : > "$LOG"; run "$binary" boxlang modules install bx-ai bx-sites >/dev/null; grep -q '^bx-module install bx-ai bx-sites' "$LOG" || fail 'bx-module install'
 run "$binary" boxlang modules update >/dev/null; grep -q '^bx-module update --force' "$LOG" || fail 'update'
