@@ -5,13 +5,16 @@
 #   curl -fsSL .../install.sh | bash -s -- --yes [--answers answers.json] [--channel beta]
 # Options: --yes|-y (never ask), --answers FILE (the wizard answers to apply), --channel stable|beta, --no-wizard, --dry-run,
 #          --base-url URL (default https://downloads.ortussolutions.com/ortussolutions/bxcachy; BXCACHY_BASE_URL), -h|--help.
-# It downloads the channel's bxcachy binary and bootstrap bundle, verifies their SHA-256, runs the install stages (packages, toolchains,
+# It downloads the channel's bxcachy binary and bootstrap bundle, verifies the Ed25519 signature of the release information and the SHA-256 of both files, runs the install stages (packages, toolchains,
 # binary, core apps) and then the wizard. Everything is logged to ~/.cache/bxcachy/install.log. Needs CachyOS or Arch, a normal user, sudo.
 set -Eeuo pipefail
 
 BASE="${BXCACHY_BASE_URL:-https://downloads.ortussolutions.com/ortussolutions/bxcachy}"
 CHANNEL="${BXCACHY_CHANNEL:-stable}"
 YES=no; ANSWERS=""; WIZARD=yes; DRY=no
+# The release public key (Ed25519, base64 of the PEM). CI fills it in when it publishes install.sh; left as is, a development copy only
+# checks SHA-256. BXCACHY_PUBKEY_B64 overrides it (tests).
+PUBKEY_B64="${BXCACHY_PUBKEY_B64:-@@PUBKEY_B64@@}"
 C_RESET="" C_BOLD="" C_DIM="" C_OK="" C_WARN="" C_ERR="" C_ACC=""
 RICH=no; INSTALL_LOG=""; TMP=""; PID=""
 
@@ -129,6 +132,19 @@ verify_sha() {   # verify_sha FILE SHAFILE
   [[ -n "$want" && "$want" == "$got" ]]
 }
 
+# verify_properties FILE SIGFILE: the release information is signed (Ed25519); with a key a missing or bad signature is fatal.
+verify_properties() {
+  [[ "$PUBKEY_B64" != "@@PUBKEY_B64@@" && -n "$PUBKEY_B64" ]] || { note "unsigned development copy: checking SHA-256 only"; return 0; }
+  command -v openssl >/dev/null 2>&1 || die "openssl is required to verify the release signature"
+  printf '%s' "$PUBKEY_B64" | base64 -d > "$TMP/release.pub" 2>/dev/null || die "the embedded release key is malformed"
+  [[ -s "$TMP/release.pub" ]] || die "the embedded release key is empty"
+  openssl pkeyutl -verify -pubin -inkey "$TMP/release.pub" -rawin -in "$1" -sigfile "$2" >/dev/null 2>&1 \
+    || die "the release signature is invalid; nothing was installed"
+  info "release signature verified (Ed25519)"
+}
+
+prop() { sed -n "s/^$2=//p" "$1" | head -n 1; }
+
 preflight() {
   # BXCACHY_INSTALL_ALLOW_ROOT=1 is for the test suite only
   [[ "$(id -u)" != 0 || "${BXCACHY_INSTALL_ALLOW_ROOT:-}" == 1 ]] || die "run this as your normal user, not as root (sudo is used only where needed)"
@@ -174,14 +190,24 @@ main() {
   TMP="$(mktemp -d)"
   section "Downloading"
   run_task "the $CHANNEL release information" fetch "$BASE/$CHANNEL/version-latest.properties" "$TMP/version.properties"
+  if [[ "$PUBKEY_B64" != "@@PUBKEY_B64@@" && -n "$PUBKEY_B64" ]]; then
+    run_task "its signature" fetch "$BASE/$CHANNEL/version-latest.properties.sig" "$TMP/version.properties.sig"
+  fi
+  verify_properties "$TMP/version.properties" "$TMP/version.properties.sig"
   run_task "the bxcachy program" fetch "$BASE/$CHANNEL/bxcachy-linux-x86_64" "$TMP/bxcachy"
   run_task "its checksum" fetch "$BASE/$CHANNEL/bxcachy-linux-x86_64.sha256" "$TMP/bxcachy.sha256"
   verify_sha "$TMP/bxcachy" "$TMP/bxcachy.sha256" || die "the bxcachy download does not match its SHA-256; nothing was installed"
-  info "bxcachy verified (SHA-256)"
+  if [[ "$PUBKEY_B64" != "@@PUBKEY_B64@@" && -n "$PUBKEY_B64" ]]; then
+    [[ "$(prop "$TMP/version.properties" sha256)" == "$(sha256sum "$TMP/bxcachy" | awk '{print $1}')" ]] || die "bxcachy does not match the signed release information; nothing was installed"
+  fi
+  info "bxcachy verified (SHA-256$( [[ "$PUBKEY_B64" != "@@PUBKEY_B64@@" && -n "$PUBKEY_B64" ]] && echo ' and signature'))"
   run_task "the install bundle" fetch "$BASE/$CHANNEL/bootstrap.tar.gz" "$TMP/bootstrap.tar.gz"
   run_task "its checksum" fetch "$BASE/$CHANNEL/bootstrap.tar.gz.sha256" "$TMP/bootstrap.sha256"
   verify_sha "$TMP/bootstrap.tar.gz" "$TMP/bootstrap.sha256" || die "the install bundle does not match its SHA-256; nothing was installed"
-  info "install bundle verified (SHA-256)"
+  if [[ "$PUBKEY_B64" != "@@PUBKEY_B64@@" && -n "$PUBKEY_B64" ]]; then
+    [[ "$(prop "$TMP/version.properties" bootstrap_sha256)" == "$(sha256sum "$TMP/bootstrap.tar.gz" | awk '{print $1}')" ]] || die "the install bundle does not match the signed release information; nothing was installed"
+  fi
+  info "install bundle verified (SHA-256$( [[ "$PUBKEY_B64" != "@@PUBKEY_B64@@" && -n "$PUBKEY_B64" ]] && echo ' and signature'))"
   mkdir -p "$TMP/src" && tar -xzf "$TMP/bootstrap.tar.gz" -C "$TMP/src"
   [[ -x "$TMP/src/bootstrap/install.sh" || -f "$TMP/src/bootstrap/install.sh" ]] || die "the install bundle has no bootstrap/install.sh"
   chmod +x "$TMP/bxcachy"

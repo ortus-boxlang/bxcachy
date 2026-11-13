@@ -55,6 +55,28 @@ echo "beta-build" >> "$tmp/srv/beta/bxcachy-linux-x86_64"; echo "$(sha256sum "$t
 echo "deadbeef  bxcachy-linux-x86_64" > "$tmp/srv/stable/bxcachy-linux-x86_64.sha256"
 : > "$LOG"; [[ "$(code --yes)" == 1 ]] || fail 'a checksum mismatch fails'
 ! grep -q '^stage' "$LOG" || fail 'a stage ran after a checksum mismatch'
+# signed releases: with a public key the release information must verify, and both files must match it
+if command -v openssl >/dev/null; then
+  openssl genpkey -algorithm ed25519 -out "$tmp/k.pem" 2>/dev/null; openssl pkey -in "$tmp/k.pem" -pubout -out "$tmp/pub.pem"
+  openssl genpkey -algorithm ed25519 -out "$tmp/o.pem" 2>/dev/null; openssl pkey -in "$tmp/o.pem" -pubout -out "$tmp/o.pub"
+  echo "$(sha256sum "$tmp/srv/stable/bxcachy-linux-x86_64" | cut -d' ' -f1)" > /dev/null
+  echo "good build" > "$tmp/srv/stable/bxcachy-linux-x86_64"; echo "$(sha256sum "$tmp/srv/stable/bxcachy-linux-x86_64" | cut -d' ' -f1)  bxcachy-linux-x86_64" > "$tmp/srv/stable/bxcachy-linux-x86_64.sha256"
+  bsha="$(cut -d' ' -f1 "$tmp/srv/stable/bootstrap.tar.gz.sha256")"; asha="$(cut -d' ' -f1 "$tmp/srv/stable/bxcachy-linux-x86_64.sha256")"
+  printf 'version=0.12.0\ncommit=abc\nsha256=%s\nbootstrap_sha256=%s\n' "$asha" "$bsha" > "$tmp/srv/stable/version-latest.properties"
+  sign() { openssl pkeyutl -sign -rawin -inkey "$tmp/k.pem" -in "$tmp/srv/stable/version-latest.properties" -out "$tmp/srv/stable/version-latest.properties.sig"; }
+  prun() { env HOME="$tmp/home" BXCACHY_BIN_DIR="$tmp/binhome" BXCACHY_BASE_URL=http://fake BXCACHY_INSTALL_ALLOW_ROOT=1 BXCACHY_PUBKEY_B64="${PUB:-$(base64 -w0 "$tmp/pub.pem")}" PATH="$tmp/bin:$PATH" LOG="$LOG" NO_COLOR=1 bash "$script" "$@"; }
+  pcode() { set +e; prun "$@" >/dev/null 2>&1; local c=$?; set -e; echo "$c"; }
+  : > "$LOG"; rm -f "$tmp/srv/stable/version-latest.properties.sig"; [[ "$(pcode --yes --no-wizard)" == 1 ]] || fail 'a missing signature fails'
+  ! grep -q '^stage' "$LOG" || fail 'a stage ran without a signature'
+  sign; [[ "$(pcode --yes --no-wizard)" == 0 ]] || fail "a valid signature installs: $(prun --yes --no-wizard 2>&1 | tail -4)"
+  out="$(prun --yes --no-wizard 2>&1)"; [[ "$out" == *"signature verified"* ]] || fail "the signature is reported: $out"
+  : > "$LOG"; PUB="$(base64 -w0 "$tmp/o.pub")" pcode --yes --no-wizard | grep -q . ; [[ "$(PUB="$(base64 -w0 "$tmp/o.pub")" pcode --yes --no-wizard)" == 1 ]] || fail 'a signature by another key fails'
+  ! grep -q '^stage' "$LOG" || fail 'a stage ran after a bad signature'
+  printf 'version=0.12.0\ncommit=abc\nsha256=%s\nbootstrap_sha256=%s\nx=1\n' "$asha" "$bsha" > "$tmp/srv/stable/version-latest.properties"
+  [[ "$(pcode --yes --no-wizard)" == 1 ]] || fail 'edited release information fails'
+  printf 'version=0.12.0\ncommit=abc\nsha256=%s\nbootstrap_sha256=%s\n' "0000" "$bsha" > "$tmp/srv/stable/version-latest.properties"; sign
+  [[ "$(pcode --yes --no-wizard)" == 1 ]] || fail 'a binary that does not match the signed hash fails'
+fi
 # root is refused
 rc=0; env HOME="$tmp/home" BXCACHY_BASE_URL=http://fake PATH="$tmp/bin:$PATH" NO_COLOR=1 bash "$script" --yes >/dev/null 2>&1 || rc=$?
 [[ "$(id -u)" != 0 || "$rc" == 1 ]] || fail 'root is refused'

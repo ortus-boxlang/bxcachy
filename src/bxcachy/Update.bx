@@ -4,8 +4,11 @@
 //   check [--notify]             compares the running binary's SHA-256 with the one published for the channel
 //                                (BASE/CHANNEL/version-latest.properties); also counts pending system updates (`checkupdates`, pacman-contrib)
 //                                --notify shows a desktop notification when something is new (noctalia msg notification-show, else notify-send)
-//   apply [--yes]                downloads BASE/CHANNEL/bxcachy-linux-x86_64, verifies the SHA-256 from its .sha256 file, and replaces the
-//                                installed binary (same folder, atomic move). SHA-256 only, no signatures (owner decision 2026-11-13)
+//   apply [--yes]                downloads BASE/CHANNEL/bxcachy-linux-x86_64 and replaces the installed binary (same folder, atomic move)
+//                                after checking its SHA-256 against both its .sha256 file and the signed version-latest.properties
+//   signatures                   version-latest.properties is signed with Ed25519 (version-latest.properties.sig, verified with `openssl pkeyutl`
+//                                and the public key built into this binary from keys/release.pub). A bad or missing signature is exit 5. A build
+//                                without an embedded key (development) does not verify, only checks the SHA-256
 //   notifications on|off|status  a user timer (bxcachy-update-check.timer, daily) running `bxcachy update check --notify`
 //   system update [--yes]        snapshot first (snapper or timeshift when present), then `sudo pacman -Syu` and, with yay, `yay -Sua`
 // BASE is https://downloads.ortussolutions.com/ortussolutions/bxcachy (BXCACHY_BASE_URL overrides it). Exit: 0 done, 2 plan without --yes,
@@ -68,12 +71,46 @@ class Update {
         return r.exitCode == 0 ? listFirst( trim( r.output ), " " ) : "";
     }
 
+    // The public key file: BXCACHY_PUBKEY_FILE (tests), else the key embedded in this build, else "" (no signature check, a development build).
+    function pubKeyFile() {
+        var f = getSystemSetting( "BXCACHY_PUBKEY_FILE", "" );
+        if ( len( f ) ) return f;
+        var pem = new bxcachy.ReleaseKey().pem();
+        if ( !len( pem ) ) return "";
+        var tmp = reReplace( getTempDirectory(), "/+$", "" ) & "/bxcachy-pub-" & left( createUUID(), 8 ) & ".pem";
+        fileWrite( tmp, pem );
+        return tmp;
+    }
+
+    // The channel's version-latest.properties, verified with its .sig (Ed25519 via `openssl pkeyutl -verify -rawin`) when a public key is set.
+    // { ok, error, signed, ...properties }. With a key, a missing or bad signature is an error (a downgrade to unsigned is refused).
     function props( chan ) {
-        var r = tryExec( [ "curl", "-fsSL", "--max-time", "30", base() & "/" & arguments.chan & "/version-latest.properties" ], 60 );
-        if ( r.exitCode != 0 ) return { ok: false };
-        var out = { ok: true };
-        for ( var l in listToArray( r.output, chr( 10 ) ) ) if ( find( "=", l ) ) out[ listFirst( l, "=" ) ] = trim( listRest( l, "=" ) );
-        return out;
+        var dir = reReplace( getTempDirectory(), "/+$", "" ) & "/bxcachy-upd-" & left( createUUID(), 8 );
+        directoryCreate( dir, true );
+        try {
+            var got = tryExec( [ "curl", "-fsSL", "--max-time", "30", "-o", dir & "/p", base() & "/" & arguments.chan & "/version-latest.properties" ], 60 );
+            if ( got.exitCode != 0 ) return { ok: false, error: "unreachable" };
+            var key = pubKeyFile();
+            var signed = false;
+            if ( len( key ) ) {
+                var sg = tryExec( [ "curl", "-fsSL", "--max-time", "30", "-o", dir & "/p.sig", base() & "/" & arguments.chan & "/version-latest.properties.sig" ], 60 );
+                if ( sg.exitCode != 0 ) return { ok: false, error: "unsigned" };
+                var v = tryExec( [ "openssl", "pkeyutl", "-verify", "-pubin", "-inkey", key, "-rawin", "-in", dir & "/p", "-sigfile", dir & "/p.sig" ], 30 );
+                if ( v.exitCode != 0 ) return { ok: false, error: "signature" };
+                signed = true;
+            }
+            var out = { ok: true, signed: signed };
+            for ( var l in listToArray( fileRead( dir & "/p" ), chr( 10 ) ) ) if ( find( "=", l ) ) out[ listFirst( l, "=" ) ] = trim( listRest( l, "=" ) );
+            return out;
+        } finally {
+            try { directoryDelete( dir, true ); } catch ( any e ) {}
+        }
+    }
+
+    function propsFailure( p, chan, asJson ) {
+        if ( arguments.p.error == "signature" ) return say( 5, { error: "signature" }, arguments.asJson, [ "error: the release information for " & arguments.chan & " has an invalid signature. Nothing was changed." ] );
+        if ( arguments.p.error == "unsigned" ) return say( 5, { error: "unsigned" }, arguments.asJson, [ "error: the release information for " & arguments.chan & " is not signed. Nothing was changed." ] );
+        return say( 5, { error: "unreachable" }, arguments.asJson, [ "error: could not reach " & base() & "/" & arguments.chan & "/" ] );
     }
 
     function pendingSystem() {
@@ -91,7 +128,7 @@ class Update {
     function check( doNotify, asJson ) {
         var d = load();
         var p = props( d.channel );
-        if ( !p.ok ) return say( 5, { error: "could not reach the update server" }, arguments.asJson, [ "error: could not reach " & base() & "/" & d.channel & "/" ] );
+        if ( !p.ok ) return propsFailure( p, d.channel, arguments.asJson );
         var mine = sha( selfPath() );
         var newer = len( mine ) && structKeyExists( p, "sha256" ) && mine != p.sha256;
         var system = pendingSystem();
@@ -105,7 +142,7 @@ class Update {
     function apply( yes, asJson ) {
         var d = load();
         var p = props( d.channel );
-        if ( !p.ok ) return say( 5, { error: "could not reach the update server" }, arguments.asJson, [ "error: could not reach " & base() & "/" & d.channel & "/" ] );
+        if ( !p.ok ) return propsFailure( p, d.channel, arguments.asJson );
         var target = selfPath();
         if ( !len( target ) ) return say( 4, { error: "cannot find the installed bxcachy" }, arguments.asJson, [ "error: cannot find the installed bxcachy binary" ] );
         var data = { channel: d.channel, target: target, latest: p.version ?: "" };
@@ -115,7 +152,8 @@ class Update {
         var dl = tryExec( [ "curl", "-fsSL", "--max-time", "600", "-o", tmp, base() & "/" & d.channel & "/bxcachy-linux-x86_64" ], 700 );
         var sum = tryExec( [ "curl", "-fsSL", "--max-time", "30", base() & "/" & d.channel & "/bxcachy-linux-x86_64.sha256" ], 60 );
         if ( dl.exitCode != 0 || sum.exitCode != 0 ) { if ( fileExists( tmp ) ) fileDelete( tmp ); return say( 5, { error: "download failed" }, arguments.asJson, [ "error: the download failed" ] ); }
-        if ( listFirst( trim( sum.output ), " " ) != sha( tmp ) ) { fileDelete( tmp ); return say( 5, { error: "checksum mismatch" }, arguments.asJson, [ "error: the SHA-256 does not match; nothing was replaced" ] ); }
+        var got = sha( tmp );
+        if ( listFirst( trim( sum.output ), " " ) != got || ( structKeyExists( p, "sha256" ) && p.sha256 != got ) ) { fileDelete( tmp ); return say( 5, { error: "checksum mismatch" }, arguments.asJson, [ "error: the SHA-256 does not match; nothing was replaced" ] ); }
         tryExec( [ "chmod", "755", tmp ], 10 );
         var mv = tryExec( [ "mv", "-f", tmp, target ], 30 );
         if ( mv.exitCode != 0 ) { if ( fileExists( tmp ) ) fileDelete( tmp ); return say( 6, { error: trim( mv.output ) }, arguments.asJson, [ "error: could not replace " & target ] ); }

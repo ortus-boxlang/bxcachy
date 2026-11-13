@@ -21,12 +21,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          bash -n bootstrap/install.sh scripts/package-manager.sh tests/package-manager-test.sh tests/bootstrap-test.sh tests/native-smoke.sh tests/native-package-integration.sh scripts/config.sh tests/config-test.sh tests/config-native-test.sh tests/cli-contract-test.sh tests/catalog-test.sh tests/packages-test.sh tests/setup-test.sh tests/tiling-test.sh tests/keys-test.sh tests/keys-apply-test.sh tests/xremap-test.sh tests/assets-test.sh tests/noctalia-config-test.sh tests/hyprland-setup-test.sh tests/session-test.sh tests/shell-setup-test.sh tests/terminal-setup-test.sh tests/wizard-test.sh tests/init-test.sh tests/toolchain-test.sh tests/runner-test.sh tests/db-test.sh tests/dotfiles-test.sh tests/default-test.sh tests/secrets-test.sh tests/ai-test.sh tests/ai-shell-test.sh tests/ai-session-test.sh tests/ssh-keyboard-test.sh tests/menu-test.sh tests/containers-test.sh tests/utilities-test.sh tests/keys-editor-test.sh tests/web-vpn-test.sh tests/runtime-cloud-test.sh tests/apps-test.sh tests/status-test.sh tests/strata-test.sh tests/extras-test.sh tests/capture-notify-test.sh tests/plasma-panels-test.sh tests/boxlang-test.sh tests/macextras-test.sh tests/update-test.sh bootstrap/web-install.sh tests/web-install-test.sh bootstrap/gen-catalog.sh bootstrap/gen-templates.sh bootstrap/gen-assets.sh bootstrap/gen-wizard.sh scripts/get-matchbox.sh scripts/dev-build.sh
+          bash -n bootstrap/install.sh scripts/package-manager.sh tests/package-manager-test.sh tests/bootstrap-test.sh tests/native-smoke.sh tests/native-package-integration.sh scripts/config.sh tests/config-test.sh tests/config-native-test.sh tests/cli-contract-test.sh tests/catalog-test.sh tests/packages-test.sh tests/setup-test.sh tests/tiling-test.sh tests/keys-test.sh tests/keys-apply-test.sh tests/xremap-test.sh tests/assets-test.sh tests/noctalia-config-test.sh tests/hyprland-setup-test.sh tests/session-test.sh tests/shell-setup-test.sh tests/terminal-setup-test.sh tests/wizard-test.sh tests/init-test.sh tests/toolchain-test.sh tests/runner-test.sh tests/db-test.sh tests/dotfiles-test.sh tests/default-test.sh tests/secrets-test.sh tests/ai-test.sh tests/ai-shell-test.sh tests/ai-session-test.sh tests/ssh-keyboard-test.sh tests/menu-test.sh tests/containers-test.sh tests/utilities-test.sh tests/keys-editor-test.sh tests/web-vpn-test.sh tests/runtime-cloud-test.sh tests/apps-test.sh tests/status-test.sh tests/strata-test.sh tests/extras-test.sh tests/capture-notify-test.sh tests/plasma-panels-test.sh tests/boxlang-test.sh tests/macextras-test.sh tests/update-test.sh bootstrap/web-install.sh tests/web-install-test.sh bootstrap/gen-catalog.sh bootstrap/gen-releasekey.sh scripts/gen-signing-key.sh bootstrap/gen-templates.sh bootstrap/gen-assets.sh bootstrap/gen-wizard.sh scripts/get-matchbox.sh scripts/dev-build.sh
           test -s src/Main.bx -a -s src/Application.bx
           jq -e . catalog/apps.json >/dev/null
           bash bootstrap/gen-catalog.sh --check   # src/bxcachy/CatalogData.bx embeds the current catalog
           bash bootstrap/gen-assets.sh --check
           bash bootstrap/gen-templates.sh --check
+          bash bootstrap/gen-releasekey.sh --check
           bash bootstrap/gen-wizard.sh --check
           jq -e . box.json >/dev/null   # the manifest must be valid JSON
           for command in version doctor prerequisites desktop-list tui-list web-list optional-list optional-plan profile-list profile-plan plan apps-doctor dev-plan help; do
@@ -239,12 +240,30 @@ jobs:
             mkdir -p "$1"
             cp dist/bxcachy "$1/bxcachy-linux-x86_64"; echo "${sum}  bxcachy-linux-x86_64" > "$1/bxcachy-linux-x86_64.sha256"
             cp bootstrap.tar.gz "$1/bootstrap.tar.gz"; echo "${bsum}  bootstrap.tar.gz" > "$1/bootstrap.tar.gz.sha256"
-            printf 'version=%s\ncommit=%s\nsha256=%s\nchannel=%s\nbuiltAt=%s\n' "$VERSION" "${GITHUB_SHA::7}" "$sum" "$CHANNEL" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$1/version-latest.properties"
+            printf 'version=%s\ncommit=%s\nsha256=%s\nbootstrap_sha256=%s\nchannel=%s\nbuiltAt=%s\n' "$VERSION" "${GITHUB_SHA::7}" "$sum" "$bsum" "$CHANNEL" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$1/version-latest.properties"
           }
           layout "build/s3/$CHANNEL"
           if [[ "$CHANNEL" == beta ]]; then layout "build/s3/snapshots/${VERSION}-${GITHUB_SHA::7}"; else layout "build/s3/releases/${VERSION}"; fi
           cp bootstrap/web-install.sh build/s3/install.sh
           echo "channel=$CHANNEL version=$VERSION"
+      - name: Sign the release (Ed25519; the key is the secret BXCACHY_SIGNING_KEY, the public key is keys/release.pub)
+        env:
+          SIGNING_KEY: ${{ secrets.BXCACHY_SIGNING_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${SIGNING_KEY:-}" || ! -f keys/release.pub ]]; then
+            echo "::warning::BXCACHY_SIGNING_KEY or keys/release.pub is missing: publishing UNSIGNED (clients without a key check SHA-256 only; clients with a key refuse it)"
+            exit 0
+          fi
+          umask 077
+          printf '%s\n' "$SIGNING_KEY" > "$RUNNER_TEMP/release.key"
+          # the public key goes into the published installer, then everything is signed
+          sed -i "s|@@PUBKEY_B64@@|$(base64 -w0 keys/release.pub)|" build/s3/install.sh
+          for f in $(find build/s3 -name version-latest.properties) build/s3/install.sh; do
+            openssl pkeyutl -sign -rawin -inkey "$RUNNER_TEMP/release.key" -in "$f" -out "$f.sig"
+            openssl pkeyutl -verify -pubin -inkey keys/release.pub -rawin -in "$f" -sigfile "$f.sig"
+          done
+          rm -f "$RUNNER_TEMP/release.key"
       - name: Upload to S3 (public-read, never deletes older snapshots or releases)
         if: env.HAS_S3 == 'true'
         uses: jakejarvis/s3-sync-action@master
