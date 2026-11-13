@@ -92,8 +92,18 @@ class SystemState {
     }
 
     // `scan( spec )`: { answers: { qid: value or [values] }, installed: { qid: [values] } }; only questions the system has something to say about appear.
+    // Is there a battery (a laptop)? BXCACHY_POWER_DIR overrides /sys/class/power_supply for tests.
+    function hasBattery() {
+        var dir = getSystemSetting( "BXCACHY_POWER_DIR", "/sys/class/power_supply" );
+        if ( !directoryExists( dir ) ) return false;
+        for ( var d in directoryList( dir, false, "name" ) ) if ( reFind( "^BAT", d ) ) return true;
+        return false;
+    }
+
     function scan( spec ) {
         var out = { answers: {}, installed: {} };
+        // the laptop power question is a yes on a laptop and a no (ignored) on a desktop
+        for ( var pg0 in arguments.spec.pages ) for ( var q0 in pg0.questions ) if ( q0.id == "power_setup" ) out.answers.power_setup = hasBattery();
         for ( var pg in arguments.spec.pages ) for ( var q in pg.questions ) {
             if ( !arrayFind( [ "choice", "multi" ], q.type ) ) continue;
             var r = question( q );
@@ -107,7 +117,7 @@ class SystemState {
     // The wizard's starting answers for a mode: tune (saved answers merged with what the system has), rerun (saved only) or fresh (none).
     // Lists are joined (nothing you saved is dropped, nothing installed is missed); a single choice follows the system when it says something.
     function merge( saved, detected, mode ) {
-        if ( arguments.mode == "fresh" ) return {};
+        if ( arguments.mode == "fresh" ) return structKeyExists( arguments.detected, "power_setup" ) ? { power_setup: arguments.detected.power_setup } : {};
         if ( arguments.mode == "rerun" ) return arguments.saved;
         var out = {};
         for ( var k in structKeyArray( arguments.saved ) ) out[ k ] = arguments.saved[ k ];

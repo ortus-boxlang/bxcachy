@@ -572,10 +572,11 @@ class {
           if ( thSub == "set" && p.len() == 3 ) CLIExit( th.set( p[3], args.options.mode ?: "", structKeyExists( args.options, "keep-wallpaper" ), thDry, asJson ) );
           if ( ( thSub == "random" || thSub == "next" ) && p.len() == 2 ) CLIExit( th.set( th.pick( thSub ), args.options.mode ?: "", structKeyExists( args.options, "keep-wallpaper" ), thDry, asJson ) );
           if ( thSub == "mode" && p.len() == 3 ) CLIExit( th.mode( p[3], thDry, asJson ) );
+          if ( thSub == "vscode" && p.len() == 2 ) CLIExit( th.vscode( structKeyExists( args.options, "yes" ), thDry, asJson ) );
           if ( thSub == "install" && p.len() == 3 ) CLIExit( th.install( p[3], args.options.name ?: "", structKeyExists( args.options, "force" ), asJson ) );
           if ( thSub == "import" && p.len() == 3 ) CLIExit( th.importDir( p[3], args.options.name ?: "", structKeyExists( args.options, "force" ), asJson ) );
           if ( thSub == "remove" && p.len() == 3 ) CLIExit( th.remove( p[3], asJson ) );
-          println( "Usage: bxcachy theme list | show NAME | set NAME [--mode=theme|dark|light|auto] [--keep-wallpaper] | random | next | mode theme|dark|light|auto | install GIT_URL [--name=N] [--force] | import PATH [--name=N] [--force] | remove NAME | status [--dry-run] [--json]" );
+          println( "Usage: bxcachy theme list | show NAME | set NAME [--mode=theme|dark|light|auto] [--keep-wallpaper] | random | next | mode theme|dark|light|auto | install GIT_URL [--name=N] [--force] | import PATH [--name=N] [--force] | remove NAME | vscode [--yes] | status [--dry-run] [--json]" );
           CLIExit( 2 );
           break;
          case "notify":

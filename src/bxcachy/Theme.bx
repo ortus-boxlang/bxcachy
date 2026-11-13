@@ -130,8 +130,19 @@ class Theme {
             { name: "theme-alacritty", target: d & "/alacritty.toml", mode: "644", content: variables.tc.alacritty( arguments.c ) },
             { name: "theme-foot", target: d & "/foot.ini", mode: "644", content: variables.tc.foot( arguments.c ) },
             { name: "theme-btop", target: cfg() & "/btop/themes/bxcachy.theme", mode: "644", content: variables.tc.btop( arguments.c ) },
-            { name: "theme-hypr", target: d & "/hypr.lua", mode: "644", content: hyprAccent( arguments.c ) }
+            { name: "theme-hypr", target: d & "/hypr.lua", mode: "644", content: hyprAccent( arguments.c ) },
+            { name: "theme-tmux", target: d & "/tmux.conf", mode: "644", content: variables.tc.tmux( arguments.c ) },
+            { name: "theme-fzf", target: d & "/fzf.sh", mode: "644", content: variables.tc.fzf( arguments.c ) },
+            { name: "theme-rofi", target: d & "/rofi.rasi", mode: "644", content: variables.tc.rofi( arguments.c ) },
+            { name: "theme-gtk4", target: cfg() & "/gtk-4.0/gtk.css", mode: "644", content: variables.tc.gtk( arguments.c ) },
+            { name: "theme-gtk3", target: cfg() & "/gtk-3.0/gtk.css", mode: "644", content: variables.tc.gtk( arguments.c ) },
+            { name: "theme-qt6ct", target: cfg() & "/qt6ct/colors/bxcachy.conf", mode: "644", content: variables.tc.qtct( arguments.c ) },
+            { name: "theme-qt5ct", target: cfg() & "/qt5ct/colors/bxcachy.conf", mode: "644", content: variables.tc.qtct( arguments.c ) },
+            { name: "theme-fuzzel", target: cfg() & "/fuzzel/fuzzel.ini", mode: "644", content: variables.tc.fuzzel( arguments.c ) },
+            { name: "theme-wofi", target: cfg() & "/wofi/style.css", mode: "644", content: variables.tc.wofi( arguments.c ) }
         ];
+        // Rofi reads config.rasi: a stub that imports the generated theme, written only when you have none.
+        out.append( { name: "theme-rofi-config", target: cfg() & "/rofi/config.rasi", mode: "644", content: '@theme "' & d & '/rofi.rasi"' & chr( 10 ) } );
         if ( len( arguments.neovimText ) ) out.append( { name: "theme-neovim", target: variables.cfgSvc.stateDir() & "/current/theme/neovim.lua", mode: "644", content: arguments.neovimText } );
         return out;
     }
@@ -203,6 +214,10 @@ class Theme {
                       { id: "alacritty", file: cfg() & "/alacritty/alacritty.toml", line: 'import = ["' & d & '/alacritty.toml"] (under [general])' },
                       { id: "foot", file: cfg() & "/foot/foot.ini", line: "include=" & d & "/foot.ini" } ];
         for ( var c in cases ) if ( fileExists( c.file ) && !findNoCase( "bxcachy/theme", fileRead( c.file ) ) ) out.append( c.id & ": add `" & c.line & "` to " & c.file & " to follow the theme" );
+        var tm = home() & "/.tmux.conf";
+        if ( fileExists( tm ) && !findNoCase( "bxcachy/theme/tmux.conf", fileRead( tm ) ) ) out.append( "tmux: add `source-file " & d & "/tmux.conf` to " & tm & " to follow the theme" );
+        var rc = cfg() & "/rofi/config.rasi";
+        if ( fileExists( rc ) && !findNoCase( "bxcachy/theme/rofi.rasi", fileRead( rc ) ) ) out.append( 'rofi: add `@theme "' & d & '/rofi.rasi"` to ' & rc & " to follow the theme" );
         var bt = cfg() & "/btop/btop.conf";
         if ( fileExists( bt ) && !reFind( 'color_theme *= *"?bxcachy', fileRead( bt ) ) ) out.append( 'btop: set color_theme = "bxcachy" in ' & bt );
         return out;
@@ -210,7 +225,7 @@ class Theme {
 
     // Tells the running desktop. Returns { noctalia, plasma, hyprland, notes }.
     function notify( mode, wallpaper ) {
-        var out = { noctalia: "skipped", plasma: "skipped", hyprland: "skipped", notes: [] };
+        var out = { noctalia: "skipped", plasma: "skipped", hyprland: "skipped", gtk: "skipped", notes: [] };
         if ( has( "noctalia" ) ) {
             var a = tryExec( [ "noctalia", "msg", "color-scheme-set", "custom", "BxCachyTheme" ], 30 );
             var b = tryExec( [ "noctalia", "msg", "theme-mode-set", arguments.mode ], 30 );
@@ -228,6 +243,12 @@ class Theme {
         if ( findNoCase( "KDE", getSystemSetting( "XDG_CURRENT_DESKTOP", "" ) ) && has( "plasma-apply-colorscheme" ) ) {
             var kp = tryExec( [ "plasma-apply-colorscheme", arguments.mode == "light" ? "BreezeLight" : "BreezeDark" ], 30 );
             out.plasma = kp.exitCode == 0 ? "applied" : "failed";
+        }
+        out.gtk = "skipped";
+        if ( has( "gsettings" ) ) {
+            var gs = tryExec( [ "gsettings", "set", "org.gnome.desktop.interface", "color-scheme", arguments.mode == "light" ? "prefer-light" : "prefer-dark" ], 15 );
+            out.gtk = gs.exitCode == 0 ? "applied" : "failed";
+            if ( gs.exitCode == 0 && ( directoryExists( "/usr/share/themes/adw-gtk3" ) || directoryExists( home() & "/.local/share/themes/adw-gtk3" ) ) ) tryExec( [ "gsettings", "set", "org.gnome.desktop.interface", "gtk-theme", arguments.mode == "light" ? "adw-gtk3" : "adw-gtk3-dark" ], 15 );
         }
         if ( len( getSystemSetting( "HYPRLAND_INSTANCE_SIGNATURE", "" ) ) && has( "hyprctl" ) ) {
             out.hyprland = tryExec( [ "hyprctl", "reload" ], 20 ).exitCode == 0 ? "reloaded" : "failed";
@@ -259,12 +280,52 @@ class Theme {
         var n = notify( m, wall );
         data.noctalia = n.noctalia; data.plasma = n.plasma; data.hyprland = n.hyprland; data.notes = n.notes;
         var lines = [ "Theme: " & t.name & " (" & t.origin & ", " & ( data.light ? "light" : "dark" ) & ", mode " & m & ")", "Files: " & data.written.len() & " written, " & data.unchanged.len() & " unchanged" ];
-        lines.append( "Noctalia: " & n.noctalia & "  Plasma: " & n.plasma & "  Hyprland: " & n.hyprland );
+        lines.append( "Noctalia: " & n.noctalia & "  Plasma: " & n.plasma & "  Hyprland: " & n.hyprland & "  GTK: " & n.gtk );
         for ( var note in n.notes ) lines.append( "note: " & note );
         data.hints = hints();
         for ( var h in data.hints ) lines.append( "hint: " & h );
         if ( !len( t.neovimText ) ) lines.append( "note: this theme has no neovim.lua, so Neovim keeps its colourscheme" );
         return say( 0, data, arguments.asJson, lines );
+    }
+
+    // `vscode [--yes]`: puts the theme's colours into VS Code's settings.json (workbench.colorCustomizations). It edits your file, so it
+    // is a plan until --yes, takes a backup, and leaves a file it cannot read as plain JSON (comments, trailing commas) alone.
+    function vscode( yes = false, dry = false, asJson = false ) {
+        var st = readState();
+        var t = find( len( st.name ) ? st.name : "bxcachy" );
+        var p = variables.tc.parse( t.colorsText );
+        if ( !p.ok ) return say( 4, { error: "invalid theme" }, arguments.asJson, [ "error: the theme is not valid" ] );
+        var colors = variables.tc.vscode( p.colors );
+        var found = [];
+        for ( var app in [ "Code", "Code - OSS", "VSCodium", "Cursor" ] ) { var f = cfg() & "/" & app & "/User/settings.json"; if ( fileExists( f ) ) found.append( { app: app, file: f } ); }
+        if ( !found.len() ) return say( 4, { error: "no VS Code settings.json found" }, arguments.asJson, [ "error: no settings.json found for Code, Code - OSS, VSCodium or Cursor (start the editor once)" ] );
+        var plan = [];
+        var skipped = [];
+        for ( var x in found ) {
+            var cur = {};
+            try { cur = jsonDeserialize( fileRead( x.file ) ); } catch ( any e ) { skipped.append( x.app & ": settings.json has comments or trailing commas, so it is left alone (colours are in " & outDir() & "/vscode.json)" ); continue; }
+            plan.append( x );
+        }
+        var d = { theme: t.name, files: plan.map( function( y ) { return y.file; } ), skipped: skipped };
+        directoryCreate( outDir(), true, true );
+        fileWrite( outDir() & "/vscode.json", jsonSerialize( colors ) & chr( 10 ) );
+        if ( !arguments.yes || arguments.dry ) {
+            var lines = [ ( arguments.dry ? "Dry run: " : "Plan: " ) & "put the " & t.name & " colours into " & plan.len() & " VS Code settings file(s)" ];
+            for ( var pf in plan ) lines.append( "  " & pf.file );
+            for ( var sk in skipped ) lines.append( "  note: " & sk );
+            lines.append( "Your file is rewritten as plain JSON (a backup is kept; only workbench.colorCustomizations is changed)." );
+            lines.append( arguments.dry ? "Nothing was changed." : "Nothing was changed. Add --yes to apply." );
+            return say( arguments.dry ? 0 : 2, d, arguments.asJson, lines, arguments.dry );
+        }
+        for ( var u in plan ) {
+            var cfgJson = jsonDeserialize( fileRead( u.file ) );
+            var merged = structKeyExists( cfgJson, "workbench.colorCustomizations" ) && isStruct( cfgJson[ "workbench.colorCustomizations" ] ) ? cfgJson[ "workbench.colorCustomizations" ] : {};
+            for ( var k in colors ) merged[ k ] = colors[ k ];
+            cfgJson[ "workbench.colorCustomizations" ] = merged;
+            var e2 = { name: "vscode-" & replace( u.app, " ", "-", "all" ), target: u.file, mode: "644", content: jsonSerialize( cfgJson ) & chr( 10 ) };
+            if ( variables.cfgSvc.configWrite( e2, e2.content, "theme", true, false ) != 0 ) return say( 6, d, arguments.asJson, [ "error: could not write " & u.file ] );
+        }
+        return say( 0, d, arguments.asJson, [ "VS Code now uses the " & t.name & " colours (" & plan.len() & " file(s); a backup of each is in the config history)." ] & skipped );
     }
 
     // `mode`: how light or dark follows. theme = the theme's own; dark or light = pinned; auto = Noctalia switches by itself.

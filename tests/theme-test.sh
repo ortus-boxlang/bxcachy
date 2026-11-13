@@ -20,7 +20,7 @@ run "$binary" theme show bxcachy | grep -q 'accent #00ff78' || fail 'show'
 [[ "$(code "$binary" theme)" == 2 ]] || fail 'usage exits 2'
 
 # dry run changes nothing
-run "$binary" theme set catppuccin --dry-run --json | jq -e '.dry_run and (.data.files | length == 8)' >/dev/null || fail 'dry run plan'
+run "$binary" theme set catppuccin --dry-run --json | jq -e '.dry_run and (.data.files | length == 18)' >/dev/null || fail 'dry run plan'
 [[ ! -e "$tmp/cfg" ]] || fail 'dry run wrote files'
 
 # set a dark theme: files, then the desktop is told
@@ -35,7 +35,7 @@ grep -q 'noctalia msg color-scheme-set custom BxCachyTheme' "$LOG" && grep -q 'n
 jq -e '.name == "catppuccin" and .mode == "theme"' "$tmp/cfg/bxcachy/theme.json" >/dev/null || fail 'state file'
 
 # the same theme again: nothing rewritten; a light theme sets light; KDE gets Breeze; Hyprland reloads
-run "$binary" theme set catppuccin --json | jq -e '(.data.written | length == 0) and (.data.unchanged | length == 8)' >/dev/null || fail 'second set is a no-op'
+run "$binary" theme set catppuccin --json | jq -e '(.data.written | length == 0) and (.data.unchanged | length == 18)' >/dev/null || fail 'second set is a no-op'
 : > "$LOG"; XDG_CURRENT_DESKTOP=KDE HYPRLAND_INSTANCE_SIGNATURE=x run "$binary" theme set catppuccin-latte --json | jq -e '.data.applied_mode == "light" and .data.plasma == "applied" and .data.hyprland == "reloaded"' >/dev/null || fail 'light theme on KDE and Hyprland'
 grep -q 'noctalia msg theme-mode-set light' "$LOG" && grep -q 'plasma-apply-colorscheme BreezeLight' "$LOG" && grep -q 'hyprctl reload' "$LOG" || fail "light: $(cat "$LOG")"
 
@@ -53,7 +53,7 @@ run "$binary" theme mode theme >/dev/null; jq -e '.mode == "theme"' "$tmp/cfg/bx
 [[ "$(code "$binary" theme mode sideways)" == 2 ]] || fail 'bad mode value'
 
 # status, next, random
-run "$binary" theme status --json | jq -e '.data.name == "catppuccin" and (.data.files | map(select(.state == "clean")) | length == 8)' >/dev/null || fail 'status'
+run "$binary" theme status --json | jq -e '.data.name == "catppuccin" and (.data.files | map(select(.state == "clean")) | length == 18)' >/dev/null || fail 'status'
 run "$binary" theme next --json | jq -e '.ok and .data.theme != "catppuccin"' >/dev/null || fail 'next'
 before="$(jq -r .name "$tmp/cfg/bxcachy/theme.json")"; run "$binary" theme random >/dev/null; [[ "$(jq -r .name "$tmp/cfg/bxcachy/theme.json")" != "$before" ]] || fail 'random picks another theme'
 
@@ -126,4 +126,20 @@ run "$binary" theme import "$tmp/mine2" --name=ember >/dev/null; [[ -s "$tmp/cfg
 run "$binary" theme remove sunset >/dev/null; [[ ! -e "$tmp/cfg/bxcachy/themes/sunset" && ! -e "$tmp/cfg/bxcachy/nvim-themes/sunset.lua" ]] || fail 'remove'
 [[ "$(code "$binary" theme remove nord)" == 4 ]] || fail 'a bundled theme cannot be removed'
 [[ "$(code "$binary" theme remove nope)" == 4 ]] || fail 'unknown theme exits 4'
+
+# the wider machine: GTK, Qt, tmux, fzf, launchers
+run "$binary" theme set catppuccin >/dev/null
+grep -q '@define-color window_bg_color #1e1e2e' "$tmp/cfg/gtk-4.0/gtk.css" || fail 'gtk4 css'
+grep -q 'set -g status-style' "$tmp/cfg/bxcachy/theme/tmux.conf" || fail 'tmux conf'
+
+# theme vscode: plan first, then plain-JSON merge with a backup; files with comments are left alone
+mkdir -p "$tmp/cfg/Code/User" "$tmp/cfg/VSCodium/User"
+echo '{"editor.fontSize": 14, "workbench.colorCustomizations": {"keep.me": "#123456"}}' > "$tmp/cfg/Code/User/settings.json"
+printf '{\n // comment\n "a": 1,\n}\n' > "$tmp/cfg/VSCodium/User/settings.json"
+[[ "$(code "$binary" theme vscode)" == 2 ]] || fail 'vscode plan without --yes exits 2'
+grep -q 'keep.me' "$tmp/cfg/Code/User/settings.json" && ! grep -q 'editor.background' "$tmp/cfg/Code/User/settings.json" || fail 'vscode plan changed nothing'
+run "$binary" theme vscode --yes --json | jq -e '.ok and (.data.files | length == 1) and (.data.skipped | length == 1)' >/dev/null || fail 'vscode apply'
+jq -e '."editor.fontSize" == 14 and ."workbench.colorCustomizations"."keep.me" == "#123456" and ."workbench.colorCustomizations"."editor.background" == "#1e1e2e"' "$tmp/cfg/Code/User/settings.json" >/dev/null || fail 'vscode merge keeps other keys'
+grep -q '// comment' "$tmp/cfg/VSCodium/User/settings.json" || fail 'vscode file with comments untouched'
+rm -rf "$tmp/cfg/Code" "$tmp/cfg/VSCodium"; [[ "$(code "$binary" theme vscode --yes)" == 4 ]] || fail 'vscode without settings exits 4'
 echo "theme tests passed"

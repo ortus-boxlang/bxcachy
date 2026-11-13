@@ -36,5 +36,16 @@ check( "foot: colors-dark without hashes", find( "[colors-dark]", f ) > 0 && fin
 b = tc.btop( c );
 check( "btop: main_bg, the box colours and the 8 gradient steps", find( 'theme[main_bg] = "##303446"', b ) > 0 && find( "theme[gradient_color_7]", b ) > 0 && find( "theme[proc_box]", b ) > 0 );
 check( "hyprland: rgba border colour", tc.rgba( "##00ff78" ) == "rgba(00ff78ee)" );
+g4 = tc.gtk( c );
+check( "gtk: define-color list with accent and window colours", find( "@define-color accent_bg_color ##", g4 ) > 0 && find( "@define-color window_bg_color ##303446", g4 ) > 0 && find( "@define-color sidebar_bg_color", g4 ) > 0 );
+q = tc.qtct( c );
+check( "qtct: three schemes of 21 ARGB roles", listLen( listGetAt( q, 2, chr( 10 ) ), "," ) == 21 && find( "disabled_colors=", q ) > 0 && find( "inactive_colors=", q ) > 0 );
+check( "tmux: status, pane border and mode styles", find( "set -g status-style", tc.tmux( c ) ) > 0 && find( "pane-active-border-style", tc.tmux( c ) ) > 0 );
+check( "fzf: FZF_DEFAULT_OPTS with the colours", find( "FZF_DEFAULT_OPTS", tc.fzf( c ) ) > 0 && find( "bg:##303446", tc.fzf( c ) ) > 0 );
+check( "rofi: window and element selected", find( "window {", tc.rofi( c ) ) > 0 && find( "element selected.normal", tc.rofi( c ) ) > 0 );
+check( "fuzzel: colours are 8 hex digits", reFind( "background=[0-9a-f]{8}", tc.fuzzel( c ) ) && reFind( "selection=[0-9a-f]{8}", tc.fuzzel( c ) ) );
+check( "wofi: entry selected uses the accent", find( "##entry:selected", tc.wofi( c ) ) > 0 );
+vs = tc.vscode( c );
+check( "vscode: editor, status bar and 16 terminal colours", vs[ "editor.background" ] == "##303446" && structKeyExists( vs, "statusBar.background" ) && structKeyExists( vs, "terminal.ansiBrightWhite" ) && structKeyExists( vs, "terminal.ansiBlack" ) );
 if ( failures > 0 ) { println( failures & " failed" ); exit( 1 ); }
 println( "all passed" );

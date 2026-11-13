@@ -110,4 +110,8 @@ PY
 [[ "$(stat -c %a "$tmp/cfg/bxcachy/answers.json")" == 600 ]] || fail 'answers.json must be mode 600'
 run "$binary" init --print-answers | jq -e '.desktops == "hyprland" and .shell == "zsh" and .terminal == "ghostty" and (has("login_session") | not)' >/dev/null || fail "saved answers: $(run "$binary" init --print-answers)"
 [[ ! -s "$LOG" ]] || fail '--dry-run ran commands'
+# the laptop power question: yes on a laptop, no on a desktop
+mkdir -p "$tmp/ps/BAT0" "$tmp/ps/none"
+BXCACHY_POWER_DIR="$tmp/ps" run "$binary" init --print-answers --from-system | jq -e '.power_setup == true' >/dev/null || fail 'power_setup is yes on a laptop'
+BXCACHY_POWER_DIR="$tmp/ps/none" run "$binary" init --print-answers --from-system | jq -e '.power_setup == false' >/dev/null || fail 'power_setup is no on a desktop'
 echo "init tests passed"

@@ -2065,6 +2065,13 @@
           "label": "Notify me about updates",
           "default": true,
           "help": "A daily check; you get a desktop notification when BxCachy or the system has updates. Turn off with: bxcachy update notifications off."
+        },
+        {
+          "type": "confirm",
+          "id": "power_setup",
+          "label": "Laptop power tools",
+          "default": true,
+          "help": "Power profiles, battery information and what closing the lid does. Chosen by default on a laptop; on a desktop it does nothing."
         }
       ]
     },
