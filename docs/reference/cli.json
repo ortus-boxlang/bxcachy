@@ -882,6 +882,20 @@
      "note": "It needs a terminal (also available as bxtimemachine). Restore, export, send and back up now show the plan first and change nothing until you press y. --local skips the network targets so it opens at once; --demo shows made-up data and runs nothing."
     },
     {
+     "name": "tui",
+     "summary": "Control Center: every BxCachy screen in one terminal, starting with the Dashboard.",
+     "usage": [
+      "tui [PAGE] [--demo] [--json]"
+     ],
+     "examples": [
+      "bxcachy tui",
+      "bxcachy tui dashboard --json",
+      "bxcachy tui --demo"
+     ],
+     "mutates": false,
+     "note": "It needs a terminal. The sidebar lists the pages; Tab switches page, q leaves. The Dashboard shows what needs attention, system meters, what runs and your backups, and Enter on a warning shows the plan of the fix before anything changes. --json prints a page's data without a terminal; --demo shows made-up data and runs nothing."
+    },
+    {
      "name": "bxtimemachine",
      "summary": "The same as timemachine: BxTimeMachine, your backups through time.",
      "usage": [

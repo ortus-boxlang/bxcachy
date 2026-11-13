@@ -1,0 +1,50 @@
+// Draws the Control Center: a frame with the page list on the left, the open page on the right, the key hints along the bottom and the plan box on top.
+// paint( app, tick, width, height ) records the frame; a test reads it back with tui.render_to_string. hitAt( x, y ) says what a click there does.
+class ControlCenterView {
+    function init( tui ) {
+        variables.kit = new bxcachy.TuiKit( arguments.tui );
+        variables.sideW = 16;
+        return this;
+    }
+
+    function hitAt( x, y ) { return variables.kit.hitAt( arguments.x, arguments.y ); }
+
+    function paint( app, tick, width, height ) {
+        var k = variables.kit;
+        var C = function( n ) { return k.color( n ); };
+        var phase = ( arguments.tick mod 120 ) / 120;
+        k.clearHits();
+        k.fillRect( 0, 0, arguments.width, arguments.height, C( "BASE" ) );
+        var sw = variables.sideW;
+        // sidebar
+        k.fillRect( 0, 0, sw, arguments.height - 1, C( "MANTLE" ) );
+        k.gtext( 2, 1, "BxCachy", true, phase, C( "MANTLE" ) );
+        k.put( 2, 2, "Control Center", C( "OVERLAY" ), C( "MANTLE" ) );
+        var i = 0;
+        for ( var p in arguments.app.pageList() ) {
+            i++;
+            var on = i == arguments.app.index();
+            var y = 3 + i;
+            if ( on ) k.fillRect( 0, y, sw, 1, C( "SURFACE0" ) );
+            var bg = on ? C( "SURFACE0" ) : C( "MANTLE" );
+            k.put( 1, y, on ? ( arguments.app.focus() == "sidebar" ? "▸" : "▪" ) : " ", C( "GREEN" ), bg, true );
+            k.put( 3, y, k.trunc( p.title(), sw - 4 ), on ? C( "GREEN" ) : C( "TEXT" ), bg, on );
+            k.hit( "nav", 0, y, sw, 1, i );
+        }
+        k.put( 2, arguments.height - 3, "tab  next page", C( "OVERLAY" ), C( "MANTLE" ) );
+        // the page
+        var px = sw + 2;
+        var pw = arguments.width - px - 1;
+        var ph = arguments.height - 3;
+        arguments.app.page().paint( k, px, 1, pw, ph, arguments.tick, phase );
+        // key hints
+        var hints = arguments.app.page().keys();
+        hints.append( [ "tab", "pages" ] ); hints.append( [ "q", "quit" ] );
+        k.keybar( 0, arguments.height - 1, arguments.width, hints );
+        if ( len( arguments.app.message() ) ) k.toast( arguments.width, arguments.height - 2, arguments.app.message(), "info" );
+        // plan box
+        var m = arguments.app.modal();
+        if ( arguments.app.mode() == "confirm" ) k.confirmModal( arguments.width, arguments.height, m.title, m.lines, phase );
+        else if ( arguments.app.mode() == "result" ) k.modal( arguments.width, arguments.height, m.title, m.lines, [], phase );
+    }
+}

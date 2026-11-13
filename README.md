@@ -51,6 +51,7 @@ bxcachy appearance bar position bottom
 bxcachy display scale DP-2 1.5
 bxcachy time sync --yes         # after you travel
 bxcachy timemachine             # every backup on one timeline
+bxcachy tui                     # the Control Center: dashboard and pages
 bxcachy help                    # every command, or: bxcachy help appearance
 bxcachy vm create linux dev     # a Linux desktop in a container
 bxcachy db start postgres --yes

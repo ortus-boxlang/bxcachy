@@ -753,6 +753,16 @@ The wizard asks the window layout once per desktop you set up: Hyprland (`layout
 - `backup data run --all` (used by the schedule) backs up every place that is set up; `backup data default NAME` chooses the place used without `--target`.
 - **Verified:** `tests/init_plan_test.bxs` (the steps for a Synology over SMB, NFS, S3, Google, a disk, a missing address) and the wizard tests (13 pages in Basic mode).
 
+### 13.46 The TUI kit and the Control Center (decided with the owner 2026-11-13)
+
+- **Kit** (`TuiKit`, `TuiList`, `TuiRunner`): every terminal screen paints with one kit (palette, text, gradient, panels, click regions, tabs, scrolling list, modal and plan box, toast, key bar, meter, badge, sparkline), keeps list state in `TuiList` (cursor, scroll, filter) and runs through `TuiRunner` (one loop that always restores the terminal). The wizard and BxTimeMachine use it; their tests did not change.
+- **Command:** `tui [PAGE] [--demo] [--json]`. Without `--json` it needs a terminal (exit 4 without one). `--json` prints the page's data (`{ data, attention, cursor }`) and exits 0; an unknown page or more than one word exits 2. `--demo` uses made-up data and runs nothing.
+- **Page interface:** a class with `id() title() load() keys() paint( kit, x, y, w, h, tick, phase ) onKey( key ) act( hit ) onScroll( dir )`. A key, click or scroll returns an intent: `{}`, `{ action: "goto", page }`, `{ action: "launch", target }` (leave and run that screen, then come back to the same page) or `{ action: "cli", title, args }`. A `cli` intent first runs the command with `--dry-run` and shows the output as the plan; only `y` runs it with `--yes`, and the result box follows.
+- **Keys:** Tab and Shift+Tab (or `]` and `[`) change page, Left moves to the sidebar, Right or Enter returns, q, Escape and Ctrl+c leave.
+- **Dashboard** (built): needs attention (updates from `checkupdates` when installed, backups older than 2 days or none, disk 85% or more, battery 20% or less and not charging), system meters (`/proc`, `df`, `/sys/class/power_supply`, `BXCACHY_POWER_DIR`), machines (`db list --json` and `vm list --json`) and backups (the timeline, `--local`). Every part is read alone; a part that fails is left out. `BXCACHY_DASHBOARD_FILE` (a JSON file) replaces the machine for tests.
+- **Next pages, in order:** BoxLang Central, Java Manager, Version Managers (`bvm`, `mvm`, `nvm`), Ports and Processes, Packages, Shortcuts, Machines, Storage, Secrets, Themes, Logs, then BxTimeMachine as a page.
+- **Known MatchBox quirk:** reading a missing key of a parsed JSON struct inside a try block in a nested function panicked the native runner while the interpreter did not; the code checks the key first. To be reproduced and reported upstream.
+
 ## 14. Install and the setup wizard (decided with the owner 2026-11-10; install, wizard and the init engine are built, the pages' later commands are not)
 
 ### 14.1 Install

@@ -542,6 +542,22 @@ class {
            CLIExit( 4 );
           }
           break;
+         case "tui":
+          // The Control Center: every BxCachy screen in one terminal. See COMMAND-CONTRACT.md 13.46.
+          ccPage = p.len() >= 2 ? p[ 2 ] : "dashboard";
+          ccDemo = structKeyExists( args.options, "demo" );
+          if ( p.len() > 2 ) {
+           println( "Usage: bxcachy tui [PAGE] [--demo] [--json]" );
+           CLIExit( 2 );
+          }
+          if ( asJson ) CLIExit( new bxcachy.ControlCenter( cli ).dump( ccPage, ccDemo, true ) );
+          try {
+           CLIExit( new bxcachy.ControlCenter( cli ).run( ccPage, ccDemo ) );
+          } catch ( any ccErr ) {
+           println( "bxcachy tui needs a terminal (" & ccErr.message & ")." );
+           CLIExit( 4 );
+          }
+          break;
          case "vm":
           // Windows and Linux desktops in containers. See COMMAND-CONTRACT.md 13.33.
           vmSub = p.len() >= 2 ? p[2] : "list";

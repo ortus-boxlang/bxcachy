@@ -1,0 +1,6 @@
+// A stand-in for DashboardData that returns made-up data, for `bxcachy tui --demo` and tests.
+class DashboardDemo {
+    function init( real ) { variables.real = arguments.real; return this; }
+    function collect() { return variables.real.demo(); }
+    function attention( data ) { return variables.real.attention( arguments.data ); }
+}

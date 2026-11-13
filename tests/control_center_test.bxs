@@ -1,0 +1,52 @@
+// Control Center: the dashboard data and attention list, the shell model (pages, focus, intents, plan box) and what the screen shows.
+// Run from src/: (cd src && matchbox ../tests/control_center_test.bxs)
+failures = 0;
+function check( label, ok ) { if ( ok ) println( "ok   " & label ); else { println( "FAIL " & label ); failures++; } }
+dd = new bxcachy.DashboardData( {} );
+d = dd.demo();
+att = dd.attention( d );
+check( "attention: updates, a stale backup and nothing else in the demo", att.len() == 2 && att[ 1 ].text == "14 updates available" && find( "Files nas backup is 3 days old", att[ 2 ].text ) > 0 );
+d2 = dd.demo(); d2.updates = 0; d2.backups = []; d2.disk.used = 450000000000; d2.battery.percent = 12;
+a2 = dd.attention( d2 );
+check( "attention: a full disk and a low battery", a2.len() == 2 && a2[ 1 ].level == "warn" && a2[ 2 ].level == "error" && find( "Battery at 12%", a2[ 2 ].text ) > 0 );
+d3 = dd.demo(); d3.updates = -1; d3.backups = [ { id: "config", label: "Config", count: 0, latest: 0, error: "", ages: [] } ];
+check( "attention: unknown updates are not a warning, no backup yet is", dd.attention( d3 ).len() == 1 && find( "no backup yet", dd.attention( d3 )[ 1 ].text ) > 0 );
+check( "data: the real collect never fails and has the parts", structKeyExists( dd.collect(), "mem" ) && structKeyExists( dd.collect(), "backups" ) );
+
+page = new bxcachy.DashboardPage( new bxcachy.DashboardDemo( dd ) );
+app = new bxcachy.ControlCenterApp( [ page ], "dashboard" );
+check( "app: starts running on the dashboard", app.outcome() == "running" && app.page().id() == "dashboard" && app.focus() == "page" );
+it = app.onKey( "Enter" );
+check( "app: Enter on the first warning asks for the system update plan", it.action == "cli" && it.args[ 1 ] == "system" && it.args[ 2 ] == "update" );
+app.showPlan( it.title, [ "Plan: update" ], it );
+check( "app: the plan box waits for y", app.mode() == "confirm" && structCount( app.onKey( "x" ) ) == 0 && app.mode() == "confirm" );
+yes = app.onKey( "y" );
+check( "app: y returns the confirmed intent", yes.confirmed == true && app.mode() == "main" );
+app.showPlan( it.title, [ "Plan" ], it ); app.onKey( "n" );
+check( "app: n drops the plan", app.mode() == "main" );
+check( "app: b leaves for BxTimeMachine", structCount( app.onKey( "b" ) ) == 0 && app.outcome() == "launch:timemachine" );
+
+app2 = new bxcachy.ControlCenterApp( [ new bxcachy.DashboardPage( new bxcachy.DashboardDemo( dd ) ) ], "dashboard" );
+app2.onKey( "Down" ); check( "page: Down moves the attention cursor", app2.page().state().cursor == 2 );
+app2.onKey( "Left" ); check( "app: Left moves focus to the sidebar", app2.focus() == "sidebar" );
+app2.onKey( "Right" ); check( "app: Right goes back to the page", app2.focus() == "page" );
+app2.onKey( "q" ); check( "app: q quits", app2.outcome() == "quit" );
+app3 = new bxcachy.ControlCenterApp( [ new bxcachy.DashboardPage( new bxcachy.DashboardDemo( dd ) ) ], "" );
+app3.onKey( "Ctrl+c" ); check( "app: Ctrl+c quits", app3.outcome() == "quit" );
+check( "app: a click on a warning returns its intent", new bxcachy.ControlCenterApp( [ new bxcachy.DashboardPage( new bxcachy.DashboardDemo( dd ) ) ], "" ).act( { kind: "att", n: 1, m: 0 } ).action == "cli" );
+
+tui = createObject( "rust", "tui.TUI" );
+view = new bxcachy.ControlCenterView( tui );
+app4 = new bxcachy.ControlCenterApp( [ new bxcachy.DashboardPage( new bxcachy.DashboardDemo( dd ) ) ], "" );
+view.paint( app4, 100, 110, 34 );
+s = tui.render_to_string( 110, 34 );
+check( "screen: sidebar, header and the meters", find( "Control Center", s ) > 0 && find( "Dashboard", s ) > 0 && find( "orion", s ) > 0 && find( "CachyOS", s ) > 0 && find( "CPU", s ) > 0 && find( "RAM", s ) > 0 );
+check( "screen: attention, machines and backups", find( "Needs attention", s ) > 0 && find( "14 updates available", s ) > 0 && find( "postgres", s ) > 0 && find( "win11", s ) > 0 && find( "Files nas", s ) > 0 && find( "3 days ago", s ) > 0 );
+check( "screen: key hints", find( "quit", s ) > 0 && find( "pages", s ) > 0 );
+check( "screen: a click on the first warning and on the sidebar", view.hitAt( 25, 5 ).kind == "att" && view.hitAt( 3, 4 ).kind == "nav" );
+app4.showPlan( "System update", [ "Plan: pacman -Syu" ], it );
+view.paint( app4, 101, 110, 34 );
+s2 = tui.render_to_string( 110, 34 );
+check( "screen: the plan box", find( "System update", s2 ) > 0 && find( "Plan: pacman -Syu", s2 ) > 0 && find( "do it", s2 ) > 0 );
+if ( failures > 0 ) { println( failures & " failed" ); exit( 1 ); }
+println( "all passed" );

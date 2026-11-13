@@ -1,0 +1,85 @@
+// Runs the Control Center, one terminal for all BxCachy screens: `bxcachy tui [PAGE] [--demo]`.
+//   bxcachy tui                open the Control Center on the Dashboard
+//   bxcachy tui PAGE           open on a page (dashboard)
+//   bxcachy tui PAGE --json    print that page's data and exit (no terminal needed), for scripts and tests
+//   --demo                     made-up data, nothing is run
+// A page can send you to a full screen such as BxTimeMachine (`launch`); when you leave it you come back to the same page.
+// Everything that changes something shows the plan first (the same command with --dry-run), and only a y runs it.
+// Exit: 0 after leaving, 2 for an unknown page, 4 when there is no terminal.
+class ControlCenter {
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.runner = arguments.runner;
+        return this;
+    }
+
+    function self() { return getSystemSetting( "BXCACHY_SELF", "bxcachy" ); }
+
+    function pageIds() { return [ "dashboard" ]; }
+
+    function provider( demo ) {
+        var dd = new bxcachy.DashboardData( variables.cli, variables.runner );
+        return arguments.demo ? new bxcachy.DashboardDemo( dd ) : dd;
+    }
+
+    function buildPages( demo ) {
+        return [ new bxcachy.DashboardPage( provider( arguments.demo ) ) ];
+    }
+
+    function runCli( args ) {
+        try { return systemExecute( self(), arguments.args, 1800, true ); } catch ( any e ) { return { exitCode: 127, output: e.message }; }
+    }
+
+    function withFlag( args, flag ) {
+        var out = [];
+        for ( var a in arguments.args ) out.append( a );
+        out.append( arguments.flag );
+        return out;
+    }
+
+    function handle( app, intent ) {
+        if ( !structCount( arguments.intent ) || arguments.intent.action != "cli" ) return;
+        var args = arguments.intent.args;
+        if ( !structKeyExists( arguments.intent, "confirmed" ) ) {
+            var r = runCli( withFlag( args, "--dry-run" ) );
+            arguments.app.showPlan( arguments.intent.title, listToArray( trim( r.output ), chr( 10 ) ), arguments.intent );
+            return;
+        }
+        var res = runCli( withFlag( args, "--yes" ) );
+        arguments.app.showResult( arguments.intent.title & ( res.exitCode == 0 ? ": done" : ": failed (exit " & res.exitCode & ")" ), listToArray( trim( res.output ), chr( 10 ) ) );
+    }
+
+    // Prints the data of a page without a terminal.
+    function dump( pageId, demo, asJson ) {
+        var pages = buildPages( arguments.demo );
+        for ( var p in pages ) if ( p.id() == arguments.pageId ) {
+            p.load();
+            var st = p.state();
+            if ( arguments.asJson ) println( variables.cli.envelope( "tui " & p.id(), 0, st ) );
+            else { println( p.title() & ": " & st.attention.len() & " things to look at" ); for ( var a in st.attention ) println( "  " & a.text ); }
+            return 0;
+        }
+        println( "Unknown page " & arguments.pageId & ". Pages: " & pageIds().toList( ", " ) );
+        return 2;
+    }
+
+    function run( pageId = "dashboard", demo = false ) {
+        var start = arguments.pageId;
+        var me = this;
+        while ( true ) {
+            var app = new bxcachy.ControlCenterApp( buildPages( arguments.demo ), start );
+            new bxcachy.TuiRunner().run(
+                app,
+                function( tui ) { return new bxcachy.ControlCenterView( tui ); },
+                function( intent ) { me.handle( app, intent ); }
+            );
+            start = app.page().id();
+            var out = app.outcome();
+            if ( left( out, 7 ) != "launch:" ) break;
+            var target = mid( out, 8, 40 );
+            if ( target == "timemachine" ) new bxcachy.TimeMachine( variables.cli, variables.runner ).run( arguments.demo ? { demo: true } : { local: true } );
+            else break;
+        }
+        return 0;
+    }
+}
