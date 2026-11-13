@@ -700,6 +700,18 @@ The wizard asks the window layout once per desktop you set up: Hyprland (`layout
 - **Drift checks:** `gen-docs.sh --check` fails when a command in `src/Main.bx` has no entry, an entry has no command, a usage line does not start with its command, an example names no real command, a summary does not end in a full stop, or the text contains an em dash. The usage lines of older commands are copied from the usage text in `src/Main.bx`; the newer classes (`appearance`, `display`, `power`, `time`, `toggle`, `dns`, `kernel`, `security`) print their own usage, so their entries are written by hand and must be updated with the class.
 - **Verified:** `tests/help-test.sh` (the groups, a command, JSON, unknown, and that the generated files are current).
 
+### 13.41 NAS as a first-class namespace (decided with the owner 2026-11-13)
+
+- **`bxcachy nas`** keeps every NAS you use in `~/.config/bxcachy/nas.json` (name, host, protocol `smb` or `nfs`, user, optional SMB version, and the shares you mounted). `discover` browses the network with `avahi-browse -rtp _smb._tcp` and `_nfs._tcp` (IPv4 only). `setup` installs `cifs-utils nfs-utils smbclient avahi nss-mdns rsync` and enables `avahi-daemon` (a plan without `--yes`; every tool was checked in the Arch repos and its binary exists after install).
+- **`add NAME --host=H`** needs `--user` and a password for SMB (`--ask-password`, typed hidden, or `--password-file=F`); the password goes to the keyring as `BXCACHY_NAS_<NAME>_PASSWORD` and never into `nas.json`. NFS needs neither. Names are `^[a-z][a-z0-9-]{0,30}$`.
+- **`shares NAME`** lists SMB shares with `smbclient -g -L HOST -A AUTHFILE` (the auth file is a private temp file, deleted after; no password on a command line; `IPC$` and other hidden shares are dropped) or NFS exports with `showmount -e --no-headers`.
+- **`mount|unmount NAME SHARE`** mounts at `~/NAS/NAME/LEAF` (`BXCACHY_NAS_HOME` overrides) with `sudo mount -t cifs|nfs`; the SMB options are `credentials=/etc/bxcachy/nas/NAME.cred,uid,gid,iocharset=utf8,file_mode=0600,dir_mode=0700` plus `vers=` only when you set one (otherwise the kernel negotiates the highest version both sides support). **The credentials file is root-only (mode 600) because `mount.cifs` reads it as root**; the plan says so.
+- **`auto on|off NAME SHARE`** writes `<escaped-path>.mount` and `.automount` units to `/etc/systemd/system` (`Options=...,nofail`, `TimeoutSec=20`, `TimeoutIdleSec=600`, wanted by `multi-user.target`), runs `daemon-reload` and `enable --now`, so a sleeping NAS never blocks login. `off` disables and removes them; a NAS with automatic mounts is not removed (exit 4) until they are off.
+- **`test NAME [SHARE]`** checks: reachable (TCP 445 or 2049), signed in or exports readable, mounted (`findmnt`), writable (a probe file), free space. Exit 4 when a check fails.
+- **`sync NAME SRC --to=SHARE[/PATH]`** is a plain `rsync -a` mirror to a mounted share. Nothing is deleted from the NAS unless you add `--delete`, and the plan says so in capitals.
+- **`use NAME SHARE [--path=bxcachy-backup]`** records `targets.nas-NAME` in `~/.config/bxcachy/backup.json` (`{type: nas, nas, share, path}`); `backup data setup` reads it.
+- **Verified:** `tests/nas-test.sh` with fake avahi-browse, smbclient, showmount, findmnt, rsync, sudo and a fake `/etc`. **Not verified on a real Synology:** DSM share permissions, SMB signing, NFS export options, `nss-mdns` name resolution.
+
 ## 14. Install and the setup wizard (decided with the owner 2026-11-10; install, wizard and the init engine are built, the pages' later commands are not)
 
 ### 14.1 Install

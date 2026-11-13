@@ -53,7 +53,7 @@ Settings that only touch your own config (a theme, the bar, the font) act at onc
 
 **Look and feel**: [`theme`](#bxcachy-theme), [`appearance`](#bxcachy-appearance), [`display`](#bxcachy-display), [`power`](#bxcachy-power), [`time`](#bxcachy-time), [`toggle`](#bxcachy-toggle), [`nightshift`](#bxcachy-nightshift), [`notify`](#bxcachy-notify)
 
-**System and security**: [`system`](#bxcachy-system), [`security`](#bxcachy-security), [`dns`](#bxcachy-dns), [`kernel`](#bxcachy-kernel), [`ssh`](#bxcachy-ssh), [`secrets`](#bxcachy-secrets), [`vpn`](#bxcachy-vpn), [`cloud`](#bxcachy-cloud), [`settings`](#bxcachy-settings), [`dotfiles`](#bxcachy-dotfiles)
+**System and security**: [`system`](#bxcachy-system), [`security`](#bxcachy-security), [`dns`](#bxcachy-dns), [`kernel`](#bxcachy-kernel), [`ssh`](#bxcachy-ssh), [`secrets`](#bxcachy-secrets), [`vpn`](#bxcachy-vpn), [`cloud`](#bxcachy-cloud), [`settings`](#bxcachy-settings), [`dotfiles`](#bxcachy-dotfiles), [`nas`](#bxcachy-nas)
 
 **Develop**: [`boxlang`](#bxcachy-boxlang), [`editor`](#bxcachy-editor), [`db`](#bxcachy-db), [`containers`](#bxcachy-containers), [`vm`](#bxcachy-vm), [`ai`](#bxcachy-ai), [`skills`](#bxcachy-skills)
 
@@ -906,6 +906,36 @@ Changes the system: needs `--yes`. Without it you get the plan (exit 2); `--dry-
 bxcachy dotfiles plan https://github.com/me/dotfiles
 bxcachy dotfiles apply https://github.com/me/dotfiles --yes
 ```
+
+### `bxcachy nas` {#bxcachy-nas}
+
+Your NAS boxes: find them, save their details, list shares, mount them (also automatically), test them, mirror folders to them, use one as a backup target.
+
+```text
+bxcachy nas setup [--yes]
+bxcachy nas discover [--json]
+bxcachy nas add NAME --host=H [--protocol=smb|nfs] [--user=U] [--vers=3.1.1] [--ask-password | --password-file=F]
+bxcachy nas list | show NAME | remove NAME [--yes]
+bxcachy nas shares NAME
+bxcachy nas mount|unmount NAME SHARE [--yes]
+bxcachy nas auto on|off NAME SHARE [--yes]
+bxcachy nas test NAME [SHARE]
+bxcachy nas sync NAME SRC --to=SHARE[/PATH] [--delete] [--yes]
+bxcachy nas use NAME SHARE [--path=bxcachy-backup]
+```
+
+Changes the system: needs `--yes`. Without it you get the plan (exit 2); `--dry-run` shows it and exits 0.
+
+```bash
+bxcachy nas discover
+bxcachy nas add synology --host=ds920.local --user=me --ask-password
+bxcachy nas shares synology
+bxcachy nas mount synology backups --yes
+bxcachy nas auto on synology backups --yes
+bxcachy nas use synology backups
+```
+
+> SMB mounts are made by root, so the password is also kept in /etc/bxcachy/nas/NAME.cred (mode 600); the plan says so. The SMB version is negotiated unless you give --vers. Nothing on the NAS is deleted unless you add --delete to a sync.
 
 ## Develop
 
