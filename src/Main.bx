@@ -15,7 +15,7 @@ class {
         var config = new bxcachy.ConfigService();
         // One shared flag check for every command: unknown flags are usage errors and nothing runs.
         for ( var flag in args.options ) {
-            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider", "backend", "dir", "email", "region", "browser", "path", "from", "export", "from-system", "fresh", "rerun", "fix", "edit", "history", "out", "agenda", "without-weather", "desktops", "preset", "no-open", "location", "notify", "defaults", "tag", "mode", "keep-wallpaper" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
+            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider", "backend", "dir", "email", "region", "browser", "path", "from", "export", "from-system", "fresh", "rerun", "fix", "edit", "history", "out", "agenda", "without-weather", "desktops", "preset", "no-open", "location", "notify", "defaults", "tag", "mode", "keep-wallpaper", "version", "tag", "ram", "cpus", "disk", "memory", "share", "gpu", "web", "fullscreen" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
                 println( "Unknown option: --" & flag );
                 CLIExit( 2 );
             }
@@ -437,6 +437,25 @@ class {
          case "qr":
           if ( p.len() == 2 ) CLIExit( new bxcachy.Screenshot( cli ).qrMake( p[2], args.options.out ?: "", asJson ) );
           println( "Usage: bxcachy qr TEXT [--out=FILE.png] [--json]" );
+          CLIExit( 2 );
+          break;
+         case "vm":
+          // Windows and Linux desktops in containers. See COMMAND-CONTRACT.md 13.33.
+          vmSub = p.len() >= 2 ? p[2] : "list";
+          vmx = new bxcachy.Vm( cli );
+          vmYes = structKeyExists( args.options, "yes" );
+          vmDry = structKeyExists( args.options, "dry-run" );
+          if ( vmSub == "list" && p.len() <= 2 ) CLIExit( vmx.list( asJson ) );
+          if ( vmSub == "doctor" && p.len() == 2 ) CLIExit( vmx.doctor( asJson ) );
+          if ( vmSub == "versions" && p.len() == 3 ) CLIExit( vmx.versions( p[3], asJson ) );
+          if ( vmSub == "status" && p.len() <= 3 ) CLIExit( vmx.status( p.len() == 3 ? p[3] : "", asJson ) );
+          if ( vmSub == "size" && p.len() <= 3 ) CLIExit( vmx.size( p.len() == 3 ? p[3] : "", asJson ) );
+          if ( vmSub == "info" && p.len() == 3 ) CLIExit( vmx.info( p[3], structKeyExists( args.options, "show-password" ), asJson ) );
+          if ( ( vmSub == "start" || vmSub == "stop" || vmSub == "logs" ) && p.len() == 3 ) CLIExit( vmx.act( vmSub, p[3], asJson ) );
+          if ( vmSub == "open" && p.len() == 3 ) CLIExit( vmx.open( p[3], structKeyExists( args.options, "web" ), structKeyExists( args.options, "fullscreen" ), asJson ) );
+          if ( vmSub == "remove" && p.len() == 3 ) CLIExit( vmx.remove( p[3], structKeyExists( args.options, "keep-data" ), vmYes, vmDry, asJson ) );
+          if ( vmSub == "create" && p.len() >= 3 && p.len() <= 4 ) CLIExit( vmx.create( p[3], p.len() == 4 ? p[4] : "", { version: args.options.version ?: "", tag: args.options.tag ?: "", ram: args.options.ram ?: "", cpus: args.options.cpus ?: "", disk: args.options.disk ?: "", memory: args.options.memory ?: "", share: args.options.share ?: "", gpu: args.options.gpu ?: "" }, vmYes, vmDry, asJson ) );
+          println( "Usage: bxcachy vm list | status [NAME] | size [NAME] | info NAME [--show-password] | doctor | versions linux|windows | create windows [NAME] [--version=V] [--ram=8G] [--cpus=N] [--disk=64G] [--share=PATH|none] | create linux NAME [--tag=ubuntu-xfce] [--cpus=N] [--memory=4G] [--share=PATH|none] [--gpu=none|auto|intel|amd|nvidia] | start|stop|logs NAME | open NAME [--web] [--fullscreen] | remove NAME [--keep-data] [--yes] [--dry-run] [--json]" );
           CLIExit( 2 );
           break;
          case "theme":

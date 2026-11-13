@@ -1,0 +1,89 @@
+// The tables behind `bxcachy vm`: Linux desktops (LinuxServer's webtop image tags) and Windows versions (dockur/windows VERSION values).
+// Sources, read 2026-11-13: https://docs.linuxserver.io/images/docker-webtop/ and https://github.com/dockur/windows (the VERSION table).
+// The one-line notes about what an edition is are general knowledge, not from those pages.
+class VmData {
+    function init() {
+        return this;
+    }
+
+    function linuxImage() { return "lscr.io/linuxserver/webtop"; }
+    function windowsImage() { return "dockurr/windows"; }
+    function defaultLinux() { return "ubuntu-xfce"; }
+    function defaultWindows() { return "11"; }
+
+    // id (what you type), image tag, distro, desktop, note. The `dev` tag (the Selkies development head) and the Enterprise Linux tags (deprecated upstream) are left out.
+    function linuxTags() {
+        var t = function( id, tag, distro, desktop, note ) { return { id: id, tag: tag, distro: distro, desktop: desktop, note: note }; };
+        return [
+            t( "ubuntu-xfce", "ubuntu-xfce", "Ubuntu", "XFCE", "The default: familiar and light." ),
+            t( "ubuntu-kde", "ubuntu-kde", "Ubuntu", "KDE Plasma", "Full Plasma desktop (Wayland only)." ),
+            t( "ubuntu-mate", "ubuntu-mate", "Ubuntu", "MATE", "Classic desktop." ),
+            t( "ubuntu-lxqt", "ubuntu-lxqt", "Ubuntu", "LXQt", "Very light." ),
+            t( "ubuntu-i3", "ubuntu-i3", "Ubuntu", "i3", "Tiling window manager." ),
+            t( "debian-xfce", "debian-xfce", "Debian", "XFCE", "Stable base." ),
+            t( "debian-kde", "debian-kde", "Debian", "KDE Plasma", "Full Plasma desktop (Wayland only)." ),
+            t( "debian-mate", "debian-mate", "Debian", "MATE", "Classic desktop." ),
+            t( "debian-i3", "debian-i3", "Debian", "i3", "Tiling window manager." ),
+            t( "fedora-xfce", "fedora-xfce", "Fedora", "XFCE", "Newer packages." ),
+            t( "fedora-kde", "fedora-kde", "Fedora", "KDE Plasma", "Full Plasma desktop (Wayland only)." ),
+            t( "fedora-mate", "fedora-mate", "Fedora", "MATE", "Classic desktop." ),
+            t( "fedora-i3", "fedora-i3", "Fedora", "i3", "Tiling window manager." ),
+            t( "arch-xfce", "arch-xfce", "Arch", "XFCE", "Rolling release." ),
+            t( "arch-kde", "arch-kde", "Arch", "KDE Plasma", "Full Plasma desktop (Wayland only)." ),
+            t( "arch-mate", "arch-mate", "Arch", "MATE", "Classic desktop." ),
+            t( "arch-i3", "arch-i3", "Arch", "i3", "Tiling window manager." ),
+            t( "alpine-xfce", "latest", "Alpine", "XFCE", "Smallest image (the upstream `latest` tag, Wayland). No NVIDIA support." ),
+            t( "alpine-kde", "alpine-kde", "Alpine", "KDE Plasma", "Small Plasma (Wayland only). No NVIDIA support." ),
+            t( "alpine-mate", "alpine-mate", "Alpine", "MATE", "Small and classic. No NVIDIA support." ),
+            t( "alpine-i3", "alpine-i3", "Alpine", "i3", "Small tiling. No NVIDIA support." )
+        ];
+    }
+
+    function linuxIds() { return linuxTags().map( function( t ) { return t.id; } ); }
+
+    function linuxTag( id ) {
+        for ( var t in linuxTags() ) if ( t.id == arguments.id ) return t;
+        return {};
+    }
+
+    // value, name, size (GB of download, from the dockur table), note, curated (shown in the picker).
+    function windowsVersions() {
+        var w = function( v, n, g, note, c ) { return { value: v, name: n, size: g, note: note, curated: c }; };
+        return [
+            w( "11", "Windows 11 Pro", 7.9, "The usual choice.", true ),
+            w( "11l", "Windows 11 LTSC", 4.7, "Long-term servicing edition: fewer bundled apps.", true ),
+            w( "11e", "Windows 11 Enterprise", 6.6, "Business edition.", true ),
+            w( "10", "Windows 10 Pro", 5.7, "Older, for legacy needs.", true ),
+            w( "10l", "Windows 10 LTSC", 4.6, "Long-term servicing edition.", true ),
+            w( "tiny11", "Tiny11", 5.3, "UNOFFICIAL stripped-down Windows 11 from the community.", true ),
+            w( "core11", "Tiny11 Core", 3.0, "UNOFFICIAL, the most stripped-down.", true ),
+            w( "tiny10", "Tiny10", 3.6, "UNOFFICIAL stripped-down Windows 10.", true ),
+            w( "2025", "Windows Server 2025", 7.6, "Server edition.", true ),
+            w( "2022", "Windows Server 2022", 6.0, "Server edition.", true ),
+            w( "10e", "Windows 10 Enterprise", 5.2, "Business edition.", false ),
+            w( "8e", "Windows 8.1 Enterprise", 3.7, "", false ),
+            w( "7u", "Windows 7 Ultimate", 3.1, "", false ),
+            w( "vu", "Windows Vista Ultimate", 3.0, "", false ),
+            w( "xp", "Windows XP Professional", 0.6, "", false ),
+            w( "2k", "Windows 2000 Professional", 0.4, "", false ),
+            w( "me", "Windows ME", 0.5, "", false ),
+            w( "98", "Windows 98", 0.7, "", false ),
+            w( "95", "Windows 95", 0.6, "", false ),
+            w( "2019", "Windows Server 2019", 5.3, "Server edition.", false ),
+            w( "2016", "Windows Server 2016", 6.5, "Server edition.", false ),
+            w( "2012", "Windows Server 2012", 4.3, "Server edition.", false ),
+            w( "2008", "Windows Server 2008", 3.0, "Server edition.", false ),
+            w( "2003", "Windows Server 2003", 0.6, "Server edition.", false ),
+            w( "reactos", "ReactOS", 0.1, "Open-source Windows-compatible system, not Windows.", false )
+        ];
+    }
+
+    function windowsValues() { return windowsVersions().map( function( v ) { return v.value; } ); }
+
+    function windowsVersion( value ) {
+        for ( var v in windowsVersions() ) if ( v.value == arguments.value ) return v;
+        return {};
+    }
+
+    function curatedWindows() { return windowsVersions().filter( function( v ) { return v.curated; } ); }
+}

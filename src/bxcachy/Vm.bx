@@ -1,0 +1,558 @@
+// `bxcachy vm`: Windows and Linux desktops in containers (Podman by default, or Docker: the engine `bxcachy db engine` chose).
+//   vm list | status [NAME] | size [NAME] | info NAME [--show-password] | doctor | versions linux|windows
+//   vm create windows [NAME] [--version=V] [--ram=8G] [--cpus=4] [--disk=64G] [--share=PATH|none] [--yes]
+//   vm create linux NAME [--tag=ubuntu-xfce] [--cpus=N] [--memory=4G] [--share=PATH|none] [--gpu=none|auto|intel|amd|nvidia] [--yes]
+//   vm start|stop|logs NAME | open NAME [--web] [--fullscreen] | remove NAME [--keep-data] [--yes]
+// Windows is dockurr/windows (needs /dev/kvm; unattended install, RDP and a web viewer). Linux is LinuxServer's webtop (a desktop in the browser).
+// Every VM has a name; its record is ~/.config/bxcachy/vms/NAME.json and its data is ~/.local/share/bxcachy/vms/NAME (the Windows disk, or the
+// desktop's home folder). The password is generated and kept with `bxcachy secrets` (key BXCACHY_VM_<NAME>_PASSWORD). Ports listen on 127.0.0.1 only:
+// the webtop terminal has passwordless sudo and the Windows viewer is meant for you alone.
+// A plan until --yes (--dry-run too). Exit: 0 done, 2 plan or bad usage, 4 precondition, 6 a command failed.
+class Vm {
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.inst = new bxcachy.Installer( arguments.runner );
+        variables.config = new bxcachy.ConfigService().quiet( true );
+        variables.data = new bxcachy.VmData();
+        return this;
+    }
+
+    // ---- paths and settings ----
+    function dataHome() { return getSystemSetting( "BXCACHY_DATA_HOME", getSystemSetting( "HOME", "" ) & "/.local/share/bxcachy" ); }
+    function home() { return getSystemSetting( "HOME", "" ); }
+    function recordDir() { return variables.config.cfgHome() & "/bxcachy/vms"; }
+    function recordFile( name ) { return recordDir() & "/" & arguments.name & ".json"; }
+    function dataDir( name ) { return dataHome() & "/vms/" & arguments.name; }
+    function containerName( name ) { return "bxcachy-vm-" & arguments.name; }
+    function validName( name ) { return reFind( "^[a-z0-9][a-z0-9-]{0,30}$", arguments.name ) > 0; }
+    function secretKey( name ) { return "BXCACHY_VM_" & uCase( replace( arguments.name, "-", "_", "all" ) ) & "_PASSWORD"; }
+
+    // The container engine: podman (default) or docker, as chosen with `bxcachy db engine`.
+    function engineCli() {
+        var f = variables.config.cfgHome() & "/bxcachy/db.json";
+        if ( !fileExists( f ) ) return "podman";
+        try { var s = jsonDeserialize( fileRead( f ) ); return arrayFind( [ "podman", "docker" ], s.engine ?: "" ) ? s.engine : "podman"; } catch ( any e ) { return "podman"; }
+    }
+
+    function say( command, code, data, asJson, lines = [], dryRun = false ) {
+        if ( arguments.asJson ) println( variables.cli.envelope( arguments.command, arguments.code, arguments.data, arguments.dryRun ) );
+        else for ( var l in arguments.lines ) println( l );
+        return arguments.code;
+    }
+
+    function fail( command, code, msg, asJson ) {
+        return say( arguments.command, arguments.code, { error: arguments.msg }, arguments.asJson, [ "error: " & arguments.msg ] );
+    }
+
+    function tryExec( argv, timeout = 60 ) {
+        try { return variables.inst.exec( arguments.argv, arguments.timeout ); } catch ( any e ) { return { exitCode: 127, output: e.message }; }
+    }
+
+    function engineExec( args, timeout = 600 ) {
+        var argv = [ engineCli() ];
+        for ( var a in arguments.args ) argv.append( a );
+        return tryExec( argv, arguments.timeout );
+    }
+
+    function engineAvailable() { return engineExec( [ "--version" ], 20 ).exitCode == 0; }
+
+    // "running", "exited", ... or "" when there is no such container.
+    function stateOf( container ) {
+        var r = engineExec( [ "container", "inspect", "--format", "{{.State.Status}}", arguments.container ], 30 );
+        return r.exitCode == 0 ? trim( r.output ) : "";
+    }
+
+    function driDir() { return getSystemSetting( "BXCACHY_DRI_DIR", "/dev/dri" ); }
+    function has( name ) { return tryExec( [ "sh", "-c", 'command -v "$1"', "_", arguments.name ], 10 ).exitCode == 0; }
+    function secrets() { return new bxcachy.Secrets( variables.cli ); }
+
+    // ---- host facts ----
+    function hostMemGb() {
+        var f = getSystemSetting( "BXCACHY_MEMINFO_FILE", "/proc/meminfo" );
+        try {
+            for ( var l in listToArray( fileRead( f ), chr( 10 ) ) ) if ( left( l, 9 ) == "MemTotal:" ) return int( val( trim( replace( replace( l, "MemTotal:", "" ), "kB", "" ) ) ) / 1048576 );
+        } catch ( any e ) {}
+        return 8;
+    }
+
+    function hostCores() {
+        var r = tryExec( [ "nproc" ], 10 );
+        return r.exitCode == 0 ? int( val( trim( r.output ) ) ) : 4;
+    }
+
+    function freeKb( path ) {
+        var r = tryExec( [ "sh", "-c", 'mkdir -p "$1" 2>/dev/null; df -Pk "$1" | tail -1 | awk "{print \$4}"', "_", arguments.path ], 15 );
+        return r.exitCode == 0 ? int( val( trim( r.output ) ) ) : 0;
+    }
+
+    function duKb( path ) {
+        if ( !directoryExists( arguments.path ) ) return 0;
+        var r = tryExec( [ "sh", "-c", 'du -sk "$1" 2>/dev/null | cut -f1', "_", arguments.path ], 120 );
+        return r.exitCode == 0 ? int( val( trim( r.output ) ) ) : 0;
+    }
+
+    function humanKb( kb ) {
+        var n = arguments.kb + 0;
+        if ( n >= 1048576 ) return numberFormat( n / 1048576, "0.0" ) & " GB";
+        if ( n >= 1024 ) return numberFormat( n / 1024, "0" ) & " MB";
+        return n & " KB";
+    }
+
+    function portInUse( p ) {
+        return tryExec( [ "sh", "-c", 'ss -ltnH 2>/dev/null | grep -q ":$1 "', "_", arguments.p & "" ], 10 ).exitCode == 0;
+    }
+
+    // The first port from start that no recorded VM uses and nothing listens on.
+    function freePort( start, taken ) {
+        var p = arguments.start;
+        while ( arrayFind( arguments.taken, p ) || portInUse( p ) ) p++;
+        return p;
+    }
+
+    function takenPorts() {
+        var t = [];
+        for ( var r in allRecords() ) for ( var k in r.ports ) t.append( r.ports[ k ] );
+        return t;
+    }
+
+    function tz() {
+        var env = getSystemSetting( "TZ", "" );
+        if ( len( env ) ) return env;
+        var r = tryExec( [ "sh", "-c", 'readlink /etc/localtime 2>/dev/null | sed "s|.*/zoneinfo/||"' ], 10 );
+        return r.exitCode == 0 && len( trim( r.output ) ) ? trim( r.output ) : "Etc/UTC";
+    }
+
+    function ids() {
+        var u = tryExec( [ "id", "-u" ], 10 );
+        var g = tryExec( [ "id", "-g" ], 10 );
+        return { uid: trim( u.output ), gid: trim( g.output ) };
+    }
+
+    // A random password (hex, 16 random bytes).
+    function newSecret() {
+        return trim( tryExec( [ "sh", "-c", 'head -c 16 /dev/urandom | od -An -tx1 | tr -d "[:space:]"' ], 10 ).output );
+    }
+
+    // ---- records ----
+    function readRecord( name ) {
+        var f = recordFile( arguments.name );
+        if ( !fileExists( f ) ) return {};
+        try { return jsonDeserialize( fileRead( f ) ); } catch ( any e ) { return {}; }
+    }
+
+    function writeRecord( rec ) {
+        variables.config.writeAtomic( recordFile( arguments.rec.name ), jsonSerialize( arguments.rec ) & chr( 10 ), "600" );
+    }
+
+    function allRecords() {
+        var out = [];
+        if ( !directoryExists( recordDir() ) ) return out;
+        var files = directoryList( recordDir(), false, "name" );
+        arraySort( files, "textnocase" );
+        for ( var f in files ) if ( right( f, 5 ) == ".json" ) {
+            var r = readRecord( left( f, len( f ) - 5 ) );
+            if ( structKeyExists( r, "name" ) ) out.append( r );
+        }
+        return out;
+    }
+
+    function url( rec ) {
+        if ( arguments.rec.kind == "linux" ) return "https://127.0.0.1:" & arguments.rec.ports.web & "/";
+        return "http://127.0.0.1:" & arguments.rec.ports.web & "/";
+    }
+
+    // ---- tables ----
+    function versions( kind, asJson ) {
+        var cmd = "vm versions";
+        if ( arguments.kind == "linux" ) {
+            var rows = variables.data.linuxTags();
+            var lines = [ "Linux desktops (image " & variables.data.linuxImage() & ", default " & variables.data.defaultLinux() & "):" ];
+            for ( var t in rows ) lines.append( "  " & t.id & repeatString( " ", max( 1, 14 - len( t.id ) ) ) & t.distro & " " & t.desktop & ": " & t.note );
+            return say( cmd, 0, { kind: "linux", image: variables.data.linuxImage(), default: variables.data.defaultLinux(), tags: rows }, arguments.asJson, lines );
+        }
+        if ( arguments.kind == "windows" ) {
+            var w = variables.data.windowsVersions();
+            var wl = [ "Windows versions (image " & variables.data.windowsImage() & ", default " & variables.data.defaultWindows() & "; sizes are the download):" ];
+            for ( var v in w ) wl.append( "  " & v.value & repeatString( " ", max( 1, 8 - len( v.value ) ) ) & v.name & " (" & numberFormat( v.size, "0.0" ) & " GB)" & ( len( v.note ) ? ": " & v.note : "" ) );
+            wl.append( "You need your own Windows license; the install uses generic trial keys, which do not activate Windows." );
+            return say( cmd, 0, { kind: "windows", image: variables.data.windowsImage(), default: variables.data.defaultWindows(), versions: w }, arguments.asJson, wl );
+        }
+        return fail( cmd, 2, "Usage: bxcachy vm versions linux|windows", arguments.asJson );
+    }
+
+    // ---- doctor ----
+    function check( name, ok, detail, hard = true ) { return { check: arguments.name, ok: arguments.ok, detail: arguments.detail, hard: arguments.hard }; }
+
+    function doctor( asJson ) {
+        var cmd = "vm doctor";
+        var rows = [];
+        var eng = engineCli();
+        rows.append( check( "container engine (" & eng & ")", engineAvailable(), engineAvailable() ? "found" : eng & " was not found (bxcachy profile-install containers, or bxcachy db engine docker)" ) );
+        var kvm = getSystemSetting( "BXCACHY_KVM_DEVICE", "/dev/kvm" );
+        var kvmOk = tryExec( [ "sh", "-c", '[ -r "$1" ] && [ -w "$1" ]', "_", kvm ], 10 ).exitCode == 0;
+        rows.append( check( "KVM (" & kvm & ", read and write)", kvmOk, kvmOk ? "ok" : ( fileExists( kvm ) ? kvm & " exists but you cannot use it: add yourself to the kvm group (sudo usermod -aG kvm $USER) and log in again" : kvm & " is missing: enable virtualization (VT-x or AMD-V) in the firmware and load the kvm module" ), true ) );
+        var tun = tryExec( [ "sh", "-c", '[ -e /dev/net/tun ]' ], 10 ).exitCode == 0;
+        rows.append( check( "/dev/net/tun", tun, tun ? "ok" : "missing: sudo modprobe tun", true ) );
+        var ram = hostMemGb();
+        rows.append( check( "memory", ram >= 4, ram & " GB in the machine" & ( ram < 4 ? " (Windows wants at least 4)" : "" ), false ) );
+        var free = freeKb( dataHome() );
+        rows.append( check( "free disk in " & dataHome(), free >= 33554432, humanKb( free ) & " free" & ( free < 33554432 ? " (Windows wants at least 32 GB)" : "" ), false ) );
+        var dri = tryExec( [ "sh", "-c", '[ -d "$1" ]', "_", driDir() ], 10 ).exitCode == 0;
+        rows.append( check( "GPU for Linux desktops: /dev/dri (Intel and AMD)", dri, dri ? "present" : "not present (--gpu=intel|amd would fail)", false ) );
+        var nv = tryExec( [ "sh", "-c", 'command -v nvidia-smi >/dev/null && nvidia-smi --query-gpu=driver_version --format=csv,noheader | head -1' ], 20 );
+        var nvVer = trim( nv.output );
+        var nvOk = nv.exitCode == 0 && len( nvVer ) && int( val( listFirst( nvVer, "." ) ) ) >= 580;
+        rows.append( check( "GPU for Linux desktops: NVIDIA driver 580 or newer", nvOk, len( nvVer ) ? "driver " & nvVer & ( nvOk ? "" : " (the webtop docs ask for 580 or newer)" ) : "no NVIDIA driver found (only needed for --gpu=nvidia)", false ) );
+        if ( len( nvVer ) ) {
+            var ctk = has( "nvidia-ctk" );
+            rows.append( check( "NVIDIA container toolkit (nvidia-ctk)", ctk, ctk ? "found" : "not found: needed for --gpu=nvidia (package nvidia-container-toolkit)", false ) );
+        }
+        var rdp = "";
+        for ( var c in [ "sdl-freerdp3", "sdl-freerdp", "xfreerdp3", "xfreerdp", "wlfreerdp3", "wlfreerdp" ] ) if ( !len( rdp ) && has( c ) ) rdp = c;
+        rows.append( check( "FreeRDP client (for `vm open` on Windows)", len( rdp ) > 0, len( rdp ) ? rdp : "not found: bxcachy install freerdp", false ) );
+        var hardFail = rows.filter( function( r ) { return r.hard && !r.ok; } );
+        var lines = [];
+        for ( var r in rows ) lines.append( ( r.ok ? "ok    " : ( r.hard ? "FAIL  " : "note  " ) ) & r.check & ": " & r.detail );
+        lines.append( hardFail.len() ? "Not ready: fix the FAIL lines above." : "Ready." );
+        return say( cmd, hardFail.len() ? 4 : 0, { checks: rows, ready: !hardFail.len(), engine: eng }, arguments.asJson, lines );
+    }
+
+    // ---- choosing a Windows version ----
+    function hasTerminal() {
+        if ( len( getSystemSetting( "BXCACHY_TTY_IN", "" ) ) ) return true;
+        return tryExec( [ "sh", "-c", ': < /dev/tty' ], 10 ).exitCode == 0;
+    }
+
+    // Shows the curated list and reads one answer (a number, or a version value). Returns { error, value }.
+    // With --json the list goes to the terminal device, never to stdout, so the JSON stays clean.
+    function askVersion( asJson = false ) {
+        var list = variables.data.curatedWindows();
+        var text = [ "Which Windows? (all versions: bxcachy vm versions windows)" ];
+        for ( var i = 1; i <= list.len(); i++ ) text.append( "  " & i & ") " & list[ i ].value & repeatString( " ", max( 1, 8 - len( list[ i ].value ) ) ) & list[ i ].name & ", " & numberFormat( list[ i ].size, "0.0" ) & " GB" & ( len( list[ i ].note ) ? ": " & list[ i ].note : "" ) );
+        text.append( "You need your own Windows license for any of them." );
+        if ( !arguments.asJson ) for ( var l in text ) println( l );
+        else if ( !len( getSystemSetting( "BXCACHY_TTY_IN", "" ) ) ) tryExec( [ "sh", "-c", 'printf "%s\n" "$1" > /dev/tty 2>/dev/null', "_", text.toList( chr( 10 ) ) ], 10 );
+        var tmp = reReplace( getTempDirectory(), "/+$", "" ) & "/bxcachy-vm-" & left( createUUID(), 8 );
+        var script = 'in="${BXCACHY_TTY_IN:-/dev/tty}"; printf "Number or version [1]: " > /dev/tty 2>/dev/null; IFS= read -r v < "$in"; printf "%s" "$v" > "$1"';
+        var answer = "";
+        try {
+            tryExec( [ "sh", "-c", script, "_", tmp ], 300 );
+            answer = fileExists( tmp ) ? trim( fileRead( tmp ) ) : "";
+        } finally {
+            if ( fileExists( tmp ) ) fileDelete( tmp );
+        }
+        if ( !len( answer ) ) answer = "1";
+        if ( isNumeric( answer ) && val( answer ) >= 1 && val( answer ) <= list.len() ) return { error: "", value: list[ int( val( answer ) ) ].value };
+        if ( !structIsEmpty( variables.data.windowsVersion( answer ) ) ) return { error: "", value: answer };
+        return { error: "Not a choice: " & answer, value: "" };
+    }
+
+    // ---- GPU for Linux desktops ----
+    // Returns { error, args, mode }. none adds nothing; auto uses /dev/dri when it exists; intel and amd are the same device.
+    // nvidia (from the webtop docs): Docker takes --runtime nvidia --gpus all and /dev/nvidia-modeset; Podman has no --gpus, so CDI is used
+    // (--device nvidia.com/gpu=all, from nvidia-container-toolkit): that Podman form is not verified.
+    function gpuArgs( gpu, tag ) {
+        var g = arguments.gpu;
+        var dri = tryExec( [ "sh", "-c", '[ -d "$1" ]', "_", driDir() ], 10 ).exitCode == 0;
+        if ( !len( g ) || g == "none" ) return { error: "", args: [], mode: "none" };
+        if ( g == "auto" ) return dri ? { error: "", args: [ "--device", "/dev/dri" ], mode: "dri" } : { error: "", args: [], mode: "none" };
+        if ( g == "intel" || g == "amd" ) {
+            if ( !dri ) return { error: "--gpu=" & g & " needs /dev/dri, which this machine does not have", args: [], mode: g };
+            return { error: "", args: [ "--device", "/dev/dri" ], mode: g };
+        }
+        if ( g == "nvidia" ) {
+            if ( left( arguments.tag, 6 ) == "alpine" || arguments.tag == "latest" ) return { error: "The Alpine desktops do not support NVIDIA (use a Ubuntu, Debian, Fedora or Arch tag)", args: [], mode: g };
+            var a = engineCli() == "docker" ? [ "--runtime", "nvidia", "--gpus", "all", "--device", "/dev/nvidia-modeset" ] : [ "--device", "nvidia.com/gpu=all", "--device", "/dev/nvidia-modeset" ];
+            return { error: "", args: a, mode: "nvidia" };
+        }
+        return { error: "--gpu must be none, auto, intel, amd or nvidia", args: [], mode: g };
+    }
+
+    // ---- run commands (pure) ----
+    function labels( rec ) {
+        return [ "--label", "io.bxcachy.vm=true", "--label", "io.bxcachy.vm.kind=" & arguments.rec.kind, "--label", "io.bxcachy.vm.name=" & arguments.rec.name ];
+    }
+
+    function windowsRunArgs( rec, envFile ) {
+        var r = arguments.rec;
+        var a = [ "run", "-d", "--name", containerName( r.name ) ];
+        for ( var l in labels( r ) ) a.append( l );
+        for ( var x in [ "--restart", "unless-stopped", "--stop-timeout", "120", "--device", "/dev/kvm", "--device", "/dev/net/tun", "--cap-add", "NET_ADMIN" ] ) a.append( x );
+        a.append( "-p" ); a.append( "127.0.0.1:" & r.ports.web & ":8006" );
+        a.append( "-p" ); a.append( "127.0.0.1:" & r.ports.rdp & ":3389/tcp" );
+        a.append( "-p" ); a.append( "127.0.0.1:" & r.ports.rdp & ":3389/udp" );
+        a.append( "-v" ); a.append( dataDir( r.name ) & "/storage:/storage" );
+        if ( len( r.share ) ) { a.append( "-v" ); a.append( r.share & ":/shared" ); }
+        a.append( "--env-file" ); a.append( arguments.envFile );
+        for ( var e in [ "VERSION=" & r.version, "RAM_SIZE=" & r.ram, "CPU_CORES=" & r.cpus, "DISK_SIZE=" & r.disk ] ) { a.append( "-e" ); a.append( e ); }
+        a.append( variables.data.windowsImage() );
+        return a;
+    }
+
+    function linuxRunArgs( rec, envFile, uid, gid, gpu ) {
+        var r = arguments.rec;
+        var a = [ "run", "-d", "--name", containerName( r.name ) ];
+        for ( var l in labels( r ) ) a.append( l );
+        for ( var x in [ "--restart", "unless-stopped", "--shm-size", "1gb" ] ) a.append( x );
+        a.append( "-p" ); a.append( "127.0.0.1:" & r.ports.web & ":3001" );
+        a.append( "-v" ); a.append( dataDir( r.name ) & "/config:/config" );
+        if ( len( r.share ) ) { a.append( "-v" ); a.append( r.share & ":/config/Shared" ); }
+        if ( len( r.cpus ) ) { a.append( "--cpus" ); a.append( r.cpus ); }
+        if ( len( r.memory ) ) { a.append( "--memory" ); a.append( r.memory ); }
+        for ( var g in arguments.gpu ) a.append( g );
+        a.append( "--env-file" ); a.append( arguments.envFile );
+        for ( var e in [ "PUID=" & arguments.uid, "PGID=" & arguments.gid, "TZ=" & tz() ] ) { a.append( "-e" ); a.append( e ); }
+        a.append( variables.data.linuxImage() & ":" & r.imageTag );
+        return a;
+    }
+
+    function validSize( s ) { return reFind( "^[1-9][0-9]*[GgMm]?$", arguments.s ) > 0; }
+
+    // ---- create ----
+    function create( kind, name, opts, yes, dryRun, asJson ) {
+        var cmd = "vm create";
+        var o = arguments.opts;
+        var nm = len( arguments.name ) ? arguments.name : ( arguments.kind == "windows" ? "windows" : "" );
+        if ( !arrayFind( [ "windows", "linux" ], arguments.kind ) ) return fail( cmd, 2, "Usage: bxcachy vm create windows [NAME] | linux NAME", arguments.asJson );
+        if ( !len( nm ) ) return fail( cmd, 2, "A Linux desktop needs a name: bxcachy vm create linux NAME [--tag=ubuntu-xfce]", arguments.asJson );
+        if ( !validName( nm ) ) return fail( cmd, 4, "The name may only contain lower case letters, digits and hyphens (up to 31 characters)", arguments.asJson );
+        if ( structKeyExists( readRecord( nm ), "name" ) ) return fail( cmd, 4, "A VM named " & nm & " already exists (bxcachy vm list)", arguments.asJson );
+        if ( arguments.kind == "windows" && len( o.gpu ?: "" ) ) return fail( cmd, 2, "--gpu is for Linux desktops", arguments.asJson );
+        if ( arguments.kind == "linux" && len( o.version ?: "" ) ) return fail( cmd, 2, "--version is for Windows; Linux desktops use --tag", arguments.asJson );
+        var rec = { name: nm, kind: arguments.kind, created: now() & "", ports: {}, share: "", cpus: "", memory: "", user: "bxcachy" };
+        // the share folder: default ~/Windows (drive Z:) or ~/Shared, none to turn it off
+        var shareOpt = o.share ?: "";
+        rec.share = shareOpt == "none" ? "" : ( len( shareOpt ) ? shareOpt : home() & ( arguments.kind == "windows" ? "/Windows" : "/Shared" ) );
+        if ( len( rec.share ) && left( rec.share, 1 ) != "/" ) return fail( cmd, 4, "--share needs an absolute path (or none)", arguments.asJson );
+        var gpu = { error: "", args: [], mode: "none" };
+        var taken = takenPorts();
+        if ( arguments.kind == "windows" ) {
+            var ver = o.version ?: "";
+            if ( !len( ver ) ) {
+                if ( !hasTerminal() ) return fail( cmd, 4, "Choose the Windows version with --version=VALUE (see: bxcachy vm versions windows); there is no terminal to ask on", arguments.asJson );
+                var ask = askVersion( arguments.asJson );
+                if ( len( ask.error ) ) return fail( cmd, 4, ask.error, arguments.asJson );
+                ver = ask.value;
+            }
+            if ( structIsEmpty( variables.data.windowsVersion( ver ) ) ) return fail( cmd, 4, "Unknown Windows version " & ver & " (bxcachy vm versions windows)", arguments.asJson );
+            rec.version = ver;
+            rec.ram = len( o.ram ?: "" ) ? o.ram : min( 8, max( 4, int( hostMemGb() / 2 ) ) ) & "G";
+            rec.cpus = len( o.cpus ?: "" ) ? o.cpus : min( 8, max( 2, int( hostCores() / 2 ) ) ) & "";
+            rec.disk = len( o.disk ?: "" ) ? o.disk : "64G";
+            if ( !validSize( rec.ram ) || !validSize( rec.disk ) || !validSize( rec.cpus ) ) return fail( cmd, 4, "--ram, --disk and --cpus take a whole number, with G or M for sizes (for example 8G)", arguments.asJson );
+            rec.ports.web = freePort( 8006, taken );
+            taken.append( rec.ports.web );
+            rec.ports.rdp = freePort( 3389, taken );
+        } else {
+            var tg = len( o.tag ?: "" ) ? o.tag : variables.data.defaultLinux();
+            var t = variables.data.linuxTag( tg );
+            if ( structIsEmpty( t ) ) return fail( cmd, 4, "Unknown tag " & tg & " (bxcachy vm versions linux)", arguments.asJson );
+            rec.tag = t.id; rec.imageTag = t.tag;
+            rec.cpus = o.cpus ?: ""; rec.memory = o.memory ?: "";
+            if ( len( rec.cpus ) && !isNumeric( rec.cpus ) ) return fail( cmd, 4, "--cpus takes a number", arguments.asJson );
+            if ( len( rec.memory ) && !validSize( rec.memory ) ) return fail( cmd, 4, "--memory takes a number with G or M (for example 4G)", arguments.asJson );
+            gpu = gpuArgs( o.gpu ?: "none", t.tag );
+            if ( len( gpu.error ) ) return fail( cmd, 4, gpu.error, arguments.asJson );
+            rec.gpu = gpu.mode;
+            rec.ports.web = freePort( 3001, taken );
+        }
+        var dir = dataDir( nm );
+        var data = { name: nm, kind: arguments.kind, container: containerName( nm ), data: dir, share: rec.share, ports: rec.ports, listens: "127.0.0.1", record: recordFile( nm ), password_key: secretKey( nm ) };
+        if ( arguments.kind == "windows" ) { data.version = rec.version; data.ram = rec.ram; data.cpus = rec.cpus; data.disk = rec.disk; data.image = variables.data.windowsImage(); }
+        else { data.tag = rec.tag; data.image = variables.data.linuxImage() & ":" & rec.imageTag; data.gpu = rec.gpu; }
+        var what = "create " & containerName( nm ) & " from " & data.image & ( arguments.kind == "windows" ? " (Windows " & variables.data.windowsVersion( rec.version ).name & ", " & rec.ram & " RAM, " & rec.cpus & " CPUs, " & rec.disk & " disk)" : " (" & rec.tag & ( rec.gpu != "none" ? ", GPU " & rec.gpu : "" ) & ")" ) & "; data in " & dir & ( len( rec.share ) ? "; shared folder " & rec.share : "" ) & "; ports on 127.0.0.1 " & ( arguments.kind == "windows" ? "web " & rec.ports.web & ", RDP " & rec.ports.rdp : "web " & rec.ports.web );
+        if ( !arguments.yes || arguments.dryRun ) {
+            var lines = [ ( arguments.dryRun ? "Dry run" : "Plan" ) & ": " & cmd & " " & arguments.kind & " " & nm, "  would " & what ];
+            if ( arguments.kind == "windows" ) lines.append( "  The Windows install downloads about " & numberFormat( variables.data.windowsVersion( rec.version ).size, "0.0" ) & " GB and takes a while; you need your own Windows license." );
+            lines.append( arguments.dryRun ? "Nothing was changed." : "Nothing was changed. Add --yes to apply." );
+            return say( cmd, arguments.dryRun ? 0 : 2, merge( data, { would: what } ), arguments.asJson, lines, arguments.dryRun );
+        }
+        if ( !engineAvailable() ) return fail( cmd, 4, engineCli() & " is required but was not found (bxcachy profile-install containers, or bxcachy db engine docker)", arguments.asJson );
+        if ( arguments.kind == "windows" && tryExec( [ "sh", "-c", '[ -r /dev/kvm ] && [ -w /dev/kvm ]' ], 10 ).exitCode != 0 && !len( getSystemSetting( "BXCACHY_VM_SKIP_KVM_CHECK", "" ) ) ) return fail( cmd, 4, "/dev/kvm is not usable by you (run: bxcachy vm doctor)", arguments.asJson );
+        // the password goes to the keyring (bxcachy secrets) and, for this run only, into an env file (mode 600) the container reads
+        var pw = newSecret();
+        if ( len( pw ) < 16 ) return fail( cmd, 6, "Could not generate a password", arguments.asJson );
+        var serr = secrets().store( secretKey( nm ), pw );
+        if ( len( serr ) ) return fail( cmd, 6, "Could not store the password: " & serr, arguments.asJson );
+        directoryCreate( dir, true, true );
+        if ( len( rec.share ) ) directoryCreate( rec.share, true, true );
+        var envFile = dir & "/vm.env";
+        var envText = arguments.kind == "windows" ? "USERNAME=bxcachy" & chr( 10 ) & "PASSWORD=" & pw & chr( 10 ) : "CUSTOM_USER=bxcachy" & chr( 10 ) & "PASSWORD=" & pw & chr( 10 );
+        variables.config.writeAtomic( envFile, envText, "600" );
+        var argv = arguments.kind == "windows" ? windowsRunArgs( rec, envFile ) : linuxRunArgs( rec, envFile, rootless() ? "0" : ids().uid, rootless() ? "0" : ids().gid, gpu.args );
+        var r = engineExec( argv, 3600 );
+        tryExec( [ "rm", "-f", envFile ], 15 );
+        if ( r.exitCode != 0 ) {
+            secrets().drop( secretKey( nm ) );
+            tryExec( [ "rm", "-rf", dir ], 30 );
+            return say( cmd, 6, merge( data, { error: trim( r.output ) } ), arguments.asJson, [ "error: " & trim( r.output ) ] );
+        }
+        writeRecord( rec );
+        var out = [ "Created " & containerName( nm ) & " (" & ( arguments.kind == "windows" ? "Windows " & variables.data.windowsVersion( rec.version ).name : rec.tag ) & ")." ];
+        if ( arguments.kind == "windows" ) {
+            out.append( "Windows installs by itself on the first start: watch it at " & url( rec ) & " (about " & numberFormat( variables.data.windowsVersion( rec.version ).size, "0.0" ) & " GB to download). Then: bxcachy vm open " & nm );
+        } else out.append( "Open it with: bxcachy vm open " & nm & "  (" & url( rec ) & ", user bxcachy; the first start pulls the image)" );
+        out.append( "Password: bxcachy vm info " & nm & " --show-password   Data: " & dir & ( len( rec.share ) ? "   Shared folder: " & rec.share : "" ) );
+        return say( cmd, 0, data, arguments.asJson, out );
+    }
+
+    // rootless Podman maps the container's root to you, so the webtop runs with PUID=PGID=0 there (files stay yours); Docker uses your ids.
+    function rootless() { return engineCli() == "podman"; }
+
+    function merge( base, extra ) {
+        var out = {};
+        for ( var k in arguments.base ) out[ k ] = arguments.base[ k ];
+        for ( var k2 in arguments.extra ) out[ k2 ] = arguments.extra[ k2 ];
+        return out;
+    }
+
+    // ---- lifecycle ----
+    function resolve( name ) {
+        if ( !validName( arguments.name ) ) return { error: "Bad VM name " & arguments.name, code: 4 };
+        var rec = readRecord( arguments.name );
+        if ( !structKeyExists( rec, "name" ) ) return { error: "There is no VM named " & arguments.name & " (bxcachy vm list)", code: 4 };
+        return { error: "", code: 0, rec: rec, container: containerName( arguments.name ) };
+    }
+
+    function act( verb, name, asJson ) {
+        var cmd = "vm " & arguments.verb;
+        var res = resolve( arguments.name );
+        if ( len( res.error ) ) return fail( cmd, res.code, res.error, arguments.asJson );
+        if ( !engineAvailable() ) return fail( cmd, 4, engineCli() & " was not found", arguments.asJson );
+        var state = stateOf( res.container );
+        if ( !len( state ) ) return fail( cmd, 4, res.container & " does not exist any more (bxcachy vm remove " & arguments.name & " clears the record)", arguments.asJson );
+        if ( arguments.verb == "logs" ) {
+            var l = engineExec( [ "logs", "--tail", "200", res.container ], 60 );
+            return say( cmd, l.exitCode == 0 ? 0 : 6, { name: arguments.name, logs: l.output }, arguments.asJson, [ l.output ] );
+        }
+        if ( arguments.verb == "start" ) {
+            if ( state == "running" ) return say( cmd, 0, { name: arguments.name, state: "running", already: true }, arguments.asJson, [ arguments.name & " is already running (" & url( res.rec ) & ")" ] );
+            var s = engineExec( [ "start", res.container ], 120 );
+            return say( cmd, s.exitCode == 0 ? 0 : 6, { name: arguments.name, started: s.exitCode == 0 }, arguments.asJson, [ s.exitCode == 0 ? "Started " & arguments.name & " (" & url( res.rec ) & ")" : "error: " & trim( s.output ) ] );
+        }
+        var st = engineExec( [ "stop", res.container ], 180 );
+        return say( cmd, st.exitCode == 0 ? 0 : 6, { name: arguments.name, stopped: st.exitCode == 0 }, arguments.asJson, [ st.exitCode == 0 ? "Stopped " & arguments.name : "error: " & trim( st.output ) ] );
+    }
+
+    function waitFor( port, seconds ) {
+        if ( len( getSystemSetting( "BXCACHY_VM_NO_WAIT", "" ) ) ) return true;
+        return tryExec( [ "bash", "-c", 'i=0; while [ "$i" -lt "$2" ]; do (exec 3<>/dev/tcp/127.0.0.1/$1) 2>/dev/null && exit 0; sleep 1; i=$((i+1)); done; exit 1', "_", arguments.port & "", arguments.seconds & "" ], arguments.seconds + 30 ).exitCode == 0;
+    }
+
+    // `open NAME`: starts it when stopped. Linux: the browser. Windows: FreeRDP (a password file mode 600 is read once and removed), or --web for the browser viewer.
+    function open( name, web, fullscreen, asJson ) {
+        var cmd = "vm open";
+        var res = resolve( arguments.name );
+        if ( len( res.error ) ) return fail( cmd, res.code, res.error, arguments.asJson );
+        if ( !engineAvailable() ) return fail( cmd, 4, engineCli() & " was not found", arguments.asJson );
+        var state = stateOf( res.container );
+        if ( !len( state ) ) return fail( cmd, 4, res.container & " does not exist any more", arguments.asJson );
+        var rec = res.rec;
+        if ( state != "running" ) {
+            var s = engineExec( [ "start", res.container ], 120 );
+            if ( s.exitCode != 0 ) return fail( cmd, 6, "could not start " & res.container & ": " & trim( s.output ), arguments.asJson );
+        }
+        var target = url( rec );
+        if ( rec.kind == "linux" || arguments.web ) {
+            if ( !waitFor( rec.ports.web, 60 ) ) return say( cmd, 6, { name: arguments.name, url: target }, arguments.asJson, [ "error: " & arguments.name & " did not answer on " & target & " yet (bxcachy vm logs " & arguments.name & ")" ] );
+            var br = tryExec( [ "sh", "-c", 'setsid xdg-open "$1" </dev/null >/dev/null 2>&1 &', "_", target ], 15 );
+            return say( cmd, br.exitCode == 0 ? 0 : 6, { name: arguments.name, url: target, user: rec.user }, arguments.asJson, [ "Opening " & target & " (user " & rec.user & "; the certificate is self-signed, accept it once). Password: bxcachy vm info " & arguments.name & " --show-password" ] );
+        }
+        var client = "";
+        for ( var c in [ "sdl-freerdp3", "sdl-freerdp", "xfreerdp3", "xfreerdp", "wlfreerdp3", "wlfreerdp" ] ) if ( !len( client ) && has( c ) ) client = c;
+        if ( !len( client ) ) return fail( cmd, 4, "No FreeRDP client was found (bxcachy install freerdp). The browser viewer works meanwhile: bxcachy vm open " & arguments.name & " --web", arguments.asJson );
+        if ( !waitFor( rec.ports.rdp, 30 ) ) return say( cmd, 6, { name: arguments.name, web: target }, arguments.asJson, [ "Windows is not answering on RDP yet. On the first start it is still installing: watch it at " & target & " (bxcachy vm open " & arguments.name & " --web), then try again." ] );
+        var pw = secrets().fetch( secretKey( arguments.name ) );
+        if ( !len( pw ) ) return fail( cmd, 4, "The stored password was not found (" & secretKey( arguments.name ) & "); use --web, or set it with bxcachy secrets set", arguments.asJson );
+        // FreeRDP reads its arguments, one per line, from a file (/args-from:file:PATH), so the password is not on a command line
+        var f = dataDir( arguments.name ) & "/rdp.args";
+        var argLines = [ "/v:127.0.0.1:" & rec.ports.rdp, "/u:" & rec.user, "/p:" & pw, "/cert:ignore", "+clipboard", "/dynamic-resolution", "/title:" & arguments.name ];
+        if ( arguments.fullscreen ) argLines.append( "/f" );
+        variables.config.writeAtomic( f, argLines.toList( chr( 10 ) ) & chr( 10 ), "600" );
+        var run = tryExec( [ "sh", "-c", 'f="$2"; shift 2; ( setsid "$@" </dev/null >/dev/null 2>&1 & ); ( sleep 15; rm -f "$f" ) </dev/null >/dev/null 2>&1 &', "_", client, f, client, "/args-from:file:" & f ], 15 );
+        return say( cmd, run.exitCode == 0 ? 0 : 6, { name: arguments.name, client: client, rdp: "127.0.0.1:" & rec.ports.rdp, user: rec.user }, arguments.asJson, [ "Opening " & arguments.name & " with " & client & " (user " & rec.user & ", clipboard shared, drive Z: is " & ( len( rec.share ) ? rec.share : "off" ) & ")" ] );
+    }
+
+    // ---- views ----
+    function list( asJson ) {
+        var cmd = "vm list";
+        var eng = engineAvailable();
+        var rows = [];
+        var lines = [];
+        for ( var r in allRecords() ) {
+            var st = eng ? stateOf( containerName( r.name ) ) : "";
+            var row = { name: r.name, kind: r.kind, what: r.kind == "windows" ? r.version : r.tag, state: len( st ) ? st : ( eng ? "missing" : "unknown" ), ports: r.ports, url: url( r ), size_kb: duKb( dataDir( r.name ) ) };
+            rows.append( row );
+            lines.append( r.name & repeatString( " ", max( 1, 16 - len( r.name ) ) ) & r.kind & repeatString( " ", max( 1, 9 - len( r.kind ) ) ) & row.what & repeatString( " ", max( 1, 14 - len( row.what & "" ) ) ) & row.state & repeatString( " ", max( 1, 10 - len( row.state ) ) ) & humanKb( row.size_kb ) & "  " & row.url );
+        }
+        if ( !rows.len() ) lines.append( "No VMs yet. Create one: bxcachy vm create linux NAME   or   bxcachy vm create windows" );
+        return say( cmd, 0, { vms: rows }, arguments.asJson, lines );
+    }
+
+    function status( name, asJson ) {
+        if ( !len( arguments.name ) ) return list( arguments.asJson );
+        var cmd = "vm status";
+        var res = resolve( arguments.name );
+        if ( len( res.error ) ) return fail( cmd, res.code, res.error, arguments.asJson );
+        var st = engineAvailable() ? stateOf( res.container ) : "";
+        var d = { name: arguments.name, kind: res.rec.kind, state: len( st ) ? st : "missing", url: url( res.rec ), ports: res.rec.ports, size_kb: duKb( dataDir( arguments.name ) ), data: dataDir( arguments.name ) };
+        return say( cmd, 0, d, arguments.asJson, [ arguments.name & ": " & d.state & "  " & d.url & "  data " & humanKb( d.size_kb ) & " in " & d.data ] );
+    }
+
+    function size( name, asJson ) {
+        var cmd = "vm size";
+        var recs = len( arguments.name ) ? [ readRecord( arguments.name ) ] : allRecords();
+        if ( len( arguments.name ) && !structKeyExists( recs[ 1 ], "name" ) ) return fail( cmd, 4, "There is no VM named " & arguments.name, arguments.asJson );
+        var rows = [];
+        var total = 0;
+        var lines = [];
+        for ( var r in recs ) {
+            var kb = duKb( dataDir( r.name ) );
+            total += kb;
+            rows.append( { name: r.name, kind: r.kind, data: dataDir( r.name ), size_kb: kb } );
+            lines.append( r.name & repeatString( " ", max( 1, 16 - len( r.name ) ) ) & humanKb( kb ) & "  " & dataDir( r.name ) );
+        }
+        lines.append( "Total " & humanKb( total ) & " (the images themselves are in the container engine: " & engineCli() & " image ls)" );
+        return say( cmd, 0, { vms: rows, total_kb: total }, arguments.asJson, lines );
+    }
+
+    function info( name, showPassword, asJson ) {
+        var cmd = "vm info";
+        var res = resolve( arguments.name );
+        if ( len( res.error ) ) return fail( cmd, res.code, res.error, arguments.asJson );
+        var rec = res.rec;
+        var d = { name: rec.name, kind: rec.kind, container: res.container, user: rec.user, web: url( rec ), ports: rec.ports, data: dataDir( rec.name ), share: rec.share, created: rec.created, password_key: secretKey( rec.name ) };
+        if ( rec.kind == "windows" ) { d.version = rec.version; d.rdp = "127.0.0.1:" & rec.ports.rdp; } else { d.tag = rec.tag; d.gpu = rec.gpu ?: "none"; }
+        var lines = [ rec.name & " (" & rec.kind & ")", "  open: " & ( rec.kind == "windows" ? "bxcachy vm open " & rec.name & "   (RDP " & d.rdp & ", browser viewer " & d.web & ")" : d.web ), "  user: " & rec.user, "  data: " & d.data, "  shared folder: " & ( len( rec.share ) ? rec.share : "none" ) ];
+        if ( arguments.showPassword ) {
+            d.password = secrets().fetch( secretKey( rec.name ) );
+            lines.append( "  password: " & d.password );
+        } else lines.append( "  password: bxcachy vm info " & rec.name & " --show-password   (stored as " & secretKey( rec.name ) & ")" );
+        return say( cmd, 0, d, arguments.asJson, lines );
+    }
+
+    // `remove NAME [--keep-data]`: the container, and unless --keep-data the data folder, the password and the record.
+    function remove( name, keepData, yes, dryRun, asJson ) {
+        var cmd = "vm remove";
+        var res = resolve( arguments.name );
+        if ( len( res.error ) ) return fail( cmd, res.code, res.error, arguments.asJson );
+        if ( !engineAvailable() ) return fail( cmd, 4, engineCli() & " was not found", arguments.asJson );
+        var dir = dataDir( arguments.name );
+        var kb = duKb( dir );
+        var what = "remove the container " & res.container & ( arguments.keepData ? " (the data in " & dir & ", the password and the record are KEPT)" : " AND DELETE ITS DATA (" & humanKb( kb ) & " in " & dir & "), its stored password and its record. The shared folder is not touched" );
+        if ( !arguments.yes || arguments.dryRun ) return say( cmd, arguments.dryRun ? 0 : 2, { name: arguments.name, would: what, deletes_data: !arguments.keepData, size_kb: kb }, arguments.asJson, [ ( arguments.dryRun ? "Dry run" : "Plan" ) & ": would " & what, arguments.dryRun ? "Nothing was changed." : "Nothing was changed. Add --yes to apply." ], arguments.dryRun );
+        if ( len( stateOf( res.container ) ) ) {
+            var r = engineExec( [ "rm", "-f", res.container ], 180 );
+            if ( r.exitCode != 0 ) return fail( cmd, 6, trim( r.output ), arguments.asJson );
+        }
+        if ( !arguments.keepData ) {
+            if ( directoryExists( dir ) ) {
+                var rm = tryExec( [ "rm", "-rf", dir ], 600 );
+                if ( rm.exitCode != 0 || directoryExists( dir ) ) return say( cmd, 6, { name: arguments.name, error: "the container was removed but " & dir & " could not be deleted" }, arguments.asJson, [ "error: the container was removed but " & dir & " could not be deleted (files made by Docker may need: sudo rm -rf " & dir & ")" ] );
+            }
+            secrets().drop( secretKey( arguments.name ) );
+            if ( fileExists( recordFile( arguments.name ) ) ) fileDelete( recordFile( arguments.name ) );
+        }
+        return say( cmd, 0, { name: arguments.name, removed: true, data_deleted: !arguments.keepData }, arguments.asJson, [ "Removed " & res.container & ( arguments.keepData ? ". Its data, password and record were kept." : " and its data." ) ] );
+    }
+}
