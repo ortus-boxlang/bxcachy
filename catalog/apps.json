@@ -6690,6 +6690,113 @@
       "verified_on": "2026-11-12",
       "homepage": "https://github.com/kapitainsky/RcloneBrowser",
       "macos": "Transmit / Cyberduck"
+    },
+    {
+      "id": "rofimoji",
+      "name": "Rofimoji",
+      "description": "Emoji picker for Rofi (BxCachy: emoji)",
+      "description_source": "arch",
+      "kind": "desktop",
+      "group": "desktop",
+      "category": "Desktop polish",
+      "tier": "default",
+      "source": "pacman",
+      "targets": [
+        "rofimoji"
+      ],
+      "origin": [
+        "owner-pick"
+      ],
+      "verified_on": "2026-11-13",
+      "repo": "extra",
+      "shells": [
+        "hyprland"
+      ],
+      "macos": "Emoji and Symbols"
+    },
+    {
+      "id": "wlsunset",
+      "name": "wlsunset",
+      "description": "Day and night color temperature for Wayland (BxCachy: nightshift)",
+      "description_source": "arch",
+      "kind": "desktop",
+      "group": "desktop",
+      "category": "Desktop polish",
+      "tier": "default",
+      "source": "pacman",
+      "targets": [
+        "wlsunset"
+      ],
+      "origin": [
+        "owner-pick"
+      ],
+      "verified_on": "2026-11-13",
+      "repo": "extra",
+      "shells": [
+        "hyprland"
+      ],
+      "macos": "Night Shift"
+    },
+    {
+      "id": "libinput-gestures",
+      "name": "libinput-gestures",
+      "description": "Touchpad gestures (BxCachy: input gestures)",
+      "description_source": "aur",
+      "kind": "desktop",
+      "group": "desktop",
+      "category": "Desktop polish",
+      "tier": "default",
+      "source": "aur",
+      "targets": [
+        "libinput-gestures"
+      ],
+      "origin": [
+        "owner-pick"
+      ],
+      "verified_on": "2026-11-13",
+      "shells": [
+        "hyprland"
+      ],
+      "macos": "Trackpad gestures"
+    },
+    {
+      "id": "bluez",
+      "name": "Bluetooth stack",
+      "description": "BlueZ and its tools, for Magic Mouse and Trackpad",
+      "description_source": "arch",
+      "kind": "desktop",
+      "group": "system",
+      "category": "System",
+      "tier": "default",
+      "source": "pacman",
+      "targets": [
+        "bluez",
+        "bluez-utils"
+      ],
+      "origin": [
+        "owner-pick"
+      ],
+      "verified_on": "2026-11-13",
+      "repo": "extra"
+    },
+    {
+      "id": "uxplay",
+      "name": "UxPlay",
+      "description": "AirPlay mirroring receiver (BxCachy: airplay)",
+      "description_source": "aur",
+      "kind": "desktop",
+      "group": "network",
+      "category": "Networking",
+      "tier": "optional",
+      "source": "aur",
+      "targets": [
+        "uxplay"
+      ],
+      "origin": [
+        "owner-pick"
+      ],
+      "verified_on": "2026-11-13",
+      "macos": "AirPlay receiver"
     }
   ]
 }

@@ -1,0 +1,77 @@
+// `bxcachy settings export FILE | import FILE [--yes]`: take your BxCachy settings to another machine.
+//   export   a tar.gz of ~/.config/bxcachy (answers.json, shortcuts.json, runner.json, ai.json, menu.json, db.json, ...) without secrets
+//            (the keyring and the secrets files stay behind: use `secrets export` for those) and without backups and state
+//   import   lists what it would write; with --yes backs up each existing file next to it as NAME.bak-STAMP, then extracts
+// Entries must stay under bxcachy/ (no absolute paths, no ..). Exit: 0 done, 2 plan without --yes, 4 precondition, 6 failed.
+class Settings {
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.inst = new bxcachy.Installer( arguments.runner );
+        variables.config = new bxcachy.ConfigService().quiet( true );
+        return this;
+    }
+
+    function say( code, data, asJson, lines = [] ) {
+        if ( arguments.asJson ) println( variables.cli.envelope( "settings", arguments.code, arguments.data ) );
+        else for ( var l in arguments.lines ) println( l );
+        return arguments.code;
+    }
+
+    function tryExec( argv, timeout = 120 ) {
+        try { return variables.inst.exec( arguments.argv, arguments.timeout ); } catch ( any e ) { return { exitCode: 127, output: e.message, timeout: false }; }
+    }
+
+    function root() { return variables.config.cfgHome(); }
+
+    // The files under bxcachy/ to export (relative to the config home), no secrets, backups or state.
+    function files() {
+        var out = [];
+        var base = root() & "/bxcachy";
+        if ( !directoryExists( base ) ) return out;
+        for ( var f in directoryList( base, true, "path" ) ) {
+            if ( !fileExists( f ) ) continue;
+            var rel = "bxcachy/" & mid( f, len( base ) + 2, len( f ) );
+            if ( reFindNoCase( "secret|key|token|backup|state|\.bak-|\.tmp", rel ) ) continue;
+            out.append( rel );
+        }
+        return out;
+    }
+
+    function exportFile( file, force, asJson ) {
+        var list = files();
+        if ( !list.len() ) return say( 4, { error: "nothing to export" }, arguments.asJson, [ "error: there are no BxCachy settings to export yet" ] );
+        if ( fileExists( arguments.file ) && !arguments.force ) return say( 4, { error: "file exists" }, arguments.asJson, [ "error: " & arguments.file & " exists (add --force to replace it)" ] );
+        var argv = [ "tar", "-czf", arguments.file, "-C", root() ];
+        for ( var f in list ) argv.append( f );
+        var r = tryExec( argv, 120 );
+        if ( r.exitCode != 0 ) return say( 6, { error: trim( r.output ) }, arguments.asJson, [ "error: tar failed" ] );
+        return say( 0, { file: arguments.file, files: list }, arguments.asJson, [ "Exported " & list.len() & " files to " & arguments.file & ". Secrets are not included (bxcachy secrets export)." ] );
+    }
+
+    function entries( file ) {
+        var r = tryExec( [ "tar", "-tzf", arguments.file ], 60 );
+        if ( r.exitCode != 0 ) return { ok: false, error: "not a readable archive" };
+        var list = [];
+        for ( var l in listToArray( r.output, chr( 10 ) ) ) {
+            l = trim( l );
+            if ( !len( l ) || right( l, 1 ) == "/" ) continue;
+            if ( left( l, 1 ) == "/" || find( "..", l ) || left( l, 8 ) != "bxcachy/" ) return { ok: false, error: "unsafe entry " & l };
+            list.append( l );
+        }
+        return { ok: true, files: list };
+    }
+
+    function importFile( file, yes, asJson ) {
+        if ( !fileExists( arguments.file ) ) return say( 4, { error: "no such file" }, arguments.asJson, [ "error: no such file: " & arguments.file ] );
+        var e = entries( arguments.file );
+        if ( !e.ok ) return say( 4, { error: e.error }, arguments.asJson, [ "error: " & e.error ] );
+        var clash = e.files.filter( function( f ) { return fileExists( root() & "/" & f ); } );
+        var data = { file: arguments.file, files: e.files, existing: clash };
+        if ( !arguments.yes ) return say( 2, data, arguments.asJson, [ "Plan: import " & e.files.len() & " files into " & root() & "/bxcachy (" & clash.len() & " exist and are backed up first)", "Nothing was changed. Add --yes to apply." ] );
+        var stamp = trim( tryExec( [ "date", "+%Y%m%d-%H%M%S" ], 10 ).output );
+        for ( var f in clash ) fileCopy( root() & "/" & f, root() & "/" & f & ".bak-" & stamp );
+        var r = tryExec( [ "tar", "-xzf", arguments.file, "-C", root() ], 120 );
+        if ( r.exitCode != 0 ) return say( 6, { error: trim( r.output ) }, arguments.asJson, [ "error: extracting failed" ] );
+        return say( 0, data, arguments.asJson, [ "Imported " & e.files.len() & " files (" & clash.len() & " backed up as .bak-" & stamp & "). Run: bxcachy init --from-system to re-apply." ] );
+    }
+}

@@ -15,7 +15,7 @@ class {
         var config = new bxcachy.ConfigService();
         // One shared flag check for every command: unknown flags are usage errors and nothing runs.
         for ( var flag in args.options ) {
-            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider", "backend", "dir", "email", "region", "browser", "path", "from", "export", "from-system", "fresh", "rerun", "fix", "edit", "history", "out", "agenda", "without-weather", "desktops", "preset", "no-open" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
+            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider", "backend", "dir", "email", "region", "browser", "path", "from", "export", "from-system", "fresh", "rerun", "fix", "edit", "history", "out", "agenda", "without-weather", "desktops", "preset", "no-open", "location" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
                 println( "Unknown option: --" & flag );
                 CLIExit( 2 );
             }
@@ -334,6 +334,29 @@ class {
           println( "Usage: bxcachy editor lazyvim [--yes] [--json]" );
           CLIExit( 2 );
           break;
+         case "emoji": CLIExit( new bxcachy.MacExtras( cli ).emoji( asJson ) ); break;
+         case "forcequit": CLIExit( new bxcachy.MacExtras( cli ).forcequit( asJson ) ); break;
+         case "window":
+          if ( p.len() == 2 ) CLIExit( new bxcachy.MacExtras( cli ).window( p[2], asJson ) );
+          println( "Usage: bxcachy window minimize|restore" ); CLIExit( 2 ); break;
+         case "overview": CLIExit( new bxcachy.MacExtras( cli ).overview( p.len() == 2 && p[2] == "setup", asJson ) ); break;
+         case "nightshift":
+          if ( p.len() <= 2 && arrayFind( [ "on", "off", "toggle", "status" ], p.len() == 2 ? p[2] : "on" ) ) CLIExit( new bxcachy.MacExtras( cli ).nightshift( p.len() == 2 ? p[2] : "on", args.options.location ?: "", asJson ) );
+          println( "Usage: bxcachy nightshift [on|off|toggle|status] [--location=LAT,LON] [--json]" ); CLIExit( 2 ); break;
+         case "gpu":
+          if ( p.len() == 2 && p[2] == "doctor" ) CLIExit( new bxcachy.MacExtras( cli ).gpu( asJson ) );
+          println( "Usage: bxcachy gpu doctor [--json]" ); CLIExit( 2 ); break;
+         case "input":
+          if ( p.len() == 2 && p[2] == "doctor" ) CLIExit( new bxcachy.MacExtras( cli ).inputDoctor( asJson ) );
+          if ( p.len() == 2 && p[2] == "gestures" ) CLIExit( new bxcachy.MacExtras( cli ).gestures( structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
+          println( "Usage: bxcachy input doctor | gestures [--yes] [--dry-run] [--json]" ); CLIExit( 2 ); break;
+         case "airplay":
+          if ( p.len() == 2 ) CLIExit( new bxcachy.MacExtras( cli ).airplay( p[2], asJson ) );
+          println( "Usage: bxcachy airplay on|off|status [--json]" ); CLIExit( 2 ); break;
+         case "settings":
+          if ( p.len() == 3 && p[2] == "export" ) CLIExit( new bxcachy.Settings( cli ).exportFile( p[3], structKeyExists( args.options, "force" ), asJson ) );
+          if ( p.len() == 3 && p[2] == "import" ) CLIExit( new bxcachy.Settings( cli ).importFile( p[3], structKeyExists( args.options, "yes" ), asJson ) );
+          println( "Usage: bxcachy settings export FILE.tar.gz [--force] | import FILE.tar.gz [--yes] [--json]" ); CLIExit( 2 ); break;
          case "boxlang":
           // The BoxLang developer ecosystem. See COMMAND-CONTRACT.md 13.28.
           blSub = p.len() >= 2 ? p[2] : "status";

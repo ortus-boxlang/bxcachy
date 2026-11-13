@@ -11,6 +11,7 @@ class StarterOptions {
         return {
             "us-intl": { layout: "us", variant: "intl", label: "English (US, international)" },
             "us": { layout: "us", variant: "", label: "English (US)" },
+            "us-mac": { layout: "us", variant: "mac", label: "English (US, Macintosh: Option-key characters)" },
             "es": { layout: "es", variant: "", label: "Spanish" },
             "latam": { layout: "latam", variant: "", label: "Spanish (Latin America)" },
             "de": { layout: "de", variant: "", label: "German" },

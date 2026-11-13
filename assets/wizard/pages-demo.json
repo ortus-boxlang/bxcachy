@@ -285,6 +285,12 @@
               "group": "English"
             },
             {
+              "value": "us-mac",
+              "label": "English (US, Macintosh)",
+              "description": "Option-key characters like a Mac (Option+E then E gives e with an accent).",
+              "group": "English"
+            },
+            {
               "value": "es",
               "label": "Spanish",
               "description": "Spanish (Spain) layout.",
@@ -323,6 +329,34 @@
           "label": "Mac-style Super keys",
           "default": true,
           "help": "Super+C, Super+V, Super+Tab behave like Cmd."
+        },
+        {
+          "type": "confirm",
+          "id": "night_shift",
+          "label": "Night shift (warmer screen at sunset)",
+          "default": true,
+          "help": "Hyprland: wlsunset with your time zone's sunrise and sunset, no network lookup. Plasma: its own Night Light in automatic mode."
+        },
+        {
+          "type": "confirm",
+          "id": "gestures",
+          "label": "Trackpad gestures",
+          "default": true,
+          "when": {
+            "id": "desktops",
+            "in": [
+              "hyprland",
+              "both"
+            ]
+          },
+          "help": "Three-finger swipes switch workspaces and open the overview (libinput-gestures). Works with Apple Magic Trackpad over Bluetooth."
+        },
+        {
+          "type": "confirm",
+          "id": "airplay",
+          "label": "AirPlay receiver",
+          "default": false,
+          "help": "Lets your iPhone or Mac cast to this machine (UxPlay)."
         }
       ]
     },

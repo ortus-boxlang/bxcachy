@@ -42,6 +42,11 @@ class Menu {
                 { label: "Turn snooze off", kind: "spawn", argv: [ "notify", "snooze", "off" ] },
                 { label: "Clear notifications", kind: "spawn", argv: [ "notify", "clear" ] }
             ] },
+            { label: "Cloud storage", kind: "sub", children: [
+                { label: "Remotes", kind: "run", argv: [ "cloud", "remotes" ] },
+                { label: "Add or configure a remote", kind: "run", argv: [ "cloud", "configure" ] },
+                { label: "Mounted folders: status", kind: "run", argv: [ "cloud", "status" ] }
+            ] },
             { label: "Web apps", kind: "sub", children: [
                 { label: "Create web app", kind: "webcreate" },
                 { label: "Install all Google apps", kind: "run", argv: [ "web", "install", "google", "--yes" ] },

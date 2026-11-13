@@ -42,13 +42,13 @@ k reset logout --yes >/dev/null
 # conflicts with YOUR lines: refused unless --force; `conflicts` lists them
 cat > "$tmp/cfg/hypr/hyprland.lua" <<'LUA'
 local mainMod = "SUPER"
-hl.bind(mainMod .. " + SHIFT + M", hl.dsp.window.fullscreen())
+hl.bind(mainMod .. " + SHIFT + Y", hl.dsp.window.fullscreen())
 hl.bind("SUPER + ALT + K", function() end)
 hl.bind("XF86AudioMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"))
 LUA
-[[ "$(code "$binary" keys set control-center Super+Shift+M --yes)" == 4 ]] || fail 'a clash with your hyprland.lua is refused'
-{ k set control-center Super+Shift+M --yes 2>&1 || true; } | grep -q 'hyprland.lua line 2' || fail 'the message names your file and line'
-[[ "$(code "$binary" keys set control-center Super+Shift+M --yes --force)" == 0 ]] || fail '--force allows a clash with your own line'
+[[ "$(code "$binary" keys set control-center Super+Shift+Y --yes)" == 4 ]] || fail 'a clash with your hyprland.lua is refused'
+{ k set control-center Super+Shift+Y --yes 2>&1 || true; } | grep -q 'hyprland.lua line 2' || fail 'the message names your file and line'
+[[ "$(code "$binary" keys set control-center Super+Shift+Y --yes --force)" == 0 ]] || fail '--force allows a clash with your own line'
 k conflicts --json | jq -e '.data.ok == false and (.data.user | length) == 1 and .data.user[0].id == "control-center" and .data.user[0].line == 2' >/dev/null || fail "conflicts: $(k conflicts --json)"
 k reset control-center --yes >/dev/null
 k conflicts | grep -q 'No conflicts' || fail 'clean table and no clash'

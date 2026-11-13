@@ -154,6 +154,9 @@ class InitPlan {
         if ( agentIds.len() ) apps.append( "tmux" );
         // the pull-down AI shell on Plasma is Yakuake (Hyprland needs nothing extra)
         if ( agentIds.len() && wantsPlasma ) apps.append( "yakuake" );
+        if ( pick( a, "night_shift", false ) && wantsHypr ) apps.append( "wlsunset" );
+        if ( wantsHypr && pick( a, "gestures", false ) ) { apps.append( "libinput-gestures" ); apps.append( "bluez" ); }
+        if ( pick( a, "airplay", false ) ) apps.append( "uxplay" );
         // the Plasma panel layout needs its widgets installed
         var panelsOn = wantsPlasma && pick( a, "plasma_panels" ) == "bxcachy";
         if ( panelsOn ) {
@@ -259,6 +262,10 @@ class InitPlan {
             if ( !arrayFind( [ "dwindle", "master", "monocle", "scrolling", "stage" ], a.plasma_layout ) ) out.errors.append( "plasma_layout: unknown layout " & a.plasma_layout );
             else out.steps.append( { id: "plasma-layout", title: "use the " & a.plasma_layout & " window layout on this Plasma workspace (needs a running Plasma session)", argv: [ "bxcachy", "tiling", "layout", a.plasma_layout ], optional: true } );
         }
+        // night shift, trackpad gestures and the AirPlay receiver (optional: a failure is skipped)
+        if ( pick( a, "night_shift", false ) ) out.steps.append( { id: "night-shift", title: "turn on night shift (sunset and sunrise from your time zone)", argv: [ "bxcachy", "nightshift", "on" ], optional: true } );
+        if ( wantsHypr && pick( a, "gestures", false ) ) out.steps.append( { id: "gestures", title: "set up three-finger trackpad gestures", argv: [ "bxcachy", "input", "gestures" ], optional: true } );
+        if ( pick( a, "airplay", false ) ) out.steps.append( { id: "airplay", title: "start the AirPlay receiver", argv: [ "bxcachy", "airplay", "on" ], optional: true } );
         // the Plasma panel layout (optional: it is applied now when Plasma is running, else at your next Plasma login) and the desktop count
         if ( wantsPlasma && len( pick( a, "plasma_panels" ) ) ) {
             var deskCount = pick( a, "workspaces", 4 );

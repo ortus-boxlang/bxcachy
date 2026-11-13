@@ -3,7 +3,7 @@ failures = 0;
 function check( label, ok ) { if ( ok ) println( "ok   " & label ); else { println( "FAIL " & label ); failures++; } }
 sc = new bxcachy.Shortcuts();
 ids = sc.table().map( function( r ) { return r.id; } ).toList( "," );
-check( "the Hyprland-only bindings follow", ids == "copy,paste,switch-windows,logout,ai-shell,clipboard-history,screen-record,screen-record-region,control-center,key-sheet,screenshot-screen,screenshot-region,screenshot-menu,dnd,all-apps" );
+check( "the Hyprland-only bindings follow", ids == "copy,paste,mac-z,mac-x,mac-a,mac-s,mac-f,mac-t,mac-n,mac-o,mac-p,mac-r,mac-w,mac-l,mac-b,mac-i,mac-u,mac-comma,switch-windows,logout,ai-shell,clipboard-history,screen-record,screen-record-region,control-center,emoji,force-quit,minimize,unminimize,overview,dictation-toggle,night-shift,key-sheet,screenshot-screen,screenshot-region,screenshot-menu,dnd,all-apps" );
 x = sc.render( "xremap" );
 check( "xremap: terminals send Ctrl+Shift+C/V", find( "Super-c: Ctrl-Shift-c", x ) > 0 && find( "Super-v: Ctrl-Shift-v", x ) > 0 );
 check( "xremap: elsewhere Ctrl+C/V and Alt-Tab", find( "Super-c: Ctrl-c", x ) > 0 && find( "Super-tab: Alt-Tab", x ) > 0 );
@@ -16,7 +16,7 @@ check( "hyprland: Super+Space follows the chosen launcher and falls back to Noct
 check( "hyprland: no hyprlang bind lines", find( "bind = ", h ) == 0 );
 check( "hyprland load line", sc.hyprlandLoadLine() == 'require("bxcachy")' );
 check( "plasma: ksmserver Log Out is Meta+Shift+Q", find( "[ksmserver]", sc.render( "plasma" ) ) > 0 && find( "Log Out=Meta+Shift+Q", sc.render( "plasma" ) ) > 0 );
-check( "show lists every row", sc.show().len() == 15 );
+check( "show lists every row", sc.show().len() == 38 );
 threw = false;
 try { sc.render( "bogus" ); } catch ( any e ) { threw = true; }
 check( "unknown target throws", threw );
@@ -28,7 +28,7 @@ check( "parseKeys rejects a bare key, an unknown modifier and an unknown key", !
 check( "hyprExpr with and without Super", sc.hyprExpr( "Super+Shift+V" ) == 'mainMod .. " + SHIFT + V"' && sc.hyprExpr( "Ctrl+Alt+Q" ) == '"CTRL + ALT + Q"' );
 check( "qtKeys is Qt's spelling", sc.qtKeys( "Super+Shift+Q" ) == "Meta+Shift+Q" && sc.qtKeys( "Super+Alt+Space" ) == "Meta+Alt+Space" );
 over = new bxcachy.Shortcuts( { "ai-shell": "Super+Alt+A", copy: "Super+Alt+C", bogus: "x" } );
-check( "an override changes a binding's keys, not a remap's, and an unknown id is ignored", over.table().filter( function( r ) { return r.id == "ai-shell"; } )[ 1 ].keys == "Super+Alt+A" && over.table()[ 1 ].keys == "Super+C" && over.table().len() == 15 );
+check( "an override changes a binding's keys, not a remap's, and an unknown id is ignored", over.table().filter( function( r ) { return r.id == "ai-shell"; } )[ 1 ].keys == "Super+Alt+A" && over.table()[ 1 ].keys == "Super+C" && over.table().len() == 38 );
 check( "an override reaches the rendered Hyprland text", find( 'hl.bind(mainMod .. " + ALT + A"', over.render( "hyprland" ) ) > 0 && find( '" + grave"', over.render( "hyprland" ) ) == 0 );
 check( "an override with bad keys is ignored", new bxcachy.Shortcuts( { "ai-shell": "nonsense" } ).table().filter( function( r ) { return r.id == "ai-shell"; } )[ 1 ].keys == "Super+`" );
 
