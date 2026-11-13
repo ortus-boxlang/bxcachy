@@ -15,12 +15,17 @@ class {
         var config = new bxcachy.ConfigService();
         // One shared flag check for every command: unknown flags are usage errors and nothing runs.
         for ( var flag in args.options ) {
-            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider", "backend", "dir", "email", "region", "browser", "path", "from", "export", "from-system", "fresh", "rerun", "fix", "edit", "history", "out", "agenda", "without-weather", "desktops", "preset", "no-open", "location", "notify", "defaults", "tag", "mode", "keep-wallpaper", "version", "tag", "ram", "cpus", "disk", "memory", "share", "gpu", "web", "fullscreen", "limit", "explicit", "aur", "list", "host", "protocol", "user", "vers", "to", "delete", "starter" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
+            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider", "backend", "dir", "email", "region", "browser", "path", "from", "export", "from-system", "fresh", "rerun", "fix", "edit", "history", "out", "agenda", "without-weather", "desktops", "preset", "no-open", "location", "notify", "defaults", "tag", "mode", "keep-wallpaper", "version", "tag", "ram", "cpus", "disk", "memory", "share", "gpu", "web", "fullscreen", "limit", "explicit", "aur", "list", "host", "protocol", "user", "vers", "to", "delete", "starter", "reason", "with-secrets", "only", "packages", "keep" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
                 println( "Unknown option: --" & flag );
                 CLIExit( 2 );
             }
         }
         var base = [ "localsend", "mpv", "pacseek" ];
+
+        // A config snapshot before the commands that change a lot (default on; `bxcachy backup config auto off`). Quiet, never stops the command.
+        if ( structKeyExists( args.options, "yes" ) && !structKeyExists( args.options, "dry-run" ) && ( cmd == "refresh" || cmd == "reinstall" || cmd == "init" || ( ( cmd == "system" || cmd == "update" ) && p.len() >= 2 && ( p[ 2 ] == "update" || p[ 2 ] == "apply" ) ) ) ) {
+          new bxcachy.BackupConfig( cli ).autoSnapshot( "before " & p.toList( " " ) );
+        }
 
         switch ( cmd ) {
          case "version":
@@ -515,6 +520,12 @@ class {
           rfWords = [];
           for ( rfi = 2; rfi <= p.len(); rfi++ ) rfWords.append( p[ rfi ] );
           CLIExit( new bxcachy.Refresh( cli ).run( rfWords, args.options, structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), structKeyExists( args.options, "force" ), asJson ) );
+          break;
+         case "backup":
+          // Backups: config snapshots, system snapshots, data, send and export. See COMMAND-CONTRACT.md 13.43.
+          bkWords = [];
+          for ( bki = 2; bki <= p.len(); bki++ ) bkWords.append( p[ bki ] );
+          CLIExit( new bxcachy.Backup( cli ).run( bkWords, args.options, structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), structKeyExists( args.options, "force" ), asJson ) );
           break;
          case "vm":
           // Windows and Linux desktops in containers. See COMMAND-CONTRACT.md 13.33.
