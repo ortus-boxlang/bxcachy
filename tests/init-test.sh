@@ -100,7 +100,7 @@ def pump(t):
                 if not os.read(fd, 65536): return
             except OSError: return
 pump(1.5)
-for k in [b'\r'] + [b'\t'] * 10 + [b'\r']:
+for k in [b'\r'] + [b'\t'] * 13 + [b'\r']:
     os.write(fd, k); pump(0.3)
 pump(1.5)
 _, status = os.waitpid(pid, 0)

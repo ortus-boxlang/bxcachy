@@ -63,6 +63,13 @@ run "$binary" backup data run --target=do --yes >/dev/null
 has "restic backup --tag bxcachy --exclude-caches --one-file-system --exclude node_modules" && has "$H/Projects" && has "$H/Documents" && has "$H/.ssh" || fail "run: $(cat "$LOG")"
 ! has "$H/code" || fail 'a folder that does not exist was added'
 
+# ---- default and --all ----
+run "$binary" backup data default usb --json | jq -e '.data.default == "usb"' >/dev/null || fail 'default'
+[[ "$(code "$binary" backup data default nowhere)" == 4 ]] || fail 'an unknown default exits 4'
+run "$binary" backup data default do >/dev/null
+: > "$LOG"; run "$binary" backup data run --all --yes >/dev/null
+[[ "$(grep -c '^restic backup' "$LOG")" == 1 ]] && has 'repo=s3:https://nyc3.digitaloceanspaces.com/mybucket/bx' || fail "run --all backs up only the places that are set up: $(grep '^restic' "$LOG")"
+
 # ---- list, files, restore ----
 run "$binary" backup data list --target=do --json | jq -e '(.data.snapshots | map(.id)) == ["bbbbbbbb","aaaaaaaa"]' >/dev/null || fail 'list newest first'
 run "$binary" backup data files aaaaaaaa --target=do --json | jq -e '.data.files | map(.path) == ["/home/dev/Projects/app/main.bx"]' >/dev/null || fail 'files'
@@ -89,7 +96,7 @@ run "$binary" backup data retention --daily=14 --monthly=12 --json | jq -e '.dat
 [[ ! -e "$tmp/units/bxcachy-backup.timer" ]] || fail 'the plan wrote a timer'
 : > "$LOG"; run "$binary" backup data schedule daily --yes >/dev/null
 grep -q '^OnCalendar=daily$' "$tmp/units/bxcachy-backup.timer" && grep -q '^Persistent=true$' "$tmp/units/bxcachy-backup.timer" || fail 'timer'
-grep -q '^ExecStart=/usr/bin/bxcachy backup data run --yes --scheduled$' "$tmp/units/bxcachy-backup.service" && grep -q '^ConditionACPower=true$' "$tmp/units/bxcachy-backup.service" || fail 'service skips on battery'
+grep -q '^ExecStart=/usr/bin/bxcachy backup data run --all --yes --scheduled$' "$tmp/units/bxcachy-backup.service" && grep -q '^ConditionACPower=true$' "$tmp/units/bxcachy-backup.service" || fail 'service skips on battery'
 has 'systemctl --user enable --now bxcachy-backup.timer' || fail 'timer enabled'
 run "$binary" backup data status --json | jq -e '.data.schedule == "daily"' >/dev/null || fail 'status shows the schedule'
 run "$binary" backup data schedule off --yes >/dev/null; [[ ! -e "$tmp/units/bxcachy-backup.timer" ]] && has 'disable --now bxcachy-backup.timer' || fail 'schedule off'

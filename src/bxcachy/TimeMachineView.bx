@@ -1,4 +1,4 @@
-// Draws the Time Machine screen on MatchBox's terminal canvas (docs/tui.md in the MatchBox repo): your backups as rows across a time axis
+// Draws BxTimeMachine, the backup screen, on MatchBox's terminal canvas (docs/tui.md in the MatchBox repo): your backups as rows across a time axis
 // (newest on the right), the chosen backup as a card with older ones stacked behind it, the file browser, the plan and result screens.
 // Catppuccin Frappe neutrals with the Ortus brand gradient (cyan #00DBFF to green #00FF78); every tier has its own colour.
 //
@@ -151,7 +151,7 @@ class TimeMachineView {
 
     function header( app, width, phase ) {
         fillRect( 0, 0, arguments.width, 2, variables.MANTLE );
-        gtext( 3, 0, "◉  T I M E   M A C H I N E", true, arguments.phase, variables.MANTLE );
+        gtext( 3, 0, "◉  B x T i m e M a c h i n e", true, arguments.phase, variables.MANTLE );
         var tl = arguments.app.timeline();
         var n = tl.total ?: 0;
         var places = tl.rows.len();

@@ -14,7 +14,8 @@
 //        NAS shares are added with `bxcachy nas use NAME SHARE` and show up here as nas-NAME.
 //   backup data target remove NAME [--yes]
 //   backup data init NAME [--yes]                             create the repository; the repository password is made for you and kept in the keyring
-//   backup data run [--target=NAME] [--yes]                   back up now
+//   backup data run [--target=NAME | --all] [--yes]           back up now (--all: every place that is set up)
+//   backup data default NAME                                  the place used when --target is not given
 //   backup data list [--target=NAME] [--json]                 the snapshots (restic snapshots)
 //   backup data files ID [PATH] [--target=NAME]               the files in a snapshot (restic ls)
 //   backup data restore ID --to=DIR [--include=PATH] [--yes]  restore into DIR (never over your files unless you give their own folder)
@@ -260,6 +261,35 @@ class BackupData {
         return say( 0, { target: pt.name, output: trim( r.output ) }, arguments.asJson, [ "Backed up to " & pt.name & ".", listLast( trim( r.output ), chr( 10 ) ) ] );
     }
 
+    // `default NAME`: the target used when no --target is given.
+    function defaultCmd( name, asJson ) {
+        var s = readAll();
+        if ( !structKeyExists( s.targets, arguments.name ) ) return fail( 4, "no target called " & arguments.name & " (bxcachy backup data targets)", arguments.asJson );
+        s.data.default = arguments.name;
+        writeAll( s );
+        return say( 0, { default: arguments.name }, arguments.asJson, [ "The default backup place is " & arguments.name ] );
+    }
+
+    // `run --all`: every target that is set up, one after the other (what the schedule uses). Exit 6 when any failed, but all are tried.
+    function runAll( opts, yes, dry, asJson, scheduled ) {
+        var s = readAll();
+        var names = structKeyArray( s.targets );
+        arraySort( names, "text" );
+        var worst = 0;
+        var ran = 0;
+        for ( var n in names ) {
+            if ( !len( secrets().fetch( passwordKey( n ) ) ) ) continue;
+            ran++;
+            var o = duplicate( arguments.opts );
+            o.target = n;
+            var c = runCmd( o, arguments.yes, arguments.dry, arguments.asJson, arguments.scheduled );
+            if ( c != 0 && c != 2 ) worst = 6;
+            if ( c == 2 && worst == 0 ) worst = 2;
+        }
+        if ( !ran ) return fail( 4, "no backup place is set up yet (bxcachy backup data init NAME --yes)", arguments.asJson );
+        return worst;
+    }
+
     function notify( title, body ) {
         if ( has( "noctalia" ) ) { tryExec( [ "noctalia", "msg", "notification-show", arguments.title, arguments.body ], 10 ); return; }
         if ( has( "notify-send" ) ) tryExec( [ "notify-send", arguments.title, arguments.body ], 10 );
@@ -340,7 +370,7 @@ class BackupData {
 
     // ---- schedule ----
     function unitTexts( when ) {
-        var svc = "## Written by `bxcachy backup data schedule`." & chr( 10 ) & "[Unit]" & chr( 10 ) & "Description=BxCachy backup of your files" & chr( 10 ) & "ConditionACPower=true" & chr( 10 ) & "After=network-online.target" & chr( 10 ) & chr( 10 ) & "[Service]" & chr( 10 ) & "Type=oneshot" & chr( 10 ) & "Nice=10" & chr( 10 ) & "IOSchedulingClass=idle" & chr( 10 ) & "ExecStart=" & self() & " backup data run --yes --scheduled" & chr( 10 );
+        var svc = "## Written by `bxcachy backup data schedule`." & chr( 10 ) & "[Unit]" & chr( 10 ) & "Description=BxCachy backup of your files" & chr( 10 ) & "ConditionACPower=true" & chr( 10 ) & "After=network-online.target" & chr( 10 ) & chr( 10 ) & "[Service]" & chr( 10 ) & "Type=oneshot" & chr( 10 ) & "Nice=10" & chr( 10 ) & "IOSchedulingClass=idle" & chr( 10 ) & "ExecStart=" & self() & " backup data run --all --yes --scheduled" & chr( 10 );
         var tim = "## Written by `bxcachy backup data schedule`." & chr( 10 ) & "[Unit]" & chr( 10 ) & "Description=BxCachy backup (" & arguments.when & ")" & chr( 10 ) & chr( 10 ) & "[Timer]" & chr( 10 ) & "OnCalendar=" & arguments.when & chr( 10 ) & "Persistent=true" & chr( 10 ) & "RandomizedDelaySec=15min" & chr( 10 ) & chr( 10 ) & "[Install]" & chr( 10 ) & "WantedBy=timers.target" & chr( 10 );
         return { service: svc, timer: tim };
     }
@@ -419,6 +449,8 @@ class BackupData {
         if ( verb == "target" && rest.len() >= 2 && rest[ 1 ] == "add" && rest.len() == 2 ) return targetAdd( rest[ 2 ], arguments.opts, arguments.yes, arguments.dry, arguments.asJson );
         if ( verb == "target" && rest.len() == 2 && rest[ 1 ] == "remove" ) return targetRemove( rest[ 2 ], arguments.yes, arguments.dry, arguments.asJson );
         if ( verb == "init" && rest.len() == 1 ) return initCmd( rest[ 1 ], arguments.yes, arguments.dry, arguments.asJson );
+        if ( verb == "default" && rest.len() == 1 ) return defaultCmd( rest[ 1 ], arguments.asJson );
+        if ( verb == "run" && structKeyExists( arguments.opts, "all" ) ) return runAll( arguments.opts, arguments.yes, arguments.dry, arguments.asJson, structKeyExists( arguments.opts, "scheduled" ) );
         if ( verb == "run" ) return runCmd( arguments.opts, arguments.yes, arguments.dry, arguments.asJson, structKeyExists( arguments.opts, "scheduled" ) );
         if ( verb == "list" ) return listCmd( arguments.opts, arguments.asJson );
         if ( verb == "files" ) return filesCmd( rest, arguments.opts, arguments.asJson );

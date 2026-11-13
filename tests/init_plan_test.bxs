@@ -184,5 +184,26 @@ check( "a default agent that was not ticked is installed too", cmd( p, "apps" ) 
 check( "an unknown default agent is an error", ip.plan( { ai_default: "bogus" } ).errors.len() == 1 );
 check( "no agents, no keyring step", ip.plan( { ai_agents: [], ai_keys: "later" } ).steps.len() == 0 );
 
+
+// NAS, remote backups and the backup layers
+p = ip.plan( { nas_use: true, nas_name: "synology", nas_host: "ds920.local", nas_protocol: "smb", nas_user: "luis", nas_share: "backups", nas_auto: true, backup_layers: [ "config", "snapshots", "data" ], backup_schedule: "daily" } );
+check( "a NAS: tools, save (password asked in the terminal), mount, automount, use as a backup place", cmd( p, "nas-setup" ) == "bxcachy nas setup --yes" && cmd( p, "nas-add" ) == "bxcachy nas add synology --host=ds920.local --protocol=smb --user=luis --ask-password" && cmd( p, "nas-mount" ) == "bxcachy nas mount synology backups --yes" && cmd( p, "nas-auto" ) == "bxcachy nas auto on synology backups --yes" && cmd( p, "nas-use" ) == "bxcachy nas use synology backups" );
+check( "files: restic is installed, the repository is created on the NAS, it becomes the default, a daily schedule", find( "restic", cmd( p, "apps" ) ) > 0 && cmd( p, "backup-init-nas-synology" ) == "bxcachy backup data init nas-synology --yes" && cmd( p, "backup-default" ) == "bxcachy backup data default nas-synology" && cmd( p, "backup-schedule" ) == "bxcachy backup data schedule daily --yes" );
+check( "system snapshots are a step; the config layer needs none", cmd( p, "backup-snapshots" ) == "bxcachy backup snapshots setup --yes" && find( "backup-config-off", ids( p ) ) == 0 );
+check( "the NAS steps never stop the plan", p.steps.filter( function( s ) { return left( s.id, 3 ) == "nas" && s.id != "nas-use"; } ).every( function( s ) { return s.optional ?: false; } ) && p.errors.len() == 0 );
+check( "no password is in any step", ( function() { for ( s in p.steps ) if ( findNoCase( "password=", s.argv.toList( " " ) ) ) return false; return true; } )() );
+p = ip.plan( { nas_use: true, nas_name: "vault", nas_host: "10.0.0.5", nas_protocol: "nfs", nas_share: "/volume1/media", backup_layers: [] } );
+check( "NFS has no user or password; with no layers the config snapshots go off", cmd( p, "nas-add" ) == "bxcachy nas add vault --host=10.0.0.5 --protocol=nfs" && cmd( p, "backup-config-off" ) == "bxcachy backup config auto off" );
+p = ip.plan( { nas_use: true, nas_name: "x", nas_protocol: "smb" } );
+check( "a NAS without an address or user is an error", p.errors.len() == 1 && find( "nas_host", p.errors[ 1 ] ) > 0 );
+p = ip.plan( { remote_type: "s3", remote_name: "spaces", remote_endpoint: "https://nyc3.digitaloceanspaces.com", remote_bucket: "mybackups", remote_region: "nyc3", remote_path: "bx", backup_layers: [ "data" ], backup_schedule: "hourly" } );
+check( "S3: the target is added with --ask-keys, then created, then scheduled", cmd( p, "backup-remote" ) == "bxcachy backup data target add spaces --type=s3 --bucket=mybackups --endpoint=https://nyc3.digitaloceanspaces.com --region=nyc3 --path=bx --ask-keys" && cmd( p, "backup-init-spaces" ) == "bxcachy backup data init spaces --yes" && cmd( p, "backup-schedule" ) == "bxcachy backup data schedule hourly --yes" );
+p = ip.plan( { remote_type: "gs", remote_name: "g", remote_bucket: "b", backup_layers: [] } );
+check( "Google needs the project and the key file", p.errors.len() == 1 && find( "remote_credentials", p.errors[ 1 ] ) > 0 );
+p = ip.plan( { remote_type: "local", remote_name: "usb", remote_path: "/run/media/me/disk/repo", backup_layers: [ "data" ], backup_schedule: "off" } );
+check( "a disk needs only a path; schedule off adds no timer", cmd( p, "backup-remote" ) == "bxcachy backup data target add usb --type=local --path=/run/media/me/disk/repo" && find( "backup-schedule", ids( p ) ) == 0 );
+p = ip.plan( { backup_layers: [ "data" ] } );
+check( "files without any place are told what to do", p.pending.len() == 1 && find( "no NAS or remote place", p.pending[ 1 ] ) > 0 );
+check( "nothing is added when nothing is asked", find( "nas-add", ids( ip.plan( {} ) ) ) == 0 && find( "backup-remote", ids( ip.plan( {} ) ) ) == 0 && find( "backup-config-off", ids( ip.plan( {} ) ) ) == 0 );
 if ( failures > 0 ) { println( failures & " failed" ); exit( 1 ); }
 println( "all passed" );

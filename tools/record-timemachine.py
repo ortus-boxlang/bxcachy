@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Records the Time Machine screen (bxcachy timemachine --demo): runs it in a pseudo-terminal, plays scripted keystrokes, emulates the screen with pyte and
+"""Records BxTimeMachine (bxcachy timemachine --demo): runs it in a pseudo-terminal, plays scripted keystrokes, emulates the screen with pyte and
 draws every frame with Pillow, then encodes a video (and a GIF) with ffmpeg.
 Usage: python3 tools/record-timemachine.py [--out DIR] [--cols 120] [--rows 38] [--bin PATH]   (needs Pillow, pyte, ffmpeg)"""
 import argparse, codecs, os, pty, select, struct, fcntl, termios, time, subprocess, sys, shutil

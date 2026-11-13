@@ -35,7 +35,7 @@ run "$binary" menu items | grep -q '    Development   (lists the Development app
 run "$binary" menu search 'next theme' | grep -q 'Appearance > Next theme   (opens: bxcachy theme next)' || fail 'menu search finds an entry and its command'
 run "$binary" menu search zzzznothing | grep -q 'No menu entry matches' || fail 'menu search without a match'
 run "$binary" menu search lock --json | jq -e '.data.results | map(.path) | index("System > Lock") != null' >/dev/null || fail 'menu search json'
-for q in 'Setup > Time > Set the time zone' 'Setup > DNS > Cloudflare' 'Setup > Kernel > Installed and available' 'Setup > Security > Passwordless sudo > Turn on' 'Setup > Power > Profile > Balanced' 'Setup > Display > Monitors' 'Trigger > Toggle > Stay awake' 'Agent > Open an agent' 'Appearance > Bar > Position > Top'; do
+for q in 'Setup > Time > Set the time zone' 'Setup > DNS > Cloudflare' 'Setup > Kernel > Installed and available' 'Setup > Security > Passwordless sudo > Turn on' 'Setup > Power > Profile > Balanced' 'Setup > Display > Monitors' 'Trigger > Toggle > Stay awake' 'Agent > Open an agent' 'Appearance > Bar > Position > Top' 'Setup > Backup > BxTimeMachine: every backup on one timeline' 'Setup > NAS > Find NAS boxes on the network' 'Setup > Backup > My files > Schedule > Every day'; do
   run "$binary" menu search "${q##* > }" --json | jq -e --arg p "$q" '.data.results | map(.path) | index($p) != null' >/dev/null || fail "the menu has no entry: $q"
 done
 # every spawn and run entry names a real command (the first word must be a known route)

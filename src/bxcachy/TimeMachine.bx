@@ -1,7 +1,7 @@
-// Runs the Time Machine screen: draws TimeMachineView frames on the MatchBox terminal canvas, feeds keys, clicks and the wheel to
+// Runs BxTimeMachine, the backup screen: draws TimeMachineView frames on the MatchBox terminal canvas, feeds keys, clicks and the wheel to
 // TimeMachineApp, and runs the bxcachy commands its intents ask for. Everything that changes something goes through the plan screen first
 // (the same command with --dry-run), and only a y runs it. With --demo the data is made up and nothing is run.
-//   bxcachy timemachine [--demo] [--local]
+//   bxcachy timemachine [--demo] [--local]   (also bxtimemachine)
 // Exit: 0 after leaving, 4 when there is no terminal.
 class TimeMachine {
     function init( cli, runner = "" ) {

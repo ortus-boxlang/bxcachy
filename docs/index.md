@@ -28,6 +28,10 @@ Hyprland and Noctalia, or Plasma with tiling and a status panel. Mac-style keys,
 The control center: search every setting, install any package, change the look, monitors, power, time zone and DNS.
 :::
 
+::: card title="BxTimeMachine" href="guides/backups.md"
+Your setup, your system and your files, backed up to a NAS or the cloud, and one screen to go back through time.
+:::
+
 ::: card title="Every app, your choice" href="guides/apps.md"
 A curated catalog of 280 apps and web apps, with one-click Google, Microsoft and Apple suites.
 :::

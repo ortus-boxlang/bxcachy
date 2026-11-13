@@ -97,7 +97,7 @@ function shot( a, w = 120, h = 38 ) { view.paint( a, 100, w, h ); return tui.ren
 a3 = new bxcachy.TimeMachineApp( demo.build(), "/home/luis" );
 a3.onKey( "Down" ); a3.onKey( "Down" ); a3.onKey( "Left" );
 sc = shot( a3 );
-check( "title, counts and Powered by BoxLang", find( "T I M E   M A C H I N E", sc ) > 0 && find( "78 backups in 6 places", sc ) > 0 && find( "Powered by", sc ) > 0 && find( "BoxLang", sc ) > 0 && find( "www.boxlang.io", sc ) > 0 );
+check( "title, counts and Powered by BoxLang", find( "B x T i m e M a c h i n e", sc ) > 0 && find( "78 backups in 6 places", sc ) > 0 && find( "Powered by", sc ) > 0 && find( "BoxLang", sc ) > 0 && find( "www.boxlang.io", sc ) > 0 );
 check( "every place is a row", find( "System", sc ) > 0 && find( "Config", sc ) > 0 && find( "Files nas-synology", sc ) > 0 && find( "Files spaces", sc ) > 0 && find( "Files usb", sc ) > 0 && find( "Mirror synology", sc ) > 0 );
 check( "the time axis ends at now and shows the tiers", find( "now", sc ) > 0 && find( "hourly", sc ) > 0 && find( "monthly", sc ) > 0 && find( "yearly", sc ) > 0 );
 check( "the chosen backup is a card with id, age and tier", find( "id      ", sc ) > 0 && find( "ago", sc ) > 0 && find( "enter browse   r restore   e export   s send", sc ) > 0 );

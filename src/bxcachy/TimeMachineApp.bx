@@ -1,4 +1,4 @@
-// The state of the Time Machine screen and what each key does. No drawing and no commands here: onKey() returns an "intent" (a struct
+// The state of BxTimeMachine and what each key does. No drawing and no commands here: onKey() returns an "intent" (a struct
 // with an action) when something has to run, and TimeMachine.bx runs it and feeds the result back with setFiles(), showPlan() or showResult().
 //
 // Modes:   timeline  the rows of backups across time (the home screen)

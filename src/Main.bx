@@ -15,7 +15,7 @@ class {
         var config = new bxcachy.ConfigService();
         // One shared flag check for every command: unknown flags are usage errors and nothing runs.
         for ( var flag in args.options ) {
-            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider", "backend", "dir", "email", "region", "browser", "path", "from", "export", "from-system", "fresh", "rerun", "fix", "edit", "history", "out", "agenda", "without-weather", "desktops", "preset", "no-open", "location", "notify", "defaults", "tag", "mode", "keep-wallpaper", "version", "tag", "ram", "cpus", "disk", "memory", "share", "gpu", "web", "fullscreen", "limit", "explicit", "aur", "list", "host", "protocol", "user", "vers", "to", "delete", "starter", "reason", "with-secrets", "only", "packages", "keep", "home", "description", "type", "url", "bucket", "endpoint", "region", "project", "credentials", "remote", "container", "keys-file", "ask-keys", "target", "include", "deep", "scheduled", "mode", "daily", "weekly", "monthly", "from", "local" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
+            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider", "backend", "dir", "email", "region", "browser", "path", "from", "export", "from-system", "fresh", "rerun", "fix", "edit", "history", "out", "agenda", "without-weather", "desktops", "preset", "no-open", "location", "notify", "defaults", "tag", "mode", "keep-wallpaper", "version", "tag", "ram", "cpus", "disk", "memory", "share", "gpu", "web", "fullscreen", "limit", "explicit", "aur", "list", "host", "protocol", "user", "vers", "to", "delete", "starter", "reason", "with-secrets", "only", "packages", "keep", "home", "description", "type", "url", "bucket", "endpoint", "region", "project", "credentials", "remote", "container", "keys-file", "ask-keys", "target", "include", "deep", "scheduled", "mode", "daily", "weekly", "monthly", "from", "local", "all" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
                 println( "Unknown option: --" & flag );
                 CLIExit( 2 );
             }
@@ -527,11 +527,12 @@ class {
           for ( bki = 2; bki <= p.len(); bki++ ) bkWords.append( p[ bki ] );
           CLIExit( new bxcachy.Backup( cli ).run( bkWords, args.options, structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), structKeyExists( args.options, "force" ), asJson ) );
           break;
+         case "bxtimemachine":
          case "timemachine":
-          // The Time Machine screen: your backups through time. See COMMAND-CONTRACT.md 13.44.
+          // BxTimeMachine, the backup screen: your backups through time. See COMMAND-CONTRACT.md 13.44.
           tmOpts = args.options;
           if ( p.len() != 1 ) {
-           println( "Usage: bxcachy timemachine [--demo] [--local]" );
+           println( "Usage: bxcachy timemachine [--demo] [--local]   (also: bxtimemachine)" );
            CLIExit( 2 );
           }
           try {

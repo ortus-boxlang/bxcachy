@@ -53,7 +53,7 @@ Settings that only touch your own config (a theme, the bar, the font) act at onc
 
 **Look and feel**: [`theme`](#bxcachy-theme), [`appearance`](#bxcachy-appearance), [`display`](#bxcachy-display), [`power`](#bxcachy-power), [`time`](#bxcachy-time), [`toggle`](#bxcachy-toggle), [`nightshift`](#bxcachy-nightshift), [`notify`](#bxcachy-notify)
 
-**System and security**: [`system`](#bxcachy-system), [`security`](#bxcachy-security), [`dns`](#bxcachy-dns), [`kernel`](#bxcachy-kernel), [`ssh`](#bxcachy-ssh), [`secrets`](#bxcachy-secrets), [`vpn`](#bxcachy-vpn), [`cloud`](#bxcachy-cloud), [`settings`](#bxcachy-settings), [`dotfiles`](#bxcachy-dotfiles), [`nas`](#bxcachy-nas), [`backup`](#bxcachy-backup), [`timemachine`](#bxcachy-timemachine)
+**System and security**: [`system`](#bxcachy-system), [`security`](#bxcachy-security), [`dns`](#bxcachy-dns), [`kernel`](#bxcachy-kernel), [`ssh`](#bxcachy-ssh), [`secrets`](#bxcachy-secrets), [`vpn`](#bxcachy-vpn), [`cloud`](#bxcachy-cloud), [`settings`](#bxcachy-settings), [`dotfiles`](#bxcachy-dotfiles), [`nas`](#bxcachy-nas), [`backup`](#bxcachy-backup), [`timemachine`](#bxcachy-timemachine), [`bxtimemachine`](#bxcachy-bxtimemachine)
 
 **Develop**: [`boxlang`](#bxcachy-boxlang), [`editor`](#bxcachy-editor), [`db`](#bxcachy-db), [`containers`](#bxcachy-containers), [`vm`](#bxcachy-vm), [`ai`](#bxcachy-ai), [`skills`](#bxcachy-skills)
 
@@ -1026,7 +1026,7 @@ bxcachy backup timeline --local
 
 ### `bxcachy timemachine` {#bxcachy-timemachine}
 
-The Time Machine screen: every backup of your system, setup and files on one timeline, with browse, restore, export and send.
+BxTimeMachine: every backup of your system, setup and files on one timeline, with browse, restore, export and send.
 
 ```text
 bxcachy timemachine [--demo] [--local]
@@ -1038,7 +1038,19 @@ bxcachy timemachine --local
 bxcachy timemachine --demo
 ```
 
-> It needs a terminal. Restore, export, send and back up now show the plan first and change nothing until you press y. --local skips the network targets so it opens at once; --demo shows made-up data and runs nothing.
+> It needs a terminal (also available as bxtimemachine). Restore, export, send and back up now show the plan first and change nothing until you press y. --local skips the network targets so it opens at once; --demo shows made-up data and runs nothing.
+
+### `bxcachy bxtimemachine` {#bxcachy-bxtimemachine}
+
+The same as timemachine: BxTimeMachine, your backups through time.
+
+```text
+bxcachy bxtimemachine [--demo] [--local]
+```
+
+```bash
+bxcachy bxtimemachine
+```
 
 ## Develop
 

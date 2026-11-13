@@ -116,6 +116,12 @@ Every command below follows the BxCachy rules (plan without `--yes`, `--dry-run`
 - `bxcachy kernel list|install NAME --yes|remove NAME --yes`: never edits the bootloader, never removes the running or last kernel.
 - `bxcachy security status|fingerprint on|off|enroll|fido2 register|on|off|ssh-server on|off|passwordless-sudo on|off --yes`: only `/etc/pam.d/sudo` is changed, with a `sufficient` line, a backup and a marker; sudoers is checked with `visudo -cf` first. Always show the user `--dry-run` first, and tell them to keep a root terminal open the first time.
 
+#### Backups, NAS and BxTimeMachine
+
+- `bxcachy backup config now|list|diff ID|restore ID [--only=PATH] --yes|auto on|off|export` (BxCachy setup snapshots, automatic before updates). `bxcachy backup snapshots setup|list|create|restore ID PATH` (snapper on Btrfs, Timeshift elsewhere; no automatic rollback). `bxcachy backup data target add NAME --type=s3|b2|azure|gs|sftp|rest|rclone|local ... [--ask-keys]`, then `init NAME --yes`, `run --all --yes`, `list`, `restore ID --to=DIR`, `verify`, `forget`, `schedule daily|hourly|off --yes`. `backup send ID --from=A --to=B` and `backup export data|config ID --to=FILE`. Keys and repository passwords live in the keyring; never ask for or print them.
+- `bxcachy nas discover|add NAME --host=H --user=U --ask-password|shares|mount NAME SHARE --yes|auto on NAME SHARE --yes|test|sync|use NAME SHARE`. SMB mounts use a root-only credentials file; say so before applying.
+- `bxcachy timemachine` (alias `bxtimemachine`) is BxTimeMachine, the backup screen; `backup timeline --json` is the same data for scripts. It needs a terminal.
+
 #### Finding commands
 
 - `bxcachy help` lists every command by group; `bxcachy help NAME` shows its usage and examples. `bxcachy menu search TEXT` finds a menu entry.' & chr( 10 );

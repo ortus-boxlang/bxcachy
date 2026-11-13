@@ -868,7 +868,7 @@
     },
     {
      "name": "timemachine",
-     "summary": "The Time Machine screen: every backup of your system, setup and files on one timeline, with browse, restore, export and send.",
+     "summary": "BxTimeMachine: every backup of your system, setup and files on one timeline, with browse, restore, export and send.",
      "usage": [
       "timemachine [--demo] [--local]"
      ],
@@ -878,7 +878,18 @@
       "bxcachy timemachine --demo"
      ],
      "mutates": false,
-     "note": "It needs a terminal. Restore, export, send and back up now show the plan first and change nothing until you press y. --local skips the network targets so it opens at once; --demo shows made-up data and runs nothing."
+     "note": "It needs a terminal (also available as bxtimemachine). Restore, export, send and back up now show the plan first and change nothing until you press y. --local skips the network targets so it opens at once; --demo shows made-up data and runs nothing."
+    },
+    {
+     "name": "bxtimemachine",
+     "summary": "The same as timemachine: BxTimeMachine, your backups through time.",
+     "usage": [
+      "bxtimemachine [--demo] [--local]"
+     ],
+     "examples": [
+      "bxcachy bxtimemachine"
+     ],
+     "mutates": false
     }
    ]
   },

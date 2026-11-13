@@ -30,6 +30,8 @@ Add `--channel beta` for the bleeding-edge snapshots. Update later with `bxcachy
 | Desktop | Hyprland and Noctalia, KDE Plasma with HyprKwin tiling, one shared shortcut table (including Mac-style Cmd remaps), key cheat sheet |
 | Control center | `bxcachy menu`: every command as one searchable menu on your launcher (Rofi, Walker, Wofi, Fuzzel, Vicinae) |
 | Appearance and hardware | Bar, dock, windows, fonts, backgrounds, monitors, laptop power, time zone and DNS, each one command (`appearance`, `display`, `power`, `time`, `dns`) |
+| Backups | BxCachy setup snapshots, system snapshots (snapper), encrypted file backups (restic) to a NAS, a disk or the cloud, and **BxTimeMachine**, one screen for all of them (`bxcachy timemachine`) |
+| NAS | Synology or any SMB or NFS share: discover, mount, automatic mounts, mirror (`bxcachy nas`) |
 | Themes | 15 color themes in the Omarchy format (10 from Omarchy, 5 of ours); follows into terminals, btop, window borders and Neovim |
 | Shell and editor | zsh, fish or bash with Starship (shows the BoxLang version), Ghostty and other terminals, Neovim with LazyVim and BoxLang syntax |
 | Apps | A curated catalog of about 290 apps by category, chosen in the wizard |
@@ -48,6 +50,7 @@ bxcachy theme set tokyo-night   # change the look
 bxcachy appearance bar position bottom
 bxcachy display scale DP-2 1.5
 bxcachy time sync --yes         # after you travel
+bxcachy timemachine             # every backup on one timeline
 bxcachy help                    # every command, or: bxcachy help appearance
 bxcachy vm create linux dev     # a Linux desktop in a container
 bxcachy db start postgres --yes

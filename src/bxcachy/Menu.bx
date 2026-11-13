@@ -125,6 +125,9 @@ class Menu {
             var pk2 = new bxcachy.Packages( variables.cli, cat2 );
             var names2 = pk2.installedNames();
             for ( var b in cat2.apps ) if ( pk2.isInstalled( b, names2 ) ) out.append( { label: b.name & "  (" & b.id & ")", value: b.id, current: false } );
+        } else if ( src == "nas" ) {
+            var nr = exec( [ self(), "nas", "list", "--json" ], 30 );
+            try { for ( var nx in jsonDeserialize( nr.output ).data.nas ) out.append( { label: nx.name & "  (" & nx.protocol & "://" & nx.host & ")", value: nx.name, current: false } ); } catch ( any e ) {}
         } else if ( src == "agents" ) {
             var ar = exec( [ self(), "ai", "list", "--json" ], 30 );
             try { for ( var ag in jsonDeserialize( ar.output ).data.agents ) if ( ag.installed ) out.append( { label: ag.name, value: ag.id, current: ag.default } ); } catch ( any e ) {}

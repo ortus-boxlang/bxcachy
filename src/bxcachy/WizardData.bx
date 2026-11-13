@@ -969,6 +969,376 @@ class WizardData {
       ]
     },
     {
+      "id": "nas",
+      "title": "NAS",
+      "intro": "Connect a network drive (Synology, TrueNAS or any SMB or NFS share) so BxCachy can mount it, even automatically, and back up to it. Skip this page if you do not have one.",
+      "questions": [
+        {
+          "type": "confirm",
+          "id": "nas_use",
+          "label": "I have a NAS to connect",
+          "default": false,
+          "help": "You can add more later with bxcachy nas add."
+        },
+        {
+          "type": "text",
+          "id": "nas_name",
+          "label": "Name for it",
+          "placeholder": "synology",
+          "help": "Lower case letters, digits and dashes.",
+          "when": {
+            "id": "nas_use",
+            "equals": "true"
+          }
+        },
+        {
+          "type": "text",
+          "id": "nas_host",
+          "label": "Address of the NAS",
+          "placeholder": "ds920.local or 192.168.1.20",
+          "help": "Find it with: bxcachy nas discover",
+          "when": {
+            "id": "nas_use",
+            "equals": "true"
+          }
+        },
+        {
+          "type": "choice",
+          "id": "nas_protocol",
+          "label": "How do you reach it?",
+          "default": "smb",
+          "when": {
+            "id": "nas_use",
+            "equals": "true"
+          },
+          "options": [
+            {
+              "value": "smb",
+              "label": "SMB (Windows file sharing)",
+              "description": "What Synology offers by default. Needs a user name and password."
+            },
+            {
+              "value": "nfs",
+              "label": "NFS",
+              "description": "No password; the NAS allows your computer''s address."
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "nas_user",
+          "label": "NAS user name",
+          "placeholder": "luis",
+          "when": {
+            "id": "nas_protocol",
+            "equals": "smb"
+          }
+        },
+        {
+          "type": "text",
+          "id": "nas_share",
+          "label": "Share to use for backups",
+          "placeholder": "backups",
+          "help": "The folder share on the NAS, as DSM shows it.",
+          "when": {
+            "id": "nas_use",
+            "equals": "true"
+          }
+        },
+        {
+          "type": "confirm",
+          "id": "nas_auto",
+          "label": "Mount it by itself when something opens it",
+          "default": true,
+          "when": {
+            "id": "nas_use",
+            "equals": "true"
+          },
+          "help": "A sleeping NAS never blocks your login. SMB needs a root-only credentials file for this; the setup tells you."
+        },
+        {
+          "type": "info",
+          "label": "Your password",
+          "help": "You type the NAS password in the terminal while the setup runs. It goes to your keyring, never into a file.",
+          "when": {
+            "id": "nas_protocol",
+            "equals": "smb"
+          }
+        }
+      ]
+    },
+    {
+      "id": "remote",
+      "title": "Remote backups",
+      "intro": "Back up somewhere else too: another computer over SSH, an rclone remote (FTP, WebDAV, Dropbox and more) or the cloud. Access keys are typed in the terminal while the setup runs and go straight to your keyring.",
+      "questions": [
+        {
+          "type": "choice",
+          "id": "remote_type",
+          "label": "Where else?",
+          "default": "none",
+          "options": [
+            {
+              "value": "none",
+              "label": "Nowhere else",
+              "description": "Only the NAS above, if you added one."
+            },
+            {
+              "value": "s3",
+              "label": "S3-compatible cloud",
+              "description": "AWS, DigitalOcean Spaces, Wasabi, MinIO. Asks for the endpoint, the bucket and the access keys."
+            },
+            {
+              "value": "b2",
+              "label": "Backblaze B2",
+              "description": "Asks for the bucket and the account keys."
+            },
+            {
+              "value": "azure",
+              "label": "Azure Blob Storage",
+              "description": "Asks for the container and the account name and key."
+            },
+            {
+              "value": "gs",
+              "label": "Google Cloud Storage",
+              "description": "Asks for the bucket, the project and a service account key file."
+            },
+            {
+              "value": "sftp",
+              "label": "Another computer over SSH (SFTP)",
+              "description": "Uses your SSH keys; the host must already be in your known hosts."
+            },
+            {
+              "value": "rclone",
+              "label": "An rclone remote (FTP and more)",
+              "description": "Set it up first with bxcachy cloud configure."
+            },
+            {
+              "value": "local",
+              "label": "A disk or folder",
+              "description": "A USB drive or any folder."
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "remote_name",
+          "label": "Name for it",
+          "placeholder": "cloud",
+          "help": "Lower case letters, digits and dashes.",
+          "when": {
+            "id": "remote_type",
+            "in": [
+              "s3",
+              "b2",
+              "azure",
+              "gs",
+              "sftp",
+              "rclone",
+              "local"
+            ]
+          }
+        },
+        {
+          "type": "text",
+          "id": "remote_endpoint",
+          "label": "Endpoint",
+          "placeholder": "https://nyc3.digitaloceanspaces.com",
+          "help": "Leave empty for AWS.",
+          "when": {
+            "id": "remote_type",
+            "in": [
+              "s3"
+            ]
+          }
+        },
+        {
+          "type": "text",
+          "id": "remote_bucket",
+          "label": "Bucket",
+          "placeholder": "mybackups",
+          "when": {
+            "id": "remote_type",
+            "in": [
+              "s3",
+              "b2",
+              "gs"
+            ]
+          }
+        },
+        {
+          "type": "text",
+          "id": "remote_region",
+          "label": "Region",
+          "placeholder": "nyc3",
+          "help": "Optional.",
+          "when": {
+            "id": "remote_type",
+            "in": [
+              "s3"
+            ]
+          }
+        },
+        {
+          "type": "text",
+          "id": "remote_container",
+          "label": "Container",
+          "placeholder": "backups",
+          "when": {
+            "id": "remote_type",
+            "in": [
+              "azure"
+            ]
+          }
+        },
+        {
+          "type": "text",
+          "id": "remote_project",
+          "label": "Google project id",
+          "placeholder": "my-project",
+          "when": {
+            "id": "remote_type",
+            "in": [
+              "gs"
+            ]
+          }
+        },
+        {
+          "type": "text",
+          "id": "remote_credentials",
+          "label": "Service account key file",
+          "placeholder": "~/keys/gcs.json",
+          "help": "The JSON file you downloaded from Google.",
+          "when": {
+            "id": "remote_type",
+            "in": [
+              "gs"
+            ]
+          }
+        },
+        {
+          "type": "text",
+          "id": "remote_host",
+          "label": "Host",
+          "placeholder": "nas.example.com",
+          "when": {
+            "id": "remote_type",
+            "in": [
+              "sftp"
+            ]
+          }
+        },
+        {
+          "type": "text",
+          "id": "remote_user",
+          "label": "User",
+          "placeholder": "luis",
+          "when": {
+            "id": "remote_type",
+            "in": [
+              "sftp"
+            ]
+          }
+        },
+        {
+          "type": "text",
+          "id": "remote_remote",
+          "label": "rclone remote name",
+          "placeholder": "myftp",
+          "help": "As shown by rclone listremotes.",
+          "when": {
+            "id": "remote_type",
+            "in": [
+              "rclone"
+            ]
+          }
+        },
+        {
+          "type": "text",
+          "id": "remote_path",
+          "label": "Folder",
+          "placeholder": "bxcachy-backup",
+          "help": "Inside the bucket, the remote or the disk. For a disk, the full path.",
+          "when": {
+            "id": "remote_type",
+            "in": [
+              "s3",
+              "b2",
+              "azure",
+              "gs",
+              "sftp",
+              "rclone",
+              "local"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "backups",
+      "title": "Backups",
+      "intro": "Three layers, any of them. BxCachy keeps the passwords and keys in your keyring and shows a plan before it changes anything.",
+      "questions": [
+        {
+          "type": "multi",
+          "id": "backup_layers",
+          "label": "What do you want protected?",
+          "default": [
+            "config"
+          ],
+          "options": [
+            {
+              "value": "config",
+              "label": "My BxCachy setup",
+              "description": "A small snapshot of your settings and config files before every update, init and refresh, so a mistake is one command to undo."
+            },
+            {
+              "value": "snapshots",
+              "label": "The whole system",
+              "description": "Snapshots with snapper on Btrfs (one before and after every update), Timeshift on other filesystems."
+            },
+            {
+              "value": "data",
+              "label": "My files",
+              "description": "Projects, Documents and your SSH config, encrypted with restic, to the NAS and the place above."
+            }
+          ]
+        },
+        {
+          "type": "choice",
+          "id": "backup_schedule",
+          "label": "How often do your files go?",
+          "default": "daily",
+          "when": {
+            "id": "backup_layers",
+            "has": "data"
+          },
+          "options": [
+            {
+              "value": "daily",
+              "label": "Every day",
+              "description": "Skips on battery and catches up after the computer was off."
+            },
+            {
+              "value": "hourly",
+              "label": "Every hour",
+              "description": "For a lot of changing work."
+            },
+            {
+              "value": "off",
+              "label": "Only when I ask",
+              "description": "bxcachy backup data run, or the Time Machine screen."
+            }
+          ]
+        },
+        {
+          "type": "info",
+          "label": "Look at them any time",
+          "help": "bxcachy timemachine shows every backup on one timeline, with browse, restore, export and send."
+        }
+      ]
+    },
+    {
       "id": "apps",
       "title": "Apps",
       "intro": "Defaults come from the BxCachy catalog.",
@@ -1615,30 +1985,6 @@ class WizardData {
               "value": "bundle",
               "label": "Full CachyOS gaming bundle",
               "description": "Steam, Lutris, Heroic, Proton tools, MangoHud and more."
-            }
-          ]
-        },
-        {
-          "type": "multi",
-          "id": "backups",
-          "label": "Backups and snapshots",
-          "help": "Tools only; BxCachy does not schedule anything yet.",
-          "default": [],
-          "options": [
-            {
-              "value": "snapper",
-              "label": "Snapper + snap-pac",
-              "description": "Btrfs snapshots, one before and after every pacman update."
-            },
-            {
-              "value": "restic",
-              "label": "restic",
-              "description": "Fast encrypted backups to local disks or the cloud."
-            },
-            {
-              "value": "borg",
-              "label": "BorgBackup",
-              "description": "Deduplicating backups with compression."
             }
           ]
         },

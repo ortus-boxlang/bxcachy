@@ -19,6 +19,11 @@ summary: Where BxCachy keeps things.
 | `~/.config/bxcachy/theme.json` | the current theme and mode |
 | `~/.config/bxcachy/theme/look.lua` | generated Hyprland window looks (gaps, corners, opacity); never edit |
 | `~/.config/bxcachy/theme/monitors.lua` | generated Hyprland monitor settings; never edit |
+| `~/.config/bxcachy/nas.json` | your NAS boxes (no passwords) |
+| `~/.config/bxcachy/backup.json` | backup places, what is backed up, retention, schedule (no keys) |
+| `~/.local/share/bxcachy/backups/config/` | your BxCachy config snapshots |
+| `/etc/bxcachy/nas/NAME.cred` | the SMB credentials of a NAS, root only (mode 600) |
+| `~/.config/systemd/user/bxcachy-backup.{service,timer}` | the automatic file backup |
 | `~/.config/bxcachy/vms/` | one record per virtual machine |
 | `/etc/systemd/logind.conf.d/50-bxcachy-lid.conf` | what closing the lid does (`bxcachy power lid`); remove it to go back to the defaults |
 | `/etc/pam.d/sudo` and `.bxcachy-backup` | one marked line per `bxcachy security fingerprint\|fido2 on`; the backup is the original |

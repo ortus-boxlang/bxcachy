@@ -213,6 +213,38 @@ class MenuTree {
                     spawn( "AirPlay receiver on", [ "airplay", "on" ] ),
                     spawn( "AirPlay receiver off", [ "airplay", "off" ] )
                 ] ),
+                sub( "Backup", [
+                    run( "BxTimeMachine: every backup on one timeline", [ "timemachine" ] ),
+                    run( "Status", [ "backup", "data", "status" ] ),
+                    sub( "My BxCachy setup", [
+                        run( "Take a snapshot now", [ "backup", "config", "now" ] ),
+                        run( "List the snapshots", [ "backup", "config", "list" ] ),
+                        run( "Automatic snapshots: on", [ "backup", "config", "auto", "on" ] ),
+                        run( "Automatic snapshots: off", [ "backup", "config", "auto", "off" ] )
+                    ] ),
+                    sub( "The whole system", [
+                        run( "Status", [ "backup", "snapshots", "status" ] ),
+                        run( "Set up snapshots", [ "backup", "snapshots", "setup", "--yes" ] ),
+                        run( "List", [ "backup", "snapshots", "list" ] ),
+                        run( "Take a snapshot now", [ "backup", "snapshots", "create", "--yes" ] )
+                    ] ),
+                    sub( "My files", [
+                        run( "Backup places", [ "backup", "data", "targets" ] ),
+                        run( "Back up now (every place)", [ "backup", "data", "run", "--all", "--yes" ] ),
+                        run( "Snapshots", [ "backup", "data", "list" ] ),
+                        run( "Check the backups are readable", [ "backup", "data", "verify" ] ),
+                        run( "Apply the retention (deletes old backups)", [ "backup", "data", "forget" ] ),
+                        sub( "Schedule", [ run( "Every day", [ "backup", "data", "schedule", "daily", "--yes" ] ), run( "Every hour", [ "backup", "data", "schedule", "hourly", "--yes" ] ), run( "Off", [ "backup", "data", "schedule", "off", "--yes" ] ) ] )
+                    ] )
+                ] ),
+                sub( "NAS", [
+                    run( "Find NAS boxes on the network", [ "nas", "discover" ] ),
+                    run( "My NAS boxes", [ "nas", "list" ] ),
+                    run( "Install the NAS tools", [ "nas", "setup", "--yes" ] ),
+                    pick( "Shares of a NAS", "nas", [ "nas", "shares", "{}" ], "run" ),
+                    pick( "Test a NAS", "nas", [ "nas", "test", "{}" ], "run" ),
+                    pick( "Forget a NAS", "nas", [ "nas", "remove", "{}", "--yes" ], "run", "Forget the NAS {}? (the files on it are not touched)" )
+                ] ),
                 run( "App launcher check", [ "runner", "doctor" ] ),
                 run( "Setup status", [ "setup", "status" ] ),
                 run( "Dotfiles status", [ "dotfiles", "status" ] ),

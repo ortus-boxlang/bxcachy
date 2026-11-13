@@ -207,6 +207,7 @@ class InitPlan {
             if ( len( rid ) && !arrayFind( apps, rid ) ) apps.append( rid );
         }
         for ( var id in pick( a, "backups", [] ) ) { apps.append( id ); if ( id == "snapper" ) apps.append( "snap-pac" ); }
+        if ( arrayFind( pick( a, "backup_layers", [] ), "data" ) > 0 && !arrayFind( apps, "restic" ) ) apps.append( "restic" );
         if ( apps.len() ) {
             var iargv = [ "bxcachy", "install" ];
             for ( var id in apps ) iargv.append( id );
@@ -284,6 +285,66 @@ class InitPlan {
             if ( !arrayFind( [ "dwindle", "master", "monocle", "scrolling", "stage" ], a.plasma_layout ) ) out.errors.append( "plasma_layout: unknown layout " & a.plasma_layout );
             else out.steps.append( { id: "plasma-layout", title: "use the " & a.plasma_layout & " window layout on this Plasma workspace (needs a running Plasma session)", argv: [ "bxcachy", "tiling", "layout", a.plasma_layout ], optional: true } );
         }
+        // NAS, remote backup targets and the backup layers (the NAS, Remote backups and Backups pages). Passwords and keys are typed in the terminal
+        // by the commands themselves (--ask-password, --ask-keys), so nothing secret is in the answers; each step is optional so a missing
+        // network or a wrong password never stops the rest of the plan.
+        var bkTargets = [];
+        if ( pick( a, "nas_use", false ) == true ) {
+            var nn = lCase( trim( pick( a, "nas_name" ) ) );
+            if ( !len( nn ) ) nn = "nas";
+            var nhost = trim( pick( a, "nas_host" ) );
+            var nproto = pick( a, "nas_protocol", "smb" );
+            var nuser = trim( pick( a, "nas_user" ) );
+            var nshare = trim( pick( a, "nas_share" ) );
+            if ( !len( nshare ) ) nshare = "backups";
+            if ( !reFind( "^[a-z][a-z0-9-]{0,30}$", nn ) ) out.errors.append( "nas_name: lower case letters, digits and dashes" );
+            else if ( !len( nhost ) ) out.errors.append( "nas_host: the address of the NAS is needed" );
+            else if ( nproto == "smb" && !len( nuser ) ) out.errors.append( "nas_user: SMB needs a user name" );
+            else {
+                out.steps.append( { id: "nas-setup", title: "install the NAS tools (cifs-utils, nfs-utils, smbclient, avahi, rsync)", argv: [ "bxcachy", "nas", "setup", "--yes" ], optional: true } );
+                var addArgv = [ "bxcachy", "nas", "add", nn, "--host=" & nhost, "--protocol=" & nproto ];
+                if ( nproto == "smb" ) { addArgv.append( "--user=" & nuser ); addArgv.append( "--ask-password" ); }
+                out.steps.append( { id: "nas-add", title: "save the NAS " & nn & ( nproto == "smb" ? " (you type its password; it goes to your keyring)" : "" ), argv: addArgv, optional: true } );
+                out.steps.append( { id: "nas-mount", title: "mount " & nshare & " from " & nn, argv: [ "bxcachy", "nas", "mount", nn, nshare, "--yes" ], optional: true } );
+                if ( pick( a, "nas_auto", true ) ) out.steps.append( { id: "nas-auto", title: "mount it by itself when something opens it", argv: [ "bxcachy", "nas", "auto", "on", nn, nshare, "--yes" ], optional: true } );
+                out.steps.append( { id: "nas-use", title: "use " & nn & "/" & nshare & " as a backup place", argv: [ "bxcachy", "nas", "use", nn, nshare ] } );
+                bkTargets.append( "nas-" & nn );
+            }
+        }
+        var rtype = pick( a, "remote_type", "none" );
+        if ( rtype != "none" ) {
+            var rn2 = lCase( trim( pick( a, "remote_name" ) ) );
+            if ( !len( rn2 ) ) rn2 = "cloud";
+            var tArgv = [ "bxcachy", "backup", "data", "target", "add", rn2, "--type=" & rtype ];
+            var need = { s3: [ "bucket" ], b2: [ "bucket" ], azure: [ "container" ], gs: [ "bucket", "project", "credentials" ], sftp: [ "host", "user" ], rclone: [ "remote" ], local: [] };
+            var missingRemote = "";
+            for ( var f in need[ rtype ] ) {
+                var rv = trim( pick( a, "remote_" & f ) );
+                if ( !len( rv ) ) missingRemote = f; else tArgv.append( "--" & f & "=" & rv );
+            }
+            for ( var o in [ "endpoint", "region", "path" ] ) {
+                var ov = trim( pick( a, "remote_" & o ) );
+                if ( len( ov ) && !( o == "endpoint" && rtype != "s3" ) && !( o == "region" && rtype != "s3" ) ) tArgv.append( "--" & o & "=" & ov );
+            }
+            if ( rtype == "local" && !len( trim( pick( a, "remote_path" ) ) ) ) missingRemote = "path";
+            if ( !reFind( "^[a-z][a-z0-9-]{0,30}$", rn2 ) ) out.errors.append( "remote_name: lower case letters, digits and dashes" );
+            else if ( len( missingRemote ) ) out.errors.append( "remote_" & missingRemote & ": needed for " & rtype );
+            else {
+                if ( arrayFind( [ "s3", "b2", "azure" ], rtype ) ) tArgv.append( "--ask-keys" );
+                out.steps.append( { id: "backup-remote", title: "add the backup place " & rn2 & " (" & rtype & ")" & ( arrayFind( [ "s3", "b2", "azure" ], rtype ) ? "; you type the access keys, they go to your keyring" : "" ), argv: tArgv, optional: true } );
+                bkTargets.append( rn2 );
+            }
+        }
+        var layers = pick( a, "backup_layers", [] );
+        if ( arrayFind( layers, "data" ) > 0 ) {
+            if ( !bkTargets.len() ) out.pending.append( "backup_layers: files are chosen but there is no NAS or remote place yet; add one with bxcachy nas use or bxcachy backup data target add" );
+            for ( var bt in bkTargets ) out.steps.append( { id: "backup-init-" & bt, title: "create the encrypted backup repository on " & bt, argv: [ "bxcachy", "backup", "data", "init", bt, "--yes" ], optional: true } );
+            if ( bkTargets.len() ) out.steps.append( { id: "backup-default", title: "make " & bkTargets[ 1 ] & " the default backup place", argv: [ "bxcachy", "backup", "data", "default", bkTargets[ 1 ] ], optional: true } );
+            var sched = pick( a, "backup_schedule", "daily" );
+            if ( sched != "off" && bkTargets.len() ) out.steps.append( { id: "backup-schedule", title: "back up my files " & sched, argv: [ "bxcachy", "backup", "data", "schedule", sched, "--yes" ], optional: true } );
+        }
+        if ( arrayFind( layers, "snapshots" ) > 0 ) out.steps.append( { id: "backup-snapshots", title: "set up system snapshots (snapper on Btrfs, Timeshift elsewhere)", argv: [ "bxcachy", "backup", "snapshots", "setup", "--yes" ], optional: true } );
+        if ( structKeyExists( a, "backup_layers" ) && arrayFind( layers, "config" ) == 0 ) out.steps.append( { id: "backup-config-off", title: "do not take a config snapshot before updates", argv: [ "bxcachy", "backup", "config", "auto", "off" ] } );
         // laptop power tools (power-profiles-daemon, upower): `power setup` does nothing on a machine without a battery, so this is safe everywhere
         if ( pick( a, "power_setup", false ) ) out.steps.append( { id: "power-setup", title: "set up laptop power tools (only when a battery is found)", argv: [ "bxcachy", "power", "setup" ], optional: true } );
         // update channel and the daily update notification
