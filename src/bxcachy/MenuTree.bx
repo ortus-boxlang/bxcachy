@@ -136,6 +136,15 @@ class MenuTree {
                 spawn( "Overview", [ "overview" ] )
             ] ),
             sub( "Setup", [
+                sub( "Display", [
+                    run( "Monitors", [ "display", "list" ] ),
+                    pick( "Scale", "monitors", [ "display", "scale", "{}", "1.5" ] ),
+                    sub( "Laptop panel", [ spawn( "On", [ "display", "laptop", "on" ] ), spawn( "Off", [ "display", "laptop", "off" ] ) ] ),
+                    sub( "Mirror the laptop panel", [ spawn( "On", [ "display", "mirror", "on" ] ), spawn( "Off", [ "display", "mirror", "off" ] ) ] ),
+                    sub( "Brightness", [ spawn( "Up", [ "display", "brightness", "up" ] ), spawn( "Down", [ "display", "brightness", "down" ] ), spawn( "50%", [ "display", "brightness", "set", "50" ] ), spawn( "100%", [ "display", "brightness", "set", "100" ] ) ] ),
+                    spawn( "Re-apply saved display settings", [ "display", "apply" ] ),
+                    spawn( "Forget saved display settings", [ "display", "reset" ] )
+                ] ),
                 sub( "Defaults", [
                     pick( "Browser", "browsers", [ "default", "browser", "{}", "--yes" ] ),
                     pick( "Terminal", "terminals", [ "default", "terminal", "{}", "--yes" ] ),

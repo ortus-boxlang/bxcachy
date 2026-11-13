@@ -221,6 +221,13 @@ class Shortcuts {
         out.append( '  if ok and type(look) == "table" then hl.config(look) end' );
         out.append( 'end' );
         out.append( '' );
+        out.append( '-- Monitors: `bxcachy display` writes ~/.config/bxcachy/theme/monitors.lua (scale, rotation, position, mirror, laptop panel)' );
+        out.append( 'do' );
+        out.append( '  local cfgdir = os.getenv("BXCACHY_CONFIG_HOME") or ((os.getenv("HOME") or "") .. "/.config")' );
+        out.append( '  local ok, mons = pcall(dofile, cfgdir .. "/bxcachy/theme/monitors.lua")' );
+        out.append( '  if ok and type(mons) == "table" then for _, m in ipairs(mons) do hl.monitor(m) end end' );
+        out.append( 'end' );
+        out.append( '' );
         out.append( '-- The pull-down AI shell (bxcachy ai shell) lives on the special workspace "ai"; its window class is set by the terminal it starts' );
         out.append( 'hl.window_rule({ name = "bxcachy-ai", match = { class = "^com.bxcachy.ai$" }, workspace = "special:ai", float = true })' );
         out.append( '' );

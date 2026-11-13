@@ -468,6 +468,12 @@ class {
           for ( api = 2; api <= p.len(); api++ ) apWords.append( p[ api ] );
           CLIExit( new bxcachy.Appearance( cli ).run( apWords, structKeyExists( args.options, "dry-run" ), structKeyExists( args.options, "yes" ), asJson ) );
           break;
+         case "display":
+          // Monitors: scale, rotation, position, mirror, laptop panel, brightness. See COMMAND-CONTRACT.md 13.36.
+          dpWords = [];
+          for ( dpi = 2; dpi <= p.len(); dpi++ ) dpWords.append( p[ dpi ] );
+          CLIExit( new bxcachy.Display( cli ).run( dpWords, structKeyExists( args.options, "dry-run" ), structKeyExists( args.options, "yes" ), asJson ) );
+          break;
          case "vm":
           // Windows and Linux desktops in containers. See COMMAND-CONTRACT.md 13.33.
           vmSub = p.len() >= 2 ? p[2] : "list";

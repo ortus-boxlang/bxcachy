@@ -1323,6 +1323,30 @@
       }
     },
     {
+      "id": "meld",
+      "name": "Meld",
+      "description": "Compare files, directories and working copies",
+      "description_source": "arch",
+      "kind": "desktop",
+      "group": "development",
+      "category": "Version control",
+      "tier": "default",
+      "source": "pacman",
+      "targets": [
+        "meld"
+      ],
+      "repo": "extra",
+      "homepage": "https://meldmerge.org/",
+      "macos": "Kaleidoscope / FileMerge",
+      "origin": [
+        "owner-request"
+      ],
+      "verified_on": "2026-11-13",
+      "profiles": {
+        "editors": "default"
+      }
+    },
+    {
       "id": "chezmoi",
       "name": "chezmoi",
       "description": "Manage your dotfiles across machines (used by bxcachy dotfiles)",

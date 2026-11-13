@@ -129,6 +129,8 @@ class Menu {
             for ( var v in new bxcachy.Vm( variables.cli ).allRecords() ) out.append( { label: v.name & "  (" & v.kind & ")", value: v.name, current: false } );
         } else if ( src == "fonts" || src == "fonts-uninstalled" ) {
             for ( var fo in new bxcachy.Appearance( variables.cli ).fontRows() ) if ( ( src == "fonts" ) == fo.installed ) out.append( { label: fo.label & "  (" & fo.family & ")", value: fo.id, current: false } );
+        } else if ( src == "monitors" ) {
+            for ( var mo in new bxcachy.Display( variables.cli ).monitors() ) out.append( { label: mo.name & "  " & mo.width & "x" & mo.height & "  scale " & mo.scale, value: mo.name, current: false } );
         } else if ( src == "backgrounds" ) {
             for ( var im in new bxcachy.Appearance( variables.cli ).images() ) out.append( { label: im.name, value: im.path, current: false } );
         } else if ( src == "skills-installed" ) {
