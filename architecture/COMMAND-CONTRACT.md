@@ -712,6 +712,13 @@ The wizard asks the window layout once per desktop you set up: Hyprland (`layout
 - **`use NAME SHARE [--path=bxcachy-backup]`** records `targets.nas-NAME` in `~/.config/bxcachy/backup.json` (`{type: nas, nas, share, path}`); `backup data setup` reads it.
 - **Verified:** `tests/nas-test.sh` with fake avahi-browse, smbclient, showmount, findmnt, rsync, sudo and a fake `/etc`. **Not verified on a real Synology:** DSM share permissions, SMB signing, NFS export options, `nss-mdns` name resolution.
 
+### 13.42 `refresh` and `reinstall` (decided with the owner 2026-11-13)
+
+- **No factory reset.** `bxcachy refresh COMPONENT` puts managed config back to what BxCachy ships and never installs a package. Components: `hyprland` (runs `keys apply`, `appearance apply`, `display apply`; with `--starter` also the starter `hyprland.lua`), `noctalia` (`theme set CURRENT`, `appearance apply`, `noctalia msg config-reload`; with `--starter` also the Noctalia starter files), `terminals` (the starter config of each installed terminal, then the theme includes), `shell` (`starship.toml`, the shell init and the line in `.zshrc` or `.bashrc`), `nvim` (`editor refresh`), `theme` (`theme set CURRENT`, `appearance apply`), `all`, and `list`.
+- **Semantics are the config service's:** a clean file is left alone, a missing or outdated one is written, a file you edited (`drifted`) is kept and reported, and `--force` overwrites it after a backup (`config history`, `config restore`). A link or special file in the way blocks (exit 8 in the service, shown as blocked). Without `--yes` it prints the plan and exits 2; `--dry-run` exits 0.
+- **`reinstall`** is `init --rerun`: the way to install packages again.
+- **Verified:** `tests/refresh-test.sh` (temp home, fake `bxcachy` that logs the commands, a fake terminal): plan and dry run write nothing, files are written, a second run rewrites nothing clean, edits are kept, `--force` overwrites and takes a backup, each component runs its commands.
+
 ## 14. Install and the setup wizard (decided with the owner 2026-11-10; install, wizard and the init engine are built, the pages' later commands are not)
 
 ### 14.1 Install
