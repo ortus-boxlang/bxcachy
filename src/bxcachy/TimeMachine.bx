@@ -1,0 +1,111 @@
+// Runs the Time Machine screen: draws TimeMachineView frames on the MatchBox terminal canvas, feeds keys, clicks and the wheel to
+// TimeMachineApp, and runs the bxcachy commands its intents ask for. Everything that changes something goes through the plan screen first
+// (the same command with --dry-run), and only a y runs it. With --demo the data is made up and nothing is run.
+//   bxcachy timemachine [--demo] [--local]
+// Exit: 0 after leaving, 4 when there is no terminal.
+class TimeMachine {
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.runner = arguments.runner;
+        variables.demo = false;
+        return this;
+    }
+
+    function self() { return getSystemSetting( "BXCACHY_SELF", "bxcachy" ); }
+    function home() { return getSystemSetting( "HOME", "" ); }
+
+    // Runs bxcachy with the arguments. Returns { exitCode, output }.
+    function runCli( args ) {
+        try { return systemExecute( self(), arguments.args, 1800, true ); } catch ( any e ) { return { exitCode: 127, output: e.message }; }
+    }
+
+    function filesFrom( intent, res ) {
+        var r = arguments.intent.row;
+        var out = [];
+        if ( r.kind == "files" || r.kind == "config" ) {
+            try {
+                var j = jsonDeserialize( arguments.res.output );
+                for ( var f in j.data.files ) out.append( isStruct( f ) ? { path: f.path, size: f.size ?: 0 } : { path: f, size: 0 } );
+            } catch ( any e ) {}
+        } else {
+            for ( var line in listToArray( arguments.res.output, chr( 10 ) ) ) {
+                var t = trim( line );
+                if ( len( t ) && find( "/", t ) ) out.append( { path: mid( t, find( "/", t ), len( t ) ), size: 0 } );
+            }
+        }
+        return out;
+    }
+
+    function titleFor( intent ) { return uCase( left( arguments.intent.action, 1 ) ) & mid( arguments.intent.action, 2, 30 ) & ": " & arguments.intent.row.label; }
+
+    function reloadTimeline( app ) {
+        if ( variables.demo ) return;
+        arguments.app.reload( new bxcachy.BackupTimeline( variables.cli, variables.runner ).build( false ) );
+    }
+
+    // What to do with an intent from the app.
+    function handle( app, intent ) {
+        var it = arguments.intent;
+        if ( structIsEmpty( it ) ) return;
+        var a = it.action;
+        var confirmed = structKeyExists( it, "confirmed" );
+        var cmd = arguments.app.commandFor( it, confirmed ? "run" : "plan" );
+        if ( variables.demo ) {
+            var line = "bxcachy " & cmd.toList( " " );
+            if ( a == "browse" ) { arguments.app.setFiles( new bxcachy.TimeMachineDemo().files( it.row.kind ), "" ); return; }
+            if ( !cmd.len() ) { arguments.app.say( "Not available for this kind of backup." ); return; }
+            if ( confirmed ) arguments.app.showResult( titleFor( it ), "Demo: nothing was run." & chr( 10 ) & chr( 10 ) & "It would have run:" & chr( 10 ) & "  " & line );
+            else if ( arguments.app.changes( it ) ) arguments.app.showPlan( titleFor( it ), "Plan:" & chr( 10 ) & "  " & line & chr( 10 ) & chr( 10 ) & "Demo mode: nothing will be changed.", it );
+            else arguments.app.showResult( titleFor( it ), "Demo: " & line );
+            return;
+        }
+        if ( !cmd.len() ) {
+            arguments.app.say( a == "restore" && it.row.kind == "system" ? "Open the snapshot (enter) and pick a folder first." : "Not available for this kind of backup." );
+            return;
+        }
+        var res = runCli( cmd );
+        if ( a == "browse" ) {
+            if ( it.row.kind == "system" && res.exitCode != 0 ) { arguments.app.showResult( titleFor( it ), res.output ); return; }
+            arguments.app.setFiles( filesFrom( it, res ), "", res.exitCode != 0 ? trim( res.output ) : "" );
+            return;
+        }
+        if ( a == "diff" ) { arguments.app.showResult( titleFor( it ), res.output ); return; }
+        if ( confirmed ) {
+            arguments.app.showResult( titleFor( it ) & ( res.exitCode == 0 ? "  done" : "  failed" ), res.output );
+            reloadTimeline( arguments.app );
+            return;
+        }
+        if ( arguments.app.changes( it ) && a != "now" || ( a == "now" && it.row.kind != "config" ) ) arguments.app.showPlan( titleFor( it ), res.output, it );
+        else {
+            arguments.app.showResult( titleFor( it ), res.output );
+            reloadTimeline( arguments.app );
+        }
+    }
+
+    function run( opts = {} ) {
+        variables.demo = structKeyExists( arguments.opts, "demo" );
+        var tl = variables.demo ? new bxcachy.TimeMachineDemo( new bxcachy.BackupTimeline( variables.cli ).nowEpoch() ).build() : new bxcachy.BackupTimeline( variables.cli, variables.runner ).build( structKeyExists( arguments.opts, "local" ) );
+        var app = new bxcachy.TimeMachineApp( tl, home() );
+        var tui = createObject( "rust", "tui.TUI" );
+        var view = new bxcachy.TimeMachineView( tui );
+        tui.init();
+        try {
+            var tick = 0;
+            while ( app.outcome() == "running" ) {
+                var size = tui.size();
+                view.paint( app, tick, size.width, size.height );
+                tui.end_frame();
+                var ev = tui.poll_event( 50 );
+                if ( !isNull( ev ) ) {
+                    if ( ev.type == "key" ) handle( app, app.onKey( ev.key ) );
+                    else if ( ev.type == "click" ) app.act( view.hitAt( ev.x, ev.y ) );
+                    else if ( ev.type == "scroll" ) app.onScroll( ev.direction );
+                }
+                tick++;
+            }
+        } finally {
+            tui.shutdown();
+        }
+        return 0;
+    }
+}

@@ -1,0 +1,176 @@
+// `bxcachy backup timeline [--json] [--local]`: every backup you have, in one list, by place and by age. The Time Machine screen draws this.
+// Rows (one per place):
+//   system      snapshots of the whole system (snapper)
+//   config      snapshots of your BxCachy setup
+//   files-NAME  restic snapshots of one target (a NAS, a USB disk, a cloud bucket ...)
+//   mirror-NAME plain copies made with `nas sync` (when and where; no versions)
+// Each point: { id, time (ISO, UTC where the tool says), epoch, label, tier, size }. The tier says how old it is, the way a thinning schedule
+// would group it: hourly (up to a day), daily (to a week), weekly (to 5 weeks), monthly (to a year), yearly.
+// --local leaves out the targets that need the network (cloud, SFTP, REST, rclone) so the screen opens at once; a failing target is
+// shown as a row with an error, never as a failure of the whole timeline.
+// Test override: BXCACHY_TIMELINE_FILE (a JSON file with { rows: [...] } used instead of asking the tools).
+// Exit: 0 always unless the arguments are wrong (2).
+class BackupTimeline {
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.runner = arguments.runner;
+        return this;
+    }
+
+    // ---- time, pure ----
+    // Days from 1970-01-01 to a civil date (Howard Hinnant's algorithm).
+    function daysFromCivil( y, m, d ) {
+        var yy = arguments.m <= 2 ? arguments.y - 1 : arguments.y;
+        var era = int( ( yy >= 0 ? yy : yy - 399 ) / 400 );
+        var yoe = yy - era * 400;
+        var mp = ( arguments.m + 9 ) mod 12;
+        var doy = int( ( 153 * mp + 2 ) / 5 ) + arguments.d - 1;
+        var doe = yoe * 365 + int( yoe / 4 ) - int( yoe / 100 ) + doy;
+        return era * 146097 + doe - 719468;
+    }
+
+    // Seconds since 1970 for "2026-11-13T15:30:00", "2026-11-13 15:30:00" or with a trailing Z or fractions. 0 when it cannot be read.
+    function epoch( text ) {
+        var t = trim( arguments.text );
+        if ( !reFind( "^[0-9]{4}-[0-9]{2}-[0-9]{2}[T ][0-9]{2}:[0-9]{2}:[0-9]{2}", t ) ) return 0;
+        var y = int( val( mid( t, 1, 4 ) ) );
+        var mo = int( val( mid( t, 6, 2 ) ) );
+        var d = int( val( mid( t, 9, 2 ) ) );
+        var hh = int( val( mid( t, 12, 2 ) ) );
+        var mi = int( val( mid( t, 15, 2 ) ) );
+        var ss = int( val( mid( t, 18, 2 ) ) );
+        return daysFromCivil( y, mo, d ) * 86400 + hh * 3600 + mi * 60 + ss;
+    }
+
+    function nowEpoch() {
+        var forced = getSystemSetting( "BXCACHY_NOW_EPOCH", "" );
+        if ( len( forced ) ) return int( val( forced ) );
+        return epoch( dateTimeFormat( dateConvert( "local2utc", now() ), "yyyy-MM-dd'T'HH:mm:ss" ) );
+    }
+
+    // The tier of something this many seconds old.
+    function tier( ageSeconds ) {
+        var a = arguments.ageSeconds;
+        if ( a <= 86400 ) return "hourly";
+        if ( a <= 7 * 86400 ) return "daily";
+        if ( a <= 35 * 86400 ) return "weekly";
+        if ( a <= 366 * 86400 ) return "monthly";
+        return "yearly";
+    }
+
+    // "3 hours ago", "yesterday", "5 weeks ago".
+    function ago( ageSeconds ) {
+        var a = max( 0, arguments.ageSeconds );
+        if ( a < 90 ) return "just now";
+        if ( a < 5400 ) return round( a / 60 ) & " minutes ago";
+        if ( a < 129600 ) return round( a / 3600 ) & " hours ago";
+        if ( a < 2 * 86400 ) return "yesterday";
+        if ( a < 14 * 86400 ) return int( a / 86400 ) & " days ago";
+        if ( a < 60 * 86400 ) return int( a / ( 7 * 86400 ) ) & " weeks ago";
+        if ( a < 730 * 86400 ) return int( a / ( 30 * 86400 ) ) & " months ago";
+        return int( a / ( 365 * 86400 ) ) & " years ago";
+    }
+
+    // ---- gathering ----
+    function point( id, time, label, now, size = 0, extra = {} ) {
+        var e = epoch( arguments.time );
+        var p = { id: arguments.id, time: arguments.time, epoch: e, label: arguments.label, tier: tier( arguments.now - e ), size: arguments.size };
+        for ( var k in arguments.extra ) p[ k ] = arguments.extra[ k ];
+        return p;
+    }
+
+    function sortNewestFirst( points ) {
+        var ps = arguments.points;
+        arraySort( ps, function( a, b ) { return b.epoch - a.epoch; } );
+        return ps;
+    }
+
+    function systemRow( now ) {
+        var row = { id: "system", label: "System", kind: "system", target: "", points: [], error: "" };
+        try {
+            var sn = new bxcachy.BackupSnapshots( variables.cli, variables.runner );
+            if ( sn.tool() == "snapper" ) for ( var s in sn.allSnapshots() ) row.points.append( point( s.config & ":" & s.number, replace( s.date, " ", "T" ), len( s.description ) ? s.description : s.type, arguments.now, 0, { number: s.number, config: s.config } ) );
+        } catch ( any e ) { row.error = e.message; }
+        row.points = sortNewestFirst( row.points );
+        return row;
+    }
+
+    function configRow( now ) {
+        var row = { id: "config", label: "Config", kind: "config", target: "", points: [], error: "" };
+        try {
+            for ( var m in new bxcachy.BackupConfig( variables.cli, variables.runner ).snapshots() ) row.points.append( point( m.id, m.time ?: "", m.reason ?: "", arguments.now, m.size ?: 0, { files: m.files ?: 0, packages: m.packages ?: 0, secrets: m.secrets ?: false } ) );
+        } catch ( any e ) { row.error = e.message; }
+        row.points = sortNewestFirst( row.points );
+        return row;
+    }
+
+    function filesRows( now, localOnly ) {
+        var rows = [];
+        var bd = new bxcachy.BackupData( variables.cli, variables.runner );
+        var s = bd.readAll();
+        var names = structKeyArray( s.targets );
+        arraySort( names, "text" );
+        for ( var n in names ) {
+            var t = s.targets[ n ];
+            var row = { id: "files-" & n, label: "Files " & n, kind: "files", target: n, type: t.type, points: [], error: "" };
+            var isRemote = arrayFind( [ "s3", "b2", "azure", "gs", "sftp", "rest", "rclone" ], t.type ) > 0;
+            if ( isRemote && arguments.localOnly ) { row.error = "not read (--local)"; rows.append( row ); continue; }
+            if ( !len( bd.secrets().fetch( bd.passwordKey( n ) ) ) ) { row.error = "not initialized"; rows.append( row ); continue; }
+            if ( !bd.has( "restic" ) ) { row.error = "restic is not installed"; rows.append( row ); continue; }
+            var env = bd.envFor( n, t );
+            if ( structKeyExists( env, "__unmounted" ) ) { row.error = "the NAS share is not mounted"; rows.append( row ); continue; }
+            var r = bd.restic( env, [ "snapshots", "--json" ], 120 );
+            if ( r.exitCode != 0 ) { row.error = trim( listFirst( trim( r.output ), chr( 10 ) ) ); rows.append( row ); continue; }
+            try {
+                for ( var x in jsonDeserialize( r.output ) ) row.points.append( point( x.short_id ?: left( x.id, 8 ), left( replace( x.time ?: "", "Z", "" ), 19 ), ( x.paths ?: [] ).toList( ", " ), arguments.now, 0, { host: x.hostname ?: "", paths: x.paths ?: [] } ) );
+            } catch ( any e ) { row.error = "could not read the snapshot list"; }
+            row.points = sortNewestFirst( row.points );
+            rows.append( row );
+        }
+        return rows;
+    }
+
+    function mirrorRows( now ) {
+        var rows = [];
+        var file = variables.runner == "" ? getSystemSetting( "HOME", "" ) : getSystemSetting( "HOME", "" );
+        var cfg = new bxcachy.ConfigService().quiet( true ).cfgHome() & "/bxcachy/nas.json";
+        if ( !fileExists( cfg ) ) return rows;
+        try {
+            var j = jsonDeserialize( fileRead( cfg ) );
+            for ( var n in structKeyArray( j.nas ?: {} ) ) {
+                var pts = [];
+                for ( var sh in structKeyArray( j.nas[ n ].shares ?: {} ) ) for ( var sy in ( j.nas[ n ].shares[ sh ].syncs ?: [] ) ) pts.append( point( sh & ":" & sy.time, sy.time, sy.source & " to " & sh, arguments.now, 0, { source: sy.source, share: sh } ) );
+                if ( pts.len() ) rows.append( { id: "mirror-" & n, label: "Mirror " & n, kind: "mirror", target: n, points: sortNewestFirst( pts ), error: "" } );
+            }
+        } catch ( any e ) {}
+        return rows;
+    }
+
+    function build( localOnly = false ) {
+        var forced = getSystemSetting( "BXCACHY_TIMELINE_FILE", "" );
+        if ( len( forced ) && fileExists( forced ) ) return jsonDeserialize( fileRead( forced ) );
+        var now = nowEpoch();
+        var rows = [ systemRow( now ), configRow( now ) ];
+        for ( var r in filesRows( now, arguments.localOnly ) ) rows.append( r );
+        for ( var m in mirrorRows( now ) ) rows.append( m );
+        var total = 0;
+        for ( var x in rows ) total += x.points.len();
+        return { now: now, rows: rows, total: total };
+    }
+
+    function say( code, data, asJson, lines = [] ) {
+        if ( arguments.asJson ) println( variables.cli.envelope( "backup", arguments.code, arguments.data ) );
+        else for ( var l in arguments.lines ) println( l );
+        return arguments.code;
+    }
+
+    function run( opts, asJson ) {
+        var t = build( structKeyExists( arguments.opts, "local" ) );
+        var lines = [];
+        for ( var r in t.rows ) {
+            var last = r.points.len() ? ago( t.now - r.points[ 1 ].epoch ) : ( len( r.error ) ? r.error : "none yet" );
+            lines.append( r.label & "   " & r.points.len() & " backups   latest: " & last );
+        }
+        return say( 0, t, arguments.asJson, lines );
+    }
+}

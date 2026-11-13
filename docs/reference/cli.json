@@ -841,7 +841,8 @@
       "backup data include|exclude add|remove PATH_OR_PATTERN",
       "backup send ID|all --to=TARGET [--from=TARGET] [--yes]",
       "backup export data ID --to=FILE.tar|FILE.zip [--path=/PATH] [--target=NAME] [--yes]",
-      "backup export config ID --to=FILE.tar.gz [--yes]"
+      "backup export config ID --to=FILE.tar.gz [--yes]",
+      "backup timeline [--local] [--json]"
      ],
      "examples": [
       "bxcachy backup config now",
@@ -859,10 +860,25 @@
       "bxcachy backup data restore latest --to=~/restored --yes",
       "bxcachy backup send latest --from=usb --to=do --yes",
       "bxcachy backup export data latest --to=~/projects.zip --path=/home/me/Projects --yes",
-      "bxcachy backup export config 20261113T153000 --to=~/my-setup.tar.gz --yes"
+      "bxcachy backup export config 20261113T153000 --to=~/my-setup.tar.gz --yes",
+      "bxcachy backup timeline --local"
      ],
      "mutates": true,
      "note": "A config snapshot is taken by itself before update, system update, init, reinstall and refresh (turn it off with backup config auto off). Secrets and SSH keys are never in it unless you add --with-secrets, which stores your secrets export, encrypted with a passphrase you type."
+    },
+    {
+     "name": "timemachine",
+     "summary": "The Time Machine screen: every backup of your system, setup and files on one timeline, with browse, restore, export and send.",
+     "usage": [
+      "timemachine [--demo] [--local]"
+     ],
+     "examples": [
+      "bxcachy timemachine",
+      "bxcachy timemachine --local",
+      "bxcachy timemachine --demo"
+     ],
+     "mutates": false,
+     "note": "It needs a terminal. Restore, export, send and back up now show the plan first and change nothing until you press y. --local skips the network targets so it opens at once; --demo shows made-up data and runs nothing."
     }
    ]
   },

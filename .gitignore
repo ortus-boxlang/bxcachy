@@ -3,3 +3,4 @@ arch-test-out/
 dist/
 site/
 .cache/
+recording/

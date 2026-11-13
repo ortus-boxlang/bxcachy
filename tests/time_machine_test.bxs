@@ -1,0 +1,121 @@
+// Time Machine: the model (keys, intents, commands), the timeline maths and what the screen shows, read back with render_to_string
+// (needs MatchBox built with bif-tui). Run from src/: (cd src && matchbox ../tests/time_machine_test.bxs)
+failures = 0;
+function check( label, ok ) { if ( ok ) println( "ok   " & label ); else { println( "FAIL " & label ); failures++; } }
+tl = new bxcachy.BackupTimeline( {} );
+check( "epoch of a known moment", tl.epoch( "2026-11-13T15:30:00" ) == 1794583800 && tl.epoch( "2026-11-13 15:30:00" ) == 1794583800 && tl.epoch( "2026-11-13T15:30:00Z" ) == 1794583800 );
+check( "epoch of 1970 and a leap day", tl.epoch( "1970-01-01T00:00:00" ) == 0 && tl.epoch( "2000-03-01T00:00:00" ) == 951868800 );
+check( "epoch of nonsense is 0", tl.epoch( "yesterday" ) == 0 );
+check( "tiers by age", tl.tier( 3600 ) == "hourly" && tl.tier( 3 * 86400 ) == "daily" && tl.tier( 20 * 86400 ) == "weekly" && tl.tier( 100 * 86400 ) == "monthly" && tl.tier( 800 * 86400 ) == "yearly" );
+check( "ago in words", tl.ago( 30 ) == "just now" && tl.ago( 3600 * 5 ) == "5 hours ago" && tl.ago( 86400 * 2 + 5 ) == "2 days ago" && tl.ago( 86400 * 20 ) == "2 weeks ago" );
+
+demo = new bxcachy.TimeMachineDemo( 1794000000 );
+data = demo.build();
+check( "the demo has every kind of place", data.rows.len() == 6 && data.total > 70 && data.rows[ 1 ].kind == "system" && data.rows[ 6 ].kind == "mirror" );
+check( "the demo covers every tier", ( function() { seen = {}; for ( r in data.rows ) for ( p in r.points ) seen[ p.tier ] = true; return structCount( seen ) == 5; } )() );
+check( "points are newest first", data.rows[ 3 ].points[ 1 ].epoch > data.rows[ 3 ].points[ 2 ].epoch );
+
+app = new bxcachy.TimeMachineApp( data, "/home/luis" );
+check( "starts on the first place with backups, on its newest point", app.rowIndex() == 1 && app.selIndex() == 1 && app.mode() == "timeline" );
+app.onKey( "Left" ); app.onKey( "Left" );
+check( "left goes back in time", app.selIndex() == 3 );
+app.onKey( "Right" );
+check( "right goes forward", app.selIndex() == 2 );
+app.onKey( "End" );
+check( "End is the newest", app.selIndex() == 1 );
+app.onKey( "Home" );
+check( "Home is the oldest, and the axis zooms out to show it", app.selIndex() == data.rows[ 1 ].points.len() && app.inWindow( app.point() ) && app.zoom().name != "1 month" );
+app.onKey( "End" );
+app.onKey( "Down" ); app.onKey( "Down" );
+check( "down changes the place", app.rowIndex() == 3 && app.row().kind == "files" );
+app.onKey( "+" ); z1 = app.zoom().name; app.onKey( "-" ); app.onKey( "-" );
+check( "+ and - change the zoom", z1 != app.zoom().name );
+for ( i = 1; i <= 12; i++ ) app.onKey( "-" );
+check( "zoom stops at all", app.zoom().name == "all" );
+app.onKey( "?" );
+check( "? opens the help and any key closes it", app.mode() == "help" );
+app.onKey( "x" );
+check( "...back on the timeline", app.mode() == "timeline" );
+
+// intents
+it = app.onKey( "Enter" );
+check( "enter asks to browse", it.action == "browse" && it.row.kind == "files" && len( it.point.id ) == 8 );
+check( "browse command for files", app.commandFor( it ).toList( " " ) == "backup data files " & it.point.id & " --target=nas-synology --json" );
+app.setFiles( demo.files( "files" ), "" );
+check( "the file list opens the browser", app.mode() == "browse" && app.filteredFiles().len() == 11 );
+app.onKey( "/" ); for ( c in [ "t", "a", "x" ] ) app.onKey( c );
+check( "typing filters the files", app.filteredFiles().len() == 1 && app.selectedFile().path == "/home/luis/Documents/taxes-2025.pdf" );
+app.onKey( "Backspace" ); app.onKey( "Backspace" ); app.onKey( "Backspace" ); app.onKey( "Escape" );
+check( "escape clears the filter", app.filteredFiles().len() == 11 );
+app.onKey( "Down" ); app.onKey( "Down" );
+r = app.onKey( "r" );
+check( "r on a file asks to restore that file", r.action == "restore" && r.path == "/home/luis/Projects/bxcachy/src/bxcachy/Nas.bx" );
+check( "restore plan command", app.commandFor( r, "plan" ).toList( " " ) == "backup data restore " & r.point.id & " --to=/home/luis/Restored/" & r.point.id & " --target=nas-synology --include=/home/luis/Projects/bxcachy/src/bxcachy/Nas.bx --dry-run" );
+check( "restore run command", right( app.commandFor( r, "run" ).toList( " " ), 6 ) == "--yes" || right( app.commandFor( r, "run" ).toList( " " ), 5 ) == "--yes" );
+app.showPlan( "Restore", "Plan: restore", r );
+check( "a plan waits for y", app.mode() == "confirm" );
+back = app.onKey( "y" );
+check( "y confirms the same intent", back.action == "restore" && structKeyExists( back, "confirmed" ) );
+app.showPlan( "Restore", "Plan: restore", r ); app.onKey( "n" );
+check( "n leaves the plan and nothing runs", app.mode() == "browse" );
+app.onKey( "Escape" );
+check( "escape leaves the browser", app.mode() == "timeline" );
+e = app.onKey( "e" );
+check( "e asks to export; the file lands in your home", e.action == "export" && find( "--to=/home/luis/bxcachy-", app.commandFor( e, "run" ).toList( " " ) ) > 0 );
+s = app.onKey( "s" );
+check( "s on files opens the destination picker without the NAS itself", app.mode() == "pick" && app.pickState().list.len() == 2 && app.pickState().list[ 1 ].target == "spaces" );
+app.onKey( "Down" ); d = app.onKey( "Enter" );
+check( "choosing a destination gives the send intent", d.action == "send" && d.dest == "usb" && find( "--from=nas-synology --to=usb", app.commandFor( d, "run" ).toList( " " ) ) > 0 );
+app.onKey( "Up" );
+check( "up to the config place", app.row().kind == "config" );
+check( "diff and now for config", app.commandFor( app.onKey( "d" ) ).toList( " " ) == "backup config diff " & app.point().id && app.commandFor( app.onKey( "n" ), "run" ).toList( " " ) == "backup config now" );
+s2 = app.onKey( "s" );
+check( "send is for file backups only", app.mode() == "timeline" && find( "file backups", app.message() ) > 0 );
+app.onKey( "Up" );
+check( "system restore needs a folder first", app.commandFor( { action: "restore", row: app.row(), point: app.point(), path: "" } ).len() == 0 );
+check( "system changes command", app.commandFor( { action: "browse", row: app.row(), point: app.point() } )[ 2 ] == "snapshots" );
+app.onKey( "Ctrl+c" );
+check( "ctrl-c quits", app.outcome() == "quit" );
+
+// clicks
+app2 = new bxcachy.TimeMachineApp( demo.build(), "/home/luis" );
+app2.act( { kind: "point", n: 3, m: 4 } );
+check( "a click on a point selects it", app2.rowIndex() == 3 && app2.selIndex() == 4 );
+app2.act( { kind: "zoom", n: 1, m: 0 } );
+check( "a click on a zoom chip zooms (and grows if the point is older)", app2.zoom().name != "" );
+
+// an empty setup
+empty = new bxcachy.TimeMachineApp( { now: 1794000000, total: 0, rows: [ { id: "config", label: "Config", kind: "config", target: "", points: [], error: "" } ] }, "/home/luis" );
+n = empty.onKey( "Enter" );
+check( "nothing to open on an empty place; it says what to do", structIsEmpty( n ) && find( "first backup", empty.message() ) > 0 );
+check( "n still offers a backup", empty.onKey( "n" ).action == "now" );
+
+// the screen
+tui = createObject( "rust", "tui.TUI" );
+view = new bxcachy.TimeMachineView( tui );
+function shot( a, w = 120, h = 38 ) { view.paint( a, 100, w, h ); return tui.render_to_string( w, h ); }
+a3 = new bxcachy.TimeMachineApp( demo.build(), "/home/luis" );
+a3.onKey( "Down" ); a3.onKey( "Down" ); a3.onKey( "Left" );
+sc = shot( a3 );
+check( "title, counts and Powered by BoxLang", find( "T I M E   M A C H I N E", sc ) > 0 && find( "78 backups in 6 places", sc ) > 0 && find( "Powered by", sc ) > 0 && find( "BoxLang", sc ) > 0 && find( "www.boxlang.io", sc ) > 0 );
+check( "every place is a row", find( "System", sc ) > 0 && find( "Config", sc ) > 0 && find( "Files nas-synology", sc ) > 0 && find( "Files spaces", sc ) > 0 && find( "Files usb", sc ) > 0 && find( "Mirror synology", sc ) > 0 );
+check( "the time axis ends at now and shows the tiers", find( "now", sc ) > 0 && find( "hourly", sc ) > 0 && find( "monthly", sc ) > 0 && find( "yearly", sc ) > 0 );
+check( "the chosen backup is a card with id, age and tier", find( "id      ", sc ) > 0 && find( "ago", sc ) > 0 && find( "enter browse   r restore   e export   s send", sc ) > 0 );
+check( "the zoom chips and the key hints", find( "1 month", sc ) > 0 && find( "n back up", sc ) > 0 );
+check( "older backups stack behind the card", find( "╭─ ", sc ) > 0 );
+check( "a click on a place name is a row action", view.hitAt( 10, 5 ).kind == "row" && view.hitAt( 10, 5 ).n == 1 );
+a3.onKey( "Enter" ); a3.setFiles( demo.files( "files" ), "" );
+sc2 = shot( a3 );
+check( "the browser lists the files with sizes and the filter box", find( "/home/luis/Projects/bxcachy/src/Main.bx", sc2 ) > 0 && find( "KB", sc2 ) > 0 && find( "press / to filter", sc2 ) > 0 && find( "11 of 11 files", sc2 ) > 0 );
+a3.onKey( "Escape" ); a3.showPlan( "Restore: Files nas-synology", "Plan: restore x" & chr( 10 ) & "  line two", { action: "restore" } );
+sc3 = shot( a3 );
+check( "the plan screen shows the plan and the two choices", find( "Plan: restore x", sc3 ) > 0 && find( "y  do it", sc3 ) > 0 && find( "n  not now", sc3 ) > 0 );
+a3.onKey( "n" ); a3.onKey( "?" );
+check( "the help screen lists the keys", find( "restore (a plan comes first)", shot( a3 ) ) > 0 );
+small = shot( a3, 60, 20 );
+check( "a window that is too small asks for a bigger one", find( "Make the window a little bigger", small ) > 0 );
+errApp = new bxcachy.TimeMachineApp( { now: 1794000000, total: 0, rows: [ { id: "files-x", label: "Files cloud", kind: "files", target: "cloud", type: "s3", points: [], error: "not initialized" } ] }, "/home/luis" );
+check( "a place with an error shows it", find( "not initialized", shot( errApp ) ) > 0 );
+
+if ( failures > 0 ) { println( failures & " failed" ); exit( 1 ); }
+println( "all passed" );
