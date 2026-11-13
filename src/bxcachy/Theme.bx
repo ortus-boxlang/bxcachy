@@ -194,6 +194,20 @@ class Theme {
         return say( 0, data, arguments.asJson, [ t.name & " (" & t.origin & ", " & ( data.light ? "light" : "dark" ) & ")", "accent " & c.accent & "  background " & c.background & "  foreground " & c.foreground, "neovim colourscheme: " & ( data.neovim ? "yes" : "no" ) ] );
     }
 
+    // One line per terminal or btop config of yours that does not use the generated theme yet (we never edit your files).
+    function hints() {
+        var d = outDir();
+        var out = [];
+        var cases = [ { id: "ghostty", file: cfg() & "/ghostty/config", line: "config-file = ?" & d & "/ghostty" },
+                      { id: "kitty", file: cfg() & "/kitty/kitty.conf", line: "include " & d & "/kitty.conf" },
+                      { id: "alacritty", file: cfg() & "/alacritty/alacritty.toml", line: 'import = ["' & d & '/alacritty.toml"] (under [general])' },
+                      { id: "foot", file: cfg() & "/foot/foot.ini", line: "include=" & d & "/foot.ini" } ];
+        for ( var c in cases ) if ( fileExists( c.file ) && !findNoCase( "bxcachy/theme", fileRead( c.file ) ) ) out.append( c.id & ": add `" & c.line & "` to " & c.file & " to follow the theme" );
+        var bt = cfg() & "/btop/btop.conf";
+        if ( fileExists( bt ) && !reFind( 'color_theme *= *"?bxcachy', fileRead( bt ) ) ) out.append( 'btop: set color_theme = "bxcachy" in ' & bt );
+        return out;
+    }
+
     // Tells the running desktop. Returns { noctalia, plasma, hyprland, notes }.
     function notify( mode, wallpaper ) {
         var out = { noctalia: "skipped", plasma: "skipped", hyprland: "skipped", notes: [] };
@@ -247,6 +261,8 @@ class Theme {
         var lines = [ "Theme: " & t.name & " (" & t.origin & ", " & ( data.light ? "light" : "dark" ) & ", mode " & m & ")", "Files: " & data.written.len() & " written, " & data.unchanged.len() & " unchanged" ];
         lines.append( "Noctalia: " & n.noctalia & "  Plasma: " & n.plasma & "  Hyprland: " & n.hyprland );
         for ( var note in n.notes ) lines.append( "note: " & note );
+        data.hints = hints();
+        for ( var h in data.hints ) lines.append( "hint: " & h );
         if ( !len( t.neovimText ) ) lines.append( "note: this theme has no neovim.lua, so Neovim keeps its colourscheme" );
         return say( 0, data, arguments.asJson, lines );
     }

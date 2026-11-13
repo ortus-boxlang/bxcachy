@@ -11,4 +11,4 @@ description: "Use this skill when installing or choosing apps with BxCachy: the 
 - Dictation: `bxcachy dictation setup superwhisper|voxtype --yes`. Quick Look: `bxcachy quicklook PATH`. Dolphin: `bxcachy dolphin doctor [--fix]`. Strata Send-to providers: `bxcachy strata integrations`.
 - Databases (Podman first): `bxcachy db list|start ENGINE|stop|status|logs|remove|info`. Cloud storage as folders: `bxcachy cloud remotes|configure|mount NAME|unmount NAME|status`.
 - BoxLang tools: `bxcachy boxlang status|use VERSION|matchbox use VERSION|modules list|search|install|update|vscode|links|welcome`. `use` wraps bvm and mvm; modules come from ForgeBox and install with `bx-module`.
-- VPN, remote desktop, containers: `bxcachy vpn nordvpn setup`, `bxcachy containers doctor|socket enable|docker-compat`, `bxcachy editor lazyvim`.
+- VPN, remote desktop, containers: `bxcachy vpn nordvpn setup`, `bxcachy containers doctor|socket enable|docker-compat`, `bxcachy editor lazyvim|boxlang|status|refresh` (LazyVim with the BxCachy layer and BoxLang syntax).

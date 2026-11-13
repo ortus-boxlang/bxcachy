@@ -107,7 +107,7 @@ bxcachy dolphin doctor [--fix] [--json]
 ### `bxcachy editor`
 
 ```text
-bxcachy editor lazyvim [--yes] [--json]
+bxcachy editor lazyvim [--yes] | boxlang [--yes] | status | refresh [--force] [--yes] [--json]
 ```
 
 ### `bxcachy gpu`
@@ -240,6 +240,12 @@ bxcachy strata integrations [--dry-run] [--json]
 
 ```text
 bxcachy system update [--yes] [--json]
+```
+
+### `bxcachy theme`
+
+```text
+bxcachy theme list | show NAME | set NAME [--mode=theme|dark|light|auto] [--keep-wallpaper] | random | next | mode theme|dark|light|auto | install GIT_URL [--name=N] [--force] | import PATH [--name=N] [--force] | remove NAME | status [--dry-run] [--json]
 ```
 
 ### `bxcachy tiling`

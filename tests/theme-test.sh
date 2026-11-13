@@ -83,6 +83,14 @@ grep -q "wallpaper-set $tmp/cfg/omarchy/themes/mine/backgrounds/1.png" "$LOG" ||
 echo "accent = nope" > "$tmp/cfg/omarchy/themes/mine/colors.toml"
 [[ "$(code "$binary" theme set mine)" == 4 ]] || fail 'an invalid theme is rejected before anything is written'
 
+# a terminal config of yours without the include gets a hint, never an edit; with the include it is quiet
+mkdir -p "$tmp/cfg/ghostty" "$tmp/cfg/btop"; echo 'font-size = 12' > "$tmp/cfg/ghostty/config"; echo 'color_theme = "Default"' > "$tmp/cfg/btop/btop.conf"
+run "$binary" theme set nord --json | jq -e '(.data.hints | length == 2) and (.data.hints[0] | test("ghostty: add .config-file = \\?")) and (.data.hints[1] | test("btop"))' >/dev/null || fail "hints: $(run "$binary" theme set nord --json | jq -c .data.hints)"
+[[ "$(cat "$tmp/cfg/ghostty/config")" == 'font-size = 12' ]] || fail 'your ghostty config was edited'
+echo "config-file = ?$tmp/cfg/bxcachy/theme/ghostty" >> "$tmp/cfg/ghostty/config"; echo 'color_theme = "bxcachy"' > "$tmp/cfg/btop/btop.conf"
+run "$binary" theme set nord --json | jq -e '.data.hints | length == 0' >/dev/null || fail 'no hints once the includes are there'
+rm -rf "$tmp/cfg/ghostty" "$tmp/cfg/btop"
+
 # install from git (fake git: the clone is an Omarchy-format folder), import from a folder, remove
 cat > "$tmp/bin/git" <<'FAKE'
 #!/usr/bin/env bash
