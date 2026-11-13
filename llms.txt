@@ -16,6 +16,7 @@
 - [The wizard program](https://bxcachy.boxlang.io/architecture/wizard.md) ([HTML](https://bxcachy.boxlang.io/architecture/wizard/index.html))
 - [Themes](https://bxcachy.boxlang.io/guides/themes.md) ([HTML](https://bxcachy.boxlang.io/guides/themes/index.html))
 - [Apps and web apps](https://bxcachy.boxlang.io/guides/apps.md) ([HTML](https://bxcachy.boxlang.io/guides/apps/index.html))
+- [Virtual machines](https://bxcachy.boxlang.io/guides/vms.md) ([HTML](https://bxcachy.boxlang.io/guides/vms/index.html))
 - [AI agents and skills](https://bxcachy.boxlang.io/guides/ai.md) ([HTML](https://bxcachy.boxlang.io/guides/ai/index.html))
 - [BoxLang and MatchBox](https://bxcachy.boxlang.io/guides/boxlang.md) ([HTML](https://bxcachy.boxlang.io/guides/boxlang/index.html))
 - [Updates and channels](https://bxcachy.boxlang.io/guides/updates.md) ([HTML](https://bxcachy.boxlang.io/guides/updates/index.html))

@@ -266,6 +266,12 @@ bxcachy toolchain node [--yes] [--dry-run] [--json]   (Bun and Deno: bxcachy ins
 bxcachy update check [--notify] | apply [--yes] | channel [stable|beta] | notifications on|off|status [--json]
 ```
 
+### `bxcachy vm`
+
+```text
+bxcachy vm list | status [NAME] | size [NAME] | info NAME [--show-password] | doctor | versions linux|windows | create windows [NAME] [--version=V] [--ram=8G] [--cpus=N] [--disk=64G] [--share=PATH|none] | create linux NAME [--tag=ubuntu-xfce] [--cpus=N] [--memory=4G] [--share=PATH|none] [--gpu=none|auto|intel|amd|nvidia] | start|stop|logs NAME | open NAME [--web] [--fullscreen] | remove NAME [--keep-data] [--yes] [--dry-run] [--json]
+```
+
 ### `bxcachy vpn`
 
 ```text
