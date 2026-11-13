@@ -636,7 +636,7 @@ Themes, fonts, bar, dock, windows, monitors and power.
 Themes: 15 bundled (10 from Omarchy, 5 BxCachy), set one, light or dark, install from git.
 
 ```text
-bxcachy theme list | show NAME | set NAME [--mode=theme|dark|light|auto] [--keep-wallpaper] | random | next | mode theme|dark|light|auto | install GIT_URL [--name=N] [--force] | import PATH [--name=N] [--force] | remove NAME | status [--dry-run] [--json]
+bxcachy theme list | show NAME | set NAME [--mode=theme|dark|light|auto] [--keep-wallpaper] | random | next | mode theme|dark|light|auto | install GIT_URL [--name=N] [--force] | import PATH [--name=N] [--force] | remove NAME | vscode [--yes] [--dry-run] | status [--dry-run] [--json]
 ```
 
 ```bash
@@ -644,9 +644,10 @@ bxcachy theme list
 bxcachy theme set tokyo-night --mode=dark
 bxcachy theme install https://github.com/user/theme --name=mine
 bxcachy theme mode auto
+bxcachy theme vscode --yes
 ```
 
-> A theme colours the bar, terminals, btop, Neovim and (on Plasma) the colour scheme.
+> A theme colours the bar, terminals, btop, Neovim, GTK and Qt apps, tmux, fzf, launchers and (on Plasma) the colour scheme. VS Code is opt-in.
 
 ### `bxcachy appearance` {#bxcachy-appearance}
 
