@@ -53,7 +53,7 @@ Settings that only touch your own config (a theme, the bar, the font) act at onc
 
 **Look and feel**: [`theme`](#bxcachy-theme), [`appearance`](#bxcachy-appearance), [`display`](#bxcachy-display), [`power`](#bxcachy-power), [`time`](#bxcachy-time), [`toggle`](#bxcachy-toggle), [`nightshift`](#bxcachy-nightshift), [`notify`](#bxcachy-notify)
 
-**System and security**: [`system`](#bxcachy-system), [`security`](#bxcachy-security), [`dns`](#bxcachy-dns), [`kernel`](#bxcachy-kernel), [`ssh`](#bxcachy-ssh), [`secrets`](#bxcachy-secrets), [`vpn`](#bxcachy-vpn), [`cloud`](#bxcachy-cloud), [`settings`](#bxcachy-settings), [`dotfiles`](#bxcachy-dotfiles), [`nas`](#bxcachy-nas), [`backup`](#bxcachy-backup)
+**System and security**: [`system`](#bxcachy-system), [`security`](#bxcachy-security), [`dns`](#bxcachy-dns), [`kernel`](#bxcachy-kernel), [`ssh`](#bxcachy-ssh), [`secrets`](#bxcachy-secrets), [`vpn`](#bxcachy-vpn), [`cloud`](#bxcachy-cloud), [`settings`](#bxcachy-settings), [`dotfiles`](#bxcachy-dotfiles), [`nas`](#bxcachy-nas), [`backup`](#bxcachy-backup), [`timemachine`](#bxcachy-timemachine)
 
 **Develop**: [`boxlang`](#bxcachy-boxlang), [`editor`](#bxcachy-editor), [`db`](#bxcachy-db), [`containers`](#bxcachy-containers), [`vm`](#bxcachy-vm), [`ai`](#bxcachy-ai), [`skills`](#bxcachy-skills)
 
@@ -997,6 +997,7 @@ bxcachy backup data include|exclude add|remove PATH_OR_PATTERN
 bxcachy backup send ID|all --to=TARGET [--from=TARGET] [--yes]
 bxcachy backup export data ID --to=FILE.tar|FILE.zip [--path=/PATH] [--target=NAME] [--yes]
 bxcachy backup export config ID --to=FILE.tar.gz [--yes]
+bxcachy backup timeline [--local] [--json]
 ```
 
 Changes the system: needs `--yes`. Without it you get the plan (exit 2); `--dry-run` shows it and exits 0.
@@ -1018,9 +1019,26 @@ bxcachy backup data restore latest --to=~/restored --yes
 bxcachy backup send latest --from=usb --to=do --yes
 bxcachy backup export data latest --to=~/projects.zip --path=/home/me/Projects --yes
 bxcachy backup export config 20261113T153000 --to=~/my-setup.tar.gz --yes
+bxcachy backup timeline --local
 ```
 
 > A config snapshot is taken by itself before update, system update, init, reinstall and refresh (turn it off with backup config auto off). Secrets and SSH keys are never in it unless you add --with-secrets, which stores your secrets export, encrypted with a passphrase you type.
+
+### `bxcachy timemachine` {#bxcachy-timemachine}
+
+The Time Machine screen: every backup of your system, setup and files on one timeline, with browse, restore, export and send.
+
+```text
+bxcachy timemachine [--demo] [--local]
+```
+
+```bash
+bxcachy timemachine
+bxcachy timemachine --local
+bxcachy timemachine --demo
+```
+
+> It needs a terminal. Restore, export, send and back up now show the plan first and change nothing until you press y. --local skips the network targets so it opens at once; --demo shows made-up data and runs nothing.
 
 ## Develop
 
