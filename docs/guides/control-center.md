@@ -35,6 +35,25 @@ The first page shows what needs your attention, then the state of the machine:
 
 Each part is read on its own. If one cannot be read, the rest still shows.
 
+## Pages
+
+| Page | What it does |
+|---|---|
+| Dashboard | what needs attention, meters, what runs, backups |
+| BoxLang | BoxLang versions through `bvm`: use, install, remove |
+| Java | your Java homes: default, install a Temurin JDK, remove (see `bxcachy java`) |
+| Versions | BoxLang, MatchBox, Java and Node in one table; Enter opens the deep page |
+| Ports | what listens on which port and who owns it; stop or kill it, with a plan first. A port with two owners is red |
+| Packages | search the repos and the AUR with `/`, then install or remove |
+| Shortcuts | every shortcut; rebind (it asks for the keys), reset, conflicts |
+| Machines | databases and VMs: start, stop, info |
+| Storage | NAS shares and cloud remotes: mount, unmount, test |
+| Secrets | names only; `v` shows one value for one look |
+| Themes | the 15 themes; Enter applies |
+| Logs | the journal of this boot; `p` changes the lowest priority shown |
+
+In a table, `/` filters the rows (or searches, on Packages), Enter keeps it and Escape clears it. Every key that changes something shows a plan first.
+
 ## How the pages fit together
 
 Every screen shares one kit for lists, tabs, plan boxes and meters, so they look and behave the same. A page is a small class, which is also how new pages are added. A page can send you to a full screen such as BxTimeMachine and bring you back.

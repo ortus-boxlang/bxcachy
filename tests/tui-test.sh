@@ -12,6 +12,12 @@ code() { set +e; "$@" >/dev/null 2>&1; echo $?; set -e; }
 "$binary" tui dashboard --demo --json | jq -e '.ok and .data.data.host == "orion" and (.data.attention | length == 2) and (.data.data.machines | length == 4) and (.data.data.backups | length == 3)' >/dev/null || fail 'demo dashboard json'
 "$binary" tui --demo --json | jq -e '.data.attention[0].action.args == ["system","update"]' >/dev/null || fail 'default page is the dashboard'
 
+# the other pages in demo mode
+"$binary" tui ports --demo --json | jq -e '.data.rows == 7 and (.data.items | map(select(.conflict)) | length == 2)' >/dev/null || fail 'ports demo'
+"$binary" tui java --demo --json | jq -e '.data.items[0].id == "temurin-21.0.13_9"' >/dev/null || fail 'java demo'
+for pg in boxlang versions shortcuts machines storage secrets themes logs; do "$binary" tui "$pg" --demo --json | jq -e '.ok and (.data.rows > 0)' >/dev/null || fail "$pg demo"; done
+"$binary" tui packages --demo --json | jq -e '.data.rows == 0' >/dev/null || fail 'packages start empty until you search'
+
 # the real machine: never fails, has the parts (power switch points at an empty folder: no battery)
 mkdir -p "$tmp/power"
 BXCACHY_POWER_DIR="$tmp/power" "$binary" tui dashboard --json | jq -e '.ok and (.data.data.mem.total > 0) and (.data.data.battery.present == false) and (.data.data.backups | type == "array") and (.data.data.os | length > 0)' >/dev/null || fail 'real dashboard json'

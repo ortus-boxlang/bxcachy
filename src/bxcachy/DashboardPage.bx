@@ -13,6 +13,7 @@ class DashboardPage {
     }
 
     function id() { return "dashboard"; }
+    function usesLeft() { return false; }
     function title() { return "Dashboard"; }
 
     function load() {
@@ -28,12 +29,12 @@ class DashboardPage {
 
     function onKey( key ) {
         var k = arguments.key;
-        if ( k == "Up" || k == "k" ) { variables.cursor = max( 1, variables.cursor - 1 ); return {}; }
-        if ( k == "Down" || k == "j" ) { variables.cursor = min( max( 1, variables.att.len() ), variables.cursor + 1 ); return {}; }
-        if ( k == "r" ) { load(); return {}; }
-        if ( k == "b" ) return { action: "launch", target: "timemachine" };
+        if ( k == "Up" || compare( k, "k" ) == 0 ) { variables.cursor = max( 1, variables.cursor - 1 ); return {}; }
+        if ( k == "Down" || compare( k, "j" ) == 0 ) { variables.cursor = min( max( 1, variables.att.len() ), variables.cursor + 1 ); return {}; }
+        if ( compare( k, "r" ) == 0 ) { load(); return {}; }
+        if ( compare( k, "b" ) == 0 ) return { action: "launch", target: "timemachine" };
         if ( k == "Enter" && variables.att.len() ) return variables.att[ variables.cursor ].action;
-        for ( var a in variables.att ) if ( len( a.key ) && a.key == k ) return a.action;
+        for ( var a in variables.att ) if ( len( a.key ) && compare( a.key, k ) == 0 ) return a.action;
         return {};
     }
 

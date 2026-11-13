@@ -45,6 +45,10 @@ class ControlCenterView {
         // plan box
         var m = arguments.app.modal();
         if ( arguments.app.mode() == "confirm" ) k.confirmModal( arguments.width, arguments.height, m.title, m.lines, phase );
+        else if ( arguments.app.mode() == "ask" ) {
+            var a = arguments.app.ask();
+            k.modal( arguments.width, arguments.height, a.title, [ a.prompt, "", "> " & a.input & "▌" ], [ { key: "Enter", label: "continue", kind: "askok" }, { key: "Esc", label: "cancel", kind: "askno" } ], phase );
+        }
         else if ( arguments.app.mode() == "result" ) k.modal( arguments.width, arguments.height, m.title, m.lines, [], phase );
     }
 }

@@ -22,7 +22,11 @@ class ListPage {
 
     function id() { return variables.p.id(); }
     function title() { return variables.p.title(); }
-    function state() { return { rows: variables.rows.len(), shown: variables.list.count(), cursor: variables.list.cursor(), mode: variables.mode, filter: variables.list.query(), query: variables.query }; }
+    function state() {
+        var items = [];
+        for ( var r in variables.rows ) { var c = {}; for ( var k in r ) if ( k != "__text" ) c[ k ] = r[ k ]; items.append( c ); }
+        return { rows: variables.rows.len(), shown: variables.list.count(), cursor: variables.list.cursor(), mode: variables.mode, filter: variables.list.query(), query: variables.query, items: items };
+    }
     function selected() { return variables.list.selected(); }
 
     function usesLeft() { return variables.mode != "list"; }
@@ -37,7 +41,7 @@ class ListPage {
 
     function searchText( r ) {
         var t = "";
-        for ( var c in variables.p.columns() ) t &= " " & ( r[ c.key ] ?: "" );
+        for ( var cd in variables.p.columns() ) t &= " " & ( r[ cd.key ] ?: "" );
         return lCase( t );
     }
 
@@ -56,7 +60,7 @@ class ListPage {
 
     function intentFor( key ) {
         var row = variables.list.selected();
-        for ( var a in variables.p.actions() ) if ( a.key == arguments.key ) return isSimpleValue( row ) ? {} : a.run( row );
+        for ( var a in variables.p.actions() ) if ( compare( a.key, arguments.key ) == 0 ) return isSimpleValue( row ) ? {} : a.run( row );
         return {};
     }
 
@@ -79,14 +83,14 @@ class ListPage {
             }
             return {};
         }
-        if ( k == "Up" || k == "k" ) { variables.list.move( -1 ); return {}; }
-        if ( k == "Down" || k == "j" ) { variables.list.move( 1 ); return {}; }
+        if ( k == "Up" || compare( k, "k" ) == 0 ) { variables.list.move( -1 ); return {}; }
+        if ( k == "Down" || compare( k, "j" ) == 0 ) { variables.list.move( 1 ); return {}; }
         if ( k == "PageUp" ) { variables.list.page( -1, variables.rowsShown ); return {}; }
         if ( k == "PageDown" ) { variables.list.page( 1, variables.rowsShown ); return {}; }
         if ( k == "Home" ) { variables.list.home(); return {}; }
         if ( k == "End" ) { variables.list.end(); return {}; }
         if ( k == "/" ) { variables.mode = "input"; variables.input = variables.p.live() ? variables.query : variables.list.query(); return {}; }
-        if ( k == "r" ) { load(); return {}; }
+        if ( compare( k, "r" ) == 0 ) { load(); return {}; }
         return intentFor( k );
     }
 
@@ -98,7 +102,7 @@ class ListPage {
 
     function onScroll( dir ) { variables.list.move( arguments.dir == "up" ? -3 : 3 ); return {}; }
 
-    function pad( s, w ) { var t = s & ""; return len( t ) >= w ? left( t, max( 0, w - 1 ) ) & " " : t & repeatString( " ", w - len( t ) ); }
+    function padText( s, w ) { var t = s & ""; return len( t ) >= w ? left( t, max( 0, w - 1 ) ) & " " : t & repeatString( " ", w - len( t ) ); }
 
     function paint( kit, x, y, w, h, tick, phase ) {
         var k = arguments.kit;
@@ -115,10 +119,10 @@ class ListPage {
         var cx = arguments.x + 3;
         var widths = [];
         var used = 0;
-        for ( var c in cols ) { widths.append( c.w ); used += c.w; }
+        for ( var colDef in cols ) { widths.append( colDef.w ); used += colDef.w; }
         for ( var ci = 1; ci <= cols.len(); ci++ ) if ( widths[ ci ] == 0 ) widths[ ci ] = max( 8, arguments.w - 6 - used );
         var hx = cx;
-        for ( var ci = 1; ci <= cols.len(); ci++ ) { k.put( hx, arguments.y + 3, pad( cols[ ci ].label, widths[ ci ] ), C( "OVERLAY" ), C( "MANTLE" ), true ); hx += widths[ ci ]; }
+        for ( var ci = 1; ci <= cols.len(); ci++ ) { k.put( hx, arguments.y + 3, padText( cols[ ci ].label, widths[ ci ] ), C( "OVERLAY" ), C( "MANTLE" ), true ); hx += widths[ ci ]; }
         variables.rowsShown = max( 1, tableH - 4 );
         variables.list.fit( variables.rowsShown );
         var win = variables.list.window( variables.rowsShown );
@@ -134,7 +138,7 @@ class ListPage {
             k.put( arguments.x + 1, ry, on ? "▸" : " ", C( "GREEN" ), bg, true );
             var px = cx;
             for ( var ci = 1; ci <= cols.len(); ci++ ) {
-                k.put( px, ry, pad( k.trunc( r[ cols[ ci ].key ] ?: "", widths[ ci ] - 1 ), widths[ ci ] ), on ? C( "GREEN" ) : base, bg, on );
+                k.put( px, ry, padText( k.trunc( r[ cols[ ci ].key ] ?: "", widths[ ci ] - 1 ), widths[ ci ] ), on ? C( "GREEN" ) : base, bg, on );
                 px += widths[ ci ];
             }
             k.hit( "row", arguments.x + 1, ry, arguments.w - 2, 1, item.index );

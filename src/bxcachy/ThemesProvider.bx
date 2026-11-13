@@ -1,0 +1,27 @@
+// Theme picker: the 15 bundled themes (and your own); Enter applies one. Reads `theme list`.
+class ThemesProvider {
+    function init( demo = false ) { variables.demo = arguments.demo; variables.sys = new bxcachy.TuiSys(); return this; }
+    function id() { return "themes"; }
+    function title() { return "Themes"; }
+    function hint() { return "Enter applies a theme"; }
+    function live() { return false; }
+    function emptyText() { return "No themes found."; }
+    function columns() { return [ { key: "mark", label: "", w: 3 }, { key: "name", label: "name", w: 24 }, { key: "mode", label: "mode", w: 8 }, { key: "origin", label: "from", w: 10 }, { key: "swatch", label: "", w: 0 } ]; }
+    function style( r ) { return r.current ? "ok" : ""; }
+    function detail( r ) { return [ r.name & " (" & r.origin & ", " & r.mode & ")", r.current ? "The current theme." : "Enter applies it to the bar, terminals, GTK and Qt apps, Neovim and more." ]; }
+
+    function actions() {
+        return [
+            { key: "Enter", label: "apply", run: function( r ) { return { action: "cli", title: "Apply theme " & r.name, args: [ "theme", "set", r.name ] }; } },
+            { key: "m", label: "auto mode", run: function( r ) { return { action: "cli", title: "Theme mode auto", args: [ "theme", "mode", "auto" ] }; } },
+            { key: "v", label: "VS Code", run: function( r ) { return { action: "cli", title: "VS Code colours", args: [ "theme", "vscode" ] }; } }
+        ];
+    }
+
+    function load( q = "" ) {
+        var d = variables.demo ? { themes: [ { name: "bxcachy", light: false, current: true, origin: "bundled" }, { name: "bxcachy-light", light: true, current: false, origin: "bundled" }, { name: "catppuccin", light: false, current: false, origin: "bundled" }, { name: "tokyo-night", light: false, current: false, origin: "bundled" } ] } : variables.sys.bx( [ "theme", "list" ] );
+        var rows = [];
+        for ( var t in ( d.themes ?: [] ) ) rows.append( { mark: t.current ? "●" : " ", name: t.name, mode: t.light ? "light" : "dark", origin: t.origin, current: t.current, swatch: "" } );
+        return rows;
+    }
+}

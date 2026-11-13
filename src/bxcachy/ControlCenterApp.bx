@@ -14,6 +14,7 @@ class ControlCenterApp {
         variables.modal = {};
         variables.mode = "main";
         variables.message = "";
+        variables.ask = {};
         variables.loaded = {};
         ensureLoaded();
         return this;
@@ -27,6 +28,7 @@ class ControlCenterApp {
     function mode() { return variables.mode; }
     function modal() { return variables.modal; }
     function message() { return variables.message; }
+    function ask() { return variables.ask; }
 
     function ensureLoaded() {
         var id = page().id();
@@ -51,6 +53,8 @@ class ControlCenterApp {
     function handleIntent( it ) {
         if ( !structCount( arguments.it ) ) return {};
         if ( arguments.it.action == "goto" ) { goto( arguments.it.page ); return {}; }
+        if ( arguments.it.action == "reload" ) { page().load(); return {}; }
+        if ( arguments.it.action == "ask" ) { variables.ask = { title: arguments.it.title, prompt: arguments.it.prompt, make: arguments.it.make, input: "" }; variables.mode = "ask"; return {}; }
         if ( arguments.it.action == "launch" ) { variables.outcome = "launch:" & arguments.it.target; return {}; }
         return arguments.it;
     }
@@ -60,6 +64,18 @@ class ControlCenterApp {
         if ( k == "Ctrl+c" ) { variables.outcome = "quit"; return {}; }
         variables.message = "";
         if ( variables.mode == "result" ) { variables.mode = "main"; return {}; }
+        if ( variables.mode == "ask" ) {
+            if ( k == "Escape" ) { variables.mode = "main"; return {}; }
+            if ( k == "Enter" ) {
+                var v = trim( variables.ask.input );
+                variables.mode = "main";
+                return len( v ) ? variables.ask.make( v ) : {};
+            }
+            if ( k == "Backspace" ) { variables.ask.input = len( variables.ask.input ) ? left( variables.ask.input, len( variables.ask.input ) - 1 ) : ""; return {}; }
+            if ( k == "Space" ) variables.ask.input &= " ";
+            else if ( len( k ) == 1 ) variables.ask.input &= k;
+            return {};
+        }
         if ( variables.mode == "confirm" ) {
             if ( k == "y" || k == "Y" || k == "Enter" ) { var it = variables.modal.intent; it.confirmed = true; variables.mode = "main"; return it; }
             if ( k == "n" || k == "N" || k == "Escape" || k == "q" ) variables.mode = "main";
@@ -68,18 +84,20 @@ class ControlCenterApp {
         if ( k == "Tab" || k == "]" ) { step( 1 ); return {}; }
         if ( k == "Shift+Tab" || k == "BackTab" || k == "[" ) { step( -1 ); return {}; }
         if ( variables.focus == "sidebar" ) {
-            if ( k == "Up" || k == "k" ) { step( -1 ); return {}; }
-            if ( k == "Down" || k == "j" ) { step( 1 ); return {}; }
-            if ( k == "Right" || k == "Enter" || k == "l" ) { variables.focus = "page"; return {}; }
-            if ( k == "q" || k == "Escape" ) { variables.outcome = "quit"; return {}; }
+            if ( k == "Up" || compare( k, "k" ) == 0 ) { step( -1 ); return {}; }
+            if ( k == "Down" || compare( k, "j" ) == 0 ) { step( 1 ); return {}; }
+            if ( k == "Right" || k == "Enter" || compare( k, "l" ) == 0 ) { variables.focus = "page"; return {}; }
+            if ( compare( k, "q" ) == 0 || k == "Escape" ) { variables.outcome = "quit"; return {}; }
             return {};
         }
-        if ( k == "Left" && !pageUsesLeft() ) { variables.focus = "sidebar"; return {}; }
-        if ( k == "q" || k == "Escape" ) { variables.outcome = "quit"; return {}; }
+        if ( pageCaptures() ) return handleIntent( page().onKey( k ) );
+        if ( k == "Left" ) { variables.focus = "sidebar"; return {}; }
+        if ( compare( k, "q" ) == 0 || k == "Escape" ) { variables.outcome = "quit"; return {}; }
         return handleIntent( page().onKey( k ) );
     }
 
-    function pageUsesLeft() { return structKeyExists( page(), "usesLeft" ) && page().usesLeft(); }
+    // A page that is taking text (a filter or a search) gets every key, q and Escape included.
+    function pageCaptures() { return page().usesLeft(); }
 
     function act( hit ) {
         var h = arguments.hit;
@@ -89,6 +107,7 @@ class ControlCenterApp {
             return {};
         }
         if ( variables.mode == "result" ) { variables.mode = "main"; return {}; }
+        if ( variables.mode == "ask" ) { if ( h.kind == "askok" ) return onKey( "Enter" ); if ( h.kind == "askno" ) return onKey( "Escape" ); return {}; }
         if ( h.kind == "nav" ) { variables.idx = h.n; variables.focus = "page"; ensureLoaded(); return {}; }
         return handleIntent( page().act( h ) );
     }

@@ -79,7 +79,7 @@ class DashboardData {
             var r = systemExecute( self(), [ "db", "list", "--json" ], 40, true );
             var j = jsonDeserialize( r.output );
             var list = structKeyExists( j.data, "databases" ) ? j.data.databases : [];
-            for ( var d in list ) rows.append( { kind: "db", name: len( d.name ) ? d.name : d.container, state: left( d.status, 2 ) == "Up" ? "running" : "stopped", port: d.port ?: 0 } );
+            for ( var d in list ) rows.append( { kind: "db", name: len( d.name ) ? d.name : d.container, engine: d.engine ?: "", state: left( d.status, 2 ) == "Up" ? "running" : "stopped", port: d.port ?: 0 } );
         } catch ( any e ) {}
         return rows;
     }
@@ -90,7 +90,7 @@ class DashboardData {
             var r = systemExecute( self(), [ "vm", "list", "--json" ], 40, true );
             var j = jsonDeserialize( r.output );
             var list = structKeyExists( j.data, "vms" ) ? j.data.vms : [];
-            for ( var m in list ) rows.append( { kind: "vm", name: m.name, state: m.state == "running" ? "running" : "stopped", port: 0 } );
+            for ( var m in list ) rows.append( { kind: "vm", name: m.name, engine: m.what ?: "", state: m.state == "running" ? "running" : "stopped", port: 0 } );
         } catch ( any e ) {}
         return rows;
     }
@@ -166,7 +166,7 @@ class DashboardData {
             host: "orion", os: "CachyOS", kernel: "6.18.4-cachyos", uptime: 3 * 86400 + 4 * 3600, cpu: 0.23,
             mem: { used: 9876893696, total: 17179869184 }, disk: { used: 417000000000, total: 512000000000 }, battery: { present: true, percent: 64, charging: false },
             updates: 14, now: now,
-            machines: [ { kind: "db", name: "postgres", state: "running", port: 5432 }, { kind: "db", name: "redis", state: "running", port: 6379 }, { kind: "vm", name: "win11", state: "stopped", port: 0 }, { kind: "vm", name: "webtop-ubuntu", state: "running", port: 3001 } ],
+            machines: [ { kind: "db", name: "postgres", engine: "postgres", state: "running", port: 5432 }, { kind: "db", name: "redis", engine: "redis", state: "running", port: 6379 }, { kind: "vm", name: "win11", engine: "Windows 11 Pro", state: "stopped", port: 0 }, { kind: "vm", name: "webtop-ubuntu", engine: "ubuntu-xfce", state: "running", port: 3001 } ],
             backups: [
                 { id: "system", label: "System", count: 24, latest: now - 3 * 3600, error: "", ages: [ 1, 1, 2, 3, 3, 4, 5, 5 ] },
                 { id: "config", label: "Config", count: 9, latest: now - 1800, error: "", ages: [ 1, 1, 1, 1, 2, 1, 1, 1 ] },

@@ -48,5 +48,61 @@ app4.showPlan( "System update", [ "Plan: pacman -Syu" ], it );
 view.paint( app4, 101, 110, 34 );
 s2 = tui.render_to_string( 110, 34 );
 check( "screen: the plan box", find( "System update", s2 ) > 0 && find( "Plan: pacman -Syu", s2 ) > 0 && find( "do it", s2 ) > 0 );
+
+// ---- every page, in demo mode
+cc = new bxcachy.ControlCenter( {} );
+pages = cc.buildPages( true );
+check( "pages: twelve, in order", pages.len() == 12 && pages[ 1 ].id() == "dashboard" && pages[ 5 ].id() == "ports" && pages[ 12 ].id() == "logs" );
+want = { boxlang: "1.9.0-snapshot", java: "temurin-21.0.13_9", versions: "MatchBox", ports: "postgres", shortcuts: "Launcher", machines: "webtop-ubuntu", storage: "syno/backups", secrets: "ANTHROPIC_API_KEY", themes: "tokyo-night", logs: "port 5432 already in use" };
+big = new bxcachy.ControlCenterApp( pages, "" );
+for ( pg in pages ) {
+    if ( pg.id() == "dashboard" ) continue;
+    big.goto( pg.id() );
+    view.paint( big, 10, 120, 38 );
+    sc = tui.render_to_string( 120, 38 );
+    ok = find( pg.title(), sc ) > 0 && find( want[ pg.id() ], sc ) > 0;
+    if ( pg.id() == "packages" ) ok = find( "Press /", sc ) > 0;
+    check( "page " & pg.id() & ": title and its demo rows show", ok );
+}
+// the table: filter, cursor, actions
+big.goto( "ports" ); port = big.page();
+check( "ports: 7 demo rows, two on 5432 are conflicts", port.state().rows == 7 && port.state().items.filter( function( r ) { return r.conflict; } ).len() == 2 );
+big.onKey( "/" ); for ( ch in [ "r", "e", "d" ] ) big.onKey( ch ); big.onKey( "Enter" );
+check( "ports: / filters rows (redis only)", port.state().shown == 1 && port.selected().process == "redis-server" );
+x = big.onKey( "x" );
+check( "ports: x is a plan to send SIGTERM", x.action == "exec" && x.argv[ 1 ] == "kill" && x.argv[ 2 ] == "4177" && x.plan.len() >= 1 );
+check( "ports: K is kill -9 and o opens the browser", big.onKey( "K" ).argv[ 2 ] == "-9" && big.onKey( "o" ).argv[ 1 ] == "xdg-open" );
+big.onKey( "/" ); big.onKey( "Escape" );
+check( "ports: Escape clears the filter", port.state().shown == 7 );
+big.goto( "java" );
+check( "java: d makes the default plan, x the removal plan", big.onKey( "d" ).args[ 1 ] == "java" && big.onKey( "d" ).args[ 2 ] == "default" && big.onKey( "x" ).args[ 2 ] == "remove" );
+ask = big.onKey( "i" );
+check( "java: i asks for a version, then plans the install", structCount( ask ) == 0 && big.mode() == "ask" );
+for ( ch in [ "2", "5" ] ) big.onKey( ch );
+inst = big.onKey( "Enter" );
+check( "java: the answer becomes the install intent", inst.action == "cli" && inst.args[ 3 ] == "25" && big.mode() == "main" );
+big.goto( "versions" ); big.onKey( "Down" ); big.onKey( "Down" );
+check( "versions: Enter on Java opens the Java page", structCount( big.onKey( "Enter" ) ) == 0 && big.page().id() == "java" );
+big.goto( "machines" );
+big.onKey( "Down" ); big.onKey( "Down" ); st = big.onKey( "s" );
+check( "machines: s on a stopped VM starts it", st.args[ 1 ] == "vm" && st.args[ 2 ] == "start" && st.args[ 3 ] == "win11" );
+big.goto( "packages" ); big.onKey( "/" ); for ( ch in [ "d", "o", "c", "k" ] ) big.onKey( ch ); big.onKey( "Enter" );
+check( "packages: a live search loads the matches", big.page().state().rows == 4 );
+check( "packages: i on an AUR package adds --aur", ( function() { big.onKey( "Down" ); big.onKey( "Down" ); big.onKey( "Down" ); var it = big.onKey( "i" ); return it.args[ it.args.len() ] == "--aur"; } )() );
+big.goto( "logs" ); lg = big.page();
+check( "logs: warnings and errors by default", lg.state().rows == 3 );
+big.onKey( "p" ); check( "logs: p moves to info and reloads", lg.state().rows == 5 );
+big.goto( "secrets" );
+check( "secrets: v reveals through a read-only show, never in the table", big.onKey( "v" ).action == "show" && find( "ANTHROPIC_API_KEY", tui.render_to_string( 120, 38 ) ) >= 0 );
+// parsers
+pp = new bxcachy.PortsProvider( false );
+ssText = 'LISTEN 0 4096 127.0.0.1:5432 0.0.0.0:* users:(("postgres",pid=4102,fd=5))' & chr( 10 ) & 'LISTEN 0 4096 [::]:5432 [::]:* users:(("postgres",pid=4102,fd=6))' & chr( 10 ) & 'LISTEN 0 128 *:631 *:*' & chr( 10 ) & 'LISTEN 0 511 0.0.0.0:8080 0.0.0.0:* users:(("java",pid=12044,fd=9))';
+psText = '  4102 you          259200 postgres -D /data' & chr( 10 ) & ' 12044 you             720 java -jar app.jar';
+pr = pp.build( ssText, psText );
+check( "ports parser: one row per port and pid, sorted, with owners", pr.len() == 3 && pr[ 1 ].port == 631 && pr[ 2 ].port == 5432 && pr[ 2 ].pid == 4102 && pr[ 2 ].user == "you" && pr[ 2 ].up == "3d" && pr[ 3 ].command == "java -jar app.jar" );
+bp = new bxcachy.BoxlangProvider( false ).parseList( "Installed versions:" & chr( 10 ) & "  1.7.2" & chr( 10 ) & "* 1.8.0" & chr( 10 ) & "  1.9.0-snapshot (snapshot)", "" );
+check( "bvm parser: every version, the starred one is active", bp.len() == 3 && bp[ 2 ].active && !bp[ 1 ].active && bp[ 3 ].version == "1.9.0-snapshot" );
+lp = new bxcachy.LogsProvider( false ).parseLine( '{"PRIORITY":"3","SYSLOG_IDENTIFIER":"podman","MESSAGE":"boom","__REALTIME_TIMESTAMP":"1794583800000000"}' );
+check( "journal parser: level, unit, message", lp.level == "error" && lp.unit == "podman" && lp.message == "boom" && lp.time == "15:30:00" );
 if ( failures > 0 ) { println( failures & " failed" ); exit( 1 ); }
 println( "all passed" );

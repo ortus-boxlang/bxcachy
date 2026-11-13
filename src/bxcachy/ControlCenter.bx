@@ -15,7 +15,7 @@ class ControlCenter {
 
     function self() { return getSystemSetting( "BXCACHY_SELF", "bxcachy" ); }
 
-    function pageIds() { return [ "dashboard" ]; }
+    function pageIds() { return [ "dashboard", "boxlang", "java", "versions", "ports", "packages", "shortcuts", "machines", "storage", "secrets", "themes", "logs" ]; }
 
     function provider( demo ) {
         var dd = new bxcachy.DashboardData( variables.cli, variables.runner );
@@ -23,7 +23,21 @@ class ControlCenter {
     }
 
     function buildPages( demo ) {
-        return [ new bxcachy.DashboardPage( provider( arguments.demo ) ) ];
+        var d = arguments.demo;
+        return [
+            new bxcachy.DashboardPage( provider( d ) ),
+            new bxcachy.ListPage( new bxcachy.BoxlangProvider( d ) ),
+            new bxcachy.ListPage( new bxcachy.JavaProvider( d ) ),
+            new bxcachy.ListPage( new bxcachy.VersionsProvider( d ) ),
+            new bxcachy.ListPage( new bxcachy.PortsProvider( d ) ),
+            new bxcachy.ListPage( new bxcachy.PackagesProvider( d ) ),
+            new bxcachy.ListPage( new bxcachy.ShortcutsProvider( d ) ),
+            new bxcachy.ListPage( new bxcachy.MachinesProvider( d, provider( d ) ) ),
+            new bxcachy.ListPage( new bxcachy.StorageProvider( d ) ),
+            new bxcachy.ListPage( new bxcachy.SecretsProvider( d ) ),
+            new bxcachy.ListPage( new bxcachy.ThemesProvider( d ) ),
+            new bxcachy.ListPage( new bxcachy.LogsProvider( d ) )
+        ];
     }
 
     function runCli( args ) {
@@ -76,7 +90,7 @@ class ControlCenter {
             p.load();
             var st = p.state();
             if ( arguments.asJson ) println( variables.cli.envelope( "tui " & p.id(), 0, st ) );
-            else { println( p.title() & ": " & st.attention.len() & " things to look at" ); for ( var a in st.attention ) println( "  " & a.text ); }
+            else println( p.title() & ": " & ( structKeyExists( st, "attention" ) ? st.attention.len() & " things to look at" : st.rows & " rows" ) );
             return 0;
         }
         println( "Unknown page " & arguments.pageId & ". Pages: " & pageIds().toList( ", " ) );
