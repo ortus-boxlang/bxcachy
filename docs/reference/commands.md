@@ -985,6 +985,15 @@ bxcachy backup snapshots status | list [--json]
 bxcachy backup snapshots setup [--home] [--yes]
 bxcachy backup snapshots create [--description=TEXT] [--yes]
 bxcachy backup snapshots delete ID | changes ID | restore ID PATH [--yes]
+bxcachy backup data status | targets [--json]
+bxcachy backup data target add NAME --type=local|sftp|rest|s3|b2|azure|gs|rclone [--path=P --host=H --user=U --url=U --bucket=B --endpoint=URL --region=R --container=C --project=ID --credentials=FILE --remote=R] [--ask-keys | --keys-file=F]
+bxcachy backup data target remove NAME [--yes]
+bxcachy backup data init NAME [--yes]
+bxcachy backup data run [--target=NAME] [--yes]
+bxcachy backup data list [--target=NAME] | files ID [PATH] | restore ID --to=DIR [--include=PATH] [--yes]
+bxcachy backup data verify [--deep] | forget [--yes] | retention [--daily=N --weekly=N --monthly=N]
+bxcachy backup data schedule hourly|daily|off|status [--yes]
+bxcachy backup data include|exclude add|remove PATH_OR_PATTERN
 ```
 
 Changes the system: needs `--yes`. Without it you get the plan (exit 2); `--dry-run` shows it and exits 0.
@@ -998,6 +1007,11 @@ bxcachy backup config restore 20261113T153000 --only=.config/hypr --yes
 bxcachy backup snapshots setup --yes
 bxcachy backup snapshots list
 bxcachy backup snapshots restore 12 /home/me/projects/app --dry-run
+bxcachy backup data target add do --type=s3 --endpoint=https://nyc3.digitaloceanspaces.com --bucket=mybackups --ask-keys
+bxcachy backup data init do --yes
+bxcachy backup data run --yes
+bxcachy backup data schedule daily --yes
+bxcachy backup data restore latest --to=~/restored --yes
 ```
 
 > A config snapshot is taken by itself before update, system update, init, reinstall and refresh (turn it off with backup config auto off). Secrets and SSH keys are never in it unless you add --with-secrets, which stores your secrets export, encrypted with a passphrase you type.
