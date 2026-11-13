@@ -1,3 +1,9 @@
+---
+title: MatchBox parity
+order: 2
+summary: Developer reference.
+---
+
 # MatchBox parity work: class entry, mappings, Application.bx
 
 Source of truth: BoxLang JVM (`ortus-boxlang/boxlang`, read 2026-11-09 at b8ea0f0) and the BoxLang docs (CLI Scripting, Application.bx). MatchBox today (develop + our PRs) supports none of the three for scripts or native builds.

@@ -1,0 +1,59 @@
+{
+  "version": 2,
+  "skills": {
+    "bx-sites-actions": {
+      "source": "ortus-boxlang/bx-sites-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bx-sites-actions/SKILL.md",
+      "computedHash": "e7c73cec423311108648626ebd38ab6b4427f3958d531da27c7e9e2f91ea9e73"
+    },
+    "bx-sites-ai-features": {
+      "source": "ortus-boxlang/bx-sites-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bx-sites-ai-features/SKILL.md",
+      "computedHash": "a45b490c592f16f95d24fa553b2141f23ba2431770056323d42188ade80dadbb"
+    },
+    "bx-sites-build": {
+      "source": "ortus-boxlang/bx-sites-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bx-sites-build/SKILL.md",
+      "computedHash": "a86f81377dc0ea5e9bd75448a6da50372efc7561b787e5da3f3be934a21e327c"
+    },
+    "bx-sites-configuration": {
+      "source": "ortus-boxlang/bx-sites-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bx-sites-configuration/SKILL.md",
+      "computedHash": "e4dc09425bb07562ecb4c82ccf3f95ea8661156944f95d8444319641003822fe"
+    },
+    "bx-sites-content-quality": {
+      "source": "ortus-boxlang/bx-sites-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bx-sites-content-quality/SKILL.md",
+      "computedHash": "5474fcd89d9abe6b6995959109c734df4de637b6f0e6024958b065c019408181"
+    },
+    "bx-sites-deployment": {
+      "source": "ortus-boxlang/bx-sites-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bx-sites-deployment/SKILL.md",
+      "computedHash": "a43eda905ca87f1a571c3f82890c8f33c31df0dfa8f5facd47905e507b688706"
+    },
+    "bx-sites-getting-started": {
+      "source": "ortus-boxlang/bx-sites-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bx-sites-getting-started/SKILL.md",
+      "computedHash": "e4e581aee2bec69edc20352012781575f29f27817503d6daf31d53936a60017b"
+    },
+    "bx-sites-plugins": {
+      "source": "ortus-boxlang/bx-sites-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bx-sites-plugins/SKILL.md",
+      "computedHash": "8f5f591e0d818e4d6213398bd7e19d8f458b080de86ec2a4c71887643163107c"
+    },
+    "bx-sites-search": {
+      "source": "ortus-boxlang/bx-sites-skills",
+      "sourceType": "github",
+      "skillPath": "skills/bx-sites-search/SKILL.md",
+      "computedHash": "3d0fbaf75e18792c9a8a676bbacea9a74d1c29fcb7f8db4e178d965e9948c257"
+    }
+  }
+}

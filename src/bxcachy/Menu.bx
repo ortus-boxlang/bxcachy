@@ -62,6 +62,8 @@ class Menu {
                 { label: "Setup status", kind: "run", argv: [ "setup", "status" ] },
                 { label: "Dotfiles status", kind: "run", argv: [ "dotfiles", "status" ] },
                 { label: "Shortcut cheat sheet", kind: "spawn", argv: [ "keys", "sheet" ] },
+                { label: "Agent skills: status", kind: "run", argv: [ "skills", "status" ] },
+                { label: "Agent skills: update", kind: "run", argv: [ "skills", "update", "--yes" ] },
                 { label: "Updates: check", kind: "run", argv: [ "update", "check" ] },
                 { label: "Updates: install the BxCachy update", kind: "run", argv: [ "update", "apply", "--yes" ] },
                 { label: "Updates: channel stable", kind: "run", argv: [ "update", "channel", "stable" ] },

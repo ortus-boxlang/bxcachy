@@ -1,3 +1,8 @@
+---
+title: The wizard program
+order: 3
+---
+
 # The setup wizard
 
 The BxCachy setup wizard: a full-screen terminal form written in BoxLang on MatchBox's terminal canvas (`docs/tui.md` in the MatchBox repo). It draws pages given as

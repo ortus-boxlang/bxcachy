@@ -102,6 +102,13 @@ class InitPlan {
             out.steps.append( { id: "toolchain-" & tc, title: "install the " & tc & " toolchain", argv: [ "bxcachy", "profile-install", profiles[ tc ] ] } );
             if ( tc == "php" ) out.steps.append( { id: "laravel", title: "install the Laravel installer (composer global)", argv: [ "composer", "global", "require", "laravel/installer" ] } );
         }
+        // agent skills (optional: needs the skills hub for boxlang and matchbox; a failure is skipped)
+        var skillPick = pick( a, "agent_skills", [] );
+        if ( skillPick.len() ) {
+            var skArgv = [ "bxcachy", "skills", "install" ];
+            for ( var sk in skillPick ) skArgv.append( sk );
+            out.steps.append( { id: "agent-skills", title: "give your coding agents skills (" & skillPick.toList( ", " ) & ")", argv: skArgv, optional: true } );
+        }
         // BoxLang modules from ForgeBox and the VS Code extension (optional: a failure is skipped, the plan goes on)
         var blMods = pick( a, "boxlang_modules", [] );
         if ( blMods.len() ) {

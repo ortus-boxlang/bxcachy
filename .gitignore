@@ -1,3 +1,5 @@
 extra-ca.crt
 arch-test-out/
 dist/
+site/
+.cache/

@@ -1,3 +1,9 @@
+---
+title: Native migration inventory
+order: 91
+hidden: true
+---
+
 # Native migration inventory (v0.10.0)
 
 The legacy archive contains 45+ executable entrypoints and 20+ test files. The new BoxLang CLI currently does **not** provide feature parity.

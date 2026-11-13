@@ -1,0 +1,58 @@
+name: Publish Docs
+
+# Builds the docs (docs/ + bxsites.yaml, with bxSites) and publishes site/ to GitHub Pages at https://bxcachy.boxlang.io
+# on every push to development. Needs GitHub Pages enabled (Settings -> Pages -> Source: Deploy from a branch -> gh-pages, / root)
+# and the custom domain bxcachy.boxlang.io (a CNAME record for bxcachy.boxlang.io pointing at the GitHub Pages host).
+# A pull request builds and audits the site without publishing it.
+on:
+  push:
+    branches: [development]
+  pull_request:
+    branches: [development]
+    paths: ['docs/**', 'bxsites.yaml', 'src/Main.bx', 'bootstrap/gen-docs.sh', '.github/workflows/docs.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: "docs-${{ github.ref_name }}"
+  cancel-in-progress: false
+
+jobs:
+  docs:
+    name: Build and publish the docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: The command reference is current
+        run: bash bootstrap/gen-docs.sh --check
+
+      - name: Setup BoxLang with bx-sites
+        uses: ortus-boxlang/setup-boxlang@1.6.0
+        with:
+          modules: bx-sites bx-image
+
+      - name: Build the site
+        run: boxlang bxSites build
+
+      - name: Verify the build produced output
+        run: |
+          # `boxlang bxSites build` can exit 0 after an internal failure: an empty site/ is a failed build.
+          if [[ ! -d site ]] || [[ -z "$(ls -A site 2>/dev/null)" ]]; then
+            echo "::error::the build produced no site/ output"
+            exit 1
+          fi
+
+      - name: Audit links and images
+        run: boxlang bxSites audit
+
+      - name: Publish to GitHub Pages
+        if: github.event_name != 'pull_request'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
+          # Keeps the custom domain across a gh-pages wipe.
+          cname: bxcachy.boxlang.io

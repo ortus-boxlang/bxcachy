@@ -1306,6 +1306,34 @@ class WizardData {
             "id": "ai_local",
             "has": "ollama"
           }
+        },
+        {
+          "type": "multi",
+          "id": "agent_skills",
+          "label": "Agent skills",
+          "help": "Skills teach your coding agents (Claude Code, Codex, Gemini, OpenCode) how to use BxCachy, BoxLang and MatchBox. They are stored once in ~/.agents/skills and linked into each agent. Find more with: bxcachy skills search TEXT (the skills.boxlang.io hub).",
+          "default": [
+            "bxcachy",
+            "boxlang",
+            "matchbox"
+          ],
+          "options": [
+            {
+              "value": "bxcachy",
+              "label": "BxCachy",
+              "description": "How to use and change this machine (five small skills, shipped with BxCachy)."
+            },
+            {
+              "value": "boxlang",
+              "label": "BoxLang language",
+              "description": "BoxLang fundamentals: syntax, scopes, control flow, types (from the skills.boxlang.io hub)."
+            },
+            {
+              "value": "matchbox",
+              "label": "MatchBox",
+              "description": "The MatchBox runtime: native binaries, targets, the MVM (from the skills.boxlang.io hub)."
+            }
+          ]
         }
       ]
     },

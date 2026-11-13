@@ -21,13 +21,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          bash -n bootstrap/install.sh scripts/package-manager.sh tests/package-manager-test.sh tests/bootstrap-test.sh tests/native-smoke.sh tests/native-package-integration.sh scripts/config.sh tests/config-test.sh tests/config-native-test.sh tests/cli-contract-test.sh tests/catalog-test.sh tests/packages-test.sh tests/setup-test.sh tests/tiling-test.sh tests/keys-test.sh tests/keys-apply-test.sh tests/xremap-test.sh tests/assets-test.sh tests/noctalia-config-test.sh tests/hyprland-setup-test.sh tests/session-test.sh tests/shell-setup-test.sh tests/terminal-setup-test.sh tests/wizard-test.sh tests/init-test.sh tests/toolchain-test.sh tests/runner-test.sh tests/db-test.sh tests/dotfiles-test.sh tests/default-test.sh tests/secrets-test.sh tests/ai-test.sh tests/ai-shell-test.sh tests/ai-session-test.sh tests/ssh-keyboard-test.sh tests/menu-test.sh tests/containers-test.sh tests/utilities-test.sh tests/keys-editor-test.sh tests/web-vpn-test.sh tests/runtime-cloud-test.sh tests/apps-test.sh tests/status-test.sh tests/strata-test.sh tests/extras-test.sh tests/capture-notify-test.sh tests/plasma-panels-test.sh tests/boxlang-test.sh tests/macextras-test.sh tests/update-test.sh bootstrap/web-install.sh tests/web-install-test.sh bootstrap/gen-catalog.sh bootstrap/gen-releasekey.sh scripts/gen-signing-key.sh bootstrap/gen-templates.sh bootstrap/gen-assets.sh bootstrap/gen-wizard.sh scripts/get-matchbox.sh scripts/dev-build.sh
+          bash -n bootstrap/install.sh scripts/package-manager.sh tests/package-manager-test.sh tests/bootstrap-test.sh tests/native-smoke.sh tests/native-package-integration.sh scripts/config.sh tests/config-test.sh tests/config-native-test.sh tests/cli-contract-test.sh tests/catalog-test.sh tests/packages-test.sh tests/setup-test.sh tests/tiling-test.sh tests/keys-test.sh tests/keys-apply-test.sh tests/xremap-test.sh tests/assets-test.sh tests/noctalia-config-test.sh tests/hyprland-setup-test.sh tests/session-test.sh tests/shell-setup-test.sh tests/terminal-setup-test.sh tests/wizard-test.sh tests/init-test.sh tests/toolchain-test.sh tests/runner-test.sh tests/db-test.sh tests/dotfiles-test.sh tests/default-test.sh tests/secrets-test.sh tests/ai-test.sh tests/ai-shell-test.sh tests/ai-session-test.sh tests/ssh-keyboard-test.sh tests/menu-test.sh tests/containers-test.sh tests/utilities-test.sh tests/keys-editor-test.sh tests/web-vpn-test.sh tests/runtime-cloud-test.sh tests/apps-test.sh tests/status-test.sh tests/strata-test.sh tests/extras-test.sh tests/capture-notify-test.sh tests/plasma-panels-test.sh tests/boxlang-test.sh tests/macextras-test.sh tests/update-test.sh tests/skills-test.sh bootstrap/gen-skills.sh bootstrap/gen-docs.sh bootstrap/web-install.sh tests/web-install-test.sh bootstrap/gen-catalog.sh bootstrap/gen-releasekey.sh scripts/gen-signing-key.sh bootstrap/gen-templates.sh bootstrap/gen-assets.sh bootstrap/gen-wizard.sh scripts/get-matchbox.sh scripts/dev-build.sh
           test -s src/Main.bx -a -s src/Application.bx
           jq -e . catalog/apps.json >/dev/null
           bash bootstrap/gen-catalog.sh --check   # src/bxcachy/CatalogData.bx embeds the current catalog
           bash bootstrap/gen-assets.sh --check
           bash bootstrap/gen-templates.sh --check
           bash bootstrap/gen-releasekey.sh --check
+          bash bootstrap/gen-skills.sh --check
           bash bootstrap/gen-wizard.sh --check
           jq -e . box.json >/dev/null   # the manifest must be valid JSON
           for command in version doctor prerequisites desktop-list tui-list web-list optional-list optional-plan profile-list profile-plan plan apps-doctor dev-plan help; do
@@ -173,6 +174,7 @@ jobs:
           bash tests/boxlang-test.sh "$candidate"
           bash tests/macextras-test.sh "$candidate"
           bash tests/update-test.sh "$candidate"
+          bash tests/skills-test.sh "$candidate"
       - name: Publish verified native artifact
         uses: actions/upload-artifact@v4
         with:

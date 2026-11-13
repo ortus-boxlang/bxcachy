@@ -1,0 +1,43 @@
+name: "BxCachy"
+description: "Your developer machine, set up in minutes. A CachyOS setup tool written in BoxLang."
+baseURL: "https://bxcachy.boxlang.io/"
+source: docs
+theme:
+  name: bootstrap
+  options:
+    colorMode: dark
+    navCollapsible: true
+    navExpandAll: false
+    tocPosition: sticky
+    accentColor: "#00C853"
+    accentColorDark: "#00FF78"
+  logo: "assets/bxcachy-logo.svg"
+  favicon: "assets/favicon.png"
+search: true
+mcp: true
+nav: []
+markdown:
+  enableFootnotes: true
+  enableDefinitionLists: true
+# The docs are versioned: docs/ is the version being written (1.0.x). When 1.0.0 ships, cut it with
+#   bxSites version:new --name=1.0.x
+# and set versions.default to "1.0.x" so the release is at the root and docs/ becomes /next/ (see docs/guides/contributing.md).
+variables:
+  version: "1.0.x"
+  installUrl: "https://downloads.ortussolutions.com/ortussolutions/bxcachy/install.sh"
+# English only for now. A language is one folder: bxSites i18n:new --code=es
+i18n:
+  defaultLocale: { code: en, label: English }
+repo:
+  url: "https://github.com/ortus-boxlang/bxcachy"
+  editUri: "edit/development/docs/"
+social:
+  - url: "https://github.com/ortus-boxlang/BoxLang"
+    icon: github
+    label: "BoxLang on GitHub"
+  - url: "https://www.boxlang.io"
+    icon: link
+    label: "BoxLang"
+footer: true
+lastUpdated: true
+mermaid: true
