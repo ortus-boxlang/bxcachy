@@ -67,6 +67,10 @@ check( "a colour theme other than the default is applied after the terminals", c
 check( "Auto mode is passed on to the theme", cmd( ip.plan( { desktops: "plasma", theme_name: "nord", theme: "auto" } ), "theme" ) == "bxcachy theme set nord --mode=auto" );
 check( "the default theme needs no step", find( "theme", ids( ip.plan( { desktops: "hyprland", theme_name: "bxcachy" } ) ) ) == 0 || !reFind( "(^|,)theme(,|$)", ids( ip.plan( { desktops: "hyprland", theme_name: "bxcachy" } ) ) ) );
 check( "a Light answer with the default theme picks BxCachy Light", cmd( ip.plan( { desktops: "hyprland", theme_name: "bxcachy", theme: "light" } ), "theme" ) == "bxcachy theme set bxcachy-light" );
+p = ip.plan( { vm_windows: "tiny11", vm_linux: "arch-xfce" } );
+check( "a Windows VM and a Linux desktop become optional vm steps", cmd( p, "vm-windows" ) == "bxcachy vm create windows --version=tiny11" && cmd( p, "vm-linux" ) == "bxcachy vm create linux desktop --tag=arch-xfce" && p.steps.filter( function( s ) { return s.id == "vm-windows" || s.id == "vm-linux"; } ).filter( function( s ) { return s.optional; } ).len() == 2 );
+check( "VMs without a container engine answer also install Podman, first", reFind( "^containers,", ids( p ) ) > 0 );
+check( "none means no vm step and no Podman", ids( ip.plan( { vm_windows: "none", vm_linux: "none" } ) ) == "" );
 check( "no desktop, no theme step", !reFind( "(^|,)theme(,|$)", ids( ip.plan( { theme_name: "nord" } ) ) ) );
 check( "the theme step is optional and comes after the terminal step", ip.plan( { desktops: "hyprland", terminal: "ghostty", theme_name: "nord" } ).steps.filter( function( s ) { return s.id == "theme"; } )[ 1 ].optional && reFind( "terminal,theme", ids( ip.plan( { desktops: "hyprland", terminal: "ghostty", theme_name: "nord" } ) ) ) > 0 );
 

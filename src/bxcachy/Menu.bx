@@ -55,6 +55,13 @@ class Menu {
                 { label: "List web apps", kind: "run", argv: [ "web", "list" ] },
                 { label: "Remove a web app", kind: "webrm" }
             ] },
+            { label: "Virtual machines", kind: "sub", children: [
+                { label: "List VMs", kind: "run", argv: [ "vm", "list" ] },
+                { label: "VM disk sizes", kind: "run", argv: [ "vm", "size" ] },
+                { label: "Check this machine (KVM, GPU)", kind: "run", argv: [ "vm", "doctor" ] },
+                { label: "Windows versions", kind: "run", argv: [ "vm", "versions", "windows" ] },
+                { label: "Linux desktops (tags)", kind: "run", argv: [ "vm", "versions", "linux" ] }
+            ] },
             { label: "Themes", kind: "sub", children: [
                 { label: "Next theme", kind: "spawn", argv: [ "theme", "next" ] },
                 { label: "Random theme", kind: "spawn", argv: [ "theme", "random" ] },

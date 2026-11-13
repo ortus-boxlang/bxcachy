@@ -388,12 +388,25 @@ class Vm {
             return say( cmd, 6, merge( data, { error: trim( r.output ) } ), arguments.asJson, [ "error: " & trim( r.output ) ] );
         }
         writeRecord( rec );
+        writeLauncher( rec );
         var out = [ "Created " & containerName( nm ) & " (" & ( arguments.kind == "windows" ? "Windows " & variables.data.windowsVersion( rec.version ).name : rec.tag ) & ")." ];
         if ( arguments.kind == "windows" ) {
             out.append( "Windows installs by itself on the first start: watch it at " & url( rec ) & " (about " & numberFormat( variables.data.windowsVersion( rec.version ).size, "0.0" ) & " GB to download). Then: bxcachy vm open " & nm );
         } else out.append( "Open it with: bxcachy vm open " & nm & "  (" & url( rec ) & ", user bxcachy; the first start pulls the image)" );
         out.append( "Password: bxcachy vm info " & nm & " --show-password   Data: " & dir & ( len( rec.share ) ? "   Shared folder: " & rec.share : "" ) );
         return say( cmd, 0, data, arguments.asJson, out );
+    }
+
+    function desktopFile( name ) {
+        return getSystemSetting( "XDG_DATA_HOME", home() & "/.local/share" ) & "/applications/bxcachy-vm-" & arguments.name & ".desktop";
+    }
+
+    // An app-menu entry that runs `bxcachy vm open NAME` (removed with the VM).
+    function writeLauncher( rec ) {
+        var nl = chr( 10 );
+        var text = "[Desktop Entry]" & nl & "Type=Application" & nl & "Name=" & arguments.rec.name & " (" & ( arguments.rec.kind == "windows" ? "Windows" : "Linux" ) & " VM)" & nl &
+                   "Comment=Open the BxCachy VM " & arguments.rec.name & nl & "Exec=sh -c 'PATH=" & '"$HOME/.local/bin:$PATH"' & "; bxcachy vm open " & arguments.rec.name & "'" & nl & "Icon=computer" & nl & "Terminal=false" & nl & "Categories=System;" & nl;
+        variables.config.writeAtomic( desktopFile( arguments.rec.name ), text, "644" );
     }
 
     // rootless Podman maps the container's root to you, so the webtop runs with PUID=PGID=0 there (files stay yours); Docker uses your ids.
@@ -545,6 +558,7 @@ class Vm {
             var r = engineExec( [ "rm", "-f", res.container ], 180 );
             if ( r.exitCode != 0 ) return fail( cmd, 6, trim( r.output ), arguments.asJson );
         }
+        if ( fileExists( desktopFile( arguments.name ) ) ) fileDelete( desktopFile( arguments.name ) );
         if ( !arguments.keepData ) {
             if ( directoryExists( dir ) ) {
                 var rm = tryExec( [ "rm", "-rf", dir ], 600 );

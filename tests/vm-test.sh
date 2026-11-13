@@ -57,6 +57,7 @@ for want in "-p 127.0.0.1:3001:3001" "lscr.io/linuxserver/webtop:ubuntu-xfce" "-
 grep -q '^CUSTOM_USER=bxcachy$' "$tmp/fake/containers/bxcachy-vm-dev.env" && grep -Eq '^PASSWORD=[0-9a-f]{32}$' "$tmp/fake/containers/bxcachy-vm-dev.env" || fail "env file: $(cat "$tmp/fake/containers/bxcachy-vm-dev.env")"
 [[ ! -e "$tmp/data/vms/dev/vm.env" ]] || fail 'the env file must not be left behind'
 [[ "$(stat -c %a "$tmp/cfg/bxcachy/vms/dev.json")" == 600 && -d "$tmp/home/Shared" ]] || fail 'record mode and the shared folder'
+grep -q "^Exec=.*bxcachy vm open dev'" "$tmp/home/.local/share/applications/bxcachy-vm-dev.desktop" && grep -q '^Name=dev (Linux VM)' "$tmp/home/.local/share/applications/bxcachy-vm-dev.desktop" || fail 'the app-menu launcher'
 pw="$(grep '^PASSWORD=' "$tmp/fake/containers/bxcachy-vm-dev.env" | cut -d= -f2)"
 run "$binary" vm info dev --show-password --json | jq -e --arg pw "$pw" '.data.password == $pw and .data.user == "bxcachy"' >/dev/null || fail 'the stored password is the one the container got'
 info_text="$(run "$binary" vm info dev)"
@@ -125,6 +126,7 @@ run "$binary" vm remove dev --dry-run --json | jq -e '.dry_run and .data.deletes
 run "$binary" vm remove arch1 --keep-data --yes >/dev/null; [[ -d "$tmp/data/vms/arch1" && -f "$tmp/cfg/bxcachy/vms/arch1.json" && ! -e "$tmp/fake/containers/bxcachy-vm-arch1.state" ]] || fail '--keep-data keeps data and record, removes the container'
 run "$binary" vm remove dev --yes >/dev/null; [[ ! -e "$tmp/data/vms/dev" && ! -e "$tmp/cfg/bxcachy/vms/dev.json" && ! -e "$tmp/fake/containers/bxcachy-vm-dev.state" ]] || fail 'remove deletes the container, data and record'
 [[ ! -e "$tmp/data/secrets/BXCACHY_VM_DEV_PASSWORD" ]] || fail 'the stored password is dropped'
+[[ ! -e "$tmp/home/.local/share/applications/bxcachy-vm-dev.desktop" ]] || fail 'the launcher is removed with the VM'
 [[ -d "$tmp/home/Shared" ]] || fail 'the shared folder is never deleted'
 
 # no engine

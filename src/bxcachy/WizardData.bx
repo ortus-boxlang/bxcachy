@@ -862,6 +862,109 @@ class WizardData {
               "description": "You type it (twice, hidden) as each database starts. Databases with no password (Redis, Chroma, Qdrant, Weaviate, Couchbase) are not asked."
             }
           ]
+        },
+        {
+          "type": "choice",
+          "id": "vm_windows",
+          "label": "Windows VM",
+          "default": "none",
+          "help": "A Windows virtual machine in a container (needs KVM). It installs itself on the first start and you use it with `bxcachy vm open`. You need your own Windows license.",
+          "options": [
+            {
+              "value": "none",
+              "label": "None",
+              "description": "No Windows VM."
+            },
+            {
+              "value": "11",
+              "label": "Windows 11 Pro",
+              "description": "7.9 GB download. The usual choice."
+            },
+            {
+              "value": "11l",
+              "label": "Windows 11 LTSC",
+              "description": "4.7 GB. Long-term servicing edition, fewer bundled apps."
+            },
+            {
+              "value": "11e",
+              "label": "Windows 11 Enterprise",
+              "description": "6.6 GB. Business edition."
+            },
+            {
+              "value": "10",
+              "label": "Windows 10 Pro",
+              "description": "5.7 GB. Older, for legacy needs."
+            },
+            {
+              "value": "10l",
+              "label": "Windows 10 LTSC",
+              "description": "4.6 GB. Long-term servicing edition."
+            },
+            {
+              "value": "tiny11",
+              "label": "Tiny11",
+              "description": "5.3 GB. UNOFFICIAL stripped-down Windows 11 from the community."
+            },
+            {
+              "value": "core11",
+              "label": "Tiny11 Core",
+              "description": "3.0 GB. UNOFFICIAL, the most stripped-down."
+            },
+            {
+              "value": "tiny10",
+              "label": "Tiny10",
+              "description": "3.6 GB. UNOFFICIAL stripped-down Windows 10."
+            },
+            {
+              "value": "2025",
+              "label": "Windows Server 2025",
+              "description": "7.6 GB. Server edition."
+            }
+          ]
+        },
+        {
+          "type": "choice",
+          "id": "vm_linux",
+          "label": "Linux desktop in a container",
+          "default": "none",
+          "help": "A full Linux desktop you open in the browser (LinuxServer webtop). Create more later with `bxcachy vm create linux NAME`.",
+          "options": [
+            {
+              "value": "none",
+              "label": "None",
+              "description": "No Linux desktop."
+            },
+            {
+              "value": "ubuntu-xfce",
+              "label": "Ubuntu, XFCE",
+              "description": "The default: familiar and light."
+            },
+            {
+              "value": "arch-xfce",
+              "label": "Arch, XFCE",
+              "description": "Rolling release."
+            },
+            {
+              "value": "debian-xfce",
+              "label": "Debian, XFCE",
+              "description": "Stable base."
+            },
+            {
+              "value": "fedora-xfce",
+              "label": "Fedora, XFCE",
+              "description": "Newer packages."
+            },
+            {
+              "value": "ubuntu-kde",
+              "label": "Ubuntu, KDE Plasma",
+              "description": "Full Plasma desktop."
+            },
+            {
+              "value": "alpine-xfce",
+              "label": "Alpine, XFCE",
+              "description": "Smallest image."
+            }
+          ]
         }
       ]
     },

@@ -128,7 +128,10 @@ class InitPlan {
         if ( pick( a, "boxlang_vscode", false ) ) out.steps.append( { id: "boxlang-vscode", title: "add the BoxLang extension to VS Code", argv: [ "bxcachy", "boxlang", "vscode" ], optional: true } );
         // containers: Podman is the engine the containers profile is built around; Docker is one extra package
         var engine = pick( a, "container_engine" );
-        if ( engine == "podman" ) out.steps.append( { id: "containers", title: "install Podman and its tools", argv: [ "bxcachy", "profile-install", "containers" ] } );
+        var vmWin = pick( a, "vm_windows" );
+        var vmLin = pick( a, "vm_linux" );
+        var vmWanted = ( len( vmWin ) && vmWin != "none" ) || ( len( vmLin ) && vmLin != "none" );
+        if ( engine == "podman" || ( !len( engine ) && vmWanted ) ) out.steps.append( { id: "containers", title: "install Podman and its tools", argv: [ "bxcachy", "profile-install", "containers" ] } );
         if ( engine == "podman" && pick( a, "docker_compat", false ) == true ) out.steps.append( { id: "docker-compat", title: "make docker and docker compose run on Podman (podman-docker, podman-compose)", argv: [ "bxcachy", "containers", "docker-compat" ] } );
         if ( pick( a, "gaming" ) == "bundle" ) out.steps.append( { id: "gaming", title: "install the CachyOS gaming bundle", argv: [ "bxcachy", "profile-install", "gaming" ] } );
         // apps: Basic installs the catalog's recommended set for the chosen desktop(s); Customize installs what was ticked
@@ -228,6 +231,9 @@ class InitPlan {
             if ( pick( a, "database_passwords" ) == "ask" && !arrayFind( [ "redis", "couchbase", "chroma", "qdrant", "weaviate" ], db ) ) dargv.append( "--ask-password" );
             out.steps.append( { id: "db-" & db, title: "start " & db & " (local container, 127.0.0.1 only)" & ( dargv.len() > 4 ? ", asking for its password" : "" ), argv: dargv } );
         }
+        // virtual machines (containers): Windows with the version you chose, a Linux desktop called "desktop"; optional steps, so a missing KVM never stops the plan
+        if ( len( vmWin ) && vmWin != "none" ) out.steps.append( { id: "vm-windows", title: "create a Windows VM (" & vmWin & "; it installs itself on the first start)", argv: [ "bxcachy", "vm", "create", "windows", "--version=" & vmWin ], optional: true } );
+        if ( len( vmLin ) && vmLin != "none" ) out.steps.append( { id: "vm-linux", title: "create a Linux desktop in a container (" & vmLin & ")", argv: [ "bxcachy", "vm", "create", "linux", "desktop", "--tag=" & vmLin ], optional: true } );
         // AI: a keyring for the API keys, the keys you chose to type now (optional steps: skipping one never stops the plan), the
         // keys you chose to export to every shell, and the default agent
         if ( agentIds.len() ) out.steps.append( { id: "secrets-setup", title: "check for a keyring for your API keys (installs one, with libsecret and age, only if none is found)", argv: [ "bxcachy", "secrets", "setup" ] } );
