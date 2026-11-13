@@ -16,8 +16,7 @@ class WizardView {
         variables.TEXT = "##c6d0f5";    variables.SUB = "##a5adce";
         variables.GREEN = "##00ff78";   variables.CYAN = "##00dbff";
         variables.YELLOW = "##e5c890";  variables.RED = "##e78284";
-        variables.hits = [];
-        variables.fade = 1;
+        variables.kit = new bxcachy.TuiKit( arguments.tui );
         variables.shownKey = "";
         variables.changedAt = 0;
         variables.stars = [];
@@ -25,102 +24,17 @@ class WizardView {
         return this;
     }
 
-    // ---------------------------------------------------------------- colour helpers
+    // ---------------------------------------------------------------- colour and drawing helpers (the shared kit does the work)
 
-    function rgb( hex ) {
-        var h = replace( arguments.hex, "#", "", "all" );
-        return [ inputBaseN( mid( h, 1, 2 ), 16 ), inputBaseN( mid( h, 3, 2 ), 16 ), inputBaseN( mid( h, 5, 2 ), 16 ) ];
-    }
-
-    function toHex( r, g, b ) {
-        var out = "##";
-        for ( var v in [ arguments.r, arguments.g, arguments.b ] ) out &= right( "0" & formatBaseN( int( min( 255, max( 0, v ) ) ), 16 ), 2 );
-        return out;
-    }
-
-    // A blend of two colours, t from 0 to 1.
-    function mix( a, b, t ) {
-        var x = rgb( arguments.a );
-        var y = rgb( arguments.b );
-        var k = min( 1, max( 0, arguments.t ) );
-        return toHex( x[ 1 ] + ( y[ 1 ] - x[ 1 ] ) * k, x[ 2 ] + ( y[ 2 ] - x[ 2 ] ) * k, x[ 3 ] + ( y[ 3 ] - x[ 3 ] ) * k );
-    }
-
-    // The brand gradient at t (cyan to green).
-    function brand( t ) { return mix( variables.CYAN, variables.GREEN, arguments.t ); }
-
-    // The gradient with a soft highlight at `phase` (a moving shimmer): position x of width w.
-    function shimmer( x, w, phase ) {
-        var pos = min( 1, max( 0, arguments.x / max( 1, arguments.w ) ) );
-        var band = min( 1, max( 0, 1 - abs( pos - arguments.phase ) * 4 ) );
-        return mix( brand( pos ), "##ffffff", band * 0.45 );
-    }
-
-    // A colour as it should be drawn now: faded towards the background while a new screen fades in.
-    function c( hex ) {
-        return variables.fade >= 1 ? arguments.hex : mix( variables.BASE, arguments.hex, variables.fade );
-    }
-
-    // ---------------------------------------------------------------- drawing helpers
-
-    // Text at x, y. Colours are hex strings; bg "" keeps the cell's background.
-    function put( x, y, s, col, bg = "", bold = false ) {
-        var style = { fg: c( arguments.col ), bold: arguments.bold };
-        if ( len( arguments.bg ) ) style.bg = c( arguments.bg );
-        variables.tui.text( arguments.x, arguments.y, arguments.s, style );
-        return arguments.x + len( arguments.s );
-    }
-
-    function fillRect( x, y, w, h, bg ) {
-        if ( arguments.w > 0 && arguments.h > 0 ) variables.tui.fill( arguments.x, arguments.y, arguments.w, arguments.h, { bg: c( arguments.bg ) } );
-    }
-
-    // Text in the brand gradient, drawn in short pieces so the shimmer can travel along it.
-    function gtext( x, y, s, bold, phase, bg = "" ) {
-        var n = len( arguments.s );
-        var pos = 0;
-        while ( pos < n ) {
-            var piece = mid( arguments.s, pos + 1, 8 );
-            var style = { bold: arguments.bold };
-            if ( len( arguments.bg ) ) style.bg = c( arguments.bg );
-            variables.tui.gradient( arguments.x + pos, arguments.y, piece, c( shimmer( pos, n, arguments.phase ) ), c( shimmer( pos + len( piece ), n, arguments.phase ) ), style );
-            pos += len( piece );
-        }
-    }
-
-    // Wraps text to lines of at most `width` characters.
-    function wrap( text, width ) {
-        var lines = [];
-        var cur = "";
-        for ( var word in listToArray( trim( arguments.text ), " " ) ) {
-            if ( len( cur ) && len( cur ) + 1 + len( word ) > arguments.width ) { lines.append( cur ); cur = ""; }
-            cur = len( cur ) ? cur & " " & word : word;
-        }
-        if ( len( cur ) ) lines.append( cur );
-        return lines;
-    }
-
-    // A rounded panel; `accent` draws the border in the brand gradient.
-    function panel( x, y, w, h, title, accent, phase ) {
-        variables.tui.border( arguments.x, arguments.y, arguments.w, arguments.h, { border: "rounded", fg: c( variables.SURFACE1 ), bg: c( variables.MANTLE ) } );
-        if ( arguments.accent ) {
-            var line = repeatString( "─", arguments.w - 2 );
-            gtext( arguments.x + 1, arguments.y, line, false, arguments.phase, variables.MANTLE );
-            gtext( arguments.x + 1, arguments.y + arguments.h - 1, line, false, arguments.phase, variables.MANTLE );
-            put( arguments.x, arguments.y, "╭", shimmer( 0, arguments.w, arguments.phase ), variables.MANTLE );
-            put( arguments.x + arguments.w - 1, arguments.y, "╮", shimmer( arguments.w, arguments.w, arguments.phase ), variables.MANTLE );
-            put( arguments.x, arguments.y + arguments.h - 1, "╰", shimmer( 0, arguments.w, arguments.phase ), variables.MANTLE );
-            put( arguments.x + arguments.w - 1, arguments.y + arguments.h - 1, "╯", shimmer( arguments.w, arguments.w, arguments.phase ), variables.MANTLE );
-            for ( var yy = arguments.y + 1; yy < arguments.y + arguments.h - 1; yy++ ) {
-                put( arguments.x, yy, "│", shimmer( 0, arguments.w, arguments.phase ), variables.MANTLE );
-                put( arguments.x + arguments.w - 1, yy, "│", shimmer( arguments.w, arguments.w, arguments.phase ), variables.MANTLE );
-            }
-        }
-        if ( len( arguments.title ) ) {
-            put( arguments.x + 2, arguments.y, " " & arguments.title & " ", variables.TEXT, variables.MANTLE, true );
-            gtext( arguments.x + 3, arguments.y, arguments.title, true, arguments.phase, variables.MANTLE );
-        }
-    }
+    function mix( a, b, t ) { return variables.kit.mix( arguments.a, arguments.b, arguments.t ); }
+    function brand( t ) { return variables.kit.brand( arguments.t ); }
+    function shimmer( x, w, phase ) { return variables.kit.shimmer( arguments.x, arguments.w, arguments.phase ); }
+    function c( hex ) { return variables.kit.c( arguments.hex ); }
+    function put( x, y, s, col, bg = "", bold = false ) { return variables.kit.put( arguments.x, arguments.y, arguments.s, arguments.col, arguments.bg, arguments.bold ); }
+    function fillRect( x, y, w, h, bg ) { variables.kit.fillRect( arguments.x, arguments.y, arguments.w, arguments.h, arguments.bg ); }
+    function gtext( x, y, s, bold, phase, bg = "" ) { variables.kit.gtext( arguments.x, arguments.y, arguments.s, arguments.bold, arguments.phase, arguments.bg ); }
+    function wrap( text, width ) { return variables.kit.wrap( arguments.text, arguments.width ); }
+    function panel( x, y, w, h, title, accent, phase ) { variables.kit.panel( arguments.x, arguments.y, arguments.w, arguments.h, arguments.title, arguments.accent, arguments.phase ); }
 
     // Pixel art (an array of rows) in the brand gradient with a shimmer, one gradient per few cells.
     function artBlock( x, y, lines, phase ) {
@@ -155,20 +69,14 @@ class WizardView {
     // ---------------------------------------------------------------- the frame
 
     // What a click at x, y does: a { kind, n } struct, kind "" when it hits nothing.
-    function hitAt( x, y ) {
-        for ( var i = variables.hits.len(); i >= 1; i-- ) {
-            var h = variables.hits[ i ];
-            if ( arguments.x >= h.x && arguments.x < h.x + h.w && arguments.y >= h.y && arguments.y < h.y + h.h ) return { kind: h.kind, n: h.n };
-        }
-        return { kind: "", n: 0 };
-    }
+    function hitAt( x, y ) { var h = variables.kit.hitAt( arguments.x, arguments.y ); return { kind: h.kind, n: h.n }; }
 
     function paint( app, tick, width, height ) {
-        variables.hits = [];
+        variables.kit.clearHits();
         var key = app.screen() & ":" & app.pageIndex();
         if ( key != variables.shownKey ) { variables.shownKey = key; variables.changedAt = arguments.tick; }
         var age = ( arguments.tick - variables.changedAt ) / 7;
-        variables.fade = age >= 1 ? 1 : age * age * ( 3 - 2 * age );
+        variables.kit.setFade( age >= 1 ? 1 : age * age * ( 3 - 2 * age ) );
         variables.tui.begin_frame();
         variables.tui.fill( 0, 0, arguments.width, arguments.height, { bg: variables.BASE } );
         if ( arguments.width < 76 || arguments.height < 24 ) {
@@ -288,7 +196,7 @@ class WizardView {
             put( arguments.x + 3, ry, mark, col, bg );
             if ( here ) gtext( arguments.x + 6, ry, left( title, arguments.w - 9 ), true, arguments.phase, bg );
             else put( arguments.x + 6, ry, left( title, arguments.w - 9 ), reached ? variables.TEXT : variables.OVERLAY, bg );
-            if ( reached ) variables.hits.append( { x: arguments.x + 1, y: ry, w: arguments.w - 2, h: 1, kind: isReview ? "review" : "page", n: i } );
+            if ( reached ) variables.kit.hit( isReview ? "review" : "page", arguments.x + 1, ry, arguments.w - 2, 1, i );
         }
     }
 
@@ -352,7 +260,7 @@ class WizardView {
                 put( ix + 5, ry, opt.label, selected ? variables.GREEN : variables.TEXT, bg, selected );
                 // an option the machine already has is marked (the wizard never removes anything)
                 if ( opt.installed ?: false ) put( ix + 5 + len( opt.label ) + 2, ry, "✓ installed", variables.OVERLAY, bg );
-                variables.hits.append( { x: ix, y: ry, w: iw, h: 1, kind: "focus", n: idx } );
+                variables.kit.hit( "focus", ix, ry, iw, 1, idx );
             } else if ( row.kind == "field" ) {
                 var qn = pg.questions[ row.q ];
                 if ( qn.type == "text" ) {
@@ -377,7 +285,7 @@ class WizardView {
                     put( ix + 2, ry, " Yes ", on ? variables.CRUST : variables.SUB, on ? variables.GREEN : variables.SURFACE1, true );
                     put( ix + 8, ry, " No ", !on ? variables.CRUST : variables.SUB, !on ? variables.RED : variables.SURFACE1, true );
                 }
-                variables.hits.append( { x: ix, y: ry, w: iw, h: 1, kind: "focus", n: idx } );
+                variables.kit.hit( "focus", ix, ry, iw, 1, idx );
             }
         }
         if ( scroll > 0 ) put( ix + iw - 2, listTop, "▲", variables.OVERLAY, variables.MANTLE );

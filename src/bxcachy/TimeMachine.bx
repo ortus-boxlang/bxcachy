@@ -86,26 +86,12 @@ class TimeMachine {
         variables.demo = structKeyExists( arguments.opts, "demo" );
         var tl = variables.demo ? new bxcachy.TimeMachineDemo( new bxcachy.BackupTimeline( variables.cli ).nowEpoch() ).build() : new bxcachy.BackupTimeline( variables.cli, variables.runner ).build( structKeyExists( arguments.opts, "local" ) );
         var app = new bxcachy.TimeMachineApp( tl, home() );
-        var tui = createObject( "rust", "tui.TUI" );
-        var view = new bxcachy.TimeMachineView( tui );
-        tui.init();
-        try {
-            var tick = 0;
-            while ( app.outcome() == "running" ) {
-                var size = tui.size();
-                view.paint( app, tick, size.width, size.height );
-                tui.end_frame();
-                var ev = tui.poll_event( 50 );
-                if ( !isNull( ev ) ) {
-                    if ( ev.type == "key" ) handle( app, app.onKey( ev.key ) );
-                    else if ( ev.type == "click" ) app.act( view.hitAt( ev.x, ev.y ) );
-                    else if ( ev.type == "scroll" ) app.onScroll( ev.direction );
-                }
-                tick++;
-            }
-        } finally {
-            tui.shutdown();
-        }
+        var me = this;
+        new bxcachy.TuiRunner().run(
+            app,
+            function( tui ) { return new bxcachy.TimeMachineView( tui ); },
+            function( intent ) { me.handle( app, intent ); }
+        );
         return 0;
     }
 }

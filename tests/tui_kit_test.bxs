@@ -1,0 +1,52 @@
+// The shared TUI kit: TuiList (pure) and TuiKit widgets read back with render_to_string. Run from src/: (cd src && matchbox ../tests/tui_kit_test.bxs)
+failures = 0;
+function check( label, ok ) { if ( ok ) println( "ok   " & label ); else { println( "FAIL " & label ); failures++; } }
+
+// ---- TuiList
+l = new bxcachy.TuiList( [ "alpha", "beta", "gamma", "delta", "epsilon" ] );
+check( "list: starts on the first item", l.cursor() == 1 && l.selected() == "alpha" && l.count() == 5 );
+l.move( 2 ); check( "list: move down", l.selected() == "gamma" );
+l.move( 99 ); check( "list: move stops at the end", l.selected() == "epsilon" );
+l.move( -99 ); check( "list: move stops at the start", l.cursor() == 1 );
+l.end(); l.fit( 2 ); w = l.window( 2 );
+check( "list: window scrolls to the cursor", w.len() == 2 && w[ 2 ].item == "epsilon" && w[ 1 ].index == 4 );
+l.home(); l.fit( 2 ); check( "list: home scrolls back", l.window( 2 )[ 1 ].item == "alpha" );
+l.page( 1, 3 ); check( "list: page moves rows-1", l.cursor() == 3 );
+l.filter( "A" ); check( "list: filter is case-insensitive", l.count() == 4 );
+l.filter( "ta" ); check( "list: filter narrows", l.count() == 2 && l.selected() == "beta" );
+l.filter( "zzz" ); check( "list: empty result has no selection", l.count() == 0 && l.selected() == "" && l.window( 5 ).len() == 0 );
+l.filter( "" ); check( "list: clearing the filter restores", l.count() == 5 && l.total() == 5 );
+sl = new bxcachy.TuiList( [ { n: "web" }, { n: "db" } ], function( x ) { return x.n; } );
+sl.filter( "db" ); check( "list: filter with a text function", sl.count() == 1 && sl.selected().n == "db" );
+l.setItems( [ "x", "y" ] ); check( "list: setItems keeps the cursor in range", l.count() == 2 && l.cursor() <= 2 );
+
+// ---- TuiKit
+tui = createObject( "rust", "tui.TUI" );
+kit = new bxcachy.TuiKit( tui );
+check( "kit: mix and brand", kit.mix( "##000000", "##ffffff", 0.5 ) == "##7f7f7f" || kit.mix( "##000000", "##ffffff", 0.5 ) == "##808080" );
+check( "kit: trunc and wrap", kit.trunc( "abcdefgh", 5 ) == "abcd…" && kit.wrap( "one two three", 7 ).len() == 2 );
+check( "kit: size", kit.size( 900 ) == "900 B" && kit.size( 1048576 ) == "1 MB" && find( "GB", kit.size( 3221225472 ) ) > 0 );
+
+function shot( w = 80, h = 24 ) { return tui.render_to_string( w, h ); }
+kit.clearHits();
+kit.fillRect( 0, 0, 80, 24, kit.color( "BASE" ) );
+kit.tabs( 1, 0, [ "Dashboard", "Packages", "Logs" ], 2, "tab" );
+ll = new bxcachy.TuiList( [ "one", "two", "three", "four" ] ); ll.move( 1 );
+kit.listView( 1, 2, 30, 3, ll, "row", function( it, on ) { return "item " & it; } );
+kit.meter( 1, 6, 20, 0.5 ); kit.badge( 1, 7, "running", kit.color( "GREEN" ) );
+kit.keybar( 0, 23, 80, [ [ "q", "quit" ], [ "/", "filter" ] ] );
+kit.toast( 80, 22, "Saved", "ok" );
+s = shot();
+check( "kit: tabs show their names", find( "Dashboard", s ) > 0 && find( "Packages", s ) > 0 && find( "Logs", s ) > 0 );
+check( "kit: listView marks the cursor row", find( "▸ item two", s ) > 0 && find( "item one", s ) > 0 );
+check( "kit: meter, badge, keybar and toast", find( "━", s ) > 0 && find( " running ", s ) > 0 && find( "quit", s ) > 0 && find( " Saved ", s ) > 0 );
+check( "kit: a click on a tab and a row is recorded", kit.hitAt( 13, 0 ).kind == "tab" && kit.hitAt( 13, 0 ).n == 2 && kit.hitAt( 3, 3 ).kind == "row" && kit.hitAt( 3, 3 ).n == 2 && kit.hitAt( 70, 10 ).kind == "" );
+kit.clearHits(); check( "kit: clearHits forgets them", kit.hitAt( 13, 0 ).kind == "" );
+kit.confirmModal( 80, 24, "Restore?", [ "Plan line one", "Plan line two" ] );
+s = shot();
+check( "kit: confirm modal shows the plan and both buttons", find( "Restore?", s ) > 0 && find( "Plan line two", s ) > 0 && find( "do it", s ) > 0 && find( "not now", s ) > 0 );
+check( "kit: modal buttons are click regions", kit.hitAt( 14, 16 ).kind == "yes" || kit.hitAt( 14, 15 ).kind == "yes" || kit.hitAt( 14, 14 ).kind == "yes" || kit.hitAt( 14, 17 ).kind == "yes" );
+kit.setFade( 0.5 ); kit.put( 1, 1, "faded", kit.color( "GREEN" ) ); kit.setFade( 1 );
+check( "kit: fade draws without failing", find( "faded", shot() ) > 0 );
+if ( failures > 0 ) { println( failures & " failed" ); exit( 1 ); }
+println( "all passed" );

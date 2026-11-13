@@ -1,0 +1,70 @@
+// The state of a scrolling list for any terminal screen: items, a cursor, a scroll position and a filter. Pure, no drawing.
+//   list = new bxcachy.TuiList( items, textOf )     textOf( item ) -> the string the filter searches (default: the item itself when it is a string)
+//   list.move( 1 ) / list.move( -1 ) / list.page( 1, rows ) / list.home() / list.end()
+//   list.filter( "text" )   keeps the items whose text contains it (case-insensitive); list.filter( "" ) shows everything again
+//   list.selected()  the item under the cursor, or "" when the list is empty;   list.cursor()  its 1-based place in the shown items
+//   list.window( rows )  the shown items that fit: [ { index, item } ] starting at top();   list.fit( rows )  scrolls so the cursor is visible
+class TuiList {
+    function init( items = [], textOf = "" ) {
+        variables.all = arguments.items;
+        variables.textOf = arguments.textOf;
+        variables.shown = arguments.items;
+        variables.q = "";
+        variables.cur = 1;
+        variables.topRow = 1;
+        return this;
+    }
+
+    function setItems( items ) {
+        var keep = selected();
+        variables.all = arguments.items;
+        refilter();
+        return this;
+    }
+
+    function text( item ) {
+        if ( isSimpleValue( variables.textOf ) ) return isSimpleValue( arguments.item ) ? arguments.item : "";
+        return variables.textOf( arguments.item );
+    }
+
+    function refilter() {
+        if ( !len( variables.q ) ) variables.shown = variables.all;
+        else {
+            var needle = lCase( variables.q );
+            var me = this;
+            variables.shown = variables.all.filter( function( it ) { return find( needle, lCase( me.text( it ) ) ) > 0; } );
+        }
+        variables.cur = max( 1, min( variables.cur, max( 1, variables.shown.len() ) ) );
+        variables.topRow = max( 1, min( variables.topRow, variables.cur ) );
+    }
+
+    function filter( q ) { variables.q = arguments.q; variables.cur = 1; variables.topRow = 1; refilter(); return this; }
+    function query() { return variables.q; }
+    function count() { return variables.shown.len(); }
+    function total() { return variables.all.len(); }
+    function items() { return variables.shown; }
+    function cursor() { return variables.cur; }
+    function top() { return variables.topRow; }
+    function selected() { return variables.shown.len() ? variables.shown[ variables.cur ] : ""; }
+    function select( n ) { variables.cur = max( 1, min( arguments.n, max( 1, variables.shown.len() ) ) ); return this; }
+    function move( delta ) { variables.cur = max( 1, min( variables.cur + arguments.delta, max( 1, variables.shown.len() ) ) ); return this; }
+    function page( dir, rows ) { return move( arguments.dir * max( 1, arguments.rows - 1 ) ); }
+    function home() { variables.cur = 1; return this; }
+    function end() { variables.cur = max( 1, variables.shown.len() ); return this; }
+
+    // Scrolls so the cursor shows in `rows` rows.
+    function fit( rows ) {
+        var r = max( 1, arguments.rows );
+        if ( variables.cur < variables.topRow ) variables.topRow = variables.cur;
+        if ( variables.cur >= variables.topRow + r ) variables.topRow = variables.cur - r + 1;
+        variables.topRow = max( 1, min( variables.topRow, max( 1, variables.shown.len() - r + 1 ) ) );
+        return this;
+    }
+
+    function window( rows ) {
+        var out = [];
+        var last = min( variables.shown.len(), variables.topRow + arguments.rows - 1 );
+        for ( var i = variables.topRow; i <= last; i++ ) out.append( { index: i, item: variables.shown[ i ] } );
+        return out;
+    }
+}

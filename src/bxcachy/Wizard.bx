@@ -20,22 +20,11 @@ class Wizard {
     }
 
     function run() {
-        variables.tui = createObject( "rust", "tui.TUI" );
-        variables.view = new bxcachy.WizardView( variables.tui );
-        variables.tui.init();
-        try {
-            var tick = 0;
-            while ( variables.app.outcome() == "running" ) {
-                var size = variables.tui.size();
-                variables.view.paint( variables.app, tick, size.width, size.height );
-                variables.tui.end_frame();
-                var ev = variables.tui.poll_event( 50 );
-                if ( !isNull( ev ) ) handle( ev );
-                tick++;
-            }
-        } finally {
-            variables.tui.shutdown();
-        }
+        var me = this;
+        new bxcachy.TuiRunner().run(
+            variables.app,
+            function( tui ) { variables.tui = tui; variables.view = new bxcachy.WizardView( tui ); return variables.view; }
+        );
         return { outcome: variables.app.outcome(), answers: variables.app.finalAnswers() };
     }
 }

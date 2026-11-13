@@ -12,7 +12,7 @@ class TimeMachineView {
         variables.SURFACE0 = "##414559"; variables.SURFACE1 = "##51576d"; variables.OVERLAY = "##737994";
         variables.TEXT = "##c6d0f5"; variables.SUB = "##a5adce";
         variables.GREEN = "##00ff78"; variables.CYAN = "##00dbff"; variables.YELLOW = "##e5c890"; variables.RED = "##e78284"; variables.MAUVE = "##ca9ee6"; variables.SKY = "##99d1db";
-        variables.hits = [];
+        variables.kit = new bxcachy.TuiKit( arguments.tui );
         variables.months = [ "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" ];
         variables.days = [ "Thu", "Fri", "Sat", "Sun", "Mon", "Tue", "Wed" ];
         variables.stars = [];
@@ -20,19 +20,10 @@ class TimeMachineView {
         return this;
     }
 
-    // ---- colours and drawing helpers ----
-    function rgb( hex ) { var h = replace( arguments.hex, "#", "", "all" ); return [ inputBaseN( mid( h, 1, 2 ), 16 ), inputBaseN( mid( h, 3, 2 ), 16 ), inputBaseN( mid( h, 5, 2 ), 16 ) ]; }
-    function toHex( r, g, b ) { var out = "##"; for ( var v in [ arguments.r, arguments.g, arguments.b ] ) out &= right( "0" & formatBaseN( int( min( 255, max( 0, v ) ) ), 16 ), 2 ); return out; }
-    function mix( a, b, t ) {
-        var x = rgb( arguments.a ); var y = rgb( arguments.b ); var k = min( 1, max( 0, arguments.t ) );
-        return toHex( x[ 1 ] + ( y[ 1 ] - x[ 1 ] ) * k, x[ 2 ] + ( y[ 2 ] - x[ 2 ] ) * k, x[ 3 ] + ( y[ 3 ] - x[ 3 ] ) * k );
-    }
-    function brand( t ) { return mix( variables.CYAN, variables.GREEN, arguments.t ); }
-    function shimmer( x, w, phase ) {
-        var pos = min( 1, max( 0, arguments.x / max( 1, arguments.w ) ) );
-        var band = min( 1, max( 0, 1 - abs( pos - arguments.phase ) * 4 ) );
-        return mix( brand( pos ), "##ffffff", band * 0.45 );
-    }
+    // ---- colours and drawing helpers (the shared kit does the work) ----
+    function mix( a, b, t ) { return variables.kit.mix( arguments.a, arguments.b, arguments.t ); }
+    function brand( t ) { return variables.kit.brand( arguments.t ); }
+    function shimmer( x, w, phase ) { return variables.kit.shimmer( arguments.x, arguments.w, arguments.phase ); }
     function tierColor( tier ) {
         var t = arguments.tier;
         if ( t == "hourly" ) return variables.SKY;
@@ -42,38 +33,12 @@ class TimeMachineView {
         return variables.MAUVE;
     }
 
-    function put( x, y, s, col, bg = "", bold = false, dim = false ) {
-        var style = { fg: arguments.col, bold: arguments.bold, dim: arguments.dim };
-        if ( len( arguments.bg ) ) style.bg = arguments.bg;
-        variables.tui.text( arguments.x, arguments.y, arguments.s, style );
-        return arguments.x + len( arguments.s );
-    }
-
-    function fillRect( x, y, w, h, bg ) { if ( arguments.w > 0 && arguments.h > 0 ) variables.tui.fill( arguments.x, arguments.y, arguments.w, arguments.h, { bg: arguments.bg } ); }
-
-    function gtext( x, y, s, bold, phase, bg = "" ) {
-        var n = len( arguments.s );
-        var pos = 0;
-        while ( pos < n ) {
-            var piece = mid( arguments.s, pos + 1, 8 );
-            var style = { bold: arguments.bold };
-            if ( len( arguments.bg ) ) style.bg = arguments.bg;
-            variables.tui.gradient( arguments.x + pos, arguments.y, piece, shimmer( pos, n, arguments.phase ), shimmer( pos + len( piece ), n, arguments.phase ), style );
-            pos += len( piece );
-        }
-    }
-
-    function trunc( s, w ) { return len( arguments.s ) > arguments.w ? left( arguments.s, max( 0, arguments.w - 1 ) ) & "…" : arguments.s; }
-
-    function hit( kind, x, y, w, h, n = 0, m = 0 ) { variables.hits.append( { kind: arguments.kind, x: arguments.x, y: arguments.y, w: arguments.w, h: arguments.h, n: arguments.n, m: arguments.m } ); }
-
-    function hitAt( x, y ) {
-        for ( var i = variables.hits.len(); i >= 1; i-- ) {
-            var h = variables.hits[ i ];
-            if ( arguments.x >= h.x && arguments.x < h.x + h.w && arguments.y >= h.y && arguments.y < h.y + h.h ) return { kind: h.kind, n: h.n, m: h.m };
-        }
-        return { kind: "", n: 0, m: 0 };
-    }
+    function put( x, y, s, col, bg = "", bold = false, dim = false ) { return variables.kit.put( arguments.x, arguments.y, arguments.s, arguments.col, arguments.bg, arguments.bold, arguments.dim ); }
+    function fillRect( x, y, w, h, bg ) { variables.kit.fillRect( arguments.x, arguments.y, arguments.w, arguments.h, arguments.bg ); }
+    function gtext( x, y, s, bold, phase, bg = "" ) { variables.kit.gtext( arguments.x, arguments.y, arguments.s, arguments.bold, arguments.phase, arguments.bg ); }
+    function trunc( s, w ) { return variables.kit.trunc( arguments.s, arguments.w ); }
+    function hit( kind, x, y, w, h, n = 0, m = 0 ) { variables.kit.hit( arguments.kind, arguments.x, arguments.y, arguments.w, arguments.h, arguments.n, arguments.m ); }
+    function hitAt( x, y ) { return variables.kit.hitAt( arguments.x, arguments.y ); }
 
     // ---- dates, pure ----
     function civil( days ) {
@@ -113,7 +78,6 @@ class TimeMachineView {
 
     // ---- the frame ----
     function paint( app, tick, width, height ) {
-        variables.hits = [];
         variables.tui.begin_frame();
         variables.tui.fill( 0, 0, arguments.width, arguments.height, { bg: variables.BASE } );
         if ( arguments.width < 90 || arguments.height < 30 ) {
@@ -317,13 +281,7 @@ class TimeMachineView {
         }
     }
 
-    function size( bytes ) {
-        var b = arguments.bytes;
-        if ( b >= 1073741824 ) return round( b / 107374182.4 ) / 10 & " GB";
-        if ( b >= 1048576 ) return round( b / 104857.6 ) / 10 & " MB";
-        if ( b >= 1024 ) return round( b / 102.4 ) / 10 & " KB";
-        return b & " B";
-    }
+    function size( bytes ) { return variables.kit.size( arguments.bytes ); }
 
     // ---- browse ----
     function browse( app, width, height, phase ) {
