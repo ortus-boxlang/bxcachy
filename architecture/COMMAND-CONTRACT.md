@@ -660,6 +660,15 @@ The wizard asks the window layout once per desktop you set up: Hyprland (`layout
 - **Menu:** Appearance has Font, Install a font, Background, Bar, Dock, Windows, Animations, Status and Re-apply beside the theme entries.
 - **Verified:** `tests/appearance-test.sh` with fake noctalia, hyprctl, fc-list, pacman and sudo. Not verified on a real machine: Hyprland Lua `dofile` and reload, Noctalia `config-set` persistence and key names.
 
+### 13.36 Display and the developer defaults (decided with the owner 2026-11-13)
+
+- **`bxcachy display list|status`**, `scale NAME auto|0.5..4`, `rotate NAME 0|90|180|270`, `mode NAME preferred|WxH[@R]`, `position NAME auto|XxY`, `mirror on|off`, `laptop on|off`, `brightness up|down|set N`, `apply`, `reset`. Bad usage exits 2, an unknown monitor or a missing tool exits 4. All take `--dry-run` and `--json`.
+- **Hyprland:** one generated file, `~/.config/bxcachy/theme/monitors.lua` (a list of `hl.monitor` tables), written through the config service and loaded by the managed `bxcachy.lua` after your own `hyprland.lua`; then `hyprctl reload`. Names come from `hyprctl monitors all -j`. **Plasma:** `kscreen-doctor output.NAME.scale.X|rotation.left|position.X,Y|mode.WxH@R|enable|disable` (90 maps to `left`, 180 to `inverted`, 270 to `right`; unverified on a real machine). State is `~/.config/bxcachy/display.json`.
+- **Mirror** shows the laptop panel on every external monitor. **Laptop off** refuses when it would leave no monitor on. Brightness up and down use `noctalia msg brightness-up|down` when Noctalia is there, else `brightnessctl set 5%+|5%-`; `set N` uses `brightnessctl`.
+- **Not built:** `laptop auto` (clamshell on lid events). Lid behavior belongs to `bxcachy power`.
+- **Menu:** Setup > Display. **Verified:** `tests/display-test.sh` (fake hyprctl JSON, kscreen-doctor, brightnessctl, noctalia).
+- **Developer defaults:** Meld (`pacman`, `extra`, verified) is a default of the `editors` profile.
+
 ## 14. Install and the setup wizard (decided with the owner 2026-11-10; install, wizard and the init engine are built, the pages' later commands are not)
 
 ### 14.1 Install
