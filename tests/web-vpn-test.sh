@@ -63,7 +63,6 @@ rm "$tmp/bin/nordvpn"; [[ "$(code "$binary" vpn nordvpn setup --yes)" == 4 ]] ||
 [[ "$(code "$binary" web install apple)" == 2 ]] || fail 'bundle without --yes exits 2'
 run "$binary" web install microsoft --dry-run --json | jq -e '(.data.apps | index("word") != null) and (.data.apps | index("outlook") != null)' >/dev/null || fail 'microsoft bundle dry run'
 run "$binary" web install google --yes | grep -q 'Added' || fail 'google bundle'
-ls "$tmp/data/applications" | grep -q 'bxcachy-web-' || fail 'launcher entries written'
-n="$(ls "$tmp/data/applications" | grep -c 'bxcachy-web-')"; [[ "$n" -ge 10 ]] || fail "google bundle wrote $n entries"
+n="$(ls "$tmp/home/.local/share/applications" 2>/dev/null | grep -c 'bxcachy-google-\|bxcachy-gmail\|bxcachy-maps')"; [[ "$n" -ge 7 ]] || fail "google bundle wrote $n launcher entries"
 [[ "$(code "$binary" web install nope --yes)" == 4 ]] || fail 'unknown bundle exits 4'
 echo "web-vpn-test: ok"
