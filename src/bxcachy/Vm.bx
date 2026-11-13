@@ -62,6 +62,9 @@ class Vm {
         return r.exitCode == 0 ? trim( r.output ) : "";
     }
 
+    function ipv6Dir() { return getSystemSetting( "BXCACHY_IPV6_DIR", "/proc/sys/net/ipv6" ); }
+    // True when this machine has no IPv6 (kernel built or booted without it): the webtop's nginx then cannot listen on [::] unless told with DISABLE_IPV6.
+    function noIpv6() { return tryExec( [ "sh", "-c", '[ ! -d "$1" ]', "_", ipv6Dir() ], 10 ).exitCode == 0; }
     function driDir() { return getSystemSetting( "BXCACHY_DRI_DIR", "/dev/dri" ); }
     function has( name ) { return tryExec( [ "sh", "-c", 'command -v "$1"', "_", arguments.name ], 10 ).exitCode == 0; }
     function secrets() { return new bxcachy.Secrets( variables.cli ); }
@@ -193,6 +196,7 @@ class Vm {
         rows.append( check( "KVM (" & kvm & ", read and write)", kvmOk, kvmOk ? "ok" : ( fileExists( kvm ) ? kvm & " exists but you cannot use it: add yourself to the kvm group (sudo usermod -aG kvm $USER) and log in again" : kvm & " is missing: enable virtualization (VT-x or AMD-V) in the firmware and load the kvm module" ), true ) );
         var tun = tryExec( [ "sh", "-c", '[ -e /dev/net/tun ]' ], 10 ).exitCode == 0;
         rows.append( check( "/dev/net/tun", tun, tun ? "ok" : "missing: sudo modprobe tun", true ) );
+        rows.append( check( "IPv6", !noIpv6(), noIpv6() ? "this machine has no IPv6: Linux desktops are started with DISABLE_IPV6=true so their web server works" : "present", false ) );
         var ram = hostMemGb();
         rows.append( check( "memory", ram >= 4, ram & " GB in the machine" & ( ram < 4 ? " (Windows wants at least 4)" : "" ), false ) );
         var free = freeKb( dataHome() );
@@ -289,7 +293,7 @@ class Vm {
         return a;
     }
 
-    function linuxRunArgs( rec, envFile, uid, gid, gpu ) {
+    function linuxRunArgs( rec, envFile, uid, gid, gpu, noV6 = false ) {
         var r = arguments.rec;
         var a = [ "run", "-d", "--name", containerName( r.name ) ];
         for ( var l in labels( r ) ) a.append( l );
@@ -302,6 +306,7 @@ class Vm {
         for ( var g in arguments.gpu ) a.append( g );
         a.append( "--env-file" ); a.append( arguments.envFile );
         for ( var e in [ "PUID=" & arguments.uid, "PGID=" & arguments.gid, "TZ=" & tz() ] ) { a.append( "-e" ); a.append( e ); }
+        if ( arguments.noV6 ) { a.append( "-e" ); a.append( "DISABLE_IPV6=true" ); }
         a.append( variables.data.linuxImage() & ":" & r.imageTag );
         return a;
     }
@@ -379,7 +384,7 @@ class Vm {
         var envFile = dir & "/vm.env";
         var envText = arguments.kind == "windows" ? "USERNAME=bxcachy" & chr( 10 ) & "PASSWORD=" & pw & chr( 10 ) : "CUSTOM_USER=bxcachy" & chr( 10 ) & "PASSWORD=" & pw & chr( 10 );
         variables.config.writeAtomic( envFile, envText, "600" );
-        var argv = arguments.kind == "windows" ? windowsRunArgs( rec, envFile ) : linuxRunArgs( rec, envFile, rootless() ? "0" : ids().uid, rootless() ? "0" : ids().gid, gpu.args );
+        var argv = arguments.kind == "windows" ? windowsRunArgs( rec, envFile ) : linuxRunArgs( rec, envFile, rootless() ? "0" : ids().uid, rootless() ? "0" : ids().gid, gpu.args, noIpv6() );
         var r = engineExec( argv, 3600 );
         tryExec( [ "rm", "-f", envFile ], 15 );
         if ( r.exitCode != 0 ) {

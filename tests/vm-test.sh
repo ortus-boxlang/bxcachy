@@ -25,7 +25,7 @@ cp "$tmp/bin/podman" "$tmp/bin/docker"
 for t in xdg-open sdl-freerdp3; do printf '#!/usr/bin/env bash\necho "%s $*" >> "$LOG"\n' "$t" > "$tmp/bin/$t"; done
 chmod +x "$tmp/bin"/*
 mkdir -p "$tmp/dri"; echo 'MemTotal:       16000000 kB' > "$tmp/meminfo"; : > "$tmp/kvm"
-run() { env HOME="$tmp/home" BXCACHY_CONFIG_HOME="$tmp/cfg" BXCACHY_DATA_HOME="$tmp/data" PATH="$tmp/bin:$PATH" LOG="$LOG" FAKE="$tmp/fake" BXCACHY_VM_NO_WAIT=1 BXCACHY_VM_SKIP_KVM_CHECK=1 BXCACHY_MEMINFO_FILE="$tmp/meminfo" BXCACHY_DRI_DIR="$tmp/dri" BXCACHY_KVM_DEVICE="$tmp/kvm" "$@"; }
+run() { env HOME="$tmp/home" BXCACHY_CONFIG_HOME="$tmp/cfg" BXCACHY_DATA_HOME="$tmp/data" PATH="$tmp/bin:$PATH" LOG="$LOG" FAKE="$tmp/fake" BXCACHY_VM_NO_WAIT=1 BXCACHY_VM_SKIP_KVM_CHECK=1 BXCACHY_MEMINFO_FILE="$tmp/meminfo" BXCACHY_DRI_DIR="$tmp/dri" BXCACHY_IPV6_DIR="$tmp/dri" BXCACHY_KVM_DEVICE="$tmp/kvm" "$@"; }
 code() { set +e; run "$@" >/dev/null 2>&1; local c=$?; set -e; echo "$c"; }
 args() { cat "$tmp/fake/containers/$1.args"; }
 
@@ -128,6 +128,12 @@ run "$binary" vm remove dev --yes >/dev/null; [[ ! -e "$tmp/data/vms/dev" && ! -
 [[ ! -e "$tmp/data/secrets/BXCACHY_VM_DEV_PASSWORD" ]] || fail 'the stored password is dropped'
 [[ ! -e "$tmp/home/.local/share/applications/bxcachy-vm-dev.desktop" ]] || fail 'the launcher is removed with the VM'
 [[ -d "$tmp/home/Shared" ]] || fail 'the shared folder is never deleted'
+
+# a host without IPv6: the webtop's nginx needs DISABLE_IPV6 (found by running the real image in a sandbox without IPv6)
+[[ "$(args bxcachy-vm-nvd)" != *DISABLE_IPV6* ]] || fail 'DISABLE_IPV6 only when the host has no IPv6'
+run env BXCACHY_IPV6_DIR="$tmp/none" "$binary" vm create linux v6 --yes >/dev/null; [[ "$(args bxcachy-vm-v6)" == *"-e DISABLE_IPV6=true"* ]] || fail 'DISABLE_IPV6=true without host IPv6'
+{ run env BXCACHY_IPV6_DIR="$tmp/none" "$binary" vm doctor --json || true; } | jq -e '.data.checks | map(select(.check == "IPv6") | .ok) == [false]' >/dev/null || fail 'doctor notes missing IPv6'
+run "$binary" vm remove v6 --yes >/dev/null
 
 # no engine
 [[ "$(set +e; env -i HOME="$tmp/home" BXCACHY_CONFIG_HOME="$tmp/cfg2" BXCACHY_DATA_HOME="$tmp/data2" PATH="/usr/bin:/bin" BXCACHY_VM_SKIP_KVM_CHECK=1 BXCACHY_DRI_DIR="$tmp/dri" "$binary" vm create linux x1 --yes >/dev/null 2>&1; echo $?)" == 4 ]] || fail 'no container engine exits 4'
