@@ -1,0 +1,219 @@
+// The BxCachy menu as data. It follows Omarchy's skeleton (Apps, Install, Remove, Appearance, Trigger, Setup, Update, Agent, Learn, About,
+// System) and adds Develop for what is ours (BoxLang, databases, virtual machines, containers, the editor).
+// Entry kinds:
+//   sub        children
+//   spawn      starts `bxcachy ARGV` detached (no window)
+//   run        runs `bxcachy ARGV` in a terminal window and waits for Enter (for output and for sudo prompts)
+//   open       opens a URL with xdg-open
+//   pick       asks you to choose from `source` (see Menu.choices), then runs argv with {} replaced by the choice (mode spawn or run)
+//   pkgsearch  asks for text, lists matching packages (source all, repo or aur), asks, then runs `pkg install`
+//   ask        asks for one line of text, then runs argv with {} replaced by it
+//   catalog    lists the catalog apps of one group (`group`), asks, then runs `install ID --yes`
+//   db, webcreate, webrm   the existing special flows
+// `confirm` on an entry asks "Are you sure?" first ({} is the choice). Every entry is a command you can run by hand: the menu mirrors the CLI.
+class MenuTree {
+    function init() {
+        return this;
+    }
+
+    function spawn( label, argv, confirm = "" ) {
+        var e = { label: arguments.label, kind: "spawn", argv: arguments.argv };
+        if ( len( arguments.confirm ) ) e.confirm = arguments.confirm;
+        return e;
+    }
+
+    function run( label, argv ) { return { label: arguments.label, kind: "run", argv: arguments.argv }; }
+    function link( label, url ) { return { label: arguments.label, kind: "open", url: arguments.url }; }
+    function sub( label, children ) { return { label: arguments.label, kind: "sub", children: arguments.children }; }
+
+    function pick( label, source, argv, mode = "spawn", confirm = "" ) {
+        var e = { label: arguments.label, kind: "pick", source: arguments.source, argv: arguments.argv, mode: arguments.mode };
+        if ( len( arguments.confirm ) ) e.confirm = arguments.confirm;
+        return e;
+    }
+
+    // catalogGroups: [ { id, title } ] from the catalog, in order.
+    function sections( catalogGroups = [] ) {
+        var groupEntries = arguments.catalogGroups.map( function( g ) { return { label: g.title, kind: "catalog", group: g.id }; } );
+        return [
+            { label: "Apps", kind: "spawn", argv: [ "apps" ] },
+            sub( "Install", [
+                { label: "Package (repos and AUR)", kind: "pkgsearch", source: "all" },
+                { label: "AUR package", kind: "pkgsearch", source: "aur" },
+                sub( "Catalog", groupEntries ),
+                sub( "Web app", [
+                    { label: "Create web app", kind: "webcreate" },
+                    run( "Install all Google apps", [ "web", "install", "google", "--yes" ] ),
+                    run( "Install all Microsoft apps", [ "web", "install", "microsoft", "--yes" ] ),
+                    run( "Install all Apple apps", [ "web", "install", "apple", "--yes" ] ),
+                    run( "BoxLang web apps", [ "web", "install", "boxlang", "--yes" ] )
+                ] ),
+                sub( "Virtual machine", [
+                    run( "Windows (asks which version)", [ "vm", "create", "windows" ] ),
+                    { label: "Linux desktop (asks a name)", kind: "ask", prompt: "Name for the new desktop", argv: [ "vm", "create", "linux", "{}", "--yes" ], mode: "run" },
+                    run( "Linux desktops: the tags", [ "vm", "versions", "linux" ] ),
+                    run( "Check this machine (KVM, GPU)", [ "vm", "doctor" ] )
+                ] ),
+                run( "Node.js (nvm)", [ "toolchain", "node", "--yes" ] ),
+                run( "Neovim with LazyVim and BoxLang", [ "editor", "lazyvim", "--yes" ] ),
+                run( "Agent skills", [ "skills", "install", "--yes" ] ),
+                run( "Dictation", [ "dictation", "setup" ] )
+            ] ),
+            sub( "Remove", [
+                pick( "Package", "packages", [ "pkg", "remove", "{}", "--yes" ], "run", "Remove the package {} and its unused dependencies?" ),
+                pick( "App from the catalog", "apps-installed", [ "remove", "{}", "--yes" ], "run", "Remove {}?" ),
+                { label: "Web app", kind: "webrm" },
+                pick( "Theme", "user-themes", [ "theme", "remove", "{}" ], "run" ),
+                pick( "Virtual machine", "vms", [ "vm", "remove", "{}", "--yes" ], "run", "Remove the VM {} and DELETE its data?" ),
+                pick( "Agent skill", "skills-installed", [ "skills", "remove", "{}", "--yes" ], "run", "Remove the skill {}?" )
+            ] ),
+            sub( "Appearance", [
+                pick( "Theme", "themes", [ "theme", "set", "{}" ] ),
+                spawn( "Next theme", [ "theme", "next" ] ),
+                spawn( "Random theme", [ "theme", "random" ] ),
+                sub( "Mode", [
+                    spawn( "Follow the theme", [ "theme", "mode", "theme" ] ),
+                    spawn( "Dark", [ "theme", "mode", "dark" ] ),
+                    spawn( "Light", [ "theme", "mode", "light" ] ),
+                    spawn( "Auto (day and night)", [ "theme", "mode", "auto" ] )
+                ] ),
+                run( "Theme status", [ "theme", "status" ] ),
+                { label: "Install a theme from git", kind: "ask", prompt: "Theme git URL (https)", argv: [ "theme", "install", "{}" ], mode: "run" }
+            ] ),
+            sub( "Trigger", [
+                sub( "Capture", [
+                    spawn( "Screenshot menu", [ "screenshot", "menu" ] ),
+                    spawn( "Screen", [ "screenshot", "screen" ] ),
+                    spawn( "Region", [ "screenshot", "region" ] ),
+                    spawn( "Window", [ "screenshot", "window" ] ),
+                    spawn( "Text (OCR)", [ "screenshot", "ocr" ] ),
+                    spawn( "QR code", [ "screenshot", "qr" ] ),
+                    spawn( "Screen recording: start or stop", [ "record", "toggle" ] )
+                ] ),
+                sub( "Toggle", [
+                    spawn( "Do Not Disturb", [ "notify", "dnd", "toggle" ] ),
+                    spawn( "Snooze notifications for 30 minutes", [ "notify", "snooze", "30m" ] ),
+                    spawn( "Snooze notifications for 2 hours", [ "notify", "snooze", "2h" ] ),
+                    spawn( "Turn snooze off", [ "notify", "snooze", "off" ] ),
+                    spawn( "Clear notifications", [ "notify", "clear" ] ),
+                    spawn( "Night light", [ "nightshift", "toggle" ] ),
+                    spawn( "Window layout: tile or float", [ "layout", "toggle" ] )
+                ] ),
+                spawn( "Emoji", [ "emoji" ] ),
+                spawn( "Clipboard history", [ "clipboard", "pick" ] ),
+                spawn( "Force quit an app", [ "forcequit" ] ),
+                spawn( "Minimize window", [ "window", "minimize" ] ),
+                spawn( "Restore window", [ "window", "restore" ] ),
+                spawn( "Overview", [ "overview" ] )
+            ] ),
+            sub( "Setup", [
+                sub( "Defaults", [
+                    pick( "Browser", "browsers", [ "default", "browser", "{}", "--yes" ] ),
+                    pick( "Terminal", "terminals", [ "default", "terminal", "{}", "--yes" ] ),
+                    pick( "File manager", "filemanagers", [ "default", "filemanager", "{}", "--yes" ] ),
+                    run( "Show the defaults", [ "default", "show" ] )
+                ] ),
+                sub( "Keyboard", [
+                    run( "Shortcuts", [ "keys", "show" ] ),
+                    spawn( "Shortcut cheat sheet", [ "keys", "sheet" ] ),
+                    run( "Shortcut conflicts", [ "keys", "conflicts" ] ),
+                    spawn( "Mac-style keys on", [ "keys", "mac", "on", "--yes" ] ),
+                    spawn( "Mac-style keys off", [ "keys", "mac", "off", "--yes" ] )
+                ] ),
+                sub( "Security", [
+                    run( "SSH key", [ "ssh", "key" ] ),
+                    run( "API keys and secrets", [ "secrets", "list" ] ),
+                    run( "Keyring check", [ "secrets", "status" ] )
+                ] ),
+                sub( "Cloud storage", [
+                    run( "Remotes", [ "cloud", "remotes" ] ),
+                    run( "Add or configure a remote", [ "cloud", "configure" ] ),
+                    run( "Mounted folders: status", [ "cloud", "status" ] )
+                ] ),
+                sub( "Hardware", [
+                    run( "GPU check", [ "gpu", "doctor" ] ),
+                    run( "Input devices and gestures", [ "input", "doctor" ] ),
+                    spawn( "AirPlay receiver on", [ "airplay", "on" ] ),
+                    spawn( "AirPlay receiver off", [ "airplay", "off" ] )
+                ] ),
+                run( "App launcher check", [ "runner", "doctor" ] ),
+                run( "Setup status", [ "setup", "status" ] ),
+                run( "Dotfiles status", [ "dotfiles", "status" ] ),
+                run( "Export my settings", [ "settings", "export", "bxcachy-settings.tar.gz" ] )
+            ] ),
+            sub( "Update", [
+                run( "Check for a BxCachy update", [ "update", "check" ] ),
+                run( "Install the BxCachy update", [ "update", "apply", "--yes" ] ),
+                run( "System update (snapshot first)", [ "system", "update", "--yes" ] ),
+                run( "Agent skills: update", [ "skills", "update", "--yes" ] ),
+                sub( "Channel", [
+                    run( "Stable", [ "update", "channel", "stable" ] ),
+                    run( "Beta (bleeding edge)", [ "update", "channel", "beta" ] )
+                ] ),
+                sub( "Notifications", [
+                    run( "On", [ "update", "notifications", "on" ] ),
+                    run( "Off", [ "update", "notifications", "off" ] )
+                ] )
+            ] ),
+            sub( "Develop", [
+                sub( "BoxLang", [
+                    run( "Status", [ "boxlang", "status" ] ),
+                    spawn( "Welcome and getting started", [ "boxlang", "welcome" ] ),
+                    run( "Browse modules (ForgeBox)", [ "boxlang", "modules", "list" ] ),
+                    run( "Update modules", [ "boxlang", "modules", "update" ] ),
+                    run( "Add the VS Code extension", [ "boxlang", "vscode" ] ),
+                    run( "Docs, sites and links", [ "boxlang", "links" ] )
+                ] ),
+                { label: "Databases", kind: "db" },
+                sub( "Virtual machines", [
+                    run( "List VMs", [ "vm", "list" ] ),
+                    run( "VM disk sizes", [ "vm", "size" ] ),
+                    pick( "Open a VM", "vms", [ "vm", "open", "{}" ] ),
+                    pick( "Start a VM", "vms", [ "vm", "start", "{}" ] ),
+                    pick( "Stop a VM", "vms", [ "vm", "stop", "{}" ] ),
+                    run( "Check this machine (KVM, GPU)", [ "vm", "doctor" ] ),
+                    run( "Windows versions", [ "vm", "versions", "windows" ] ),
+                    run( "Linux desktops (tags)", [ "vm", "versions", "linux" ] )
+                ] ),
+                sub( "Containers", [
+                    run( "Podman check", [ "containers", "doctor" ] ),
+                    run( "Enable the Podman socket", [ "containers", "socket", "enable", "--yes" ] ),
+                    run( "docker commands on Podman", [ "containers", "docker-compat", "--yes" ] )
+                ] ),
+                sub( "Editor", [
+                    run( "Neovim config status", [ "editor", "status" ] ),
+                    run( "Refresh the Neovim layer", [ "editor", "refresh", "--yes" ] ),
+                    run( "Add BoxLang syntax to Neovim", [ "editor", "boxlang", "--yes" ] )
+                ] )
+            ] ),
+            sub( "Agent", [
+                spawn( "Open the default agent", [ "ai", "launch" ] ),
+                spawn( "Pull-down AI shell", [ "ai", "shell" ] ),
+                run( "Agent session: start", [ "ai", "session", "start" ] ),
+                run( "Agent sessions: list", [ "ai", "session", "list" ] ),
+                run( "Local models: list", [ "ai", "models", "list" ] ),
+                run( "Local models: running", [ "ai", "models", "ps" ] ),
+                run( "API keys: list", [ "secrets", "list" ] ),
+                run( "Agent skills: status", [ "skills", "status" ] )
+            ] ),
+            sub( "Learn", [
+                spawn( "Shortcut cheat sheet", [ "keys", "sheet" ] ),
+                link( "BxCachy docs", "https://bxcachy.boxlang.io/" ),
+                run( "BoxLang docs, sites and links", [ "boxlang", "links" ] ),
+                link( "Hyprland wiki", "https://wiki.hypr.land/" ),
+                link( "Noctalia docs", "https://docs.noctalia.dev/" ),
+                link( "Arch wiki", "https://wiki.archlinux.org/title/Main_page" ),
+                link( "CachyOS wiki", "https://wiki.cachyos.org/" ),
+                link( "LazyVim keymaps", "https://www.lazyvim.org/keymaps" )
+            ] ),
+            run( "About", [ "status" ] ),
+            sub( "System", [
+                spawn( "Lock", [ "system", "lock" ] ),
+                spawn( "Suspend", [ "system", "suspend" ] ),
+                spawn( "Logout", [ "system", "logout", "--yes" ], "Log out now?" ),
+                spawn( "Reboot", [ "system", "reboot", "--yes" ], "Reboot now?" ),
+                spawn( "Shutdown", [ "system", "shutdown", "--yes" ], "Shut down now?" )
+            ] )
+        ];
+    }
+}

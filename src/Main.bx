@@ -369,7 +369,8 @@ class {
           break;
          case "system":
           if ( p.len() == 2 && p[2] == "update" ) CLIExit( new bxcachy.Update( cli ).systemUpdate( structKeyExists( args.options, "yes" ), asJson ) );
-          println( "Usage: bxcachy system update [--yes] [--json]" ); CLIExit( 2 ); break;
+          if ( p.len() == 2 && arrayFind( [ "lock", "suspend", "logout", "reboot", "shutdown" ], p[2] ) ) CLIExit( new bxcachy.SystemActions( cli ).run( p[2], structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
+          println( "Usage: bxcachy system update [--yes] | lock | suspend | logout|reboot|shutdown [--yes] [--dry-run] [--json]" ); CLIExit( 2 ); break;
          case "emoji": CLIExit( new bxcachy.MacExtras( cli ).emoji( asJson ) ); break;
          case "forcequit": CLIExit( new bxcachy.MacExtras( cli ).forcequit( asJson ) ); break;
          case "window":
@@ -552,7 +553,8 @@ class {
           // The BxCachy control center on the runner's menu provider. See COMMAND-CONTRACT.md 13.16.
           if ( p.len() == 1 ) CLIExit( new bxcachy.Menu( cli ).run() );
           if ( p.len() == 2 && p[2] == "items" ) CLIExit( new bxcachy.Menu( cli ).show( asJson ) );
-          println( "Usage: bxcachy menu | menu items [--json]" );
+          if ( p.len() >= 3 && p[2] == "search" ) { mnWords = []; for ( mni = 3; mni <= p.len(); mni++ ) mnWords.append( p[ mni ] ); CLIExit( new bxcachy.Menu( cli ).search( mnWords.toList( " " ), asJson ) ); }
+          println( "Usage: bxcachy menu | menu items [--json] | menu search TEXT [--json]" );
           CLIExit( 2 );
           break;
          case "ssh":

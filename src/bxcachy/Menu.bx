@@ -1,10 +1,12 @@
 // `bxcachy menu`: the BxCachy control center, shown with the menu provider you chose (`runner menu-set`: Rofi, Walker, Fuzzel, ...).
-//   menu                interactive: pick an entry; submenus open in place, results of `run` entries open in a terminal window
-//   menu items [--json] the menu tree as data (what the menu shows), for scripts and tests
-// Entry kinds: spawn (starts a command detached, no window), run (runs it in a terminal and waits for Enter), menu (Databases opens
-// the existing `db menu` control center), back / exit. Nothing here changes the system by itself: every run entry is a read-only
-// view or a command that has its own plan/--yes rules and is started without --yes.
-// Exit: 0 done or cancelled, 4 precondition (no menu program, no terminal for a `run` entry).
+//   menu                  interactive. The first entry searches every entry at once (your provider filters as you type); sections open in place
+//   menu items [--json]   the menu tree as data (what the menu shows), for scripts and tests
+//   menu search TEXT      the entries whose path contains TEXT, with the command each one runs (the CLI mirror of the search)
+// The tree is MenuTree (Omarchy's skeleton plus Develop for what is ours). Entry kinds: spawn (starts a command detached), run (in a terminal
+// window, waits for Enter), open (a URL), pick (choose from a live list, then run), ask (type a line, then run), pkgsearch (find a package in
+// the repos or the AUR, then install it), catalog (the apps of one catalog group), db, webcreate, webrm. `confirm` entries ask first.
+// Nothing here changes the system by itself: every entry runs a command that has its own plan and --yes rules (the destructive ones are
+// started with --yes only after you confirm). Exit: 0 done or cancelled, 4 precondition (no menu program, no terminal for a `run` entry).
 class Menu {
     function init( cli, runner = "" ) {
         variables.cli = arguments.cli;
@@ -12,89 +14,47 @@ class Menu {
         return this;
     }
 
-    // The tree. kind "sub" has `children`; "spawn" and "run" have `argv` (arguments after bxcachy); "db" opens the databases menu.
+    function self() { return getSystemSetting( "BXCACHY_SELF", "bxcachy" ); }
+
+    // The tree, with the catalog groups filled in.
     function tree() {
-        return [
-            { label: "AI", kind: "sub", children: [
-                { label: "Open the default agent", kind: "spawn", argv: [ "ai", "launch" ] },
-                { label: "Pull-down AI shell", kind: "spawn", argv: [ "ai", "shell" ] },
-                { label: "Agent session: start", kind: "run", argv: [ "ai", "session", "start" ] },
-                { label: "Agent sessions: list", kind: "run", argv: [ "ai", "session", "list" ] },
-                { label: "Local models: list", kind: "run", argv: [ "ai", "models", "list" ] },
-                { label: "Local models: running", kind: "run", argv: [ "ai", "models", "ps" ] },
-                { label: "API keys: list", kind: "run", argv: [ "secrets", "list" ] }
-            ] },
-            { label: "Databases", kind: "db" },
-            { label: "All apps", kind: "spawn", argv: [ "apps" ] },
-            { label: "BoxLang", kind: "sub", children: [
-                { label: "Status", kind: "run", argv: [ "boxlang", "status" ] },
-                { label: "Welcome and getting started", kind: "spawn", argv: [ "boxlang", "welcome" ] },
-                { label: "Browse modules (ForgeBox)", kind: "run", argv: [ "boxlang", "modules", "list" ] },
-                { label: "Update modules", kind: "run", argv: [ "boxlang", "modules", "update" ] },
-                { label: "Add the VS Code extension", kind: "run", argv: [ "boxlang", "vscode" ] },
-                { label: "Docs, sites and links", kind: "run", argv: [ "boxlang", "links" ] }
-            ] },
-            { label: "Screenshot", kind: "spawn", argv: [ "screenshot", "menu" ] },
-            { label: "Notifications", kind: "sub", children: [
-                { label: "Do Not Disturb: toggle", kind: "spawn", argv: [ "notify", "dnd", "toggle" ] },
-                { label: "Snooze for 30 minutes", kind: "spawn", argv: [ "notify", "snooze", "30m" ] },
-                { label: "Snooze for 2 hours", kind: "spawn", argv: [ "notify", "snooze", "2h" ] },
-                { label: "Turn snooze off", kind: "spawn", argv: [ "notify", "snooze", "off" ] },
-                { label: "Clear notifications", kind: "spawn", argv: [ "notify", "clear" ] }
-            ] },
-            { label: "Cloud storage", kind: "sub", children: [
-                { label: "Remotes", kind: "run", argv: [ "cloud", "remotes" ] },
-                { label: "Add or configure a remote", kind: "run", argv: [ "cloud", "configure" ] },
-                { label: "Mounted folders: status", kind: "run", argv: [ "cloud", "status" ] }
-            ] },
-            { label: "Web apps", kind: "sub", children: [
-                { label: "Create web app", kind: "webcreate" },
-                { label: "Install all Google apps", kind: "run", argv: [ "web", "install", "google", "--yes" ] },
-                { label: "Install all Microsoft apps", kind: "run", argv: [ "web", "install", "microsoft", "--yes" ] },
-                { label: "Install all Apple apps", kind: "run", argv: [ "web", "install", "apple", "--yes" ] },
-                { label: "List web apps", kind: "run", argv: [ "web", "list" ] },
-                { label: "Remove a web app", kind: "webrm" }
-            ] },
-            { label: "Virtual machines", kind: "sub", children: [
-                { label: "List VMs", kind: "run", argv: [ "vm", "list" ] },
-                { label: "VM disk sizes", kind: "run", argv: [ "vm", "size" ] },
-                { label: "Check this machine (KVM, GPU)", kind: "run", argv: [ "vm", "doctor" ] },
-                { label: "Windows versions", kind: "run", argv: [ "vm", "versions", "windows" ] },
-                { label: "Linux desktops (tags)", kind: "run", argv: [ "vm", "versions", "linux" ] }
-            ] },
-            { label: "Themes", kind: "sub", children: [
-                { label: "Next theme", kind: "spawn", argv: [ "theme", "next" ] },
-                { label: "Random theme", kind: "spawn", argv: [ "theme", "random" ] },
-                { label: "BxCachy", kind: "spawn", argv: [ "theme", "set", "bxcachy" ] },
-                { label: "BxCachy Light", kind: "spawn", argv: [ "theme", "set", "bxcachy-light" ] },
-                { label: "BxCachy Midnight", kind: "spawn", argv: [ "theme", "set", "bxcachy-midnight" ] },
-                { label: "BxCachy Cyan", kind: "spawn", argv: [ "theme", "set", "bxcachy-cyan" ] },
-                { label: "BxCachy Forest", kind: "spawn", argv: [ "theme", "set", "bxcachy-forest" ] },
-                { label: "All themes (then: bxcachy theme set NAME)", kind: "run", argv: [ "theme", "list" ] },
-                { label: "Mode: follow the theme", kind: "spawn", argv: [ "theme", "mode", "theme" ] },
-                { label: "Mode: dark", kind: "spawn", argv: [ "theme", "mode", "dark" ] },
-                { label: "Mode: light", kind: "spawn", argv: [ "theme", "mode", "light" ] },
-                { label: "Mode: auto (day and night)", kind: "spawn", argv: [ "theme", "mode", "auto" ] },
-                { label: "Theme status", kind: "run", argv: [ "theme", "status" ] }
-            ] },
-            { label: "Settings", kind: "sub", children: [
-                { label: "Defaults (browser, terminal)", kind: "run", argv: [ "default", "show" ] },
-                { label: "Shortcuts", kind: "run", argv: [ "keys", "show" ] },
-                { label: "App launcher check", kind: "run", argv: [ "runner", "doctor" ] },
-                { label: "Setup status", kind: "run", argv: [ "setup", "status" ] },
-                { label: "Dotfiles status", kind: "run", argv: [ "dotfiles", "status" ] },
-                { label: "Shortcut cheat sheet", kind: "spawn", argv: [ "keys", "sheet" ] },
-                { label: "Agent skills: status", kind: "run", argv: [ "skills", "status" ] },
-                { label: "Agent skills: update", kind: "run", argv: [ "skills", "update", "--yes" ] },
-                { label: "Updates: check", kind: "run", argv: [ "update", "check" ] },
-                { label: "Updates: install the BxCachy update", kind: "run", argv: [ "update", "apply", "--yes" ] },
-                { label: "Updates: channel stable", kind: "run", argv: [ "update", "channel", "stable" ] },
-                { label: "Updates: channel beta (bleeding edge)", kind: "run", argv: [ "update", "channel", "beta" ] },
-                { label: "Updates: notifications on", kind: "run", argv: [ "update", "notifications", "on" ] },
-                { label: "Updates: notifications off", kind: "run", argv: [ "update", "notifications", "off" ] },
-                { label: "System update (snapshot first)", kind: "run", argv: [ "system", "update", "--yes" ] }
-            ] }
-        ];
+        var groups = [];
+        try {
+            var cat = new bxcachy.Catalog().load();
+            var g = cat.groups;
+            arraySort( g, function( a, b ) { return a.order < b.order ? -1 : ( a.order > b.order ? 1 : 0 ); } );
+            for ( var x in g ) groups.append( { id: x.id, title: x.title } );
+        } catch ( any e ) {}
+        return new bxcachy.MenuTree().sections( groups );
+    }
+
+    // Every entry that does something, with its path ("Appearance > Theme").
+    function flatten( entries, prefix = "" ) {
+        var out = [];
+        for ( var e in arguments.entries ) {
+            var path = ( len( arguments.prefix ) ? arguments.prefix & " > " : "" ) & e.label;
+            if ( e.kind == "sub" ) { for ( var c in flatten( e.children, path ) ) out.append( c ); }
+            else out.append( { path: path, entry: e } );
+        }
+        return out;
+    }
+
+    // What an entry runs, as text.
+    function describe( e ) {
+        var c = structKeyExists( e, "argv" ) ? "bxcachy " & e.argv.toList( " " ) : "";
+        switch ( e.kind ) {
+            case "spawn": return "opens: " & c;
+            case "run": return "shows in a terminal: " & c;
+            case "open": return "opens " & e.url;
+            case "pick": return "choose from " & e.source & ", then: " & c;
+            case "ask": return "asks for text, then: " & c;
+            case "pkgsearch": return "searches " & ( e.source == "aur" ? "the AUR" : "the repos and the AUR" ) & ", then: bxcachy pkg install NAME --yes";
+            case "catalog": return "lists the " & e.label & " apps, then: bxcachy install ID --yes";
+            case "db": return "opens the databases menu: bxcachy db menu";
+            case "webcreate": return "asks for a name and a URL, then: bxcachy web add NAME URL";
+            case "webrm": return "pick one, confirm, then: bxcachy web rm NAME";
+        }
+        return "";
     }
 
     function say( command, code, data, asJson, lines = [] ) {
@@ -103,26 +63,82 @@ class Menu {
         return arguments.code;
     }
 
-    function show( asJson ) {
-        var rows = tree();
-        var lines = [];
-        for ( var r in rows ) {
-            lines.append( r.label );
-            if ( r.kind == "sub" ) for ( var c in r.children ) {
-                if ( c.kind == "webcreate" ) lines.append( "  " & c.label & "   (asks for a name and a URL, then: bxcachy web add NAME URL)" );
-                else if ( c.kind == "webrm" ) lines.append( "  " & c.label & "   (pick one, confirm, then: bxcachy web rm NAME)" );
-                else lines.append( "  " & c.label & "   (" & ( c.kind == "spawn" ? "opens" : "shows in a terminal" ) & ": bxcachy " & c.argv.toList( " " ) & ")" );
-            }
+    // The tree as indented text lines.
+    function lineList( entries, depth ) {
+        var out = [];
+        var pad = repeatString( "  ", arguments.depth );
+        for ( var r in arguments.entries ) {
+            if ( r.kind == "sub" ) { out.append( pad & r.label ); for ( var l in lineList( r.children, arguments.depth + 1 ) ) out.append( l ); }
+            else out.append( pad & r.label & ( len( describe( r ) ) ? "   (" & describe( r ) & ")" : "" ) );
         }
-        return say( "menu items", 0, { menu: rows }, arguments.asJson, lines );
+        return out;
     }
 
+    function show( asJson ) {
+        var rows = tree();
+        return say( "menu items", 0, { menu: rows, entries: flatten( rows ).len() }, arguments.asJson, lineList( rows, 0 ) );
+    }
+
+    // `menu search TEXT`: the entries whose path contains TEXT.
+    function search( text, asJson ) {
+        var t = lCase( trim( arguments.text ) );
+        var hits = flatten( tree() ).filter( function( f ) { return findNoCase( t, f.path ) > 0; } );
+        var rows = hits.map( function( h ) { return { path: h.path, kind: h.entry.kind, does: describe( h.entry ) }; } );
+        var lines = rows.map( function( r ) { return r.path & "   (" & r.does & ")"; } );
+        if ( !rows.len() ) lines.append( "No menu entry matches " & arguments.text );
+        return say( "menu search", 0, { query: arguments.text, results: rows }, arguments.asJson, lines );
+    }
+
+    // ---- live lists for pick entries ----
+    function exec( argv, timeout = 30 ) {
+        try { return variables.inst.exec( arguments.argv, arguments.timeout ); } catch ( any e ) { return { exitCode: 127, output: e.message }; }
+    }
+
+    function has( name ) { return exec( [ "sh", "-c", 'command -v "$1"', "_", arguments.name ], 10 ).exitCode == 0; }
+
+    // [ { label, value, current } ] for a source. Empty when there is nothing to choose.
+    function choices( source ) {
+        var out = [];
+        var src = arguments.source;
+        if ( src == "themes" ) {
+            var th = new bxcachy.Theme( variables.cli );
+            var cur = th.readState().name;
+            for ( var n in th.names() ) out.append( { label: n, value: n, current: n == cur } );
+        } else if ( src == "user-themes" ) {
+            var th2 = new bxcachy.Theme( variables.cli );
+            var all = th2.discover();
+            for ( var k in th2.names() ) if ( all[ k ].origin == "user" ) out.append( { label: k, value: k, current: false } );
+        } else if ( src == "browsers" || src == "filemanagers" ) {
+            var cat = new bxcachy.Catalog().load();
+            var pk = new bxcachy.Packages( variables.cli, cat );
+            var names = pk.installedNames();
+            var wantCat = src == "browsers" ? "Browsers" : "File Management";
+            for ( var a in cat.apps ) if ( a.category == wantCat && a.source != "web" && pk.isInstalled( a, names ) ) out.append( { label: a.name, value: a.id, current: false } );
+        } else if ( src == "terminals" ) {
+            var tc = new bxcachy.TerminalConfig( true );
+            for ( var t in tc.terminals() ) if ( has( t.cmd ) ) out.append( { label: t.id, value: t.id, current: false } );
+        } else if ( src == "packages" ) {
+            var r = exec( [ self(), "pkg", "installed", "--explicit", "--json" ], 60 );
+            try { for ( var p in jsonDeserialize( r.output ).data.packages ) out.append( { label: p.name & " " & p.version, value: p.name, current: false } ); } catch ( any e ) {}
+        } else if ( src == "apps-installed" ) {
+            var cat2 = new bxcachy.Catalog().load();
+            var pk2 = new bxcachy.Packages( variables.cli, cat2 );
+            var names2 = pk2.installedNames();
+            for ( var b in cat2.apps ) if ( pk2.isInstalled( b, names2 ) ) out.append( { label: b.name & "  (" & b.id & ")", value: b.id, current: false } );
+        } else if ( src == "vms" ) {
+            for ( var v in new bxcachy.Vm( variables.cli ).allRecords() ) out.append( { label: v.name & "  (" & v.kind & ")", value: v.name, current: false } );
+        } else if ( src == "skills-installed" ) {
+            var sr = exec( [ self(), "skills", "installed", "--json" ], 30 );
+            try { for ( var s in jsonDeserialize( sr.output ).data.skills ) out.append( { label: s.name, value: s.name, current: false } ); } catch ( any e ) {}
+        }
+        return out;
+    }
+
+    // ---- running things ----
     // The terminal program (and the flag that precedes the command) for `run` entries.
     function terminalArgv() {
         for ( var t in [ "ghostty", "kitty", "foot", "alacritty", "konsole" ] ) {
-            var found = false;
-            try { found = variables.inst.exec( [ "sh", "-c", 'command -v "$1"', "_", t ], 10 ).exitCode == 0; } catch ( any e ) {}
-            if ( found ) return arrayFind( [ "ghostty", "alacritty", "konsole" ], t ) ? [ t, "-e" ] : [ t ];
+            if ( has( t ) ) return arrayFind( [ "ghostty", "alacritty", "konsole" ], t ) ? [ t, "-e" ] : [ t ];
         }
         return [];
     }
@@ -133,11 +149,10 @@ class Menu {
         variables.inst.exec( run, 10 );
     }
 
-    // Starts one entry.
+    // Starts one entry (spawn or run).
     function start( entry ) {
-        var self = getSystemSetting( "BXCACHY_SELF", "bxcachy" );
         if ( arguments.entry.kind == "spawn" ) {
-            var sp = [ self ];
+            var sp = [ self() ];
             for ( var a in arguments.entry.argv ) sp.append( a );
             detach( sp );
             return 0;
@@ -146,52 +161,139 @@ class Menu {
         if ( !term.len() ) { println( "error: this entry needs a terminal program (ghostty, kitty, foot, alacritty or konsole)" ); return 4; }
         var argv = [];
         for ( var t in term ) argv.append( t );
-        for ( var w in [ "sh", "-c", 'bxcachy_cmd="$1"; shift; "$bxcachy_cmd" "$@"; echo; echo "Press Enter to close"; read _', "_", self ] ) argv.append( w );
+        for ( var w in [ "sh", "-c", 'bxcachy_cmd="$1"; shift; "$bxcachy_cmd" "$@"; echo; echo "Press Enter to close"; read _', "_", self() ] ) argv.append( w );
         for ( var a2 in arguments.entry.argv ) argv.append( a2 );
         detach( argv );
         return 0;
     }
 
+    function sub( argv, value ) {
+        return arguments.argv.map( function( a ) { return replace( a, "{}", value, "all" ); } );
+    }
+
+    function confirm( runner, text ) {
+        return arguments.runner.select( arguments.text, [ "Cancel", "Yes" ] ) == 2;
+    }
+
+    function note( runner, text ) { arguments.runner.select( arguments.text, [ "OK" ] ); }
+
+    function pickAndRun( runner, e ) {
+        var ch = choices( e.source );
+        if ( !ch.len() ) { note( arguments.runner, "Nothing to choose here" ); return 0; }
+        var labels = ch.map( function( c ) { return ( c.current ? "✓ " : "  " ) & c.label; } );
+        var pick = arguments.runner.select( e.label, labels );
+        if ( pick == 0 ) return 0;
+        var chosen = ch[ pick ];
+        if ( structKeyExists( e, "confirm" ) && !confirm( arguments.runner, replace( e.confirm, "{}", chosen.value, "all" ) ) ) return 0;
+        return start( { kind: e.mode ?: "spawn", argv: sub( e.argv, chosen.value ) } );
+    }
+
+    function askAndRun( runner, e ) {
+        if ( !arguments.runner.inputSupported() ) { note( arguments.runner, "Your menu provider cannot take typed text. Run: bxcachy " & e.argv.toList( " " ) ); return 0; }
+        var text = arguments.runner.input( e.prompt );
+        if ( !len( text ) ) return 0;
+        return start( { kind: e.mode ?: "run", argv: sub( e.argv, text ) } );
+    }
+
+    // Package search: ask for text, list the matches (repos and AUR), confirm, install in a terminal (sudo may ask for a password).
+    function pkgSearchFlow( runner, e ) {
+        if ( !arguments.runner.inputSupported() ) { note( arguments.runner, "Your menu provider cannot take typed text. Run: bxcachy pkg search TEXT" ); return 0; }
+        var text = arguments.runner.input( e.source == "aur" ? "Search the AUR" : "Search packages" );
+        if ( !len( text ) ) return 0;
+        var r = exec( [ self(), "pkg", "search", text, "--source=" & e.source, "--limit=60", "--json" ], 90 );
+        var rows = [];
+        try { rows = jsonDeserialize( r.output ).data.results; } catch ( any x ) {}
+        if ( !rows.len() ) { note( arguments.runner, "No packages match " & text ); return 0; }
+        var labels = rows.map( function( p ) { return ( p.installed ? "✓ " : "  " ) & p.repo & "/" & p.name & " " & p.version & ( len( p.description ) ? "  " & left( p.description, 70 ) : "" ); } );
+        var pick = arguments.runner.select( "Install which package?", labels );
+        if ( pick == 0 ) return 0;
+        var chosen = rows[ pick ];
+        if ( chosen.installed ) { note( arguments.runner, chosen.name & " is already installed" ); return 0; }
+        if ( !confirm( arguments.runner, "Install " & chosen.name & ( chosen.source == "aur" ? " from the AUR (a user-submitted build script)?" : "?" ) ) ) return 0;
+        var argv = [ "pkg", "install", chosen.name, "--yes" ];
+        if ( chosen.source == "aur" ) argv.append( "--aur" );
+        return start( { kind: "run", argv: argv } );
+    }
+
+    // The apps of one catalog group: pick one, confirm, install it in a terminal.
+    function catalogFlow( runner, e ) {
+        var cat = new bxcachy.Catalog().load();
+        var pk = new bxcachy.Packages( variables.cli, cat );
+        var names = pk.installedNames();
+        var apps = cat.apps.filter( function( a ) { return a.group == e.group; } );
+        arraySort( apps, function( a, b ) { return compareNoCase( a.name, b.name ); } );
+        if ( !apps.len() ) { note( arguments.runner, "No apps in this group" ); return 0; }
+        var labels = apps.map( function( a ) { return ( pk.isInstalled( a, names ) ? "✓ " : "  " ) & a.name & "  " & left( a.description ?: "", 70 ); } );
+        var pick = arguments.runner.select( e.label, labels );
+        if ( pick == 0 ) return 0;
+        var chosen = apps[ pick ];
+        if ( pk.isInstalled( chosen, names ) ) { note( arguments.runner, chosen.name & " is already installed" ); return 0; }
+        if ( !confirm( arguments.runner, "Install " & chosen.name & "?" ) ) return 0;
+        return start( { kind: "run", argv: [ "install", chosen.id, "--yes" ] } );
+    }
+
     // Create web app, Omarchy style: asks for the name and the URL, then adds it. Providers that cannot take typed text open a terminal
     // that asks the same questions (`bxcachy web add`).
     function createWebApp( runner ) {
-        var self = getSystemSetting( "BXCACHY_SELF", "bxcachy" );
         if ( !arguments.runner.inputSupported() ) return start( { kind: "run", argv: [ "web", "add" ] } );
         var name = arguments.runner.input( "Web app name" );
         if ( !len( name ) ) return 0;
         var url = arguments.runner.input( "URL (https://...)" );
         if ( !len( url ) ) return 0;
-        var r = variables.inst.exec( [ self, "web", "add", name, url, "--yes" ], 60 );
+        var r = variables.inst.exec( [ self(), "web", "add", name, url, "--yes" ], 60 );
         arguments.runner.select( r.exitCode == 0 ? "Added " & name : "Could not add " & name & ": " & left( trim( r.output ), 120 ), [ "OK" ] );
         return 0;
     }
 
     // Remove a web app: pick one, confirm, delete.
     function removeWebApp( runner ) {
-        var self = getSystemSetting( "BXCACHY_SELF", "bxcachy" );
         var apps = new bxcachy.Web( variables.cli, variables.inst.runner() ).apps();
-        if ( !apps.len() ) { arguments.runner.select( "No web apps yet", [ "OK" ] ); return 0; }
+        if ( !apps.len() ) { note( arguments.runner, "No web apps yet" ); return 0; }
         var labels = apps.map( function( a ) { return a.name & "  " & a.url; } );
         var pick = arguments.runner.select( "Remove which web app?", labels );
         if ( pick == 0 ) return 0;
-        if ( arguments.runner.select( "Remove " & apps[ pick ].name & "?", [ "Cancel", "Remove" ] ) != 2 ) return 0;
-        variables.inst.exec( [ self, "web", "rm", apps[ pick ].name, "--yes" ], 30 );
+        if ( !confirm( arguments.runner, "Remove " & apps[ pick ].name & "?" ) ) return 0;
+        variables.inst.exec( [ self(), "web", "rm", apps[ pick ].name, "--yes" ], 30 );
         return 0;
     }
 
-    // Shows one level and follows the choice. Returns when the user goes back or cancels.
-    function level( runner, title, entries ) {
+    // Does one entry (anything but a submenu). Returns an exit code (0 keeps the menu open).
+    function activate( runner, e ) {
+        switch ( e.kind ) {
+            case "db": new bxcachy.Db( variables.cli, variables.inst.runner() ).menu(); return 0;
+            case "webcreate": return createWebApp( arguments.runner );
+            case "webrm": return removeWebApp( arguments.runner );
+            case "pick": return pickAndRun( arguments.runner, e );
+            case "ask": return askAndRun( arguments.runner, e );
+            case "pkgsearch": return pkgSearchFlow( arguments.runner, e );
+            case "catalog": return catalogFlow( arguments.runner, e );
+            case "open": detach( [ "xdg-open", e.url ] ); return 0;
+        }
+        if ( structKeyExists( e, "confirm" ) && !confirm( arguments.runner, e.confirm ) ) return 0;
+        return start( e );
+    }
+
+    // Search everything: one flat list of every entry's path; your provider filters as you type.
+    function searchAll( runner, entries ) {
+        var flat = flatten( arguments.entries );
+        var pick = arguments.runner.select( "Search", flat.map( function( f ) { return f.path; } ) );
+        if ( pick == 0 ) return 0;
+        return activate( arguments.runner, flat[ pick ].entry );
+    }
+
+    // Shows one level and follows the choice. Returns when the user goes back or cancels. The top level starts with Search.
+    function level( runner, title, entries, top = false ) {
         while ( true ) {
             var labels = arguments.entries.map( function( e ) { return e.label; } );
-            labels.append( arguments.title == "BxCachy" ? "Exit" : "Back" );
+            var off = 0;
+            if ( arguments.top ) { labels.prepend( "Search…" ); off = 1; }
+            labels.append( arguments.top ? "Exit" : "Back" );
             var pick = arguments.runner.select( arguments.title, labels );
             if ( pick == 0 || pick == labels.len() ) return 0;
-            var e = arguments.entries[ pick ];
+            if ( arguments.top && pick == 1 ) { var sc = searchAll( arguments.runner, arguments.entries ); if ( sc != 0 ) return sc; continue; }
+            var e = arguments.entries[ pick - off ];
             if ( e.kind == "sub" ) { var inner = level( arguments.runner, e.label, e.children ); if ( inner != 0 ) return inner; }
-            else if ( e.kind == "db" ) new bxcachy.Db( variables.cli, variables.inst.runner() ).menu();
-            else if ( e.kind == "webcreate" ) { var wc = createWebApp( arguments.runner ); if ( wc != 0 ) return wc; }
-            else if ( e.kind == "webrm" ) { var wr = removeWebApp( arguments.runner ); if ( wr != 0 ) return wr; }
-            else { var rc = start( e ); if ( rc != 0 ) return rc; }
+            else { var rc = activate( arguments.runner, e ); if ( rc != 0 ) return rc; }
         }
         return 0;
     }
@@ -199,7 +301,7 @@ class Menu {
     function run() {
         try {
             var runner = new bxcachy.Runner( variables.cli, variables.inst.runner() );
-            return level( runner, "BxCachy", tree() );
+            return level( runner, "BxCachy", tree(), true );
         } catch ( any err ) {
             println( "error: " & err.message );
             return 4;

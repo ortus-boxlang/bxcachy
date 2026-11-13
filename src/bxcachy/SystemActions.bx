@@ -1,0 +1,54 @@
+// `bxcachy system lock | suspend | logout | reboot | shutdown [--yes] [--dry-run]`: the session actions of Omarchy's System menu.
+// Inside Hyprland with Noctalia they go through its IPC (`noctalia msg session lock|suspend|logout|reboot|shutdown`, Noctalia docs v5);
+// anywhere else (Plasma, no Noctalia) through systemd: `loginctl lock-session`, `systemctl suspend|reboot|poweroff`,
+// `loginctl terminate-session $XDG_SESSION_ID`. Lock and suspend act at once. Logout, reboot and shutdown end your session, so they are a
+// plan until --yes. Exit: 0 done, 2 plan without --yes or bad usage, 4 nothing can do it here, 6 the command failed.
+class SystemActions {
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.inst = new bxcachy.Installer( arguments.runner );
+        return this;
+    }
+
+    function verbs() { return [ "lock", "suspend", "logout", "reboot", "shutdown" ]; }
+    function needsYes( verb ) { return arrayFind( [ "logout", "reboot", "shutdown" ], arguments.verb ) > 0; }
+
+    function say( code, data, asJson, lines = [], dry = false ) {
+        if ( arguments.asJson ) println( variables.cli.envelope( "system", arguments.code, arguments.data, arguments.dry ) );
+        else for ( var l in arguments.lines ) println( l );
+        return arguments.code;
+    }
+
+    function tryExec( argv, timeout = 30 ) {
+        try { return variables.inst.exec( arguments.argv, arguments.timeout ); } catch ( any e ) { return { exitCode: 127, output: e.message }; }
+    }
+
+    function has( name ) { return tryExec( [ "sh", "-c", 'command -v "$1"', "_", arguments.name ], 10 ).exitCode == 0; }
+
+    // The command for a verb: through Noctalia when it is the running shell, else systemd. Returns { argv, via } or an empty struct.
+    function command( verb ) {
+        var v = arguments.verb;
+        var hypr = len( getSystemSetting( "HYPRLAND_INSTANCE_SIGNATURE", "" ) ) > 0;
+        if ( hypr && has( "noctalia" ) ) return { argv: [ "noctalia", "msg", "session", v ], via: "noctalia" };
+        if ( v == "lock" ) return has( "loginctl" ) ? { argv: [ "loginctl", "lock-session" ], via: "systemd" } : {};
+        if ( v == "logout" ) {
+            var sid = getSystemSetting( "XDG_SESSION_ID", "" );
+            return has( "loginctl" ) && len( sid ) ? { argv: [ "loginctl", "terminate-session", sid ], via: "systemd" } : {};
+        }
+        if ( !has( "systemctl" ) ) return {};
+        return { argv: [ "systemctl", v == "shutdown" ? "poweroff" : v ], via: "systemd" };
+    }
+
+    function run( verb, yes, dryRun, asJson ) {
+        if ( !arrayFind( verbs(), arguments.verb ) ) return say( 2, { error: "unknown action " & arguments.verb }, arguments.asJson, [ "Usage: bxcachy system lock|suspend|logout|reboot|shutdown [--yes] [--dry-run] | update [--yes]" ] );
+        var c = command( arguments.verb );
+        if ( structIsEmpty( c ) ) return say( 4, { error: "nothing here can do " & arguments.verb }, arguments.asJson, [ "error: " & arguments.verb & " needs Noctalia (in Hyprland) or systemd (loginctl, systemctl), and neither was found" ] );
+        var data = { action: arguments.verb, via: c.via, command: c.argv.toList( " " ) };
+        if ( arguments.dryRun || ( needsYes( arguments.verb ) && !arguments.yes ) ) {
+            var dry = arguments.dryRun;
+            return say( dry ? 0 : 2, data, arguments.asJson, [ ( dry ? "Dry run" : "Plan" ) & ": " & arguments.verb & " with `" & data.command & "`" & ( needsYes( arguments.verb ) ? " (ends your session)" : "" ), dry ? "Nothing was changed." : "Nothing was changed. Add --yes to apply." ], dry );
+        }
+        var r = tryExec( c.argv, 30 );
+        return say( r.exitCode == 0 ? 0 : 6, data, arguments.asJson, [ r.exitCode == 0 ? arguments.verb & ": done" : "error: " & arguments.verb & " failed: " & trim( r.output ) ] );
+    }
+}

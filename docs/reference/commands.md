@@ -143,7 +143,7 @@ bxcachy layout [toggle|float|tile|status] [--dry-run] [--json]
 ### `bxcachy menu`
 
 ```text
-bxcachy menu | menu items [--json]
+bxcachy menu | menu items [--json] | menu search TEXT [--json]
 ```
 
 ### `bxcachy nightshift`
@@ -156,6 +156,12 @@ bxcachy nightshift [on|off|toggle|status] [--location=LAT,LON] [--json]
 
 ```text
 bxcachy notify dnd on|off|toggle|status | snooze [30m|2h|90s|off] | clear [--history] [--json]
+```
+
+### `bxcachy pkg`
+
+```text
+bxcachy pkg search TEXT [--source=all|repo|aur] [--limit=N] | info NAME | installed [--explicit] | install NAME... [--aur] [--yes] [--dry-run] | remove NAME... [--yes] [--dry-run] [--json]
 ```
 
 ### `bxcachy plasma`
@@ -239,7 +245,7 @@ bxcachy strata integrations [--dry-run] [--json]
 ### `bxcachy system`
 
 ```text
-bxcachy system update [--yes] [--json]
+bxcachy system update [--yes] | lock | suspend | logout|reboot|shutdown [--yes] [--dry-run] [--json]
 ```
 
 ### `bxcachy theme`
