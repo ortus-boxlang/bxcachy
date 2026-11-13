@@ -882,6 +882,21 @@
      "note": "It needs a terminal (also available as bxtimemachine). Restore, export, send and back up now show the plan first and change nothing until you press y. --local skips the network targets so it opens at once; --demo shows made-up data and runs nothing."
     },
     {
+     "name": "java",
+     "summary": "Your Java homes: list them, install a Temurin JDK, choose the default for new shells.",
+     "usage": [
+      "java list | available | install MAJOR [--yes] [--dry-run] | default ID|MAJOR [--yes] | default --unset [--yes] | remove ID [--yes] | env [ID|MAJOR] [--json]"
+     ],
+     "examples": [
+      "bxcachy java list",
+      "bxcachy java install 21 --yes",
+      "bxcachy java default 21 --yes",
+      "bxcachy java env 17"
+     ],
+     "mutates": true,
+     "note": "Homes come from BxCachy installs (~/.local/share/bxcachy/java), SDKMAN and /usr/lib/jvm. Only BxCachy's own installs are ever deleted. The default is written to java.sh and java.fish, which the shell starters source, so run bxcachy refresh shell once on an existing setup."
+    },
+    {
      "name": "tui",
      "summary": "Control Center: every BxCachy screen in one terminal, starting with the Dashboard.",
      "usage": [

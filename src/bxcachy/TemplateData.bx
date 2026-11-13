@@ -628,7 +628,9 @@ command -v zoxide >/dev/null && eval "$(zoxide init zsh)"
 ## Starship prompt (the same prompt in every shell; config: ~/.config/starship.toml)
 command -v starship >/dev/null && eval "$(starship init zsh)"
 ## API keys: per-command loaders written by `bxcachy secrets` (no values in this file)
-[ -r "${XDG_CONFIG_HOME:-$HOME/.config}/bxcachy/secrets.sh" ] && . "${XDG_CONFIG_HOME:-$HOME/.config}/bxcachy/secrets.sh"' & chr( 10 );
+[ -r "${XDG_CONFIG_HOME:-$HOME/.config}/bxcachy/secrets.sh" ] && . "${XDG_CONFIG_HOME:-$HOME/.config}/bxcachy/secrets.sh"
+## Java: the default home chosen with `bxcachy java default` (no file, no change)
+[ -r "${XDG_CONFIG_HOME:-$HOME/.config}/bxcachy/java.sh" ] && . "${XDG_CONFIG_HOME:-$HOME/.config}/bxcachy/java.sh"' & chr( 10 );
             case "shell.bash":
                 return '## BxCachy shell setup for bash (managed by `bxcachy setup shell`; your own settings belong in ~/.bashrc).
 HISTSIZE=50000
@@ -642,7 +644,9 @@ command -v zoxide >/dev/null && eval "$(zoxide init bash)"
 ## Starship prompt (the same prompt in every shell; config: ~/.config/starship.toml)
 command -v starship >/dev/null && eval "$(starship init bash)"
 ## API keys: per-command loaders written by `bxcachy secrets` (no values in this file)
-[ -r "${XDG_CONFIG_HOME:-$HOME/.config}/bxcachy/secrets.sh" ] && . "${XDG_CONFIG_HOME:-$HOME/.config}/bxcachy/secrets.sh"' & chr( 10 );
+[ -r "${XDG_CONFIG_HOME:-$HOME/.config}/bxcachy/secrets.sh" ] && . "${XDG_CONFIG_HOME:-$HOME/.config}/bxcachy/secrets.sh"
+## Java: the default home chosen with `bxcachy java default` (no file, no change)
+[ -r "${XDG_CONFIG_HOME:-$HOME/.config}/bxcachy/java.sh" ] && . "${XDG_CONFIG_HOME:-$HOME/.config}/bxcachy/java.sh"' & chr( 10 );
             case "shell.fish":
                 return '## BxCachy shell setup for fish (managed by `bxcachy setup shell`; your own settings belong in ~/.config/fish/config.fish).
 ## Fish has autosuggestions, syntax highlighting and completions built in.
@@ -654,7 +658,8 @@ if status is-interactive
 end
 ## API keys: per-command loaders written by `bxcachy secrets` (no values in this file)
 set -l bxc_cfg $HOME/.config; set -q XDG_CONFIG_HOME; and set bxc_cfg $XDG_CONFIG_HOME
-test -r "$bxc_cfg/bxcachy/secrets.fish"; and source "$bxc_cfg/bxcachy/secrets.fish"' & chr( 10 );
+test -r "$bxc_cfg/bxcachy/secrets.fish"; and source "$bxc_cfg/bxcachy/secrets.fish"
+test -r "$bxc_cfg/bxcachy/java.fish"; and source "$bxc_cfg/bxcachy/java.fish"' & chr( 10 );
             case "nvim/lua/config/bxcachy.lua":
                 return '-- Written by bxcachy (editor lazyvim). Loaded from options.lua. Rewritten by `bxcachy editor refresh`; keep your own changes in options.lua.
 vim.opt.relativenumber = false

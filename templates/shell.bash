@@ -11,3 +11,5 @@ command -v zoxide >/dev/null && eval "$(zoxide init bash)"
 command -v starship >/dev/null && eval "$(starship init bash)"
 # API keys: per-command loaders written by `bxcachy secrets` (no values in this file)
 [ -r "${XDG_CONFIG_HOME:-$HOME/.config}/bxcachy/secrets.sh" ] && . "${XDG_CONFIG_HOME:-$HOME/.config}/bxcachy/secrets.sh"
+# Java: the default home chosen with `bxcachy java default` (no file, no change)
+[ -r "${XDG_CONFIG_HOME:-$HOME/.config}/bxcachy/java.sh" ] && . "${XDG_CONFIG_HOME:-$HOME/.config}/bxcachy/java.sh"

@@ -37,8 +37,28 @@ class ControlCenter {
         return out;
     }
 
+    // Runs a program (argv array) and returns { exitCode, output }.
+    function runArgv( argv ) {
+        var rest = [];
+        for ( var i = 2; i <= arguments.argv.len(); i++ ) rest.append( arguments.argv[ i ] );
+        try { return systemExecute( arguments.argv[ 1 ], rest, 1800, true ); } catch ( any e ) { return { exitCode: 127, output: e.message }; }
+    }
+
     function handle( app, intent ) {
-        if ( !structCount( arguments.intent ) || arguments.intent.action != "cli" ) return;
+        if ( !structCount( arguments.intent ) ) return;
+        // exec: any program, with a plan written by the page (no --dry-run exists for it). readonly: run at once and show the output.
+        if ( arguments.intent.action == "exec" ) {
+            if ( !structKeyExists( arguments.intent, "confirmed" ) ) { arguments.app.showPlan( arguments.intent.title, arguments.intent.plan, arguments.intent ); return; }
+            var xr = runArgv( arguments.intent.argv );
+            arguments.app.showResult( arguments.intent.title & ( xr.exitCode == 0 ? ": done" : ": failed (exit " & xr.exitCode & ")" ), listToArray( trim( xr.output ), chr( 10 ) ) );
+            return;
+        }
+        if ( arguments.intent.action == "show" ) {
+            var sr = structKeyExists( arguments.intent, "argv" ) ? runArgv( arguments.intent.argv ) : runCli( arguments.intent.args );
+            arguments.app.showResult( arguments.intent.title, listToArray( trim( sr.output ), chr( 10 ) ) );
+            return;
+        }
+        if ( arguments.intent.action != "cli" ) return;
         var args = arguments.intent.args;
         if ( !structKeyExists( arguments.intent, "confirmed" ) ) {
             var r = runCli( withFlag( args, "--dry-run" ) );
