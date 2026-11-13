@@ -2,6 +2,7 @@
 //   backup config ...      see BackupConfig
 //   backup snapshots ...   see BackupSnapshots
 //   backup data ...        see BackupData
+//   backup send|export ... see BackupMove
 // More layers are added as they are built. Exit codes are the ones of each layer.
 class Backup {
     function init( cli, runner = "" ) {
@@ -15,9 +16,11 @@ class Backup {
         var rest = [];
         for ( var i = 2; i <= arguments.words.len(); i++ ) rest.append( arguments.words[ i ] );
         if ( layer == "config" ) return new bxcachy.BackupConfig( variables.cli, variables.runner ).run( rest, arguments.opts, arguments.yes, arguments.dry, arguments.asJson );
+        if ( layer == "send" ) return new bxcachy.BackupMove( variables.cli, variables.runner ).sendCmd( rest, arguments.opts, arguments.yes, arguments.dry, arguments.asJson );
+        if ( layer == "export" ) return new bxcachy.BackupMove( variables.cli, variables.runner ).exportCmd( rest, arguments.opts, arguments.yes, arguments.dry, arguments.asJson );
         if ( layer == "data" ) return new bxcachy.BackupData( variables.cli, variables.runner ).run( rest, arguments.opts, arguments.yes, arguments.dry, arguments.asJson );
         if ( layer == "snapshots" ) return new bxcachy.BackupSnapshots( variables.cli, variables.runner ).run( rest, arguments.opts, arguments.yes, arguments.dry, arguments.asJson );
-        var msg = "Usage: bxcachy backup config ... | snapshots ... | data ...";
+        var msg = "Usage: bxcachy backup config ... | snapshots ... | data ... | send ... | export ...";
         if ( arguments.asJson ) println( variables.cli.envelope( "backup", 2, { error: msg } ) ); else println( msg );
         return 2;
     }

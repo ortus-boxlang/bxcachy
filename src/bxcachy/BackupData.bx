@@ -57,7 +57,7 @@ class BackupData {
         if ( !structKeyExists( s, "targets" ) ) s.targets = {};
         if ( !structKeyExists( s, "data" ) ) s.data = {};
         var d = s.data;
-        if ( !structKeyExists( d, "include" ) ) d.include = [ "Projects", "code", "dev", "Documents", ".ssh" ];
+        if ( !structKeyExists( d, "include" ) ) d.include = [ "Projects", "code", "dev", "Documents", ".ssh", ".local/share/bxcachy/backups/config" ];
         if ( !structKeyExists( d, "exclude" ) ) d.exclude = [ "node_modules", "target", ".gradle", "__pycache__", ".venv", "venv", ".cache", ".next", "*.tmp" ];
         if ( !structKeyExists( d, "retention" ) ) d.retention = { daily: 7, weekly: 4, monthly: 6 };
         if ( !structKeyExists( d, "schedule" ) ) d.schedule = "off";
