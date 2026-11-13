@@ -994,6 +994,9 @@ bxcachy backup data list [--target=NAME] | files ID [PATH] | restore ID --to=DIR
 bxcachy backup data verify [--deep] | forget [--yes] | retention [--daily=N --weekly=N --monthly=N]
 bxcachy backup data schedule hourly|daily|off|status [--yes]
 bxcachy backup data include|exclude add|remove PATH_OR_PATTERN
+bxcachy backup send ID|all --to=TARGET [--from=TARGET] [--yes]
+bxcachy backup export data ID --to=FILE.tar|FILE.zip [--path=/PATH] [--target=NAME] [--yes]
+bxcachy backup export config ID --to=FILE.tar.gz [--yes]
 ```
 
 Changes the system: needs `--yes`. Without it you get the plan (exit 2); `--dry-run` shows it and exits 0.
@@ -1012,6 +1015,9 @@ bxcachy backup data init do --yes
 bxcachy backup data run --yes
 bxcachy backup data schedule daily --yes
 bxcachy backup data restore latest --to=~/restored --yes
+bxcachy backup send latest --from=usb --to=do --yes
+bxcachy backup export data latest --to=~/projects.zip --path=/home/me/Projects --yes
+bxcachy backup export config 20261113T153000 --to=~/my-setup.tar.gz --yes
 ```
 
 > A config snapshot is taken by itself before update, system update, init, reinstall and refresh (turn it off with backup config auto off). Secrets and SSH keys are never in it unless you add --with-secrets, which stores your secrets export, encrypted with a passphrase you type.
