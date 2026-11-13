@@ -30,3 +30,4 @@
 - [Troubleshooting](https://bxcachy.boxlang.io/guides/troubleshooting.md) ([HTML](https://bxcachy.boxlang.io/guides/troubleshooting/index.html))
 - [Contributing and docs versions](https://bxcachy.boxlang.io/guides/contributing.md) ([HTML](https://bxcachy.boxlang.io/guides/contributing/index.html))
 - [Architecture](https://bxcachy.boxlang.io/architecture/index.md) ([HTML](https://bxcachy.boxlang.io/architecture/index.html))
+- [Control Center](https://bxcachy.boxlang.io/guides/control-center.md) ([HTML](https://bxcachy.boxlang.io/guides/control-center/index.html))

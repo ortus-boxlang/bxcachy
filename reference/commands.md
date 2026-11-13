@@ -53,7 +53,7 @@ Settings that only touch your own config (a theme, the bar, the font) act at onc
 
 **Look and feel**: [`theme`](#bxcachy-theme), [`appearance`](#bxcachy-appearance), [`display`](#bxcachy-display), [`power`](#bxcachy-power), [`time`](#bxcachy-time), [`toggle`](#bxcachy-toggle), [`nightshift`](#bxcachy-nightshift), [`notify`](#bxcachy-notify)
 
-**System and security**: [`system`](#bxcachy-system), [`security`](#bxcachy-security), [`dns`](#bxcachy-dns), [`kernel`](#bxcachy-kernel), [`ssh`](#bxcachy-ssh), [`secrets`](#bxcachy-secrets), [`vpn`](#bxcachy-vpn), [`cloud`](#bxcachy-cloud), [`settings`](#bxcachy-settings), [`dotfiles`](#bxcachy-dotfiles), [`nas`](#bxcachy-nas), [`backup`](#bxcachy-backup), [`timemachine`](#bxcachy-timemachine), [`bxtimemachine`](#bxcachy-bxtimemachine)
+**System and security**: [`system`](#bxcachy-system), [`security`](#bxcachy-security), [`dns`](#bxcachy-dns), [`kernel`](#bxcachy-kernel), [`ssh`](#bxcachy-ssh), [`secrets`](#bxcachy-secrets), [`vpn`](#bxcachy-vpn), [`cloud`](#bxcachy-cloud), [`settings`](#bxcachy-settings), [`dotfiles`](#bxcachy-dotfiles), [`nas`](#bxcachy-nas), [`backup`](#bxcachy-backup), [`timemachine`](#bxcachy-timemachine), [`tui`](#bxcachy-tui), [`bxtimemachine`](#bxcachy-bxtimemachine)
 
 **Develop**: [`boxlang`](#bxcachy-boxlang), [`editor`](#bxcachy-editor), [`db`](#bxcachy-db), [`containers`](#bxcachy-containers), [`vm`](#bxcachy-vm), [`ai`](#bxcachy-ai), [`skills`](#bxcachy-skills)
 
@@ -1040,6 +1040,22 @@ bxcachy timemachine --demo
 ```
 
 > It needs a terminal (also available as bxtimemachine). Restore, export, send and back up now show the plan first and change nothing until you press y. --local skips the network targets so it opens at once; --demo shows made-up data and runs nothing.
+
+### `bxcachy tui` {#bxcachy-tui}
+
+Control Center: every BxCachy screen in one terminal, starting with the Dashboard.
+
+```text
+bxcachy tui [PAGE] [--demo] [--json]
+```
+
+```bash
+bxcachy tui
+bxcachy tui dashboard --json
+bxcachy tui --demo
+```
+
+> It needs a terminal. The sidebar lists the pages; Tab switches page, q leaves. The Dashboard shows what needs attention, system meters, what runs and your backups, and Enter on a warning shows the plan of the fix before anything changes. --json prints a page's data without a terminal; --demo shows made-up data and runs nothing.
 
 ### `bxcachy bxtimemachine` {#bxcachy-bxtimemachine}
 

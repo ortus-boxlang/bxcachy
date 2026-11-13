@@ -32,6 +32,10 @@ The control center: search every setting, install any package, change the look, 
 Your setup, your system and your files, backed up to a NAS or the cloud, and one screen to go back through time.
 :::
 
+::: card title="Control Center" href="guides/control-center.md"
+One terminal for your machine: what needs attention, what runs and how fresh your backups are.
+:::
+
 ::: card title="Every app, your choice" href="guides/apps.md"
 A curated catalog of 280 apps and web apps, with one-click Google, Microsoft and Apple suites.
 :::
