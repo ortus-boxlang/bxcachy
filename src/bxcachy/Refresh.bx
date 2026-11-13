@@ -1,0 +1,145 @@
+// `bxcachy refresh COMPONENT`: put a managed config back to what BxCachy ships, with a backup, without installing anything.
+//   refresh hyprland [--starter]   the generated Hyprland module (shortcuts), look.lua and monitors.lua; --starter also the starter hyprland.lua
+//   refresh noctalia [--starter]   the theme palette, the saved appearance settings pushed again; --starter also the Noctalia config.toml
+//   refresh terminals              the terminal starters (ghostty, kitty, foot, ...) and the theme includes, for the terminals you have
+//   refresh shell                  the Starship config and the shell init (the line in .zshrc or .bashrc)
+//   refresh nvim                   the BxCachy layer of the Neovim config
+//   refresh theme                  the current theme, applied again everywhere
+//   refresh all                    all of the above
+//   refresh list                   the components and what each owns
+// Every file goes through the config service: clean files are left alone, missing or outdated ones are written, and one you edited is KEPT
+// (reported as drifted) unless you add --force, which overwrites it after taking a backup (`config history`, `config restore`).
+// A plan without --yes (exit 2); --dry-run shows it and exits 0. Packages are never installed: `bxcachy init --rerun` (alias `reinstall`) does that.
+// Exit: 0 done (or nothing to do), 2 plan or bad usage, 4 precondition, 6 a command failed.
+class Refresh {
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.inst = new bxcachy.Installer( arguments.runner );
+        variables.cfg = new bxcachy.ConfigService().quiet( true );
+        return this;
+    }
+
+    function self() { return getSystemSetting( "BXCACHY_SELF", "bxcachy" ); }
+    function home() { return getSystemSetting( "HOME", "" ); }
+
+    function tryExec( argv, timeout = 60 ) {
+        try { return variables.inst.exec( arguments.argv, arguments.timeout ); } catch ( any e ) { return { exitCode: 127, output: e.message }; }
+    }
+
+    function has( name ) { return tryExec( [ "sh", "-c", 'command -v "$1"', "_", arguments.name ], 10 ).exitCode == 0; }
+    function say( code, data, asJson, lines = [], dry = false ) {
+        if ( arguments.asJson ) println( variables.cli.envelope( "refresh", arguments.code, arguments.data, arguments.dry ) );
+        else for ( var l in arguments.lines ) println( l );
+        return arguments.code;
+    }
+    function fail( code, msg, asJson ) { return say( arguments.code, { error: arguments.msg }, arguments.asJson, [ "error: " & arguments.msg ] ); }
+
+    function components() {
+        return [
+            { id: "hyprland", owns: "hypr/bxcachy.lua (shortcuts), theme/look.lua, theme/monitors.lua; with --starter also hypr/hyprland.lua" },
+            { id: "noctalia", owns: "the theme palette and your saved appearance settings; with --starter also noctalia/config.toml" },
+            { id: "terminals", owns: "the starter configs of the terminals you have, and the theme includes" },
+            { id: "shell", owns: "starship.toml, the shell init and its line in .zshrc or .bashrc" },
+            { id: "nvim", owns: "the BxCachy layer of the Neovim config" },
+            { id: "theme", owns: "the current theme, applied again everywhere" }
+        ];
+    }
+
+    // One unit of work: an entry (a file) or a command.
+    function entryUnit( component, e ) {
+        var st = variables.cfg.configState( arguments.e );
+        return { kind: "file", component: arguments.component, name: arguments.e.name, target: arguments.e.target, state: st, entry: arguments.e };
+    }
+
+    function cmdUnit( component, title, argv ) { return { kind: "command", component: arguments.component, name: arguments.title, argv: arguments.argv }; }
+
+    function currentTheme() {
+        try { var t = new bxcachy.Theme( variables.cli ).readState().name; return len( t ) ? t : "bxcachy"; } catch ( any e ) { return "bxcachy"; }
+    }
+
+    function unitsFor( component, opts ) {
+        var u = [];
+        var c = arguments.component;
+        var starter = structKeyExists( arguments.opts, "starter" );
+        var cfgHome = variables.cfg.cfgHome();
+        if ( c == "hyprland" ) {
+            u.append( cmdUnit( c, "the shortcut module (keys apply)", [ self(), "keys", "apply" ] ) );
+            u.append( cmdUnit( c, "look.lua (appearance apply)", [ self(), "appearance", "apply" ] ) );
+            u.append( cmdUnit( c, "monitors.lua (display apply)", [ self(), "display", "apply" ] ) );
+            if ( starter ) for ( var e in new bxcachy.Starter( true ).entries() ) if ( e.name == "hyprland" ) u.append( entryUnit( c, e ) );
+        } else if ( c == "noctalia" ) {
+            u.append( cmdUnit( c, "the palette (theme set " & currentTheme() & ")", [ self(), "theme", "set", currentTheme() ] ) );
+            u.append( cmdUnit( c, "your appearance settings (appearance apply)", [ self(), "appearance", "apply" ] ) );
+            if ( starter ) for ( var n in new bxcachy.Starter( true ).entries() ) if ( n.name != "hyprland" ) u.append( entryUnit( c, n ) );
+        } else if ( c == "terminals" ) {
+            var tc = new bxcachy.TerminalConfig( true );
+            var ids = [];
+            for ( var t in tc.terminals() ) if ( has( t.cmd ) ) ids.append( t.id );
+            for ( var te in tc.entries( ids, cfgHome ) ) u.append( entryUnit( c, te ) );
+            u.append( cmdUnit( c, "the theme includes (theme set " & currentTheme() & ")", [ self(), "theme", "set", currentTheme() ] ) );
+        } else if ( c == "shell" ) {
+            var sc = new bxcachy.ShellConfig( true );
+            var sh = listLast( getSystemSetting( "SHELL", "/usr/bin/zsh" ), "/" );
+            if ( !arrayFind( sc.shells(), sh ) ) sh = sc.defaultShell();
+            var rcFile = home() & "/" & ( sh == "zsh" ? ".zshrc" : ".bashrc" );
+            var rcText = ( sh != "fish" && fileExists( rcFile ) ) ? fileRead( rcFile ) : "";
+            for ( var se in sc.entries( sh, cfgHome, home(), rcText ) ) u.append( entryUnit( c, se ) );
+        } else if ( c == "nvim" ) {
+            u.append( cmdUnit( c, "the Neovim layer (editor refresh)", [ self(), "editor", "refresh" ] ) );
+        } else if ( c == "theme" ) {
+            u.append( cmdUnit( c, "theme set " & currentTheme(), [ self(), "theme", "set", currentTheme() ] ) );
+            u.append( cmdUnit( c, "appearance apply", [ self(), "appearance", "apply" ] ) );
+        }
+        return u;
+    }
+
+    // What would happen to a file unit, in words.
+    function verdict( state, force ) {
+        if ( arguments.state == "clean" ) return "unchanged";
+        if ( arguments.state == "drifted" ) return arguments.force ? "overwritten (a backup is kept)" : "kept: you edited it (--force overwrites it, with a backup)";
+        if ( arguments.state == "blocked" ) return "blocked: a link or special file is in the way";
+        return arguments.state == "missing" ? "written" : "rewritten (outdated)";
+    }
+
+    function run( words, opts = {}, yes = false, dry = false, force = false, asJson = false ) {
+        var what = arguments.words.len() == 1 ? arguments.words[ 1 ] : "";
+        var ids = components().map( function( x ) { return x.id; } );
+        if ( what == "list" ) return say( 0, { components: components() }, arguments.asJson, components().map( function( x ) { return x.id & "   " & x.owns; } ) );
+        if ( what != "all" && !arrayFind( ids, what ) ) return fail( 2, "Usage: bxcachy refresh " & ids.toList( "|" ) & "|all|list [--starter] [--force] [--yes] [--dry-run]", arguments.asJson );
+        if ( variables.inst.isRoot() ) return fail( 4, "run as a regular user: these are your own files", arguments.asJson );
+        var comps = what == "all" ? ids : [ what ];
+        var units = [];
+        for ( var c in comps ) for ( var x in unitsFor( c, arguments.opts ) ) units.append( x );
+        var rows = units.map( function( x ) { return x.kind == "file" ? { component: x.component, kind: "file", name: x.name, target: x.target, state: x.state, result: verdict( x.state, force ) } : { component: x.component, kind: "command", name: x.name, result: "runs: " & x.argv.toList( " " ) }; } );
+        if ( !arguments.yes || arguments.dry ) {
+            var lines = [ ( arguments.dry ? "Dry run: " : "Plan: " ) & "refresh " & what ];
+            for ( var r in rows ) lines.append( "  " & r.component & ": " & r.name & ( r.kind == "file" ? " -> " & r.target : "" ) & "   " & r.result );
+            lines.append( arguments.dry ? "Nothing was changed." : "Nothing was changed. Add --yes to apply." );
+            return say( arguments.dry ? 0 : 2, { component: what, units: rows, force: arguments.force }, arguments.asJson, lines, arguments.dry );
+        }
+        var done = [];
+        var kept = [];
+        var failed = [];
+        for ( var u in units ) {
+            if ( u.kind == "file" ) {
+                if ( u.state == "clean" ) continue;
+                var code = variables.cfg.configApply( u.entry, true, false, arguments.force );
+                if ( code == 0 ) done.append( u.name );
+                else if ( code == 8 && u.state == "drifted" ) kept.append( u.name );
+                else failed.append( u.name );
+            } else {
+                var argv = duplicate( u.argv );
+                if ( u.argv[ 2 ] == "keys" || u.argv[ 2 ] == "editor" ) { argv.append( "--yes" ); if ( arguments.force ) argv.append( "--force" ); }
+                var rr = tryExec( argv, 300 );
+                if ( rr.exitCode == 0 ) done.append( u.name ); else failed.append( u.name & " (exit " & rr.exitCode & ")" );
+            }
+        }
+        if ( ( what == "noctalia" || what == "all" ) && has( "noctalia" ) ) tryExec( [ "noctalia", "msg", "config-reload" ], 15 );
+        var out = [];
+        for ( var d in done ) out.append( "refreshed: " & d );
+        for ( var k in kept ) out.append( "kept (you edited it): " & k & "   run with --force to overwrite it, a backup is taken" );
+        for ( var f in failed ) out.append( "failed: " & f );
+        if ( !out.len() ) out.append( "Everything was already as BxCachy ships it." );
+        return say( failed.len() ? 6 : 0, { component: what, refreshed: done, kept: kept, failed: failed }, arguments.asJson, out );
+    }
+}

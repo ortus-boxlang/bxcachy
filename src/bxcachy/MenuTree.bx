@@ -232,6 +232,15 @@ class MenuTree {
                 sub( "Notifications", [
                     run( "On", [ "update", "notifications", "on" ] ),
                     run( "Off", [ "update", "notifications", "off" ] )
+                ] ),
+                sub( "Refresh a config to the default", [
+                    run( "Hyprland", [ "refresh", "hyprland", "--yes" ] ),
+                    run( "Noctalia", [ "refresh", "noctalia", "--yes" ] ),
+                    run( "Terminals", [ "refresh", "terminals", "--yes" ] ),
+                    run( "Shell and prompt", [ "refresh", "shell", "--yes" ] ),
+                    run( "Neovim layer", [ "refresh", "nvim", "--yes" ] ),
+                    run( "Theme", [ "refresh", "theme", "--yes" ] ),
+                    run( "Everything", [ "refresh", "all", "--yes" ] )
                 ] )
             ] ),
             sub( "Develop", [

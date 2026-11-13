@@ -45,7 +45,7 @@ Settings that only touch your own config (a theme, the bar, the font) act at onc
 
 ## All commands
 
-**Start here**: [`init`](#bxcachy-init), [`wizard`](#bxcachy-wizard), [`status`](#bxcachy-status), [`doctor`](#bxcachy-doctor), [`update`](#bxcachy-update), [`version`](#bxcachy-version), [`menu`](#bxcachy-menu), [`apps`](#bxcachy-apps), [`help`](#bxcachy-help)
+**Start here**: [`init`](#bxcachy-init), [`refresh`](#bxcachy-refresh), [`reinstall`](#bxcachy-reinstall), [`wizard`](#bxcachy-wizard), [`status`](#bxcachy-status), [`doctor`](#bxcachy-doctor), [`update`](#bxcachy-update), [`version`](#bxcachy-version), [`menu`](#bxcachy-menu), [`apps`](#bxcachy-apps), [`help`](#bxcachy-help)
 
 **Install and remove**: [`install`](#bxcachy-install), [`remove`](#bxcachy-remove), [`pkg`](#bxcachy-pkg), [`catalog`](#bxcachy-catalog), [`plan`](#bxcachy-plan), [`install-plan`](#bxcachy-install-plan), [`optional-plan`](#bxcachy-optional-plan), [`profile-plan`](#bxcachy-profile-plan), [`profile-install-plan`](#bxcachy-profile-install-plan), [`profile-install`](#bxcachy-profile-install), [`optional-install`](#bxcachy-optional-install), [`profile-list`](#bxcachy-profile-list), [`optional-list`](#bxcachy-optional-list), [`desktop-list`](#bxcachy-desktop-list), [`tui-list`](#bxcachy-tui-list), [`web-list`](#bxcachy-web-list), [`package-status`](#bxcachy-package-status), [`package-source`](#bxcachy-package-source), [`dev-plan`](#bxcachy-dev-plan), [`prerequisites`](#bxcachy-prerequisites), [`apps-doctor`](#bxcachy-apps-doctor), [`web`](#bxcachy-web), [`toolchain`](#bxcachy-toolchain)
 
@@ -78,6 +78,40 @@ bxcachy init
 bxcachy init --answers=answers.json --yes
 bxcachy init --print-answers --from-system --json
 ```
+
+### `bxcachy refresh` {#bxcachy-refresh}
+
+Put a managed config back to what BxCachy ships, with a backup first and without installing anything.
+
+```text
+bxcachy refresh hyprland|noctalia|terminals|shell|nvim|theme|all [--starter] [--force] [--yes] [--dry-run] [--json]
+bxcachy refresh list [--json]
+```
+
+Changes the system: needs `--yes`. Without it you get the plan (exit 2); `--dry-run` shows it and exits 0.
+
+```bash
+bxcachy refresh list
+bxcachy refresh terminals --dry-run
+bxcachy refresh hyprland --yes
+bxcachy refresh shell --yes --force
+```
+
+> A file you edited is kept and reported; --force overwrites it after a backup (see config history and config restore). --starter also rewrites the starter hyprland.lua or Noctalia config.toml, which are yours.
+
+### `bxcachy reinstall` {#bxcachy-reinstall}
+
+Run the setup wizard again from your saved answers (the same as init --rerun).
+
+```text
+bxcachy reinstall [--yes] [--dry-run] [--json]
+```
+
+```bash
+bxcachy reinstall
+```
+
+> This is the way to install packages again. refresh only puts config files back.
 
 ### `bxcachy wizard` {#bxcachy-wizard}
 

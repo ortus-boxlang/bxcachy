@@ -15,7 +15,7 @@ class {
         var config = new bxcachy.ConfigService();
         // One shared flag check for every command: unknown flags are usage errors and nothing runs.
         for ( var flag in args.options ) {
-            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider", "backend", "dir", "email", "region", "browser", "path", "from", "export", "from-system", "fresh", "rerun", "fix", "edit", "history", "out", "agenda", "without-weather", "desktops", "preset", "no-open", "location", "notify", "defaults", "tag", "mode", "keep-wallpaper", "version", "tag", "ram", "cpus", "disk", "memory", "share", "gpu", "web", "fullscreen", "limit", "explicit", "aur", "list", "host", "protocol", "user", "vers", "to", "delete" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
+            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider", "backend", "dir", "email", "region", "browser", "path", "from", "export", "from-system", "fresh", "rerun", "fix", "edit", "history", "out", "agenda", "without-weather", "desktops", "preset", "no-open", "location", "notify", "defaults", "tag", "mode", "keep-wallpaper", "version", "tag", "ram", "cpus", "disk", "memory", "share", "gpu", "web", "fullscreen", "limit", "explicit", "aur", "list", "host", "protocol", "user", "vers", "to", "delete", "starter" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
                 println( "Unknown option: --" & flag );
                 CLIExit( 2 );
             }
@@ -510,6 +510,12 @@ class {
           for ( nsi = 2; nsi <= p.len(); nsi++ ) nsWords.append( p[ nsi ] );
           CLIExit( new bxcachy.Nas( cli ).run( nsWords, args.options, structKeyExists( args.options, "dry-run" ), structKeyExists( args.options, "yes" ), asJson ) );
           break;
+         case "refresh":
+          // Put a managed config back to what BxCachy ships (a backup first; your edits are kept unless --force). See COMMAND-CONTRACT.md 13.42.
+          rfWords = [];
+          for ( rfi = 2; rfi <= p.len(); rfi++ ) rfWords.append( p[ rfi ] );
+          CLIExit( new bxcachy.Refresh( cli ).run( rfWords, args.options, structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), structKeyExists( args.options, "force" ), asJson ) );
+          break;
          case "vm":
           // Windows and Linux desktops in containers. See COMMAND-CONTRACT.md 13.33.
           vmSub = p.len() >= 2 ? p[2] : "list";
@@ -809,8 +815,10 @@ class {
           }
           CLIExit( new bxcachy.Setup( cli ).node( structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
           break;
+         case "reinstall":
          case "init":
           // The setup wizard and what it runs. init (needs a terminal) | init --answers=FILE [--yes] [--dry-run] [--json] | init --print-answers.
+          if ( cmd == "reinstall" ) args.options.rerun = true;
           if ( p.len() != 1 ) {
            println( "Usage: bxcachy init [--from=FILE] [--fresh | --rerun] | init --answers=FILE [--yes] [--dry-run] [--json] | init --print-answers [--from-system] [--json] | init --export=FILE [--force]" );
            CLIExit( 2 );

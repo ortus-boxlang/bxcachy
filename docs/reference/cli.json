@@ -19,6 +19,34 @@
      "mutates": true
     },
     {
+     "name": "refresh",
+     "summary": "Put a managed config back to what BxCachy ships, with a backup first and without installing anything.",
+     "usage": [
+      "refresh hyprland|noctalia|terminals|shell|nvim|theme|all [--starter] [--force] [--yes] [--dry-run] [--json]",
+      "refresh list [--json]"
+     ],
+     "examples": [
+      "bxcachy refresh list",
+      "bxcachy refresh terminals --dry-run",
+      "bxcachy refresh hyprland --yes",
+      "bxcachy refresh shell --yes --force"
+     ],
+     "mutates": true,
+     "note": "A file you edited is kept and reported; --force overwrites it after a backup (see config history and config restore). --starter also rewrites the starter hyprland.lua or Noctalia config.toml, which are yours."
+    },
+    {
+     "name": "reinstall",
+     "summary": "Run the setup wizard again from your saved answers (the same as init --rerun).",
+     "usage": [
+      "reinstall [--yes] [--dry-run] [--json]"
+     ],
+     "examples": [
+      "bxcachy reinstall"
+     ],
+     "mutates": false,
+     "note": "This is the way to install packages again. refresh only puts config files back."
+    },
+    {
      "name": "wizard",
      "summary": "Wizard pieces for scripts: render the demo screens or a pages file.",
      "usage": [
