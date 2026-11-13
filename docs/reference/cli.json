@@ -762,6 +762,32 @@
       "bxcachy dotfiles apply https://github.com/me/dotfiles --yes"
      ],
      "mutates": true
+    },
+    {
+     "name": "nas",
+     "summary": "Your NAS boxes: find them, save their details, list shares, mount them (also automatically), test them, mirror folders to them, use one as a backup target.",
+     "usage": [
+      "nas setup [--yes]",
+      "nas discover [--json]",
+      "nas add NAME --host=H [--protocol=smb|nfs] [--user=U] [--vers=3.1.1] [--ask-password | --password-file=F]",
+      "nas list | show NAME | remove NAME [--yes]",
+      "nas shares NAME",
+      "nas mount|unmount NAME SHARE [--yes]",
+      "nas auto on|off NAME SHARE [--yes]",
+      "nas test NAME [SHARE]",
+      "nas sync NAME SRC --to=SHARE[/PATH] [--delete] [--yes]",
+      "nas use NAME SHARE [--path=bxcachy-backup]"
+     ],
+     "examples": [
+      "bxcachy nas discover",
+      "bxcachy nas add synology --host=ds920.local --user=me --ask-password",
+      "bxcachy nas shares synology",
+      "bxcachy nas mount synology backups --yes",
+      "bxcachy nas auto on synology backups --yes",
+      "bxcachy nas use synology backups"
+     ],
+     "mutates": true,
+     "note": "SMB mounts are made by root, so the password is also kept in /etc/bxcachy/nas/NAME.cred (mode 600); the plan says so. The SMB version is negotiated unless you give --vers. Nothing on the NAS is deleted unless you add --delete to a sync."
     }
    ]
   },
