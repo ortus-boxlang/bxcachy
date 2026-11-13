@@ -78,6 +78,35 @@ class MenuTree {
                     spawn( "Auto (day and night)", [ "theme", "mode", "auto" ] )
                 ] ),
                 run( "Theme status", [ "theme", "status" ] ),
+                pick( "Font", "fonts", [ "appearance", "font", "{}" ] ),
+                pick( "Install a font", "fonts-uninstalled", [ "appearance", "font", "install", "{}", "--yes" ], "run" ),
+                sub( "Background", [
+                    pick( "Pick", "backgrounds", [ "appearance", "background", "set", "{}" ] ),
+                    spawn( "Next", [ "appearance", "background", "next" ] ),
+                    spawn( "Random", [ "appearance", "background", "random" ] )
+                ] ),
+                sub( "Bar", [
+                    spawn( "Show", [ "appearance", "bar", "show" ] ), spawn( "Hide", [ "appearance", "bar", "hide" ] ), spawn( "Toggle", [ "appearance", "bar", "toggle" ] ),
+                    sub( "Position", [ spawn( "Top", [ "appearance", "bar", "position", "top" ] ), spawn( "Bottom", [ "appearance", "bar", "position", "bottom" ] ), spawn( "Left", [ "appearance", "bar", "position", "left" ] ), spawn( "Right", [ "appearance", "bar", "position", "right" ] ) ] ),
+                    sub( "Style", [ spawn( "Opaque", [ "appearance", "bar", "style", "opaque" ] ), spawn( "Glassy", [ "appearance", "bar", "style", "glassy" ] ), spawn( "Clear", [ "appearance", "bar", "style", "clear" ] ) ] ),
+                    sub( "Clock", [ spawn( "24 hour", [ "appearance", "bar", "clock", "time-24h" ] ), spawn( "12 hour", [ "appearance", "bar", "clock", "time-12h" ] ), spawn( "With the weekday", [ "appearance", "bar", "clock", "sunday-24h" ] ), spawn( "With the date", [ "appearance", "bar", "clock", "date-24h" ] ), spawn( "ISO date", [ "appearance", "bar", "clock", "iso" ] ) ] ),
+                    sub( "Battery percentage", [ spawn( "Show", [ "appearance", "bar", "battery", "on" ] ), spawn( "Hide", [ "appearance", "bar", "battery", "off" ] ) ] )
+                ] ),
+                sub( "Dock", [
+                    spawn( "Show", [ "appearance", "dock", "show" ] ), spawn( "Hide", [ "appearance", "dock", "hide" ] ), spawn( "Toggle", [ "appearance", "dock", "toggle" ] ),
+                    sub( "Mode", [ spawn( "Always visible", [ "appearance", "dock", "mode", "always" ] ), spawn( "Auto hide", [ "appearance", "dock", "mode", "autohide" ] ), spawn( "Off", [ "appearance", "dock", "mode", "off" ] ) ] ),
+                    sub( "Position", [ spawn( "Bottom", [ "appearance", "dock", "position", "bottom" ] ), spawn( "Left", [ "appearance", "dock", "position", "left" ] ), spawn( "Right", [ "appearance", "dock", "position", "right" ] ) ] )
+                ] ),
+                sub( "Windows", [
+                    sub( "Gaps", [ spawn( "Default", [ "appearance", "windows", "gaps", "on" ] ), spawn( "None", [ "appearance", "windows", "gaps", "off" ] ) ] ),
+                    sub( "Corners", [ spawn( "Follow the theme", [ "appearance", "windows", "corners", "theme" ] ), spawn( "Rounded", [ "appearance", "windows", "corners", "rounded" ] ), spawn( "Sharp", [ "appearance", "windows", "corners", "sharp" ] ) ] ),
+                    sub( "Opacity", [ spawn( "Opaque", [ "appearance", "windows", "opacity", "opaque" ] ), spawn( "Glassy", [ "appearance", "windows", "opacity", "glassy" ] ) ] ),
+                    sub( "Single window aspect ratio", [ spawn( "Square (1:1)", [ "appearance", "windows", "one-window-ratio", "on" ] ), spawn( "Full", [ "appearance", "windows", "one-window-ratio", "off" ] ) ] ),
+                    sub( "Layout", [ spawn( "Dwindle", [ "appearance", "layout", "dwindle" ] ), spawn( "Scrolling", [ "appearance", "layout", "scrolling" ] ), spawn( "Floating", [ "appearance", "layout", "floating" ] ) ] )
+                ] ),
+                sub( "Animations", [ spawn( "On", [ "appearance", "animations", "on" ] ), spawn( "Off", [ "appearance", "animations", "off" ] ) ] ),
+                run( "Appearance status", [ "appearance", "status" ] ),
+                spawn( "Re-apply saved appearance", [ "appearance", "apply" ] ),
                 { label: "Install a theme from git", kind: "ask", prompt: "Theme git URL (https)", argv: [ "theme", "install", "{}" ], mode: "run" }
             ] ),
             sub( "Trigger", [

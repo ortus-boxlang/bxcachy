@@ -650,6 +650,16 @@ The wizard asks the window layout once per desktop you set up: Hyprland (`layout
 - **`system lock|suspend|logout|reboot|shutdown`:** through `noctalia msg session ...` inside Hyprland with Noctalia (Noctalia IPC docs), else `loginctl lock-session`, `systemctl suspend|reboot|poweroff`, `loginctl terminate-session`. Lock and suspend act at once; logout, reboot and shutdown are a plan until `--yes` (the menu asks first).
 - **Verified:** `tests/pkg-test.sh` (fake pacman, yay, curl, sudo, id) and `tests/menu-test.sh` (fake Rofi, Wofi and terminal); `pkg search|info|install|remove` and `remove` were also run against the real Arch repos and the live AUR in the Arch test container (search, install and remove of `cowsay`, `jq` removed by catalog id, protected packages refused). **Not verified:** the menu on a real provider (Rofi, Walker, Fuzzel), AUR installs through `yay`, `system` actions on a real session.
 
+### 13.35 Appearance (decided with the owner 2026-11-13)
+
+- **`bxcachy appearance status|apply`** and verbs `bar show|hide|toggle|position top|bottom|left|right|style opaque|glassy|clear|clock ID|battery on|off`, `dock show|hide|toggle|mode always|autohide|off|position bottom|left|right`, `windows gaps on|off|corners theme|rounded|sharp|opacity opaque|glassy|one-window-ratio on|off`, `animations on|off`, `layout dwindle|scrolling|floating`, `font list|ID|install ID`, `background list|set NAME_OR_PATH|next|random`. Bad usage exits 2, an unknown or not-installed font or image exits 4. All take `--dry-run` and `--json`.
+- **State** is `~/.config/bxcachy/appearance.json`; every choice is remembered, so `apply` re-pushes it (after a Noctalia upgrade or on a new session).
+- **Noctalia** changes go through `noctalia msg config-set PATH VALUE` (TOML values) on the starter's bar `main`, `[dock]`, `[shell]`, `[widget.clock]` and `[widget.battery]`; show/hide/toggle and wallpapers use `bar-*`, `dock-*`, `wallpaper-*`. Without Noctalia the choice is saved and reported as "saved only", not an error.
+- **Hyprland** window looks are one generated file, `~/.config/bxcachy/theme/look.lua`, written through the config service (a file you edited is never overwritten) and loaded by the managed `bxcachy.lua`; it is applied with `hyprctl reload`. `floating` runs `layout float`.
+- **Fonts** are the 7 Nerd Fonts we verified; setting one updates Noctalia and every terminal starter you have not edited (your edited terminal configs are kept and reported).
+- **Menu:** Appearance has Font, Install a font, Background, Bar, Dock, Windows, Animations, Status and Re-apply beside the theme entries.
+- **Verified:** `tests/appearance-test.sh` with fake noctalia, hyprctl, fc-list, pacman and sudo. Not verified on a real machine: Hyprland Lua `dofile` and reload, Noctalia `config-set` persistence and key names.
+
 ## 14. Install and the setup wizard (decided with the owner 2026-11-10; install, wizard and the init engine are built, the pages' later commands are not)
 
 ### 14.1 Install

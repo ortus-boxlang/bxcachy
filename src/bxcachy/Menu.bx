@@ -127,6 +127,10 @@ class Menu {
             for ( var b in cat2.apps ) if ( pk2.isInstalled( b, names2 ) ) out.append( { label: b.name & "  (" & b.id & ")", value: b.id, current: false } );
         } else if ( src == "vms" ) {
             for ( var v in new bxcachy.Vm( variables.cli ).allRecords() ) out.append( { label: v.name & "  (" & v.kind & ")", value: v.name, current: false } );
+        } else if ( src == "fonts" || src == "fonts-uninstalled" ) {
+            for ( var fo in new bxcachy.Appearance( variables.cli ).fontRows() ) if ( ( src == "fonts" ) == fo.installed ) out.append( { label: fo.label & "  (" & fo.family & ")", value: fo.id, current: false } );
+        } else if ( src == "backgrounds" ) {
+            for ( var im in new bxcachy.Appearance( variables.cli ).images() ) out.append( { label: im.name, value: im.path, current: false } );
         } else if ( src == "skills-installed" ) {
             var sr = exec( [ self(), "skills", "installed", "--json" ], 30 );
             try { for ( var s in jsonDeserialize( sr.output ).data.skills ) out.append( { label: s.name, value: s.name, current: false } ); } catch ( any e ) {}

@@ -8,7 +8,16 @@ class TerminalConfig {
     }
 
     function defaultTerminal() { return "ghostty"; }
-    function fontFamily() { return "JetBrainsMono Nerd Font"; }
+    function defaultFont() { return "JetBrainsMono Nerd Font"; }
+
+    // The font written into the terminal starters: the one `bxcachy appearance font` chose, else JetBrains Mono Nerd.
+    function fontFamily() {
+        var f = variables.config.cfgHome() & "/bxcachy/appearance.json";
+        if ( fileExists( f ) ) {
+            try { var j = jsonDeserialize( fileRead( f ) ); if ( structKeyExists( j, "font" ) && len( j.font ) ) return j.font; } catch ( any e ) {}
+        }
+        return defaultFont();
+    }
 
     // id, package, the command that starts it, and its config file relative to ~/.config ("" when it has none).
     function terminals() {
@@ -68,6 +77,19 @@ class TerminalConfig {
         for ( var id in arguments.ids ) {
             var t = find( id );
             if ( structKeyExists( t, "id" ) && len( t.config ) ) out.append( { name: "terminal-" & id, target: arguments.cfgHome & "/" & t.config, mode: "644", content: starter( id, arguments.cfgHome ) } );
+        }
+        return out;
+    }
+
+    // Rewrites the starters of the terminals that exist with the current font, but only the ones still as BxCachy wrote them (clean or outdated);
+    // one you changed is kept and reported. Returns { written, kept } (entry names).
+    function refreshFonts() {
+        var out = { written: [], kept: [] };
+        for ( var e in entries( ids(), variables.config.cfgHome() ) ) {
+            var st = variables.config.configState( e );
+            if ( st == "missing" || st == "clean" ) continue;
+            if ( st == "outdated" && variables.config.configWrite( e, e.content, "font", true, false ) == 0 ) out.written.append( e.name );
+            else out.kept.append( e.name );
         }
         return out;
     }
