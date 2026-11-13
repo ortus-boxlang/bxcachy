@@ -136,6 +136,13 @@ class MenuTree {
                 spawn( "Overview", [ "overview" ] )
             ] ),
             sub( "Setup", [
+                sub( "Power", [
+                    run( "Status", [ "power", "status" ] ),
+                    sub( "Profile", [ spawn( "Performance", [ "power", "profile", "performance" ] ), spawn( "Balanced", [ "power", "profile", "balanced" ] ), spawn( "Power saver", [ "power", "profile", "saver" ] ) ] ),
+                    sub( "Closing the lid", [ run( "Suspend", [ "power", "lid", "suspend", "--yes" ] ), run( "Lock only", [ "power", "lid", "lock", "--yes" ] ), run( "Do nothing", [ "power", "lid", "ignore", "--yes" ] ) ] ),
+                    run( "Set up laptop power tools", [ "power", "setup", "--yes" ] ),
+                    run( "Power doctor", [ "power", "doctor" ] )
+                ] ),
                 sub( "Display", [
                     run( "Monitors", [ "display", "list" ] ),
                     pick( "Scale", "monitors", [ "display", "scale", "{}", "1.5" ] ),

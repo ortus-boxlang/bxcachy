@@ -1,0 +1,182 @@
+// `bxcachy power ...`: laptop and power (Omarchy's power profile, lid and battery handling; CachyOS itself ships no laptop power tooling).
+//   power status [--json]                          battery, profile, lid action, services
+//   power profile [performance|balanced|saver]     show or set (power-profiles-daemon, `powerprofilesctl`)
+//   power lid suspend|lock|ignore [--yes]          what closing the lid does (a logind drop-in; needs sudo, so it asks for --yes)
+//   power setup [--yes] [--force]                  install and enable power-profiles-daemon and upower; on a machine without a battery it does nothing unless --force
+//   power doctor [--json]                          checks: battery, daemons, lid setting, swap for hibernation, zram
+// Battery and brightness display belong to Noctalia and Plasma (powerdevil); this adds the profile, the lid and the checks.
+// Test overrides: BXCACHY_POWER_DIR (default /sys/class/power_supply), BXCACHY_LOGIND_DIR (default /etc/systemd/logind.conf.d), BXCACHY_MEMINFO.
+// Exit: 0 ok, 2 bad usage or a plan without --yes, 4 precondition (no battery, no tool), 6 a command failed.
+class Power {
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.inst = new bxcachy.Installer( arguments.runner );
+        return this;
+    }
+
+    function env( name, fallback ) {
+        var v = getSystemSetting( arguments.name, "" );
+        return len( v ) ? v : arguments.fallback;
+    }
+
+    function tryExec( argv, timeout = 30 ) {
+        try { return variables.inst.exec( arguments.argv, arguments.timeout ); } catch ( any e ) { return { exitCode: 127, output: e.message }; }
+    }
+
+    function has( name ) { return tryExec( [ "sh", "-c", 'command -v "$1"', "_", arguments.name ], 10 ).exitCode == 0; }
+    function say( code, data, asJson, lines = [], dry = false ) {
+        if ( arguments.asJson ) println( variables.cli.envelope( "power", arguments.code, arguments.data, arguments.dry ) );
+        else for ( var l in arguments.lines ) println( l );
+        return arguments.code;
+    }
+    function fail( code, msg, asJson ) { return say( arguments.code, { error: arguments.msg }, arguments.asJson, [ "error: " & arguments.msg ] ); }
+
+    // ---- facts ----
+    function logindDir() { return env( "BXCACHY_LOGIND_DIR", "/etc/systemd/logind.conf.d" ); }
+    function lidFile() { return logindDir() & "/50-bxcachy-lid.conf"; }
+
+    // [ { name, percent, status } ] for each BAT* under the power supply directory.
+    function batteries() {
+        var out = [];
+        var dir = env( "BXCACHY_POWER_DIR", "/sys/class/power_supply" );
+        if ( !directoryExists( dir ) ) return out;
+        for ( var d in directoryList( dir, false, "name" ) ) {
+            if ( !reFind( "^BAT", d ) ) continue;
+            var b = { name: d, percent: -1, status: "" };
+            if ( fileExists( dir & "/" & d & "/capacity" ) ) b.percent = int( val( trim( fileRead( dir & "/" & d & "/capacity" ) ) ) );
+            if ( fileExists( dir & "/" & d & "/status" ) ) b.status = trim( fileRead( dir & "/" & d & "/status" ) );
+            out.append( b );
+        }
+        return out;
+    }
+
+    function profiles() { return { performance: "performance", balanced: "balanced", saver: "power-saver" }; }
+
+    function currentProfile() {
+        if ( !has( "powerprofilesctl" ) ) return "";
+        var r = tryExec( [ "powerprofilesctl", "get" ], 10 );
+        return r.exitCode == 0 ? trim( r.output ) : "";
+    }
+
+    function lidAction() {
+        if ( !fileExists( lidFile() ) ) return "default";
+        var t = fileRead( lidFile() );
+        if ( findNoCase( "HandleLidSwitch=lock", t ) ) return "lock";
+        if ( findNoCase( "HandleLidSwitch=ignore", t ) ) return "ignore";
+        if ( findNoCase( "HandleLidSwitch=suspend", t ) ) return "suspend";
+        return "custom";
+    }
+
+    function active( unit ) { return tryExec( [ "systemctl", "is-active", "--quiet", arguments.unit ], 10 ).exitCode == 0; }
+
+    // kB from /proc/meminfo.
+    function meminfo( key ) {
+        var f = env( "BXCACHY_MEMINFO", "/proc/meminfo" );
+        if ( !fileExists( f ) ) return 0;
+        for ( var line in listToArray( fileRead( f ), chr( 10 ) ) ) {
+            if ( reFind( "^" & arguments.key & ":", line ) ) return int( val( trim( reReplace( listRest( line, ":" ), "[^0-9]", "", "all" ) ) ) );
+        }
+        return 0;
+    }
+
+    // ---- commands ----
+    function statusCmd( asJson ) {
+        var bats = batteries();
+        var data = { battery: bats, profile: currentProfile(), lid: lidAction(), power_profiles_daemon: active( "power-profiles-daemon.service" ), upower: active( "upower.service" ) };
+        var lines = [];
+        if ( bats.len() ) for ( var b in bats ) lines.append( "battery " & b.name & ": " & b.percent & "% " & lCase( b.status ) );
+        else lines.append( "battery: none (a desktop)" );
+        lines.append( "profile: " & ( len( data.profile ) ? data.profile : "unknown (power-profiles-daemon not available)" ) );
+        lines.append( "lid: " & data.lid );
+        lines.append( "services: power-profiles-daemon " & ( data.power_profiles_daemon ? "on" : "off" ) & ", upower " & ( data.upower ? "on" : "off" ) );
+        return say( 0, data, arguments.asJson, lines );
+    }
+
+    function profileCmd( args, dry, asJson ) {
+        if ( !arguments.args.len() ) return say( 0, { profile: currentProfile() }, arguments.asJson, [ len( currentProfile() ) ? currentProfile() : "unknown" ] );
+        var want = arguments.args[ 1 ];
+        var map = profiles();
+        if ( arguments.args.len() != 1 || !structKeyExists( map, want ) ) return fail( 2, "Usage: bxcachy power profile [performance|balanced|saver]", arguments.asJson );
+        if ( !has( "powerprofilesctl" ) ) return fail( 4, "power-profiles-daemon is not installed (bxcachy power setup)", arguments.asJson );
+        var argv = [ "powerprofilesctl", "set", map[ want ] ];
+        if ( arguments.dry ) return say( 0, { profile: want, command: argv.toList( " " ) }, arguments.asJson, [ "would run: " & argv.toList( " " ) ], true );
+        var r = tryExec( argv, 15 );
+        if ( r.exitCode != 0 ) return say( 6, { error: trim( r.output ) }, arguments.asJson, [ "error: " & trim( r.output ) ] );
+        return say( 0, { profile: want }, arguments.asJson, [ "profile: " & want ] );
+    }
+
+    // The logind drop-in for a lid action.
+    function lidConf( action ) {
+        var a = arguments.action;
+        return "## Written by `bxcachy power lid " & a & "`. Remove this file to go back to the systemd defaults." & chr( 10 )
+            & "[Login]" & chr( 10 )
+            & "HandleLidSwitch=" & a & chr( 10 ) & "HandleLidSwitchExternalPower=" & a & chr( 10 ) & "HandleLidSwitchDocked=ignore" & chr( 10 );
+    }
+
+    function lidCmd( args, yes, dry, asJson ) {
+        var want = arguments.args.len() == 1 ? arguments.args[ 1 ] : "";
+        if ( !arrayFind( [ "suspend", "lock", "ignore" ], want ) ) return fail( 2, "Usage: bxcachy power lid suspend|lock|ignore [--yes]", arguments.asJson );
+        var tmp = getTempDirectory() & "/bxcachy-lid-" & createUUID() & ".conf";
+        var cmds = [ [ "sudo", "install", "-Dm644", tmp, lidFile() ] ];
+        var plan = [ "Plan: closing the lid will " & want, "  write " & lidFile(), "  sudo install ...", "  note: logind reads it on the next login or reboot (it is not restarted here, that would end your session)" ];
+        var data = { action: want, file: lidFile(), commands: cmds.map( function( c ) { return c.toList( " " ); } ) };
+        if ( !arguments.yes || arguments.dry ) {
+            plan.append( arguments.dry ? "Nothing was changed." : "Nothing was changed. Add --yes to apply." );
+            return say( arguments.dry ? 0 : 2, data, arguments.asJson, plan, arguments.dry );
+        }
+        fileWrite( tmp, lidConf( want ) );
+        var r = tryExec( cmds[ 1 ], 30 );
+        try { fileDelete( tmp ); } catch ( any e ) {}
+        if ( r.exitCode != 0 ) return say( 6, { error: trim( r.output ) }, arguments.asJson, [ "error: " & trim( r.output ) ] );
+        return say( 0, data, arguments.asJson, [ "lid: " & want, "written: " & lidFile(), "Applies from the next login or reboot." ] );
+    }
+
+    function setupCmd( yes, dry, force, asJson ) {
+        if ( !batteries().len() && !arguments.force ) return say( 0, { skipped: "no battery" }, arguments.asJson, [ "No battery found: this is a desktop, so there is nothing to set up. (--force installs the tools anyway.)" ] );
+        var steps = [ [ "sudo", "pacman", "-S", "--needed", "--noconfirm", "power-profiles-daemon", "upower" ], [ "sudo", "systemctl", "enable", "--now", "power-profiles-daemon.service", "upower.service" ] ];
+        var data = { steps: steps.map( function( s ) { return s.toList( " " ); } ) };
+        if ( !arguments.yes || arguments.dry ) {
+            var lines = [ arguments.dry ? "Dry run: laptop power tools" : "Plan: laptop power tools" ];
+            for ( var s in steps ) lines.append( "  " & s.toList( " " ) );
+            lines.append( arguments.dry ? "Nothing was changed." : "Nothing was changed. Add --yes to apply." );
+            return say( arguments.dry ? 0 : 2, data, arguments.asJson, lines, arguments.dry );
+        }
+        for ( var st in steps ) {
+            var r = tryExec( st, 300 );
+            if ( r.exitCode != 0 ) return say( 6, { error: trim( r.output ), step: st.toList( " " ) }, arguments.asJson, [ "error: " & st.toList( " " ) & ": " & trim( r.output ) ] );
+        }
+        return say( 0, data, arguments.asJson, [ "power-profiles-daemon and upower are installed and running.", "Choose a profile: bxcachy power profile balanced" ] );
+    }
+
+    function doctorCmd( asJson ) {
+        var checks = [];
+        var add = function( id, ok, note ) { checks.append( { id: id, ok: ok, note: note } ); };
+        var bats = batteries();
+        add( "battery", true, bats.len() ? bats.len() & " battery found" : "no battery (a desktop): the laptop checks are skipped" );
+        if ( bats.len() ) {
+            add( "power-profiles-daemon", has( "powerprofilesctl" ) && active( "power-profiles-daemon.service" ), "power profiles (bxcachy power setup installs and enables it)" );
+            add( "upower", active( "upower.service" ), "battery information for the desktop (bxcachy power setup)" );
+            add( "lid", lidAction() != "custom", "closing the lid: " & lidAction() & " (bxcachy power lid suspend|lock|ignore)" );
+        }
+        var ram = meminfo( "MemTotal" );
+        var swap = meminfo( "SwapTotal" );
+        var zramOn = tryExec( [ "sh", "-c", "ls /dev/zram* >/dev/null 2>&1" ], 10 ).exitCode == 0;
+        add( "zram", true, zramOn ? "zram swap is on (CachyOS default)" : "no zram swap" );
+        if ( bats.len() ) add( "hibernation", swap >= ram && ram > 0, swap >= ram && ram > 0 ? "disk swap is " & round( swap / 1048576 ) & " GB, enough for " & round( ram / 1048576 ) & " GB of RAM" : "hibernation needs disk swap at least the size of RAM (RAM " & round( ram / 1048576 ) & " GB, swap " & round( swap / 1048576 ) & " GB); suspend works without it" );
+        var bad = checks.filter( function( c ) { return !c.ok; } );
+        var lines = checks.map( function( c ) { return ( c.ok ? "ok    " : "warn  " ) & c.id & ": " & c.note; } );
+        return say( 0, { checks: checks, problems: bad.len() }, arguments.asJson, lines );
+    }
+
+    function run( words, dry = false, yes = false, asJson = false, force = false ) {
+        var verb = arguments.words.len() ? arguments.words[ 1 ] : "";
+        var rest = [];
+        for ( var i = 2; i <= arguments.words.len(); i++ ) rest.append( arguments.words[ i ] );
+        if ( verb == "" || verb == "status" ) return statusCmd( arguments.asJson );
+        if ( verb == "profile" ) return profileCmd( rest, arguments.dry, arguments.asJson );
+        if ( verb == "lid" ) return lidCmd( rest, arguments.yes, arguments.dry, arguments.asJson );
+        if ( verb == "setup" ) return setupCmd( arguments.yes, arguments.dry, arguments.force, arguments.asJson );
+        if ( verb == "doctor" ) return doctorCmd( arguments.asJson );
+        return fail( 2, "Usage: bxcachy power status | profile [performance|balanced|saver] | lid suspend|lock|ignore | setup | doctor", arguments.asJson );
+    }
+}

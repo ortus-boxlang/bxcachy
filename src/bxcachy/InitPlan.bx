@@ -284,6 +284,8 @@ class InitPlan {
             if ( !arrayFind( [ "dwindle", "master", "monocle", "scrolling", "stage" ], a.plasma_layout ) ) out.errors.append( "plasma_layout: unknown layout " & a.plasma_layout );
             else out.steps.append( { id: "plasma-layout", title: "use the " & a.plasma_layout & " window layout on this Plasma workspace (needs a running Plasma session)", argv: [ "bxcachy", "tiling", "layout", a.plasma_layout ], optional: true } );
         }
+        // laptop power tools (power-profiles-daemon, upower): `power setup` does nothing on a machine without a battery, so this is safe everywhere
+        if ( pick( a, "power_setup", false ) ) out.steps.append( { id: "power-setup", title: "set up laptop power tools (only when a battery is found)", argv: [ "bxcachy", "power", "setup" ], optional: true } );
         // update channel and the daily update notification
         if ( len( pick( a, "update_channel" ) ) ) out.steps.append( { id: "update-channel", title: "use the " & a.update_channel & " update channel", argv: [ "bxcachy", "update", "channel", a.update_channel ] } );
         if ( pick( a, "update_notifications", false ) ) out.steps.append( { id: "update-notifications", title: "check for updates daily and notify", argv: [ "bxcachy", "update", "notifications", "on" ], optional: true } );

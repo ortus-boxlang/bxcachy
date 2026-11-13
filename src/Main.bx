@@ -474,6 +474,12 @@ class {
           for ( dpi = 2; dpi <= p.len(); dpi++ ) dpWords.append( p[ dpi ] );
           CLIExit( new bxcachy.Display( cli ).run( dpWords, structKeyExists( args.options, "dry-run" ), structKeyExists( args.options, "yes" ), asJson ) );
           break;
+         case "power":
+          // Laptop and power: profile, lid, setup, doctor. See COMMAND-CONTRACT.md 13.37.
+          pwWords = [];
+          for ( pwi = 2; pwi <= p.len(); pwi++ ) pwWords.append( p[ pwi ] );
+          CLIExit( new bxcachy.Power( cli ).run( pwWords, structKeyExists( args.options, "dry-run" ), structKeyExists( args.options, "yes" ), asJson, structKeyExists( args.options, "force" ) ) );
+          break;
          case "vm":
           // Windows and Linux desktops in containers. See COMMAND-CONTRACT.md 13.33.
           vmSub = p.len() >= 2 ? p[2] : "list";
