@@ -42,6 +42,17 @@ grep -q '^# my zshrc' "$tmp/home/.zshrc" && grep -q 'alias ll=' "$tmp/home/.zshr
 grep -q "source \"$tmp/cfg/bxcachy/shell.zsh\"" "$tmp/home/.zshrc" || fail 'block sources the managed init'
 grep -q 'starship init zsh' "$tmp/cfg/bxcachy/shell.zsh" && grep -q 'zsh-autosuggestions.zsh' "$tmp/cfg/bxcachy/shell.zsh" && grep -q 'zsh-syntax-highlighting.zsh' "$tmp/cfg/bxcachy/shell.zsh" || fail 'zsh init has starship and the plugins'
 grep -q "palette = 'catppuccin_mocha'" "$tmp/cfg/starship.toml" && grep -q 'fg:peach)' "$tmp/cfg/starship.toml" && grep -q '^\$directory.' "$tmp/cfg/starship.toml" || fail 'starship config written'
+grep -q '^\${custom.boxlang}\\$' "$tmp/cfg/starship.toml" && grep -q '^\[custom.boxlang\]' "$tmp/cfg/starship.toml" || fail 'starship has the boxlang module in the format'
+# the module is gated by files (no `when`, which would show it everywhere) and its command prints nothing without bvm
+! grep -A8 '^\[custom.boxlang\]' "$tmp/cfg/starship.toml" | grep -q '^when' || fail 'boxlang module must not use when'
+grep -A8 '^\[custom.boxlang\]' "$tmp/cfg/starship.toml" | grep -q '^detect_files = \["box.json", "Application.bx", "Application.cfc"\]' || fail 'boxlang module detect_files'
+bxcmd="$(sed -n "/^\[custom.boxlang\]/,/^\[/p" "$tmp/cfg/starship.toml" | sed -n "s/^command = '\(.*\)'$/\1/p")"
+[[ -n "$bxcmd" ]] || fail 'boxlang module command missing'
+mkdir -p "$tmp/bvm/1.2.3"
+[[ "$(BVM_HOME="$tmp/nobvm" sh -c "$bxcmd" || true)" == "" ]] || fail 'boxlang command prints nothing without bvm'
+ln -s "$tmp/bvm/1.2.3" "$tmp/bvm/current"
+[[ "$(BVM_HOME="$tmp/bvm" sh -c "$bxcmd")" == "1.2.3" ]] || fail 'boxlang command prints the bvm version'
+rm -f "$tmp/bvm/current"
 
 # again: nothing duplicated, a changed starship.toml is kept
 echo '# mine' >> "$tmp/cfg/starship.toml"

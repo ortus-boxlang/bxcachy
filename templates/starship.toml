@@ -16,6 +16,7 @@ $golang\
 $nodejs\
 $bun\
 $php\
+${custom.boxlang}\
 $java\
 $kotlin\
 $haskell\
@@ -121,6 +122,15 @@ format = '[[ $symbol( $version) ](fg:crust bg:green)]($style)'
 symbol = " "
 style = "bg:green"
 format = '[[ $symbol( $version) ](fg:crust bg:green)]($style)'
+
+[custom.boxlang]
+description = "BoxLang version managed by bvm"
+symbol = "📦"
+detect_extensions = ["bx", "bxs", "bxm", "cfc", "cfm", "cfs"]
+detect_files = ["box.json", "Application.bx", "Application.cfc"]
+style = "bg:green"
+command = 'v="${BVM_HOME:-$HOME/.bvm}/current"; [ -L "$v" ] && basename "$(readlink "$v")"'
+format = '[[ $symbol( v$output) ](fg:crust bg:green)]($style)'
 
 [jj_bookmark]
 symbol = ""
