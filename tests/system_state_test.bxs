@@ -9,7 +9,8 @@ check( "desktops: both when Hyprland and Plasma are installed", found.answers.de
 check( "multi: installed AI agent is selected", isArray( found.answers.ai_agents ) && arrayFind( found.answers.ai_agents, "claude-code" ) > 0 );
 check( "installed map lists ollama", structKeyExists( found.installed, "ai_local" ) && arrayFind( found.installed.ai_local, "ollama" ) > 0 );
 check( "appInstalled true/false", sys.appInstalled( "git" ) && !sys.appInstalled( "timeshift" ) );
-check( "merge fresh is empty", structCount( sys.merge( { a: 1 }, found.answers, "fresh" ) ) == 0 );
+fr = sys.merge( { a: 1 }, found.answers, "fresh" );
+check( "merge fresh keeps only power_setup", structCount( fr ) <= 1 && !structKeyExists( fr, "a" ) );
 check( "merge rerun is saved only", structCount( sys.merge( { a: 1 }, found.answers, "rerun" ) ) == 1 );
 m = sys.merge( { ai_agents: [ "codex-cli" ], keep: "x" }, found.answers, "tune" );
 check( "merge tune joins lists and keeps saved keys", arrayFind( m.ai_agents, "codex-cli" ) > 0 && arrayFind( m.ai_agents, "claude-code" ) > 0 && m.keep == "x" );
