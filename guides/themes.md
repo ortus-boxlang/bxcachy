@@ -32,6 +32,8 @@ Setting a theme acts at once. `--dry-run` shows what would be written without ch
 
 Not themed: the Starship prompt, VS Code, browsers and GTK or Qt apps. Your own config files are never edited. Terminal configs you wrote yourself need one include line, which `bxcachy theme set` prints.
 
+Bar, dock, windows, fonts and backgrounds are in [Appearance](appearance.md).
+
 ## The themes
 
 BxCachy, BxCachy Light, BxCachy Midnight, BxCachy Cyan and BxCachy Forest are ours. From Omarchy: catppuccin, catppuccin-latte, tokyo-night, gruvbox, nord, rose-pine, kanagawa, everforest, matte-black and flexoki-light (MIT, credited in `themes/NOTICE.md`).

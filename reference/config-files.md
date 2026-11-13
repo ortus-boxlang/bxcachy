@@ -14,6 +14,16 @@ summary: Where BxCachy keeps things.
 | `~/.config/bxcachy/runner.json` | launcher and menu program |
 | `~/.config/bxcachy/update.json` | update channel and notification setting |
 | `~/.config/bxcachy/skills.json` | the agent skills BxCachy installed |
+| `~/.config/bxcachy/appearance.json` | what you chose in `bxcachy appearance` (bar, dock, windows, font) |
+| `~/.config/bxcachy/display.json` | what you chose in `bxcachy display` (scale, rotation, mirror, laptop panel) |
+| `~/.config/bxcachy/theme.json` | the current theme and mode |
+| `~/.config/bxcachy/theme/look.lua` | generated Hyprland window looks (gaps, corners, opacity); never edit |
+| `~/.config/bxcachy/theme/monitors.lua` | generated Hyprland monitor settings; never edit |
+| `~/.config/bxcachy/vms/` | one record per virtual machine |
+| `/etc/systemd/logind.conf.d/50-bxcachy-lid.conf` | what closing the lid does (`bxcachy power lid`); remove it to go back to the defaults |
+| `/etc/pam.d/sudo` and `.bxcachy-backup` | one marked line per `bxcachy security fingerprint\|fido2 on`; the backup is the original |
+| `/etc/sudoers.d/50-bxcachy-nopasswd` | passwordless sudo (`bxcachy security passwordless-sudo on`) |
+| `/etc/systemd/system/automatic-timezoned.service`, `/etc/geoclue/conf.d/90-bxcachy-timezone.conf` | the automatic time zone (`bxcachy time auto on`) |
 | `~/.config/bxcachy/plasma-panels/` | the Plasma panel layout and its backup |
 | `~/.config/bxcachy/welcome.html` | the getting-started page |
 | `~/.config/hypr/bxcachy.lua` | generated Hyprland module (never edit); `hyprland.lua` is yours |
