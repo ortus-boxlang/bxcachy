@@ -21,6 +21,8 @@
 - [Displays, power and time](https://bxcachy.boxlang.io/guides/system.md) ([HTML](https://bxcachy.boxlang.io/guides/system/index.html))
 - [Virtual machines](https://bxcachy.boxlang.io/guides/vms.md) ([HTML](https://bxcachy.boxlang.io/guides/vms/index.html))
 - [AI agents and skills](https://bxcachy.boxlang.io/guides/ai.md) ([HTML](https://bxcachy.boxlang.io/guides/ai/index.html))
+- [Backups and BxTimeMachine](https://bxcachy.boxlang.io/guides/backups.md) ([HTML](https://bxcachy.boxlang.io/guides/backups/index.html))
+- [Your NAS](https://bxcachy.boxlang.io/guides/nas.md) ([HTML](https://bxcachy.boxlang.io/guides/nas/index.html))
 - [BoxLang and MatchBox](https://bxcachy.boxlang.io/guides/boxlang.md) ([HTML](https://bxcachy.boxlang.io/guides/boxlang/index.html))
 - [Updates and channels](https://bxcachy.boxlang.io/guides/updates.md) ([HTML](https://bxcachy.boxlang.io/guides/updates/index.html))
 - [Move to another machine](https://bxcachy.boxlang.io/guides/settings.md) ([HTML](https://bxcachy.boxlang.io/guides/settings/index.html))
