@@ -103,6 +103,8 @@ p = ip.plan( { app_mode: "defaults", web_bundles: [ "google", "apple" ] } );
 check( "web bundles: one optional step each", cmd( p, "web-google" ) == "bxcachy web install google" && cmd( p, "web-apple" ) == "bxcachy web install apple" );
 p = ip.plan( { app_mode: "defaults", boxlang_modules: [ "bx-ai", "bx-sites" ], boxlang_vscode: true } );
 check( "BoxLang modules and the VS Code extension are optional steps", cmd( p, "boxlang-modules" ) == "bxcachy boxlang modules install bx-ai bx-sites" && cmd( p, "boxlang-vscode" ) == "bxcachy boxlang vscode" );
+p = ip.plan( { app_mode: "defaults", update_channel: "beta", update_notifications: true } );
+check( "update channel and notifications", cmd( p, "update-channel" ) == "bxcachy update channel beta" && cmd( p, "update-notifications" ) == "bxcachy update notifications on" );
 p = ip.plan( { app_mode: "defaults", dictation: "none" } );
 check( "dictation none adds nothing", ids( p ) == "apps-basic" );
 p = ip.plan( { desktops: "plasma", app_mode: "defaults", workspaces: 4, plasma_panels: "bxcachy" } );

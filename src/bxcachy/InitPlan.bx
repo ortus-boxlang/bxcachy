@@ -262,6 +262,9 @@ class InitPlan {
             if ( !arrayFind( [ "dwindle", "master", "monocle", "scrolling", "stage" ], a.plasma_layout ) ) out.errors.append( "plasma_layout: unknown layout " & a.plasma_layout );
             else out.steps.append( { id: "plasma-layout", title: "use the " & a.plasma_layout & " window layout on this Plasma workspace (needs a running Plasma session)", argv: [ "bxcachy", "tiling", "layout", a.plasma_layout ], optional: true } );
         }
+        // update channel and the daily update notification
+        if ( len( pick( a, "update_channel" ) ) ) out.steps.append( { id: "update-channel", title: "use the " & a.update_channel & " update channel", argv: [ "bxcachy", "update", "channel", a.update_channel ] } );
+        if ( pick( a, "update_notifications", false ) ) out.steps.append( { id: "update-notifications", title: "check for updates daily and notify", argv: [ "bxcachy", "update", "notifications", "on" ], optional: true } );
         // night shift, trackpad gestures and the AirPlay receiver (optional: a failure is skipped)
         if ( pick( a, "night_shift", false ) ) out.steps.append( { id: "night-shift", title: "turn on night shift (sunset and sunrise from your time zone)", argv: [ "bxcachy", "nightshift", "on" ], optional: true } );
         if ( wantsHypr && pick( a, "gestures", false ) ) out.steps.append( { id: "gestures", title: "set up three-finger trackpad gestures", argv: [ "bxcachy", "input", "gestures" ], optional: true } );

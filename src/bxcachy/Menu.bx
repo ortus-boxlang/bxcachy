@@ -61,7 +61,14 @@ class Menu {
                 { label: "App launcher check", kind: "run", argv: [ "runner", "doctor" ] },
                 { label: "Setup status", kind: "run", argv: [ "setup", "status" ] },
                 { label: "Dotfiles status", kind: "run", argv: [ "dotfiles", "status" ] },
-                { label: "Shortcut cheat sheet", kind: "spawn", argv: [ "keys", "sheet" ] }
+                { label: "Shortcut cheat sheet", kind: "spawn", argv: [ "keys", "sheet" ] },
+                { label: "Updates: check", kind: "run", argv: [ "update", "check" ] },
+                { label: "Updates: install the BxCachy update", kind: "run", argv: [ "update", "apply", "--yes" ] },
+                { label: "Updates: channel stable", kind: "run", argv: [ "update", "channel", "stable" ] },
+                { label: "Updates: channel beta (bleeding edge)", kind: "run", argv: [ "update", "channel", "beta" ] },
+                { label: "Updates: notifications on", kind: "run", argv: [ "update", "notifications", "on" ] },
+                { label: "Updates: notifications off", kind: "run", argv: [ "update", "notifications", "off" ] },
+                { label: "System update (snapshot first)", kind: "run", argv: [ "system", "update", "--yes" ] }
             ] }
         ];
     }

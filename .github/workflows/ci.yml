@@ -2,6 +2,7 @@ name: BxCachy CI
 on:
   push:
     branches: [development]
+    tags: ['v*']
   pull_request:
     branches: [development]
   workflow_dispatch:
@@ -20,7 +21,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          bash -n bootstrap/install.sh scripts/package-manager.sh tests/package-manager-test.sh tests/bootstrap-test.sh tests/native-smoke.sh tests/native-package-integration.sh scripts/config.sh tests/config-test.sh tests/config-native-test.sh tests/cli-contract-test.sh tests/catalog-test.sh tests/packages-test.sh tests/setup-test.sh tests/tiling-test.sh tests/keys-test.sh tests/keys-apply-test.sh tests/xremap-test.sh tests/assets-test.sh tests/noctalia-config-test.sh tests/hyprland-setup-test.sh tests/session-test.sh tests/shell-setup-test.sh tests/terminal-setup-test.sh tests/wizard-test.sh tests/init-test.sh tests/toolchain-test.sh tests/runner-test.sh tests/db-test.sh tests/dotfiles-test.sh tests/default-test.sh tests/secrets-test.sh tests/ai-test.sh tests/ai-shell-test.sh tests/ai-session-test.sh tests/ssh-keyboard-test.sh tests/menu-test.sh tests/containers-test.sh tests/utilities-test.sh tests/keys-editor-test.sh tests/web-vpn-test.sh tests/runtime-cloud-test.sh tests/apps-test.sh tests/status-test.sh tests/strata-test.sh tests/extras-test.sh tests/capture-notify-test.sh tests/plasma-panels-test.sh tests/boxlang-test.sh tests/macextras-test.sh bootstrap/gen-catalog.sh bootstrap/gen-templates.sh bootstrap/gen-assets.sh bootstrap/gen-wizard.sh scripts/get-matchbox.sh scripts/dev-build.sh
+          bash -n bootstrap/install.sh scripts/package-manager.sh tests/package-manager-test.sh tests/bootstrap-test.sh tests/native-smoke.sh tests/native-package-integration.sh scripts/config.sh tests/config-test.sh tests/config-native-test.sh tests/cli-contract-test.sh tests/catalog-test.sh tests/packages-test.sh tests/setup-test.sh tests/tiling-test.sh tests/keys-test.sh tests/keys-apply-test.sh tests/xremap-test.sh tests/assets-test.sh tests/noctalia-config-test.sh tests/hyprland-setup-test.sh tests/session-test.sh tests/shell-setup-test.sh tests/terminal-setup-test.sh tests/wizard-test.sh tests/init-test.sh tests/toolchain-test.sh tests/runner-test.sh tests/db-test.sh tests/dotfiles-test.sh tests/default-test.sh tests/secrets-test.sh tests/ai-test.sh tests/ai-shell-test.sh tests/ai-session-test.sh tests/ssh-keyboard-test.sh tests/menu-test.sh tests/containers-test.sh tests/utilities-test.sh tests/keys-editor-test.sh tests/web-vpn-test.sh tests/runtime-cloud-test.sh tests/apps-test.sh tests/status-test.sh tests/strata-test.sh tests/extras-test.sh tests/capture-notify-test.sh tests/plasma-panels-test.sh tests/boxlang-test.sh tests/macextras-test.sh tests/update-test.sh bootstrap/web-install.sh tests/web-install-test.sh bootstrap/gen-catalog.sh bootstrap/gen-templates.sh bootstrap/gen-assets.sh bootstrap/gen-wizard.sh scripts/get-matchbox.sh scripts/dev-build.sh
           test -s src/Main.bx -a -s src/Application.bx
           jq -e . catalog/apps.json >/dev/null
           bash bootstrap/gen-catalog.sh --check   # src/bxcachy/CatalogData.bx embeds the current catalog
@@ -39,6 +40,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: bash tests/package-manager-test.sh
       - run: bash tests/bootstrap-test.sh
+      - run: bash tests/web-install-test.sh
       - run: bash tests/config-test.sh
   arch:
     name: 3 - Arch Linux prerequisites
@@ -169,6 +171,7 @@ jobs:
           bash tests/plasma-panels-test.sh "$candidate"
           bash tests/boxlang-test.sh "$candidate"
           bash tests/macextras-test.sh "$candidate"
+          bash tests/update-test.sh "$candidate"
       - name: Publish verified native artifact
         uses: actions/upload-artifact@v4
         with:
@@ -212,8 +215,8 @@ jobs:
             arch-run.txt
           if-no-files-found: warn
   publish:
-    name: 6 - Publish BxCachy to S3
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/development'
+    name: 6 - Publish BxCachy to S3 (beta from development, stable from a v* tag)
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/development' || startsWith(github.ref, 'refs/tags/v'))
     needs: [native, arch-real]
     runs-on: ubuntu-latest
     env:
@@ -224,19 +227,25 @@ jobs:
         with:
           name: bxcachy-linux-native
           path: dist
-      - name: Lay out the S3 folders (same shape as BoxLang downloads)
+      - name: Lay out the S3 folders (channels stable and beta, snapshots, the one-line installer)
         run: |
           set -euo pipefail
-          VERSION="$(jq -r .version box.json)"
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then CHANNEL=stable; VERSION="${GITHUB_REF_NAME#v}"; else CHANNEL=beta; VERSION="$(jq -r .version box.json)"; fi
           sum="$(sha256sum dist/bxcachy | awk '{print $1}')"
-          for d in "build/s3/${VERSION}" build/evergreen; do
-            mkdir -p "$d"
-            cp dist/bxcachy "$d/bxcachy-linux-x86_64"
-            echo "${sum}  bxcachy-linux-x86_64" > "$d/bxcachy-linux-x86_64.sha256"
-          done
-          printf 'version=%s\ncommit=%s\nsha256=%s\nbuiltAt=%s\n' "$VERSION" "${GITHUB_SHA::7}" "$sum" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > build/evergreen/version-latest.properties
-          cp build/evergreen/version-latest.properties "build/s3/${VERSION}/version.properties"
-      - name: Upload this version to S3
+          bash -n bootstrap/web-install.sh
+          tar -czf bootstrap.tar.gz bootstrap/install.sh box.json
+          bsum="$(sha256sum bootstrap.tar.gz | awk '{print $1}')"
+          layout() {
+            mkdir -p "$1"
+            cp dist/bxcachy "$1/bxcachy-linux-x86_64"; echo "${sum}  bxcachy-linux-x86_64" > "$1/bxcachy-linux-x86_64.sha256"
+            cp bootstrap.tar.gz "$1/bootstrap.tar.gz"; echo "${bsum}  bootstrap.tar.gz" > "$1/bootstrap.tar.gz.sha256"
+            printf 'version=%s\ncommit=%s\nsha256=%s\nchannel=%s\nbuiltAt=%s\n' "$VERSION" "${GITHUB_SHA::7}" "$sum" "$CHANNEL" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$1/version-latest.properties"
+          }
+          layout "build/s3/$CHANNEL"
+          if [[ "$CHANNEL" == beta ]]; then layout "build/s3/snapshots/${VERSION}-${GITHUB_SHA::7}"; else layout "build/s3/releases/${VERSION}"; fi
+          cp bootstrap/web-install.sh build/s3/install.sh
+          echo "channel=$CHANNEL version=$VERSION"
+      - name: Upload to S3 (public-read, never deletes older snapshots or releases)
         if: env.HAS_S3 == 'true'
         uses: jakejarvis/s3-sync-action@master
         with:
@@ -247,14 +256,3 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_ACCESS_SECRET }}
           SOURCE_DIR: "build/s3"
           DEST_DIR: "ortussolutions/bxcachy"
-      - name: Upload the evergreen build to S3
-        if: env.HAS_S3 == 'true'
-        uses: jakejarvis/s3-sync-action@master
-        with:
-          args: --acl public-read
-        env:
-          AWS_S3_BUCKET: "downloads.ortussolutions.com"
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_ACCESS_SECRET }}
-          SOURCE_DIR: "build/evergreen"
-          DEST_DIR: "ortussolutions/bxcachy/"

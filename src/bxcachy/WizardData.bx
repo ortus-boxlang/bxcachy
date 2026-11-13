@@ -1506,6 +1506,32 @@ class WizardData {
           "label": "Cloud storage (rclone)",
           "default": false,
           "help": "Installs rclone and fuse3. Afterwards `bxcachy cloud configure` adds your accounts and `bxcachy cloud mount NAME` makes a folder of one."
+        },
+        {
+          "type": "choice",
+          "id": "update_channel",
+          "label": "Update channel",
+          "help": "stable is tagged releases. beta is the bleeding edge: a new build with every push.",
+          "default": "stable",
+          "options": [
+            {
+              "value": "stable",
+              "label": "Stable (recommended)",
+              "description": "Tagged releases."
+            },
+            {
+              "value": "beta",
+              "label": "Beta (bleeding edge)",
+              "description": "Snapshots of every push to development."
+            }
+          ]
+        },
+        {
+          "type": "confirm",
+          "id": "update_notifications",
+          "label": "Notify me about updates",
+          "default": true,
+          "help": "A daily check; you get a desktop notification when BxCachy or the system has updates. Turn off with: bxcachy update notifications off."
         }
       ]
     },

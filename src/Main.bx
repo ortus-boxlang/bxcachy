@@ -15,7 +15,7 @@ class {
         var config = new bxcachy.ConfigService();
         // One shared flag check for every command: unknown flags are usage errors and nothing runs.
         for ( var flag in args.options ) {
-            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider", "backend", "dir", "email", "region", "browser", "path", "from", "export", "from-system", "fresh", "rerun", "fix", "edit", "history", "out", "agenda", "without-weather", "desktops", "preset", "no-open", "location" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
+            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider", "backend", "dir", "email", "region", "browser", "path", "from", "export", "from-system", "fresh", "rerun", "fix", "edit", "history", "out", "agenda", "without-weather", "desktops", "preset", "no-open", "location", "notify", "defaults" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
                 println( "Unknown option: --" & flag );
                 CLIExit( 2 );
             }
@@ -334,6 +334,20 @@ class {
           println( "Usage: bxcachy editor lazyvim [--yes] [--json]" );
           CLIExit( 2 );
           break;
+         case "update":
+          // Updates for BxCachy (channels stable and beta) and notifications. See COMMAND-CONTRACT.md 13.30.
+          upSub = p.len() >= 2 ? p[2] : "check";
+          up = new bxcachy.Update( cli );
+          if ( upSub == "check" && p.len() <= 2 ) CLIExit( up.check( structKeyExists( args.options, "notify" ), asJson ) );
+          if ( upSub == "apply" && p.len() == 2 ) CLIExit( up.apply( structKeyExists( args.options, "yes" ), asJson ) );
+          if ( upSub == "channel" && p.len() <= 3 ) CLIExit( up.channel( p.len() == 3 ? p[3] : "", asJson ) );
+          if ( upSub == "notifications" && p.len() == 3 ) CLIExit( up.notifications( p[3], asJson ) );
+          println( "Usage: bxcachy update check [--notify] | apply [--yes] | channel [stable|beta] | notifications on|off|status [--json]" );
+          CLIExit( 2 );
+          break;
+         case "system":
+          if ( p.len() == 2 && p[2] == "update" ) CLIExit( new bxcachy.Update( cli ).systemUpdate( structKeyExists( args.options, "yes" ), asJson ) );
+          println( "Usage: bxcachy system update [--yes] [--json]" ); CLIExit( 2 ); break;
          case "emoji": CLIExit( new bxcachy.MacExtras( cli ).emoji( asJson ) ); break;
          case "forcequit": CLIExit( new bxcachy.MacExtras( cli ).forcequit( asJson ) ); break;
          case "window":
@@ -674,6 +688,7 @@ class {
           initRun = new bxcachy.Init( cli );
           if ( structKeyExists( args.options, "export" ) ) CLIExit( initRun.exportAnswers( args.options.export, structKeyExists( args.options, "force" ), asJson ) );
           if ( structKeyExists( args.options, "print-answers" ) ) CLIExit( initRun.printAnswers( asJson, structKeyExists( args.options, "from-system" ) ) );
+          if ( structKeyExists( args.options, "defaults" ) ) CLIExit( initRun.run( new bxcachy.WizardApp( initRun.wizardSpec(), {} ).finalAnswers(), structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
           if ( structKeyExists( args.options, "answers" ) ) {
            try {
             initAnswers = jsonDeserialize( fileRead( args.options.answers ) );
