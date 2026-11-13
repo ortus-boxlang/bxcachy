@@ -59,4 +59,11 @@ set +e; env HOME="$tmp/home" XDG_DATA_HOME="$tmp/data" PATH="$tmp/nobin" "$binar
 run "$binary" vpn nordvpn setup --yes | grep -q 'nordvpn login' || fail 'vpn setup --yes'
 grep -q 'sudo systemctl enable --now nordvpnd' "$LOG" && grep -q 'sudo gpasswd -a ada nordvpn' "$LOG" || fail "vpn commands: $(cat "$LOG")"
 rm "$tmp/bin/nordvpn"; [[ "$(code "$binary" vpn nordvpn setup --yes)" == 4 ]] || fail 'NordVPN missing exits 4'
+# bundles: all the web apps of a suite in one go
+[[ "$(code "$binary" web install apple)" == 2 ]] || fail 'bundle without --yes exits 2'
+run "$binary" web install microsoft --dry-run --json | jq -e '(.data.apps | index("word") != null) and (.data.apps | index("outlook") != null)' >/dev/null || fail 'microsoft bundle dry run'
+run "$binary" web install google --yes | grep -q 'Added' || fail 'google bundle'
+ls "$tmp/data/applications" | grep -q 'bxcachy-web-' || fail 'launcher entries written'
+n="$(ls "$tmp/data/applications" | grep -c 'bxcachy-web-')"; [[ "$n" -ge 10 ]] || fail "google bundle wrote $n entries"
+[[ "$(code "$binary" web install nope --yes)" == 4 ]] || fail 'unknown bundle exits 4'
 echo "web-vpn-test: ok"

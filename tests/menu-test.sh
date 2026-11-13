@@ -44,18 +44,18 @@ rm -f "$FAKE/n" "$FAKE/spawn.log" "$FAKE/terminal.log"; printf '2\n7\n' > "$FAKE
 run "$binary" menu >/dev/null; wait_for "$FAKE/spawn.log" || fail 'All apps did not start'; grep -q 'bxcachy apps' "$FAKE/spawn.log" || fail "all apps: $(cat "$FAKE/spawn.log")"
 
 # Web apps (3) -> Create web app (0): the name and the URL are typed in the menu (Rofi takes text), then `web add NAME URL --yes` runs
-rm -f "$FAKE/n" "$FAKE/spawn.log" "$FAKE/terminal.log"; printf '5\n0\nNotion\nhttps://notion.so\n0\n3\n7\n' > "$FAKE/answers"
+rm -f "$FAKE/n" "$FAKE/spawn.log" "$FAKE/terminal.log"; printf '5\n0\nNotion\nhttps://notion.so\n0\n6\n7\n' > "$FAKE/answers"
 printf '#!/usr/bin/env bash\necho "bxcachy $*" >> "$FAKE/spawn.log"\n' > "$tmp/self"
 run "$binary" menu >/dev/null || fail 'create web app flow exits 0'
 grep -q '^bxcachy web add Notion https://notion.so --yes$' "$FAKE/spawn.log" || fail "web add from the menu: $(cat "$FAKE/spawn.log" 2>/dev/null)"
 grep -q 'Added Notion' "$FAKE/menu.in" 2>/dev/null || true
 # an empty name cancels the flow without running anything
-rm -f "$FAKE/n" "$FAKE/spawn.log"; printf '5\n0\n\n3\n7\n' > "$FAKE/answers"; run "$binary" menu >/dev/null; [[ ! -s "$FAKE/spawn.log" ]] || fail 'an empty name added something'
+rm -f "$FAKE/n" "$FAKE/spawn.log"; printf '5\n0\n\n6\n7\n' > "$FAKE/answers"; run "$binary" menu >/dev/null; [[ ! -s "$FAKE/spawn.log" ]] || fail 'an empty name added something'
 # Remove a web app (2): pick, confirm
 mkdir -p "$tmp/data/applications"; printf '[Desktop Entry]\nType=Application\nName=Notion\nExec=brave --app=https://notion.so\nX-BxCachy-Web=https://notion.so\n' > "$tmp/data/applications/bxcachy-web-Notion.desktop"
-rm -f "$FAKE/n" "$FAKE/spawn.log"; printf '5\n2\n0\n1\n3\n7\n' > "$FAKE/answers"; XDG_DATA_HOME="$tmp/data" run env XDG_DATA_HOME="$tmp/data" "$binary" menu >/dev/null
+rm -f "$FAKE/n" "$FAKE/spawn.log"; printf '5\n5\n0\n1\n6\n7\n' > "$FAKE/answers"; XDG_DATA_HOME="$tmp/data" run env XDG_DATA_HOME="$tmp/data" "$binary" menu >/dev/null
 grep -q '^bxcachy web rm Notion --yes$' "$FAKE/spawn.log" || fail "remove from the menu: $(cat "$FAKE/spawn.log" 2>/dev/null)"
-rm -f "$FAKE/n" "$FAKE/spawn.log"; printf '5\n2\n0\n0\n3\n7\n' > "$FAKE/answers"; run env XDG_DATA_HOME="$tmp/data" "$binary" menu >/dev/null; [[ ! -s "$FAKE/spawn.log" ]] || fail 'Cancel at the confirmation removed the app'
+rm -f "$FAKE/n" "$FAKE/spawn.log"; printf '5\n5\n0\n0\n6\n7\n' > "$FAKE/answers"; run env XDG_DATA_HOME="$tmp/data" "$binary" menu >/dev/null; [[ ! -s "$FAKE/spawn.log" ]] || fail 'Cancel at the confirmation removed the app'
 # a provider that cannot take typed text (Wofi here) opens a terminal that asks the same questions
 printf '#!/usr/bin/env bash\ncat > /dev/null\nn=$(( $(cat "$FAKE/n" 2>/dev/null || echo 0) + 1 )); echo $n > "$FAKE/n"\nsed -n "${n}p" "$FAKE/answers"\n' > "$tmp/bin/wofi"; chmod +x "$tmp/bin/wofi"
 run "$binary" runner menu-set wofi >/dev/null

@@ -41,6 +41,7 @@ class Catalog {
       if ( a.source == "web" ) {
        if ( !structKeyExists( a, "url" ) || !reFind( "^https://[^/@\s]+(/\S*)?$", a.url ) ) errors.append( who & ": web url must be https without credentials" );
       }
+      if ( structKeyExists( a, "bundle" ) && !arrayFind( [ "google", "microsoft", "apple", "boxlang" ], a.bundle ) ) errors.append( who & ": unknown bundle " & a.bundle );
       if ( a.source == "script" ) {
        if ( !structKeyExists( a, "script" ) || !structKeyExists( a.script, "url" ) || !reFind( "^https://[^/@\s]+(/\S*)?$", a.script.url ) ) errors.append( who & ": script needs an https url without credentials" );
        if ( structKeyExists( a, "script" ) && structKeyExists( a.script, "shell" ) && !arrayFind( [ "sh", "bash" ], a.script.shell ) ) errors.append( who & ": script shell must be sh or bash" );

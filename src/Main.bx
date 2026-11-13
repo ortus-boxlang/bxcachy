@@ -284,9 +284,10 @@ class {
           wb = new bxcachy.Web( cli );
           if ( wbSub == "add" && p.len() == 2 ) CLIExit( wb.addInteractive( asJson ) );
           if ( wbSub == "add" && p.len() == 4 ) CLIExit( wb.add( p[3], p[4], args.options.browser ?: "", structKeyExists( args.options, "yes" ), asJson ) );
+          if ( wbSub == "install" && p.len() == 3 ) CLIExit( wb.installBundle( p[3], structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
           if ( wbSub == "list" && p.len() == 2 ) CLIExit( wb.list( asJson ) );
           if ( wbSub == "rm" && p.len() == 3 ) CLIExit( wb.remove( p[3], structKeyExists( args.options, "yes" ), asJson ) );
-          println( "Usage: bxcachy web add [NAME URL] [--browser=brave|chromium|google-chrome|edge|firefox] [--yes] | list | rm NAME [--yes] [--json]" );
+          println( "Usage: bxcachy web add [NAME URL] [--browser=brave|chromium|google-chrome|edge|firefox] [--yes] | list | rm NAME [--yes] | install google|microsoft|apple|boxlang|all [--yes] [--dry-run] [--json]" );
           CLIExit( 2 );
           break;
          case "vpn":

@@ -449,6 +449,16 @@
       "group": "gaming",
       "title": "Tools",
       "order": 4
+    },
+    {
+      "group": "webapps",
+      "title": "Apple",
+      "order": 7
+    },
+    {
+      "group": "webapps",
+      "title": "BoxLang",
+      "order": 8
     }
   ],
   "apps": [
@@ -4515,7 +4525,8 @@
       "macos": "Maps",
       "origin": [
         "owner-pick"
-      ]
+      ],
+      "bundle": "google"
     },
     {
       "id": "photos",
@@ -4533,7 +4544,8 @@
       "origin": [
         "owner-pick",
         "omarchy-web"
-      ]
+      ],
+      "bundle": "google"
     },
     {
       "id": "youtube",
@@ -4551,7 +4563,8 @@
       "origin": [
         "owner-pick",
         "omarchy-web"
-      ]
+      ],
+      "bundle": "google"
     },
     {
       "id": "youtube-music",
@@ -4568,7 +4581,8 @@
       "macos": "Music",
       "origin": [
         "owner-pick"
-      ]
+      ],
+      "bundle": "google"
     },
     {
       "id": "whatsapp",
@@ -4619,7 +4633,8 @@
       "macos": "Messages",
       "origin": [
         "omarchy-web"
-      ]
+      ],
+      "bundle": "google"
     },
     {
       "id": "google-docs",
@@ -4639,7 +4654,8 @@
       ],
       "profiles": {
         "workspace": "default"
-      }
+      },
+      "bundle": "google"
     },
     {
       "id": "google-drive",
@@ -4659,7 +4675,8 @@
       ],
       "profiles": {
         "workspace": "default"
-      }
+      },
+      "bundle": "google"
     },
     {
       "id": "google-sheets",
@@ -4679,7 +4696,8 @@
       ],
       "profiles": {
         "workspace": "default"
-      }
+      },
+      "bundle": "google"
     },
     {
       "id": "google-slides",
@@ -4699,7 +4717,8 @@
       ],
       "profiles": {
         "workspace": "default"
-      }
+      },
+      "bundle": "google"
     },
     {
       "id": "excel",
@@ -4719,7 +4738,8 @@
       ],
       "profiles": {
         "workspace": "optional"
-      }
+      },
+      "bundle": "microsoft"
     },
     {
       "id": "microsoft-teams-web",
@@ -4739,7 +4759,8 @@
       ],
       "profiles": {
         "workspace": "optional"
-      }
+      },
+      "bundle": "microsoft"
     },
     {
       "id": "onedrive",
@@ -4759,7 +4780,8 @@
       ],
       "profiles": {
         "workspace": "optional"
-      }
+      },
+      "bundle": "microsoft"
     },
     {
       "id": "outlook",
@@ -4779,7 +4801,8 @@
       ],
       "profiles": {
         "workspace": "optional"
-      }
+      },
+      "bundle": "microsoft"
     },
     {
       "id": "powerpoint",
@@ -4796,7 +4819,8 @@
       "macos": "PowerPoint (same)",
       "origin": [
         "omarchy-web"
-      ]
+      ],
+      "bundle": "microsoft"
     },
     {
       "id": "word",
@@ -4816,7 +4840,8 @@
       ],
       "profiles": {
         "workspace": "optional"
-      }
+      },
+      "bundle": "microsoft"
     },
     {
       "id": "x",
@@ -4853,7 +4878,8 @@
       ],
       "profiles": {
         "workspace": "default"
-      }
+      },
+      "bundle": "google"
     },
     {
       "id": "google-calendar",
@@ -4873,7 +4899,8 @@
       ],
       "profiles": {
         "workspace": "default"
-      }
+      },
+      "bundle": "google"
     },
     {
       "id": "basecamp",
@@ -6406,6 +6433,263 @@
       "targets": [
         "kdeplasma-addons"
       ]
+    },
+    {
+      "id": "try-boxlang",
+      "name": "Try BoxLang",
+      "description": "Write and run BoxLang in the browser",
+      "description_source": "curated",
+      "kind": "web",
+      "group": "webapps",
+      "category": "BoxLang",
+      "tier": "default",
+      "source": "web",
+      "url": "https://try.boxlang.io",
+      "homepage": "https://try.boxlang.io",
+      "macos": "",
+      "origin": [
+        "owner-pick"
+      ],
+      "bundle": "boxlang"
+    },
+    {
+      "id": "icloud",
+      "name": "iCloud",
+      "description": "iCloud home page",
+      "description_source": "curated",
+      "kind": "web",
+      "group": "webapps",
+      "category": "Apple",
+      "tier": "optional",
+      "source": "web",
+      "url": "https://www.icloud.com",
+      "homepage": "https://www.icloud.com",
+      "macos": "",
+      "origin": [
+        "owner-pick"
+      ],
+      "bundle": "apple"
+    },
+    {
+      "id": "icloud-mail",
+      "name": "iCloud Mail",
+      "description": "iCloud Mail as a web app",
+      "description_source": "curated",
+      "kind": "web",
+      "group": "webapps",
+      "category": "Apple",
+      "tier": "optional",
+      "source": "web",
+      "url": "https://www.icloud.com/mail",
+      "homepage": "https://www.icloud.com/mail",
+      "macos": "",
+      "origin": [
+        "owner-pick"
+      ],
+      "bundle": "apple"
+    },
+    {
+      "id": "icloud-calendar",
+      "name": "iCloud Calendar",
+      "description": "iCloud Calendar as a web app",
+      "description_source": "curated",
+      "kind": "web",
+      "group": "webapps",
+      "category": "Apple",
+      "tier": "optional",
+      "source": "web",
+      "url": "https://www.icloud.com/calendar",
+      "homepage": "https://www.icloud.com/calendar",
+      "macos": "",
+      "origin": [
+        "owner-pick"
+      ],
+      "bundle": "apple"
+    },
+    {
+      "id": "icloud-notes",
+      "name": "iCloud Notes",
+      "description": "iCloud Notes as a web app",
+      "description_source": "curated",
+      "kind": "web",
+      "group": "webapps",
+      "category": "Apple",
+      "tier": "optional",
+      "source": "web",
+      "url": "https://www.icloud.com/notes",
+      "homepage": "https://www.icloud.com/notes",
+      "macos": "",
+      "origin": [
+        "owner-pick"
+      ],
+      "bundle": "apple"
+    },
+    {
+      "id": "icloud-photos",
+      "name": "iCloud Photos",
+      "description": "iCloud Photos as a web app",
+      "description_source": "curated",
+      "kind": "web",
+      "group": "webapps",
+      "category": "Apple",
+      "tier": "optional",
+      "source": "web",
+      "url": "https://www.icloud.com/photos",
+      "homepage": "https://www.icloud.com/photos",
+      "macos": "",
+      "origin": [
+        "owner-pick"
+      ],
+      "bundle": "apple"
+    },
+    {
+      "id": "icloud-pages",
+      "name": "Pages",
+      "description": "Pages as a web app",
+      "description_source": "curated",
+      "kind": "web",
+      "group": "webapps",
+      "category": "Apple",
+      "tier": "optional",
+      "source": "web",
+      "url": "https://www.icloud.com/pages",
+      "homepage": "https://www.icloud.com/pages",
+      "macos": "",
+      "origin": [
+        "owner-pick"
+      ],
+      "bundle": "apple"
+    },
+    {
+      "id": "icloud-numbers",
+      "name": "Numbers",
+      "description": "Numbers as a web app",
+      "description_source": "curated",
+      "kind": "web",
+      "group": "webapps",
+      "category": "Apple",
+      "tier": "optional",
+      "source": "web",
+      "url": "https://www.icloud.com/numbers",
+      "homepage": "https://www.icloud.com/numbers",
+      "macos": "",
+      "origin": [
+        "owner-pick"
+      ],
+      "bundle": "apple"
+    },
+    {
+      "id": "icloud-keynote",
+      "name": "Keynote",
+      "description": "Keynote as a web app",
+      "description_source": "curated",
+      "kind": "web",
+      "group": "webapps",
+      "category": "Apple",
+      "tier": "optional",
+      "source": "web",
+      "url": "https://www.icloud.com/keynote",
+      "homepage": "https://www.icloud.com/keynote",
+      "macos": "",
+      "origin": [
+        "owner-pick"
+      ],
+      "bundle": "apple"
+    },
+    {
+      "id": "apple-music",
+      "name": "Apple Music",
+      "description": "Apple Music as a web app",
+      "description_source": "curated",
+      "kind": "web",
+      "group": "webapps",
+      "category": "Apple",
+      "tier": "optional",
+      "source": "web",
+      "url": "https://music.apple.com",
+      "homepage": "https://music.apple.com",
+      "macos": "",
+      "origin": [
+        "owner-pick"
+      ],
+      "bundle": "apple"
+    },
+    {
+      "id": "apple-tv",
+      "name": "Apple TV",
+      "description": "Apple TV as a web app",
+      "description_source": "curated",
+      "kind": "web",
+      "group": "webapps",
+      "category": "Apple",
+      "tier": "optional",
+      "source": "web",
+      "url": "https://tv.apple.com",
+      "homepage": "https://tv.apple.com",
+      "macos": "",
+      "origin": [
+        "owner-pick"
+      ],
+      "bundle": "apple"
+    },
+    {
+      "id": "dbeaver",
+      "name": "DBeaver",
+      "description": "Universal database tool (Community edition)",
+      "description_source": "arch",
+      "kind": "desktop",
+      "group": "infra",
+      "category": "Databases",
+      "tier": "optional",
+      "source": "pacman",
+      "targets": [
+        "dbeaver"
+      ],
+      "origin": [
+        "owner-pick"
+      ],
+      "verified_on": "2026-11-12",
+      "repo": "extra",
+      "homepage": "https://dbeaver.io"
+    },
+    {
+      "id": "heidisql",
+      "name": "HeidiSQL",
+      "description": "Lightweight GUI for MySQL, MariaDB, PostgreSQL, SQL Server and SQLite (native Qt6 build)",
+      "description_source": "aur",
+      "kind": "desktop",
+      "group": "infra",
+      "category": "Databases",
+      "tier": "optional",
+      "source": "aur",
+      "targets": [
+        "heidisql-qt6-bin"
+      ],
+      "origin": [
+        "owner-pick"
+      ],
+      "verified_on": "2026-11-12",
+      "homepage": "https://www.heidisql.com"
+    },
+    {
+      "id": "rclone-browser",
+      "name": "RClone Browser",
+      "description": "Simple GUI for rclone: browse, upload, download and sync S3, Drive and other clouds",
+      "description_source": "aur",
+      "kind": "desktop",
+      "group": "infra",
+      "category": "Cloud Storage",
+      "tier": "optional",
+      "source": "aur",
+      "targets": [
+        "rclone-browser"
+      ],
+      "origin": [
+        "owner-pick"
+      ],
+      "verified_on": "2026-11-12",
+      "homepage": "https://github.com/kapitainsky/RcloneBrowser",
+      "macos": "Transmit / Cyberduck"
     }
   ]
 }

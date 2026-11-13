@@ -131,4 +131,22 @@ class Web {
         fileDelete( f );
         return say( cmd, 0, { name: arguments.name }, arguments.asJson, [ arguments.name & " was removed." ] );
     }
+
+    // The catalog's web app bundles (google, microsoft, apple, boxlang) and `all`.
+    function bundles() { return [ "google", "microsoft", "apple", "boxlang" ]; }
+
+    // `web install BUNDLE|all [--yes] [--dry-run]`: one launcher entry per web app of the bundle (the catalog's web source).
+    function installBundle( name, yes, dryRun, asJson ) {
+        var wanted = arguments.name == "all" ? bundles() : [ arguments.name ];
+        if ( arguments.name != "all" && !arrayFind( bundles(), arguments.name ) ) return say( "web install", 4, { error: "unknown bundle " & arguments.name }, arguments.asJson, [ "error: unknown bundle " & arguments.name & " (use " & bundles().toList( ", " ) & " or all)" ] );
+        var cat = new bxcachy.Catalog().load();
+        var selected = cat.apps.filter( function( a ) { return a.source == "web" && structKeyExists( a, "bundle" ) && arrayFind( wanted, a.bundle ) > 0; } );
+        var ids = selected.map( function( a ) { return a.id; } );
+        var data = { bundle: arguments.name, apps: ids };
+        if ( !arguments.yes || arguments.dryRun ) return say( "web install", arguments.dryRun ? 0 : 2, data, arguments.asJson, [ ( arguments.dryRun ? "Dry run" : "Plan" ) & ": add " & ids.len() & " web apps (" & ids.toList( ", " ) & ")", arguments.dryRun ? "Nothing was changed." : "Nothing was changed. Add --yes to apply." ] );
+        var built = new bxcachy.Installer().steps( selected, false );
+        var r = new bxcachy.Installer().run( built.steps );
+        if ( r.failed.len() ) return say( "web install", 6, { failed: r.failed }, arguments.asJson, [ "error: " & r.failed.len() & " web apps could not be added" ] );
+        return say( "web install", 0, data, arguments.asJson, [ "Added " & r.done.len() & " web apps: " & ids.toList( ", " ) ] );
+    }
 }

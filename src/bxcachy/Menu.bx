@@ -36,6 +36,9 @@ class Menu {
             ] },
             { label: "Web apps", kind: "sub", children: [
                 { label: "Create web app", kind: "webcreate" },
+                { label: "Install all Google apps", kind: "run", argv: [ "web", "install", "google", "--yes" ] },
+                { label: "Install all Microsoft apps", kind: "run", argv: [ "web", "install", "microsoft", "--yes" ] },
+                { label: "Install all Apple apps", kind: "run", argv: [ "web", "install", "apple", "--yes" ] },
                 { label: "List web apps", kind: "run", argv: [ "web", "list" ] },
                 { label: "Remove a web app", kind: "webrm" }
             ] },

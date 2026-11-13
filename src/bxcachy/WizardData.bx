@@ -793,6 +793,30 @@ class WizardData {
           ]
         },
         {
+          "type": "multi",
+          "id": "web_bundles",
+          "label": "Web app bundles",
+          "help": "Adds all the apps of a suite as windows in your launcher: Google (Docs, Drive, Gmail...), Microsoft 365 (Word, Excel, Outlook, Teams...), Apple (iCloud, Pages, Apple Music...).",
+          "default": [],
+          "options": [
+            {
+              "value": "google",
+              "label": "Google apps",
+              "description": "Docs, Drive, Sheets, Slides, Gmail, Calendar, Maps, Photos, YouTube."
+            },
+            {
+              "value": "microsoft",
+              "label": "Microsoft 365 apps",
+              "description": "Word, Excel, PowerPoint, Outlook, Teams, OneDrive."
+            },
+            {
+              "value": "apple",
+              "label": "Apple apps",
+              "description": "iCloud, Mail, Notes, Pages, Numbers, Keynote, Apple Music, Apple TV."
+            }
+          ]
+        },
+        {
           "type": "choice",
           "id": "launcher",
           "label": "App launcher",

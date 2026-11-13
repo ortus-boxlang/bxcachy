@@ -120,6 +120,7 @@ class InitPlan {
         }
         var fileManager = pick( a, "file_manager" );
         if ( len( fileManager ) && !arrayFind( chosenApps, fileManager ) ) chosenApps.append( fileManager );
+        for ( var wbBundle in pick( a, "web_bundles", [] ) ) out.steps.append( { id: "web-" & wbBundle, title: "add all the " & wbBundle & " web apps", argv: [ "bxcachy", "web", "install", wbBundle ], optional: true } );
         var dictation = pick( a, "dictation" );
         if ( dictation == "superwhisper" ) { if ( !arrayFind( chosenApps, "superwhisper" ) ) chosenApps.append( "superwhisper" ); }
         else if ( dictation == "voxtype" ) { for ( var dapp in [ "voxtype", "wtype" ] ) if ( !arrayFind( chosenApps, dapp ) ) chosenApps.append( dapp ); }
