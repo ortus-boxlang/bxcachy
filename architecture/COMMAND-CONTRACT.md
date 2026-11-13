@@ -719,6 +719,15 @@ The wizard asks the window layout once per desktop you set up: Hyprland (`layout
 - **`reinstall`** is `init --rerun`: the way to install packages again.
 - **Verified:** `tests/refresh-test.sh` (temp home, fake `bxcachy` that logs the commands, a fake terminal): plan and dry run write nothing, files are written, a second run rewrites nothing clean, edits are kept, `--force` overwrites and takes a backup, each component runs its commands.
 
+### 13.43 Backups: the config layer (decided with the owner 2026-11-13)
+
+- **Three layers, one command.** `bxcachy backup config` (your BxCachy setup), `backup snapshots` (the system, Btrfs with snapper) and `backup data` (your files, restic) are built in that order; `backup send` and `backup export` move any of them, and `timemachine` shows them all. This section is the config layer; the others are added below as they land.
+- **A snapshot** is `~/.local/share/bxcachy/backups/config/ID.tar.gz` (mode 600) plus `ID.json`. `ID` is `yyyyMMddTHHmmss` (with `-xxxx` when two land in the same second). Inside: `files/` (paths under your home), `packages.txt` (`pacman -Qqe`), `foreign.txt` (`pacman -Qqm`), `meta.json`, and `secrets.bxs` only with `--with-secrets` (the output of `bxcachy secrets export`, encrypted with a passphrase you type).
+- **What is tracked** (under your home): `.config/bxcachy`, `hypr`, `noctalia`, `ghostty`, `kitty`, `foot`, `alacritty`, `starship.toml`, `nvim`, `btop`, `fish`, `git`, `mimeapps.list`, `xdg-terminals.list`, `.zshrc`, `.bashrc`, `.gitconfig`, `.ssh/config`. `backup config add|remove PATH` changes the list (stored in `backup.json`); SSH keys, `gnupg`, `..` and absolute paths are refused. `.git`, `node_modules` and `*.log` are skipped.
+- **Restore** shows a plan (which files are created or replaced; exit 2 without `--yes`), takes a **safety snapshot of the present** first, then copies the files back (`--only=PATH` limits it). `--packages` installs the explicit packages that are missing and exist in the repositories with `sudo pacman -S --needed --noconfirm`; AUR and local ones are listed for `yay`, never installed from here. `diff ID` compares a snapshot with now (files same, changed, missing, and missing packages).
+- **Automatic:** `auto` is on by default. Before `update apply`, `system update`, `init`, `reinstall` and `refresh` (with `--yes`, never `--dry-run`) a snapshot is taken quietly, with the reason `before <command>`; it never stops the command. The newest 30 are kept (`prune --keep=N`).
+- **Verified:** `tests/backup-config-test.sh` (temp home, fake pacman, sudo and bxcachy). Not verified: a restore on a different machine.
+
 ## 14. Install and the setup wizard (decided with the owner 2026-11-10; install, wizard and the init engine are built, the pages' later commands are not)
 
 ### 14.1 Install
