@@ -565,6 +565,52 @@ class WizardData {
               "description": "Secure TypeScript and JavaScript runtime."
             }
           ]
+        },
+        {
+          "type": "multi",
+          "id": "boxlang_modules",
+          "label": "BoxLang modules",
+          "help": "Installed with bx-module from ForgeBox. Browse them all later with: bxcachy boxlang modules list.",
+          "default": [],
+          "options": [
+            {
+              "value": "bx-ai",
+              "label": "bx-ai",
+              "description": "AI and agents: chat, tools, memory, RAG, MCP."
+            },
+            {
+              "value": "bx-mcp",
+              "label": "bx-mcp",
+              "description": "MCP server for a running BoxLang (needs bx-ai)."
+            },
+            {
+              "value": "bx-sites",
+              "label": "bx-sites",
+              "description": "Static site generator: Markdown to themed, searchable sites."
+            },
+            {
+              "value": "bx-orm",
+              "label": "bx-orm",
+              "description": "Object-relational mapping."
+            },
+            {
+              "value": "bx-compat-cfml",
+              "label": "bx-compat-cfml",
+              "description": "CFML compatibility."
+            },
+            {
+              "value": "bx-pdf",
+              "label": "bx-pdf",
+              "description": "PDF generation."
+            }
+          ]
+        },
+        {
+          "type": "confirm",
+          "id": "boxlang_vscode",
+          "label": "BoxLang extension for VS Code",
+          "default": true,
+          "help": "Installs ortus-solutions.vscode-boxlang and the developer pack into VS Code."
         }
       ]
     },

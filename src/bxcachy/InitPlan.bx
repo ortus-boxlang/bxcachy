@@ -102,6 +102,14 @@ class InitPlan {
             out.steps.append( { id: "toolchain-" & tc, title: "install the " & tc & " toolchain", argv: [ "bxcachy", "profile-install", profiles[ tc ] ] } );
             if ( tc == "php" ) out.steps.append( { id: "laravel", title: "install the Laravel installer (composer global)", argv: [ "composer", "global", "require", "laravel/installer" ] } );
         }
+        // BoxLang modules from ForgeBox and the VS Code extension (optional: a failure is skipped, the plan goes on)
+        var blMods = pick( a, "boxlang_modules", [] );
+        if ( blMods.len() ) {
+            var blArgv = [ "bxcachy", "boxlang", "modules", "install" ];
+            for ( var bm in blMods ) blArgv.append( bm );
+            out.steps.append( { id: "boxlang-modules", title: "install the BoxLang modules (" & blMods.toList( ", " ) & ")", argv: blArgv, optional: true } );
+        }
+        if ( pick( a, "boxlang_vscode", false ) ) out.steps.append( { id: "boxlang-vscode", title: "add the BoxLang extension to VS Code", argv: [ "bxcachy", "boxlang", "vscode" ], optional: true } );
         // containers: Podman is the engine the containers profile is built around; Docker is one extra package
         var engine = pick( a, "container_engine" );
         if ( engine == "podman" ) out.steps.append( { id: "containers", title: "install Podman and its tools", argv: [ "bxcachy", "profile-install", "containers" ] } );

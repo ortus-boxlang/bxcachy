@@ -26,6 +26,14 @@ class Menu {
             ] },
             { label: "Databases", kind: "db" },
             { label: "All apps", kind: "spawn", argv: [ "apps" ] },
+            { label: "BoxLang", kind: "sub", children: [
+                { label: "Status", kind: "run", argv: [ "boxlang", "status" ] },
+                { label: "Welcome and getting started", kind: "spawn", argv: [ "boxlang", "welcome" ] },
+                { label: "Browse modules (ForgeBox)", kind: "run", argv: [ "boxlang", "modules", "list" ] },
+                { label: "Update modules", kind: "run", argv: [ "boxlang", "modules", "update" ] },
+                { label: "Add the VS Code extension", kind: "run", argv: [ "boxlang", "vscode" ] },
+                { label: "Docs, sites and links", kind: "run", argv: [ "boxlang", "links" ] }
+            ] },
             { label: "Screenshot", kind: "spawn", argv: [ "screenshot", "menu" ] },
             { label: "Notifications", kind: "sub", children: [
                 { label: "Do Not Disturb: toggle", kind: "spawn", argv: [ "notify", "dnd", "toggle" ] },

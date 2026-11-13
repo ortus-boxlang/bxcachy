@@ -15,7 +15,7 @@ class {
         var config = new bxcachy.ConfigService();
         // One shared flag check for every command: unknown flags are usage errors and nothing runs.
         for ( var flag in args.options ) {
-            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider", "backend", "dir", "email", "region", "browser", "path", "from", "export", "from-system", "fresh", "rerun", "fix", "edit", "history", "out", "agenda", "without-weather", "desktops", "preset" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
+            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider", "backend", "dir", "email", "region", "browser", "path", "from", "export", "from-system", "fresh", "rerun", "fix", "edit", "history", "out", "agenda", "without-weather", "desktops", "preset", "no-open" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
                 println( "Unknown option: --" & flag );
                 CLIExit( 2 );
             }
@@ -332,6 +332,20 @@ class {
           // The LazyVim starter for Neovim. See COMMAND-CONTRACT.md 13.17.
           if ( p.len() == 2 && p[2] == "lazyvim" ) CLIExit( new bxcachy.Editor( cli ).lazyvim( structKeyExists( args.options, "yes" ), asJson ) );
           println( "Usage: bxcachy editor lazyvim [--yes] [--json]" );
+          CLIExit( 2 );
+          break;
+         case "boxlang":
+          // The BoxLang developer ecosystem. See COMMAND-CONTRACT.md 13.28.
+          blSub = p.len() >= 2 ? p[2] : "status";
+          bl = new bxcachy.Boxlang( cli );
+          if ( blSub == "status" && p.len() <= 2 ) CLIExit( bl.status( asJson ) );
+          if ( blSub == "use" && p.len() == 3 ) CLIExit( bl.use( "bvm", p[3], asJson ) );
+          if ( blSub == "matchbox" && p.len() == 4 && p[3] == "use" ) CLIExit( bl.use( "mvm", p[4], asJson ) );
+          if ( blSub == "modules" && p.len() >= 3 ) CLIExit( bl.modules( p[3], p.len() > 3 ? p.slice( 4 ) : [], asJson ) );
+          if ( blSub == "vscode" && p.len() == 2 ) CLIExit( bl.vscode( asJson ) );
+          if ( blSub == "links" && p.len() == 2 ) CLIExit( bl.showLinks( asJson ) );
+          if ( blSub == "welcome" && p.len() == 2 ) CLIExit( bl.welcome( !structKeyExists( args.options, "no-open" ), asJson ) );
+          println( "Usage: bxcachy boxlang status | use VERSION | matchbox use VERSION | modules list|search TEXT|install SLUG...|installed|outdated|update | vscode | links | welcome [--json]" );
           CLIExit( 2 );
           break;
          case "plasma":
