@@ -59,6 +59,7 @@ Each part is read on its own. If one cannot be read, the rest still shows.
 | Page | What it does |
 |---|---|
 | Dashboard | what needs attention, meters, what runs, backups |
+| Apps | install, remove and update software: Installed, Discover and Updates tabs, a search box that is always there, icons and screenshots (see [Apps](apps.md#the-apps-manager)) |
 | BoxLang | BoxLang versions through `bvm`: use, install, remove |
 | Java | your Java homes: default, remove, and `a` to browse every JDK SDKMAN offers and install one (see `bxrig java`) |
 | Maven | every Maven version SDKMAN offers, installed ones marked: install, default, remove (see `bxrig sdk`) |
