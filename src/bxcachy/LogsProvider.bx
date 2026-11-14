@@ -6,6 +6,8 @@ class LogsProvider {
     function title() { return "Logs"; }
     function hint() { return "this boot · priority " & levels()[ variables.prio ] & " and worse"; }
     function live() { return false; }
+    function refreshSeconds() { return 0; }
+    function detailLines() { return 2; }
     function emptyText() { return "No log lines at this priority."; }
     function levels() { return [ "error", "warning", "info" ]; }
     function columns() { return [ { key: "time", label: "time", w: 10 }, { key: "level", label: "level", w: 9 }, { key: "unit", label: "from", w: 22 }, { key: "message", label: "message", w: 0 } ]; }

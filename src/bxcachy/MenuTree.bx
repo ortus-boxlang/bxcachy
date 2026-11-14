@@ -285,6 +285,18 @@ class MenuTree {
                     run( "Docs, sites and links", [ "boxlang", "links" ] )
                 ] ),
                 { label: "Databases", kind: "db" },
+                sub( "Mail catcher", [
+                    run( "Status", [ "mail", "status" ] ),
+                    run( "Start (mail is thrown away when it stops)", [ "mail", "start", "--yes" ] ),
+                    run( "Start and keep the mail", [ "mail", "start", "--keep", "--yes" ] ),
+                    run( "List messages", [ "mail", "list" ] ),
+                    run( "Open the web inbox", [ "mail", "open" ] ),
+                    run( "Send a test message", [ "mail", "test" ] ),
+                    run( "SMTP settings for my app", [ "mail", "env" ] ),
+                    run( "Delete every message", [ "mail", "clear", "--yes" ] ),
+                    run( "Stop", [ "mail", "stop" ] ),
+                    run( "Remove (container and kept mail)", [ "mail", "remove", "--yes" ] )
+                ] ),
                 sub( "Virtual machines", [
                     run( "List VMs", [ "vm", "list" ] ),
                     run( "VM disk sizes", [ "vm", "size" ] ),

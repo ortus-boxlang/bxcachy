@@ -6,6 +6,8 @@ class VersionsProvider {
     function title() { return "Versions"; }
     function hint() { return "bvm, mvm and nvm in one place"; }
     function live() { return false; }
+    function refreshSeconds() { return 0; }
+    function detailLines() { return 2; }
     function emptyText() { return "No version managers found."; }
     function columns() { return [ { key: "tool", label: "tool", w: 14 }, { key: "manager", label: "manager", w: 12 }, { key: "active", label: "active", w: 18 }, { key: "extra", label: "", w: 0 } ]; }
     function style( r ) { return r.active == "-" ? "dim" : ""; }

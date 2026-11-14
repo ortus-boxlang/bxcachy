@@ -15,7 +15,7 @@ class ControlCenter {
 
     function self() { return getSystemSetting( "BXCACHY_SELF", "bxcachy" ); }
 
-    function pageIds() { return [ "dashboard", "boxlang", "java", "maven", "gradle", "versions", "ports", "packages", "shortcuts", "machines", "databases", "storage", "secrets", "themes", "logs" ]; }
+    function pageIds() { return [ "dashboard", "boxlang", "java", "maven", "gradle", "versions", "ports", "packages", "shortcuts", "machines", "databases", "mail", "storage", "secrets", "themes", "logs" ]; }
 
     function provider( demo ) {
         var dd = new bxcachy.DashboardData( variables.cli, variables.runner );
@@ -36,6 +36,7 @@ class ControlCenter {
             new bxcachy.ListPage( new bxcachy.ShortcutsProvider( d ) ),
             new bxcachy.ListPage( new bxcachy.MachinesProvider( d, provider( d ) ) ),
             new bxcachy.ListPage( new bxcachy.DatabasesProvider( d, provider( d ) ) ),
+            new bxcachy.ListPage( new bxcachy.MailProvider( d ) ),
             new bxcachy.ListPage( new bxcachy.StorageProvider( d ) ),
             new bxcachy.ListPage( new bxcachy.SecretsProvider( d ) ),
             new bxcachy.ListPage( new bxcachy.ThemesProvider( d ) ),

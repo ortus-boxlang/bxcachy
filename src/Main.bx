@@ -15,7 +15,7 @@ class {
         var config = new bxcachy.ConfigService();
         // One shared flag check for every command: unknown flags are usage errors and nothing runs.
         for ( var flag in args.options ) {
-            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider", "backend", "dir", "email", "region", "browser", "path", "from", "export", "from-system", "fresh", "rerun", "fix", "edit", "history", "out", "agenda", "without-weather", "desktops", "preset", "no-open", "location", "notify", "defaults", "tag", "mode", "keep-wallpaper", "version", "tag", "ram", "cpus", "disk", "memory", "share", "gpu", "web", "fullscreen", "limit", "explicit", "aur", "list", "host", "protocol", "user", "vers", "to", "delete", "starter", "reason", "with-secrets", "only", "packages", "keep", "home", "description", "type", "url", "bucket", "endpoint", "region", "project", "credentials", "remote", "container", "keys-file", "ask-keys", "target", "include", "deep", "scheduled", "mode", "daily", "weekly", "monthly", "from", "local", "all", "unset", "icons" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
+            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider", "backend", "dir", "email", "region", "browser", "path", "from", "export", "from-system", "fresh", "rerun", "fix", "edit", "history", "out", "agenda", "without-weather", "desktops", "preset", "no-open", "location", "notify", "defaults", "tag", "mode", "keep-wallpaper", "version", "tag", "ram", "cpus", "disk", "memory", "share", "gpu", "web", "fullscreen", "limit", "explicit", "aur", "list", "host", "protocol", "user", "vers", "to", "delete", "starter", "reason", "with-secrets", "only", "packages", "keep", "home", "description", "type", "url", "bucket", "endpoint", "region", "project", "credentials", "remote", "container", "keys-file", "ask-keys", "target", "include", "deep", "scheduled", "mode", "daily", "weekly", "monthly", "from", "local", "all", "unset", "icons", "smtp-port", "ui-port", "subject" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
                 println( "Unknown option: --" & flag );
                 CLIExit( 2 );
             }
@@ -553,6 +553,12 @@ class {
           sdkWords = [];
           for ( sdki = 2; sdki <= p.len(); sdki++ ) sdkWords.append( p[ sdki ] );
           CLIExit( new bxcachy.Sdk( cli ).run( sdkWords, args.options, structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
+          break;
+         case "mail":
+          // A mail catcher for development (Mailpit in a container). See COMMAND-CONTRACT.md 13.48.
+          mlWords = [];
+          for ( mli = 2; mli <= p.len(); mli++ ) mlWords.append( p[ mli ] );
+          CLIExit( new bxcachy.Mail( cli ).run( mlWords, args.options, structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
           break;
          case "tui":
           // The Control Center: every BxCachy screen in one terminal. See COMMAND-CONTRACT.md 13.46.

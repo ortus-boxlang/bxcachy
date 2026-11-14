@@ -864,6 +864,13 @@ class WizardData {
           ]
         },
         {
+          "type": "confirm",
+          "id": "mail_catcher",
+          "label": "Mail catcher",
+          "default": false,
+          "help": "A local inbox for the mail your apps send while you develop (Mailpit in a container, SMTP on 127.0.0.1:1025, inbox at http://127.0.0.1:8025). Mail is thrown away when it stops. Manage it with: bxcachy mail"
+        },
+        {
           "type": "choice",
           "id": "vm_windows",
           "label": "Windows VM",

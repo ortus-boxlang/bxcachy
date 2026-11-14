@@ -912,6 +912,22 @@
      "note": "setup installs SDKMAN into ~/.sdkman without touching your shell files. Maven and Gradle reach your shells through ~/.config/bxcachy/sdk.sh and sdk.fish, which the shell starters source (bxcachy refresh shell on an existing setup). Version lists come from api.sdkman.io."
     },
     {
+     "name": "mail",
+     "summary": "A mail catcher for development: a local inbox for the mail your apps send, in a container.",
+     "usage": [
+      "mail start [--keep] [--smtp-port=N] [--ui-port=N] [--yes] | stop | status | remove [--keep-data] [--yes] | list [--limit=N] | show ID | delete ID [--yes] | clear [--yes] | open [ID] | test [--to=ADDR] [--subject=TEXT] | env [--dry-run] [--json]"
+     ],
+     "examples": [
+      "bxcachy mail start --yes",
+      "bxcachy mail env",
+      "bxcachy mail test",
+      "bxcachy mail list",
+      "bxcachy mail start --keep --yes"
+     ],
+     "mutates": true,
+     "note": "Runs Mailpit in a container (the engine bxcachy db engine chose). SMTP is 127.0.0.1:1025 and the web inbox is http://127.0.0.1:8025, both local only. Mail is thrown away when the catcher stops unless you start it with --keep. The Control Center has a Mail page that refreshes by itself."
+    },
+    {
      "name": "tui",
      "summary": "Control Center: every BxCachy screen in one terminal, starting with the Dashboard.",
      "usage": [

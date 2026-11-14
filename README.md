@@ -52,6 +52,7 @@ bxcachy display scale DP-2 1.5
 bxcachy time sync --yes         # after you travel
 bxcachy timemachine             # every backup on one timeline
 bxcachy tui                     # the Control Center: dashboard and pages
+bxcachy mail start --yes        # a local inbox for your app's mail
 bxcachy help                    # every command, or: bxcachy help appearance
 bxcachy vm create linux dev     # a Linux desktop in a container
 bxcachy db start postgres --yes

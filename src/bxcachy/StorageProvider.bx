@@ -6,6 +6,8 @@ class StorageProvider {
     function title() { return "Storage"; }
     function hint() { return "NAS and cloud"; }
     function live() { return false; }
+    function refreshSeconds() { return 0; }
+    function detailLines() { return 2; }
     function emptyText() { return "No NAS or cloud yet. Add a NAS: bxcachy nas add NAME --host=HOST"; }
     function columns() { return [ { key: "mark", label: "", w: 3 }, { key: "name", label: "name", w: 22 }, { key: "kind", label: "kind", w: 10 }, { key: "state", label: "state", w: 14 }, { key: "where", label: "where", w: 0 } ]; }
     function style( r ) { return r.state == "mounted" ? "ok" : "dim"; }

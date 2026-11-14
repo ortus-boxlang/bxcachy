@@ -51,6 +51,6 @@ check( "kit: fade draws without failing", find( "faded", shot() ) > 0 );
 ik = new bxcachy.TuiKit( tui );
 check( "icons: off by default, an empty string", ik.icon( "home" ) == "" && !ik.hasIcons() );
 ik.setIcons( true );
-check( "icons: on gives one Nerd Font character, unknown names give nothing", len( ik.icon( "home" ) ) == 1 && asc( ik.icon( "home" ) ) == 61461 && asc( ik.icon( "java" ) ) == 59192 && ik.icon( "nope" ) == "" );
+check( "icons: on gives one Nerd Font character, unknown names give nothing", len( ik.icon( "home" ) ) == 1 && ik.icon( "home" ) == chr( 61461 ) && ik.icon( "java" ) == chr( 59192 ) && ik.icon( "nope" ) == "" );
 if ( failures > 0 ) { println( failures & " failed" ); exit( 1 ); }
 println( "all passed" );

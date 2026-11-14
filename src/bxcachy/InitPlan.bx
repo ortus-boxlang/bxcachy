@@ -232,6 +232,8 @@ class InitPlan {
             if ( pick( a, "database_passwords" ) == "ask" && !arrayFind( [ "redis", "couchbase", "chroma", "qdrant", "weaviate" ], db ) ) dargv.append( "--ask-password" );
             out.steps.append( { id: "db-" & db, title: "start " & db & " (local container, 127.0.0.1 only)" & ( dargv.len() > 4 ? ", asking for its password" : "" ), argv: dargv } );
         }
+        // the mail catcher (a development inbox in a container): optional, so a missing container engine never stops the plan
+        if ( pick( a, "mail_catcher", false ) ) out.steps.append( { id: "mail-start", title: "start the mail catcher (SMTP 127.0.0.1:1025, inbox http://127.0.0.1:8025)", argv: [ "bxcachy", "mail", "start", "--yes" ], optional: true } );
         // virtual machines (containers): Windows with the version you chose, a Linux desktop called "desktop"; optional steps, so a missing KVM never stops the plan
         if ( len( vmWin ) && vmWin != "none" ) out.steps.append( { id: "vm-windows", title: "create a Windows VM (" & vmWin & "; it installs itself on the first start)", argv: [ "bxcachy", "vm", "create", "windows", "--version=" & vmWin ], optional: true } );
         if ( len( vmLin ) && vmLin != "none" ) out.steps.append( { id: "vm-linux", title: "create a Linux desktop in a container (" & vmLin & ")", argv: [ "bxcachy", "vm", "create", "linux", "desktop", "--tag=" & vmLin ], optional: true } );

@@ -17,6 +17,8 @@ class ListPage {
         variables.query = "";
         variables.loaded = false;
         variables.rowsShown = 10;
+        variables.tickNow = 0;
+        variables.lastLoad = 0;
         return this;
     }
 
@@ -54,9 +56,23 @@ class ListPage {
     }
 
     function load() {
+        variables.lastLoad = variables.tickNow;
         setRows( variables.p.load( variables.query ) );
         if ( !variables.p.live() && len( variables.list.query() ) ) variables.list.filter( variables.list.query() );
         return this;
+    }
+
+    // Reloads the rows without losing the place: the cursor stays on the same row when it has an `id` that still exists.
+    function reloadKeepingCursor() {
+        var sel = variables.list.selected();
+        var keepId = !isSimpleValue( sel ) && structKeyExists( sel, "id" ) ? sel.id : "";
+        var was = variables.list.cursor();
+        load();
+        if ( len( keepId ) ) {
+            var i = 0;
+            for ( var r in variables.list.items() ) { i++; if ( structKeyExists( r, "id" ) && r.id == keepId ) { variables.list.select( i ); return; } }
+        }
+        variables.list.select( was );
     }
 
     function intentFor( key ) {
@@ -108,6 +124,9 @@ class ListPage {
     function paint( kit, x, y, w, h, tick, phase ) {
         var k = arguments.kit;
         var C = function( n ) { return k.color( n ); };
+        variables.tickNow = arguments.tick;
+        var every = variables.p.refreshSeconds();
+        if ( every > 0 && variables.loaded && variables.mode == "list" && arguments.tick - variables.lastLoad >= every * 20 ) reloadKeepingCursor();
         var ico = k.icon( variables.p.icon() );
         if ( len( ico ) ) k.put( arguments.x + 1, arguments.y, ico, C( "GREEN" ), C( "BASE" ) );
         var tx = arguments.x + 1 + ( len( ico ) ? 2 : 0 );
@@ -116,7 +135,8 @@ class ListPage {
         k.put( tx + 2 + len( variables.p.title() ), arguments.y, k.trunc( hint, arguments.w - len( variables.p.title() ) - 28 ), C( "OVERLAY" ), C( "BASE" ) );
         var fl = variables.mode != "list" ? "/ " & variables.input & "▌" : ( len( variables.list.query() ) ? "/ " & variables.list.query() : ( len( variables.query ) ? "/ " & variables.query : "" ) );
         if ( len( fl ) ) k.put( arguments.x + arguments.w - len( fl ) - 2, arguments.y, fl, variables.mode != "list" ? C( "GREEN" ) : C( "CYAN" ), C( "BASE" ), true );
-        var detailH = 6;
+        var nd = variables.p.detailLines();
+        var detailH = 4 + nd;
         var tableH = arguments.h - detailH - 1;
         k.panel( arguments.x, arguments.y + 2, arguments.w, tableH, "", false, arguments.phase );
         var cols = variables.p.columns();
@@ -156,15 +176,19 @@ class ListPage {
         if ( !isSimpleValue( sel ) ) {
             var lines = variables.p.detail( sel );
             var li = 0;
-            for ( var l in lines ) { li++; if ( li > 2 ) break; k.put( arguments.x + 2, dy + li, k.trunc( l, arguments.w - 4 ), C( "SUB" ), C( "MANTLE" ) ); }
+            for ( var l in lines ) {
+                var parts = nd > 2 && len( l ) > arguments.w - 4 ? k.wrap( l, arguments.w - 4 ) : [ l ];
+                for ( var part in parts ) { li++; if ( li > nd ) break; k.put( arguments.x + 2, dy + li, k.trunc( part, arguments.w - 4 ), C( "SUB" ), C( "MANTLE" ) ); }
+                if ( li > nd ) break;
+            }
             var ax = arguments.x + 2;
             var ai = 0;
             for ( var a in variables.p.actions() ) {
                 ai++;
                 var lab = " " & a.key & " " & a.label & " ";
                 if ( ax + len( lab ) > arguments.x + arguments.w - 2 ) break;
-                k.put( ax, dy + 4, lab, C( "CRUST" ), C( "GREEN" ), true );
-                k.hit( "action", ax, dy + 4, len( lab ), 1, ai );
+                k.put( ax, dy + nd + 2, lab, C( "CRUST" ), C( "GREEN" ), true );
+                k.hit( "action", ax, dy + nd + 2, len( lab ), 1, ai );
                 ax += len( lab ) + 1;
             }
         }

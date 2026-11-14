@@ -6,6 +6,8 @@ class JavaProvider {
     function title() { return "Java"; }
     function hint() { return variables.view == "homes" ? "* default for new shells   > this shell   (a: what you can install)" : "everything SDKMAN offers   (a: back to your homes)"; }
     function live() { return false; }
+    function refreshSeconds() { return 0; }
+    function detailLines() { return 2; }
     function emptyText() { return variables.view == "homes" ? "No Java found. Press a to see what you can install, or i and type 21." : "Could not read the list. Check your network."; }
     function columns() {
         if ( variables.view == "available" ) return [ { key: "mark", label: "", w: 4 }, { key: "vendor", label: "vendor", w: 20 }, { key: "version", label: "version", w: 22 }, { key: "id", label: "identifier", w: 0 } ];

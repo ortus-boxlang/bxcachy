@@ -7,6 +7,8 @@ class SdkProvider {
     function title() { return uCase( left( variables.cand, 1 ) ) & mid( variables.cand, 2, 20 ); }
     function hint() { return variables.ready ? "through SDKMAN · * default · ● installed" : "SDKMAN is not installed. Press S to set it up."; }
     function live() { return false; }
+    function refreshSeconds() { return 0; }
+    function detailLines() { return 2; }
     function emptyText() { return "Could not read the version list. Check your network."; }
     function columns() { return [ { key: "mark", label: "", w: 4 }, { key: "version", label: "version", w: 20 }, { key: "state", label: "", w: 0 } ]; }
     function style( r ) { return r.default ? "ok" : ( r.installed ? "" : "dim" ); }

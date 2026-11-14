@@ -6,6 +6,8 @@ class DatabasesProvider {
     function title() { return "Databases"; }
     function hint() { return "running in " & "podman or docker"; }
     function live() { return false; }
+    function refreshSeconds() { return 0; }
+    function detailLines() { return 2; }
     function emptyText() { return "No databases yet. Press n to start one, like postgres."; }
     function columns() { return [ { key: "mark", label: "", w: 3 }, { key: "name", label: "name", w: 22 }, { key: "engine", label: "engine", w: 16 }, { key: "state", label: "state", w: 10 }, { key: "port", label: "port", w: 8 } ]; }
     function style( r ) { return r.state == "running" ? "" : "dim"; }

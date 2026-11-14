@@ -6,6 +6,8 @@ class ShortcutsProvider {
     function title() { return "Shortcuts"; }
     function hint() { return "your keys, in one list"; }
     function live() { return false; }
+    function refreshSeconds() { return 0; }
+    function detailLines() { return 2; }
     function emptyText() { return "No shortcuts found."; }
     function columns() { return [ { key: "action", label: "action", w: 26 }, { key: "keys", label: "keys", w: 22 }, { key: "origin", label: "origin", w: 10 }, { key: "how", label: "through", w: 0 } ]; }
     function style( r ) { return r.custom ? "ok" : ""; }

@@ -52,8 +52,8 @@ check( "screen: the plan box", find( "System update", s2 ) > 0 && find( "Plan: p
 // ---- every page, in demo mode
 cc = new bxcachy.ControlCenter( {} );
 pages = cc.buildPages( true );
-check( "pages: fifteen, in order", pages.len() == 15 && pages[ 1 ].id() == "dashboard" && pages[ 4 ].id() == "maven" && pages[ 5 ].id() == "gradle" && pages[ 7 ].id() == "ports" && pages[ 11 ].id() == "databases" && pages[ 15 ].id() == "logs" );
-want = { boxlang: "1.9.0-snapshot", java: "temurin-21.0.13_9", maven: "3.10.0", gradle: "9.9.1", versions: "MatchBox", ports: "postgres", shortcuts: "Launcher", machines: "webtop-ubuntu", databases: "postgres", storage: "syno/backups", secrets: "ANTHROPIC_API_KEY", themes: "tokyo-night", logs: "port 5432 already in use" };
+check( "pages: sixteen, in order", pages.len() == 16 && pages[ 1 ].id() == "dashboard" && pages[ 4 ].id() == "maven" && pages[ 5 ].id() == "gradle" && pages[ 7 ].id() == "ports" && pages[ 11 ].id() == "databases" && pages[ 12 ].id() == "mail" && pages[ 16 ].id() == "logs" );
+want = { boxlang: "1.9.0-snapshot", java: "temurin-21.0.13_9", maven: "3.10.0", gradle: "9.9.1", versions: "MatchBox", ports: "postgres", shortcuts: "Launcher", machines: "webtop-ubuntu", databases: "postgres", mail: "Your order 4821 has shipped", storage: "syno/backups", secrets: "ANTHROPIC_API_KEY", themes: "tokyo-night", logs: "port 5432 already in use" };
 big = new bxcachy.ControlCenterApp( pages, "" );
 for ( pg in pages ) {
     if ( pg.id() == "dashboard" ) continue;
@@ -111,6 +111,19 @@ check( "logs: warnings and errors by default", lg.state().rows == 3 );
 big.onKey( "p" ); check( "logs: p moves to info and reloads", lg.state().rows == 5 );
 big.goto( "secrets" );
 check( "secrets: v reveals through a read-only show, never in the table", big.onKey( "v" ).action == "show" && find( "ANTHROPIC_API_KEY", tui.render_to_string( 120, 38 ) ) >= 0 );
+// mail: rows, auto refresh keeps the cursor, delete/clear plan first
+big.goto( "mail" ); ml = big.page();
+check( "mail: four demo messages, unread first row", ml.state().rows == 4 && ml.selected().subject == "Your order 4821 has shipped" && !ml.selected().read );
+view.paint( big, 10, 130, 40 ); msc = tui.render_to_string( 130, 40 );
+check( "mail: the detail shows the headers and the text body", find( "From: Shop Orders", msc ) > 0 && find( "Subject: Your order 4821 has shipped", msc ) > 0 && find( "should arrive on Tuesday", msc ) > 0 );
+check( "mail: the attachment column and unread mark", find( "+", msc ) > 0 && find( "Billing", msc ) > 0 );
+dl = big.onKey( "d" );
+check( "mail: d plans `mail delete ID`", dl.action == "cli" && dl.args[ 1 ] == "mail" && dl.args[ 2 ] == "delete" && dl.args[ 3 ] == "msgA1b2c3" );
+check( "mail: c plans `mail clear`, o and t run at once", big.onKey( "c" ).args[ 2 ] == "clear" && big.onKey( "o" ).action == "show" && big.onKey( "o" ).args[ 3 ] == "msgA1b2c3" && big.onKey( "t" ).args[ 2 ] == "test" );
+big.onKey( "Down" ); big.onKey( "Down" );
+check( "mail: the cursor moved to the third message", ml.state().cursor == 3 );
+view.paint( big, 400, 130, 40 );
+check( "mail: the page reloads itself after a few seconds and keeps the cursor", ml.state().cursor == 3 && ml.selected().id == "msgG7h8i9" );
 // parsers
 pp = new bxcachy.PortsProvider( false );
 ssText = 'LISTEN 0 4096 127.0.0.1:5432 0.0.0.0:* users:(("postgres",pid=4102,fd=5))' & chr( 10 ) & 'LISTEN 0 4096 [::]:5432 [::]:* users:(("postgres",pid=4102,fd=6))' & chr( 10 ) & 'LISTEN 0 128 *:631 *:*' & chr( 10 ) & 'LISTEN 0 511 0.0.0.0:8080 0.0.0.0:* users:(("java",pid=12044,fd=9))';
