@@ -2,7 +2,7 @@
 // A native config service needs: atomic replace, permissions, symlink detection, JSON, temp dirs, env access.
 // Every probe prints one PASS/FAIL line so the result is readable in CI. Informational: it never exits non-zero.
 println( "spike: runtime check start" );
-tmp = getTempDirectory() & "/bxcachy-spike-" & createUUID();
+tmp = getTempDirectory() & "/bxrig-spike-" & createUUID();
 results = [];
 
 function probe( name, detail ) {
@@ -41,7 +41,7 @@ try {
 
 // JSON, hashing, ids, environment.
 try { s = jsonSerialize( { a: 1, b: [ "x", "y" ] } ); back = jsonDeserialize( s ); println( ( back.b[2] == "y" ? "PASS" : "FAIL" ) & " JSON round trip: " & s ); } catch ( any e ) { fail( "JSON", e.message ); }
-try { probe( "hash", hash( "bxcachy", "SHA-256" ) ); } catch ( any e ) { fail( "hash SHA-256", e.message ); }
+try { probe( "hash", hash( "bxrig", "SHA-256" ) ); } catch ( any e ) { fail( "hash SHA-256", e.message ); }
 try { probe( "createUUID", createUUID() ); } catch ( any e ) { fail( "createUUID", e.message ); }
 try { probe( "env HOME", getSystemSetting( "HOME", "unset" ) ); } catch ( any e ) { fail( "getSystemSetting", e.message ); }
 try { probe( "now", dateTimeFormat( now(), "yyyyMMdd'T'HHmmss" ) ); } catch ( any e ) { fail( "dateTimeFormat", e.message ); }

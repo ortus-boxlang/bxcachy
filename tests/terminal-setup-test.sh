@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# `bxcachy setup terminal` and the default terminal in `setup hyprland`, with fake pacman, sudo, id. Usage: terminal-setup-test.sh [binary]
+# `bxrig setup terminal` and the default terminal in `setup hyprland`, with fake pacman, sudo, id. Usage: terminal-setup-test.sh [binary]
 set -euo pipefail
 binary="$(realpath "${1:?native executable required}")"
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
@@ -21,7 +21,7 @@ printf '#!/usr/bin/env bash\nif [[ "$1" == -u ]]; then echo "${MOCK_UID:-1000}";
 printf '#!/usr/bin/env bash\necho x86_64\n' > "$tmp/bin/uname"
 chmod +x "$tmp/bin/"*
 printf 'ID=cachyos\n' > "$tmp/os"
-run() { env BXCACHY_OS_RELEASE="$tmp/os" BXCACHY_STATE_HOME="$tmp/state" BXCACHY_CONFIG_HOME="$tmp/cfg" HOME="$tmp/home" USER=dev PATH="$tmp/bin:$PATH" XDG_CURRENT_DESKTOP=Hyprland LOG="$LOG" "$@"; }
+run() { env BXRIG_OS_RELEASE="$tmp/os" BXRIG_STATE_HOME="$tmp/state" BXRIG_CONFIG_HOME="$tmp/cfg" HOME="$tmp/home" USER=dev PATH="$tmp/bin:$PATH" XDG_CURRENT_DESKTOP=Hyprland LOG="$LOG" "$@"; }
 code() { set +e; run "$@" >/dev/null 2>&1; local c=$?; set -e; echo "$c"; }
 
 [[ "$(code "$binary" setup terminal)" == 2 ]] || fail 'no --yes exits 2'
@@ -36,9 +36,9 @@ grep -q 'pacman -S --needed --noconfirm ghostty kitty foot konsole' "$LOG" || fa
 grep -q 'font-family = JetBrainsMono Nerd Font' "$tmp/cfg/ghostty/config" || fail 'ghostty font written'
 grep -q 'font=JetBrainsMono Nerd Font' "$tmp/cfg/foot/foot.ini" || fail 'foot font written'
 [[ "$(cat "$tmp/cfg/kitty/kitty.conf")" == mine ]] || fail 'existing kitty.conf was overwritten'
-grep -q "config-file = ?$tmp/cfg/bxcachy/theme/ghostty" "$tmp/cfg/ghostty/config" || fail 'ghostty includes the theme file'
-grep -q "include=$tmp/cfg/bxcachy/theme/foot.ini" "$tmp/cfg/foot/foot.ini" || fail 'foot includes the theme file'
-[[ -s "$tmp/cfg/bxcachy/theme/ghostty" && -s "$tmp/cfg/bxcachy/theme/foot.ini" && -s "$tmp/cfg/bxcachy/theme/kitty.conf" ]] || fail 'the default theme files exist so the includes never point at nothing'
+grep -q "config-file = ?$tmp/cfg/bxrig/theme/ghostty" "$tmp/cfg/ghostty/config" || fail 'ghostty includes the theme file'
+grep -q "include=$tmp/cfg/bxrig/theme/foot.ini" "$tmp/cfg/foot/foot.ini" || fail 'foot includes the theme file'
+[[ -s "$tmp/cfg/bxrig/theme/ghostty" && -s "$tmp/cfg/bxrig/theme/foot.ini" && -s "$tmp/cfg/bxrig/theme/kitty.conf" ]] || fail 'the default theme files exist so the includes never point at nothing'
 [[ ! -e "$tmp/cfg/konsole" ]] || fail 'konsole has no starter config'
 
 # hyprland uses the chosen terminal on Super+Enter and installs it instead of the default
@@ -51,10 +51,10 @@ grep -q 'local terminal    = "ghostty"' "$tmp/cfg/hypr/hyprland.lua" || fail 'gh
 [[ "$(code "$binary" setup hyprland --terminal=putty --yes)" == 4 ]] || fail 'an unknown terminal exits 4'
 # window layout in the starter hyprland.lua
 lua() { rm -rf "$tmp/cfg"; run "$binary" setup hyprland "$@" --yes >/dev/null || fail "setup hyprland $*"; cat "$tmp/cfg/hypr/hyprland.lua"; }
-l="$(lua)"; grep -q 'layout           = "dwindle"' <<<"$l" || fail 'dwindle is the default layout'; ! grep -q '^hl.window_rule({ name = "bxcachy-floating"' <<<"$l" || fail 'tiling must not float windows'
+l="$(lua)"; grep -q 'layout           = "dwindle"' <<<"$l" || fail 'dwindle is the default layout'; ! grep -q '^hl.window_rule({ name = "bxrig-floating"' <<<"$l" || fail 'tiling must not float windows'
 l="$(lua --layout=master)"; grep -q 'layout           = "master"' <<<"$l" || fail 'master layout'
 l="$(lua --layout=scrolling)"; grep -q 'layout           = "scrolling"' <<<"$l" || fail 'scrolling layout'
-l="$(lua --layout=floating)"; grep -q 'layout           = "dwindle"' <<<"$l" && grep -q '^hl.window_rule({ name = "bxcachy-floating", match = { class = ".\*" }, float = true })' <<<"$l" || fail 'floating keeps dwindle underneath and floats new windows'
+l="$(lua --layout=floating)"; grep -q 'layout           = "dwindle"' <<<"$l" && grep -q '^hl.window_rule({ name = "bxrig-floating", match = { class = ".\*" }, float = true })' <<<"$l" || fail 'floating keeps dwindle underneath and floats new windows'
 [[ "$(code "$binary" setup hyprland --layout=carousel --yes)" == 4 ]] || fail 'an unknown layout exits 4'
 # the other starter choices: workspaces, natural scroll, keyboard layouts, theme, wallpaper
 l="$(lua)"; grep -q 'workspace = "4", persistent' <<<"$l" && ! grep -q 'workspace = "5", persistent' <<<"$l" || fail 'four workspaces by default'

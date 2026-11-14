@@ -1,4 +1,4 @@
-# BxCachy catalog
+# BxRig catalog
 
 `apps.json` is the app catalog (schema 3, draft 0.2.0). It replaces the legacy v0.10.0 `catalog/apps.json` (kept unmodified under `artifacts/legacy/original/`).
 

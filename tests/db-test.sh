@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# `bxcachy db` end to end with a fake, stateful podman/docker (no containers are started). Usage: db-test.sh BINARY
+# `bxrig db` end to end with a fake, stateful podman/docker (no containers are started). Usage: db-test.sh BINARY
 set -euo pipefail
 binary="$(realpath "${1:?native executable required}")"
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
@@ -30,9 +30,9 @@ esac
 FAKE
 chmod +x "$tmp/bin/fakeengine"; ln -s fakeengine "$tmp/bin/podman"; ln -s fakeengine "$tmp/bin/docker"
 export FAKE="$tmp/fake"
-run() { env BXCACHY_CONFIG_HOME="$tmp/cfg" BXCACHY_DATA_HOME="$tmp/data" HOME="$tmp/home" PATH="$tmp/bin:$PATH" FAKE="$FAKE" "$@"; }
+run() { env BXRIG_CONFIG_HOME="$tmp/cfg" BXRIG_DATA_HOME="$tmp/data" HOME="$tmp/home" PATH="$tmp/bin:$PATH" FAKE="$FAKE" "$@"; }
 code() { set +e; run "$@" >/dev/null 2>&1; local c=$?; set -e; echo "$c"; }
-c=bxcachy-db
+c=bxrig-db
 
 # the registry
 [[ "$(run "$binary" db engines --json | jq '.data.engines | length')" == 14 ]] || fail '14 engines'
@@ -46,19 +46,19 @@ run "$binary" db engines --json | jq -e '.data.engines | map(select(.id=="milvus
 [[ "$(code "$binary" db start postgres --port=80 --yes)" == 4 && "$(code "$binary" db start postgres --port=abc --yes)" == 4 ]] || fail 'a bad port exits 4'
 [[ "$(code "$binary" db start couchbase --port=9000 --yes)" == 4 ]] || fail 'Couchbase has fixed ports'
 [[ "$(code "$binary" db)" == 2 && "$(code "$binary" db bogus)" == 2 && "$(code "$binary" db start)" == 2 ]] || fail 'usage exits 2'
-env BXCACHY_CONFIG_HOME="$tmp/cfg" BXCACHY_DATA_HOME="$tmp/data" HOME="$tmp/home" PATH="$tmp/nobin" "$binary" db start postgres --yes >/dev/null 2>&1 && fail 'no container engine must fail'
-[[ "$(env BXCACHY_CONFIG_HOME="$tmp/cfg" BXCACHY_DATA_HOME="$tmp/data" HOME="$tmp/home" PATH="$tmp/nobin" "$binary" db start postgres --yes >/dev/null 2>&1; echo $?)" == 4 ]] || fail 'no container engine exits 4'
+env BXRIG_CONFIG_HOME="$tmp/cfg" BXRIG_DATA_HOME="$tmp/data" HOME="$tmp/home" PATH="$tmp/nobin" "$binary" db start postgres --yes >/dev/null 2>&1 && fail 'no container engine must fail'
+[[ "$(env BXRIG_CONFIG_HOME="$tmp/cfg" BXRIG_DATA_HOME="$tmp/data" HOME="$tmp/home" PATH="$tmp/nobin" "$binary" db start postgres --yes >/dev/null 2>&1; echo $?)" == 4 ]] || fail 'no container engine exits 4'
 
 # plan and dry-run create nothing
 [[ "$(code "$binary" db start postgres)" == 2 ]] || fail 'no --yes exits 2'
-run "$binary" db start postgres --dry-run --json | jq -e '.ok and .dry_run and (.data.would | contains("create bxcachy-db-postgres-default"))' >/dev/null || fail 'dry-run --json'
+run "$binary" db start postgres --dry-run --json | jq -e '.ok and .dry_run and (.data.would | contains("create bxrig-db-postgres-default"))' >/dev/null || fail 'dry-run --json'
 [[ ! -d "$tmp/fake/containers" || -z "$(ls "$tmp/fake/containers" 2>/dev/null)" ]] || fail 'the plan created a container'
 [[ ! -e "$tmp/data" ]] || fail 'the plan wrote files'
 
 # start PostgreSQL
 run "$binary" db start postgres --yes --json | jq -e '.ok and .data.port == 5432 and .data.listens == "127.0.0.1"' >/dev/null || fail 'start postgres'
 runline="$(cat "$FAKE/containers/$c-postgres-default/run")"
-for want in "--name $c-postgres-default" '--label io.bxcachy.database=true' '--label io.bxcachy.engine=postgres' '--restart unless-stopped' '-p 127.0.0.1:5432:5432' "-v $c-postgres-default:/var/lib/postgresql/data" '--env-file ' ' docker.io/library/postgres:17'; do [[ "$runline" == *"$want"* ]] || fail "run line lacks [$want]: $runline"; done
+for want in "--name $c-postgres-default" '--label io.bxrig.database=true' '--label io.bxrig.engine=postgres' '--restart unless-stopped' '-p 127.0.0.1:5432:5432' "-v $c-postgres-default:/var/lib/postgresql/data" '--env-file ' ' docker.io/library/postgres:17'; do [[ "$runline" == *"$want"* ]] || fail "run line lacks [$want]: $runline"; done
 dir="$tmp/data/databases/$c-postgres-default"
 [[ "$(stat -c %a "$dir/password")" == 600 && "$(stat -c %a "$dir/database.env")" == 600 ]] || fail 'password files must be mode 600'
 pw="$(tr -d '\n' < "$dir/password")"; [[ ${#pw} -ge 48 ]] || fail 'the password is long and random'
@@ -100,14 +100,14 @@ run "$binary" db info couchbase | grep -q 'http://127.0.0.1:8091' || fail 'couch
 
 # OpenSearch and Elasticsearch need vm.max_map_count; the generated OpenSearch password meets its policy
 echo 65530 > "$tmp/mmc"
-[[ "$(BXCACHY_MAX_MAP_COUNT_FILE="$tmp/mmc" code "$binary" db start opensearch --yes)" == 4 && "$(BXCACHY_MAX_MAP_COUNT_FILE="$tmp/mmc" code "$binary" db start elasticsearch --yes)" == 4 ]] || fail 'a low vm.max_map_count exits 4'
-out="$(BXCACHY_MAX_MAP_COUNT_FILE="$tmp/mmc" run "$binary" db start opensearch --yes 2>&1 || true)"; [[ "$out" == *'sudo sysctl -w vm.max_map_count=262144'* ]] || fail 'the fix is named'
+[[ "$(BXRIG_MAX_MAP_COUNT_FILE="$tmp/mmc" code "$binary" db start opensearch --yes)" == 4 && "$(BXRIG_MAX_MAP_COUNT_FILE="$tmp/mmc" code "$binary" db start elasticsearch --yes)" == 4 ]] || fail 'a low vm.max_map_count exits 4'
+out="$(BXRIG_MAX_MAP_COUNT_FILE="$tmp/mmc" run "$binary" db start opensearch --yes 2>&1 || true)"; [[ "$out" == *'sudo sysctl -w vm.max_map_count=262144'* ]] || fail 'the fix is named'
 echo 262144 > "$tmp/mmc"
-BXCACHY_MAX_MAP_COUNT_FILE="$tmp/mmc" run "$binary" db start opensearch --yes >/dev/null || fail 'opensearch'
+BXRIG_MAX_MAP_COUNT_FILE="$tmp/mmc" run "$binary" db start opensearch --yes >/dev/null || fail 'opensearch'
 grep -q 'discovery.type=single-node' "$FAKE/containers/$c-opensearch-default/run" || fail 'opensearch single node'
 ospw="$(tr -d '\n' < "$tmp/data/databases/$c-opensearch-default/password")"; [[ "$ospw" =~ [A-Z] && "$ospw" =~ [a-z] && "$ospw" =~ [0-9] && "$ospw" =~ [^A-Za-z0-9] && ${#ospw} -ge 8 ]] || fail 'the OpenSearch password meets its policy'
 grep -q '^OPENSEARCH_INITIAL_ADMIN_PASSWORD=' "$tmp/data/databases/$c-opensearch-default/database.env" || fail 'opensearch admin password env'
-BXCACHY_MAX_MAP_COUNT_FILE="$tmp/mmc" run "$binary" db start elasticsearch --yes >/dev/null || fail 'elasticsearch'
+BXRIG_MAX_MAP_COUNT_FILE="$tmp/mmc" run "$binary" db start elasticsearch --yes >/dev/null || fail 'elasticsearch'
 grep -q 'elasticsearch/elasticsearch:9.5.6' "$FAKE/containers/$c-elasticsearch-default/run" && grep -q '^ELASTIC_PASSWORD=' "$tmp/data/databases/$c-elasticsearch-default/database.env" || fail 'elasticsearch'
 
 # remove deletes the data too; --keep-data keeps it
@@ -153,25 +153,25 @@ run "$binary" db info mysql --show-password | grep -q 'mysql://root:MyChosen%23P
 # bad choices
 printf 'short\n' > "$tmp/pw-short"; printf 'has a space 1234\n' > "$tmp/pw-space"; printf 'alllowercase123\n' > "$tmp/pw-weak"
 [[ "$(code "$binary" db start mariadb --password-file="$tmp/pw-short" --yes)" == 4 && "$(code "$binary" db start mariadb --password-file="$tmp/pw-space" --yes)" == 4 && "$(code "$binary" db start mariadb --password-file="$tmp/missing" --yes)" == 4 ]] || fail 'short, spaced and missing password files exit 4'
-BXCACHY_MAX_MAP_COUNT_FILE="$tmp/mmc" code "$binary" db start opensearch --name=weak --password-file="$tmp/pw-weak" --yes | grep -q . ; [[ "$(BXCACHY_MAX_MAP_COUNT_FILE="$tmp/mmc" code "$binary" db start opensearch --name=weak --password-file="$tmp/pw-weak" --yes)" == 4 ]] || fail 'a weak OpenSearch password exits 4'
+BXRIG_MAX_MAP_COUNT_FILE="$tmp/mmc" code "$binary" db start opensearch --name=weak --password-file="$tmp/pw-weak" --yes | grep -q . ; [[ "$(BXRIG_MAX_MAP_COUNT_FILE="$tmp/mmc" code "$binary" db start opensearch --name=weak --password-file="$tmp/pw-weak" --yes)" == 4 ]] || fail 'a weak OpenSearch password exits 4'
 [[ "$(code "$binary" db start redis --name=r2 --password-file="$tmp/pw" --yes)" == 4 && "$(code "$binary" db start couchbase --name=c2 --password-file="$tmp/pw" --yes)" == 4 ]] || fail 'engines without a password refuse one'
 [[ "$(code "$binary" db start mariadb --password-file="$tmp/pw" --ask-password --yes)" == 4 ]] || fail 'both flags exit 4'
 [[ "$(code "$binary" db start mysql --password-file="$tmp/pw" --yes)" == 4 ]] || fail 'an existing container cannot be given a new password'
 # the hidden prompt (a file stands in for the terminal): two matching lines
 printf 'Typed-By-Hand9\nTyped-By-Hand9\n' > "$tmp/tty"
-BXCACHY_TTY_IN="$tmp/tty" run "$binary" db start mongodb --name=asked --ask-password --yes >/dev/null || fail 'start with --ask-password'
+BXRIG_TTY_IN="$tmp/tty" run "$binary" db start mongodb --name=asked --ask-password --yes >/dev/null || fail 'start with --ask-password'
 [[ "$(cat "$tmp/data/databases/$c-mongodb-asked/password")" == 'Typed-By-Hand9' ]] || fail 'the typed password is stored'
 printf 'Typed-By-Hand9\nSomething-Else9\n' > "$tmp/tty"
-[[ "$(BXCACHY_TTY_IN="$tmp/tty" code "$binary" db start mongodb --name=mismatch --ask-password --yes)" == 4 && ! -d "$tmp/data/databases/$c-mongodb-mismatch" ]] || fail 'mismatched passwords exit 4 and create nothing'
-: > "$tmp/tty"; [[ "$(BXCACHY_TTY_IN="$tmp/tty" code "$binary" db start mongodb --name=none --ask-password --yes)" == 4 ]] || fail 'no password typed exits 4'
+[[ "$(BXRIG_TTY_IN="$tmp/tty" code "$binary" db start mongodb --name=mismatch --ask-password --yes)" == 4 && ! -d "$tmp/data/databases/$c-mongodb-mismatch" ]] || fail 'mismatched passwords exit 4 and create nothing'
+: > "$tmp/tty"; [[ "$(BXRIG_TTY_IN="$tmp/tty" code "$binary" db start mongodb --name=none --ask-password --yes)" == 4 ]] || fail 'no password typed exits 4'
 # the plan never prompts
-[[ "$(BXCACHY_TTY_IN="$tmp/none" code "$binary" db start mongodb --name=planned --ask-password)" == 2 ]] || fail 'the plan with --ask-password does not prompt'
+[[ "$(BXRIG_TTY_IN="$tmp/none" code "$binary" db start mongodb --name=planned --ask-password)" == 2 ]] || fail 'the plan with --ask-password does not prompt'
 # the real prompt, in a pseudo-terminal: typed twice, not echoed
 python3 - "$binary" "$tmp" <<'PY'
 import os, pty, select, sys, time
 binary, tmp = sys.argv[1:3]
-env = dict(os.environ, BXCACHY_CONFIG_HOME=tmp + '/cfg', BXCACHY_DATA_HOME=tmp + '/data', HOME=tmp + '/home', PATH=tmp + '/bin:' + os.environ['PATH'], FAKE=tmp + '/fake')
-env.pop('BXCACHY_TTY_IN', None)
+env = dict(os.environ, BXRIG_CONFIG_HOME=tmp + '/cfg', BXRIG_DATA_HOME=tmp + '/data', HOME=tmp + '/home', PATH=tmp + '/bin:' + os.environ['PATH'], FAKE=tmp + '/fake')
+env.pop('BXRIG_TTY_IN', None)
 pid, fd = pty.fork()
 if pid == 0:
     os.execve(binary, [binary, 'db', 'start', 'mongodb', '--name=tty', '--ask-password', '--yes'], env)
@@ -217,9 +217,9 @@ printf '#!/usr/bin/env bash\necho "terminal $*" >> "$FAKE/terminal.log"\n' > "$t
 run "$binary" runner menu-set rofi >/dev/null
 # 0 = PostgreSQL, 0 = Start, 1 = Confirm, then 13 = Exit (13 engines are supported, Exit is the 14th entry)
 printf '0\n0\n1\n13\n' > "$FAKE/answers"
-BXCACHY_SELF=/opt/bxcachy run "$binary" db menu || fail 'db menu exits 0'
+BXRIG_SELF=/opt/bxrig run "$binary" db menu || fail 'db menu exits 0'
 for _ in 1 2 3 4 5 6 7 8 9 10; do [[ -s "$FAKE/terminal.log" ]] && break; sleep 0.3; done
-grep -q 'terminal -e sh -c .* _ /opt/bxcachy db start postgres --yes' "$FAKE/terminal.log" || fail "the menu starts PostgreSQL in a terminal: $(cat "$FAKE/terminal.log" 2>/dev/null)"
+grep -q 'terminal -e sh -c .* _ /opt/bxrig db start postgres --yes' "$FAKE/terminal.log" || fail "the menu starts PostgreSQL in a terminal: $(cat "$FAKE/terminal.log" 2>/dev/null)"
 # cancelling the confirmation runs nothing; picking Cancel (0) on the confirm step
 rm -f "$FAKE/n" "$FAKE/terminal.log"; printf '3\n5\n0\n13\n' > "$FAKE/answers"
 run "$binary" db menu || fail 'db menu (cancel)'; sleep 0.5

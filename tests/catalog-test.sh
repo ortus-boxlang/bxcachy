@@ -2,7 +2,7 @@
 # Catalog commands against the embedded catalog. Usage: catalog-test.sh [binary]
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
-bin="$(cd "$(dirname "${1:-./bxcachy}")" && pwd)/$(basename "${1:-./bxcachy}")"
+bin="$(cd "$(dirname "${1:-./bxrig}")" && pwd)/$(basename "${1:-./bxrig}")"
 fail() { echo "FAIL: $*" >&2; exit 1; }
 code() { set +e; "$@" >/dev/null 2>&1; local rc=$?; set -e; echo "$rc"; }
 cat="$root/catalog/apps.json"

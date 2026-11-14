@@ -1,7 +1,7 @@
 // WizardApp: state and key handling, no terminal. Run from src/: (cd src && matchbox ../tests/wizard_app_test.bxs)
 failures = 0;
 function check( label, ok ) { if ( ok ) println( "ok   " & label ); else { println( "FAIL " & label ); failures++; } }
-function mk( preset = {} ) { return new bxcachy.WizardApp( jsonDeserialize( new bxcachy.WizardData().demoPages() ), preset ); }
+function mk( preset = {} ) { return new bxrig.WizardApp( jsonDeserialize( new bxrig.WizardData().demoPages() ), preset ); }
 function started() { var a = mk(); a.onKey( "Enter" ); return a; }
 
 a = mk();
@@ -104,21 +104,21 @@ check( "the password question appears only once a database is picked", !a.finalA
 
 // ---- pages that appear only for some answers ----
 function withPages() {
-    var spec = jsonDeserialize( new bxcachy.WizardData().demoPages() );
+    var spec = jsonDeserialize( new bxrig.WizardData().demoPages() );
     var extra = { id: "extra", title: "Extra", intro: "", when: { id: "app_mode", equals: "custom" }, questions: [ { type: "multi", id: "extra_pick", label: "Pick", default: [ "a" ], options: [ { value: "a", label: "A", description: "" }, { value: "b", label: "B", description: "" } ] } ] };
     var pages = [];
     for ( var i = 1; i <= spec.pages.len(); i++ ) { pages.append( spec.pages[ i ] ); if ( i == 1 ) pages.append( extra ); }
     spec.pages = pages;
     return spec;
 }
-a = new bxcachy.WizardApp( withPages() );
+a = new bxrig.WizardApp( withPages() );
 check( "a page with `when` is hidden until its answer matches", !a.pageVisible( 2 ) && a.visiblePages().len() == a.pageCount() - 1 && a.stepCount() == a.pageCount() );
 check( "answers on a hidden page are not in the result", !a.finalAnswers().keyExists( "extra_pick" ) );
 a.onKey( "Enter" ); a.gotoPage( 1 ); a.nextPage();
 check( "next skips the hidden page", a.pageIndex() == 3 );
 a.prevPage();
 check( "and so does back", a.pageIndex() == 1 );
-a = new bxcachy.WizardApp( withPages(), { app_mode: "custom" } );
+a = new bxrig.WizardApp( withPages(), { app_mode: "custom" } );
 check( "the page shows once the answer matches, counts as a step and its answers are returned", a.pageVisible( 2 ) && a.stepCount() == a.pageCount() + 1 && a.finalAnswers().keyExists( "extra_pick" ) );
 a.onKey( "Enter" ); a.gotoPage( 1 ); a.nextPage();
 check( "next lands on it", a.pageIndex() == 2 && a.stepOf( 2 ) == 2 );

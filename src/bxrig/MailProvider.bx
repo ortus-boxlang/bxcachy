@@ -1,0 +1,72 @@
+// Mail page of the Control Center: the messages your app sent to the mail catcher (`bxrig mail`), refreshed every few seconds.
+// Rows: from, time, size, attachment mark, subject. The detail box shows the headers and the text body of the highlighted message.
+// d deletes it, c clears the inbox (both plan first), o opens it rendered in the browser, t sends a test message, r reloads.
+class MailProvider {
+    function init( demo = false ) { variables.demo = arguments.demo; variables.mail = new bxrig.Mail( {} ); variables.up = true; variables.cacheId = ""; variables.cacheMsg = {}; return this; }
+    function id() { return "mail"; }
+    function icon() { return "envelope"; }
+    function title() { return "Mail"; }
+    function hint() { return variables.up ? "your app's mail, newest first · refreshes every 3 s" : "the catcher is not running. Start it: bxrig mail start --yes"; }
+    function live() { return false; }
+    function refreshSeconds() { return 3; }
+    function detailLines() { return 9; }
+    function emptyText() { return variables.up ? "The inbox is empty. Send mail to 127.0.0.1:1025 or press t for a test message." : "The mail catcher is not running. Start it with: bxrig mail start --yes"; }
+    function columns() { return [ { key: "mark", label: "", w: 3 }, { key: "from", label: "from", w: 24 }, { key: "when", label: "received", w: 13 }, { key: "sizeText", label: "size", w: 9 }, { key: "att", label: "", w: 3 }, { key: "subject", label: "subject", w: 0 } ]; }
+    function style( r ) { return r.read ? "dim" : ""; }
+
+    function sizeText( bytes ) {
+        var b = arguments.bytes;
+        if ( b < 1024 ) return b & " B";
+        if ( b < 1048576 ) return round( b / 1024 ) & " KB";
+        return numberFormat( b / 1048576, "0.0" ) & " MB";
+    }
+
+    function fetchMessage( id ) {
+        if ( variables.cacheId == arguments.id ) return variables.cacheMsg;
+        variables.cacheMsg = variables.demo ? demoMessage( arguments.id ) : variables.mail.message( arguments.id );
+        variables.cacheId = arguments.id;
+        return variables.cacheMsg;
+    }
+
+    function detail( r ) {
+        var m = fetchMessage( r.id );
+        if ( !structCount( m ) ) return [ r.subject ];
+        var out = [ "From: " & m.sender & "   To: " & m.to_list.toList( ", " ), "Date: " & m.sent & "   Subject: " & m.subject_line ];
+        for ( var a in m.files ) out.append( "Attached: " & a.file_name & " (" & a.type & ")" );
+        for ( var l in listToArray( len( m.body_text ) ? m.body_text : ( len( m.body_html ) ? "(HTML only. Press o to see it in the browser.)" : "(empty body)" ), chr( 10 ), true ) ) if ( len( trim( l ) ) ) out.append( l );
+        return out;
+    }
+
+    function actions() {
+        return [
+            { key: "d", label: "delete", run: function( r ) { return { action: "cli", title: "Delete the message", args: [ "mail", "delete", r.id ] }; } },
+            { key: "c", label: "clear inbox", run: function( r ) { return { action: "cli", title: "Clear the inbox", args: [ "mail", "clear" ] }; } },
+            { key: "o", label: "open", run: function( r ) { return { action: "show", title: "Open in the browser", args: [ "mail", "open", r.id ] }; } },
+            { key: "t", label: "test mail", run: function( r ) { return { action: "show", title: "Send a test message", args: [ "mail", "test" ] }; } }
+        ];
+    }
+
+    function toRow( m ) {
+        var when = len( m.received ) >= 16 ? mid( m.received, 6, 11 ) : m.received;
+        return { id: m.mid, mark: m.seen ? " " : "●", from: m.sender, when: when, sizeText: sizeText( m.bytes ), att: m.attachment_count > 0 ? "+" : " ", subject: m.subject_line, read: m.seen, to: m.recipient };
+    }
+
+    function load( q = "" ) {
+        var list = variables.demo ? demoMessages() : variables.mail.messages( 100 );
+        if ( isStruct( list ) && structKeyExists( list, "error" ) ) { variables.up = false; return []; }
+        variables.up = true;
+        var rows = [];
+        var src = isArray( list ) ? list : list.messages;
+        for ( var m in src ) rows.append( toRow( m ) );
+        return rows;
+    }
+
+    function demoMessages() {
+        var m = function( id, from, subject, created, size, att, read ) { return { mid: id, sender: from, sender_address: lCase( replace( from, " ", ".", "all" ) ) & "@example.test", recipient: "you@example.test", subject_line: subject, received: created, bytes: size, attachment_count: att, seen: read, preview: "" }; };
+        return [ m( "msgA1b2c3", "Shop Orders", "Your order 4821 has shipped", "2026-11-14 09:42:10", 18240, 0, false ), m( "msgD4e5f6", "Ada Lovelace", "Welcome to the app", "2026-11-14 09:40:03", 5120, 0, false ), m( "msgG7h8i9", "Billing", "Invoice 2026-114 (PDF attached)", "2026-11-14 09:12:55", 90112, 1, true ), m( "msgJ0k1l2", "Password Reset", "Reset your password", "2026-11-13 17:30:00", 3072, 0, true ) ];
+    }
+
+    function demoMessage( id ) {
+        return { mid: arguments.id, sender: "Shop Orders <orders@example.test>", to_list: [ "you@example.test" ], cc_list: [], bcc_list: [], subject_line: "Your order 4821 has shipped", sent: "2026-11-14T09:42:10Z", body_text: "Hi," & chr( 10 ) & "Your order 4821 is on its way and should arrive on Tuesday. Track it with the link below, and reply to this message if anything looks wrong." & chr( 10 ) & "https://shop.example.test/orders/4821", body_html: "<p>Hi</p>", files: [] };
+    }
+}

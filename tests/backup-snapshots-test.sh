@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# `bxcachy backup snapshots ...` with fake snapper, timeshift, findmnt, systemctl, pacman and sudo. Usage: backup-snapshots-test.sh BINARY
+# `bxrig backup snapshots ...` with fake snapper, timeshift, findmnt, systemctl, pacman and sudo. Usage: backup-snapshots-test.sh BINARY
 set -euo pipefail
 binary="$(realpath "${1:?native executable required}")"
 tmp="$(mktemp -d)"; trap 'rm -rf "${tmp:?}"' EXIT
@@ -21,7 +21,7 @@ printf '#!/usr/bin/env bash\necho "pacman $*" >> "$LOG"\n' > "$tmp/bin/pacman"
 printf '#!/usr/bin/env bash\n[[ "$1" == --version ]] && { echo "Sudo version 1.9"; exit 0; }\nexec "$@"\n' > "$tmp/bin/sudo"
 chmod +x "$tmp/bin"/* "$tmp/snapper.real" "$tmp/timeshift.real"
 mkdir -p "$tmp/fake"; export FAKEDIR="$tmp/fake"
-run() { env HOME="$tmp/home" BXCACHY_CONFIG_HOME="$tmp/cfg" FAKEDIR="$tmp/fake" PATH="$tmp/bin:$PATH" LOG="$LOG" BXCACHY_ROOT_FS="${FS:-btrfs}" BXCACHY_BOOTLOADER="${BL:-limine}" "$@"; }
+run() { env HOME="$tmp/home" BXRIG_CONFIG_HOME="$tmp/cfg" FAKEDIR="$tmp/fake" PATH="$tmp/bin:$PATH" LOG="$LOG" BXRIG_ROOT_FS="${FS:-btrfs}" BXRIG_BOOTLOADER="${BL:-limine}" "$@"; }
 code() { set +e; run "$@" >/dev/null 2>&1; local c=$?; set -e; echo "$c"; }
 has() { grep -qF -- "$1" "$LOG"; }
 

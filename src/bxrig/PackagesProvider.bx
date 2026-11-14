@@ -1,0 +1,39 @@
+// Package browser: search the repos and the AUR, install and remove. Live: / sends your text to `pkg search`.
+class PackagesProvider {
+    function init( demo = false ) { variables.demo = arguments.demo; variables.sys = new bxrig.TuiSys(); return this; }
+    function id() { return "packages"; }
+    function icon() { return "download"; }
+    function title() { return "Packages"; }
+    function hint() { return "press / and type what you are looking for"; }
+    function live() { return true; }
+    function refreshSeconds() { return 0; }
+    function detailLines() { return 2; }
+    function emptyText() { return "Press / and type a name, like: docker"; }
+    function columns() { return [ { key: "mark", label: "", w: 3 }, { key: "name", label: "name", w: 28 }, { key: "version", label: "version", w: 16 }, { key: "source", label: "from", w: 8 }, { key: "description", label: "what it is", w: 0 } ]; }
+    function style( r ) { return r.installed ? "ok" : ( r.source == "aur" ? "warn" : "" ); }
+    function detail( r ) { return [ r.name & " " & r.version & " (" & r.source & ")", r.description ]; }
+
+    function actions() {
+        return [
+            { key: "i", label: "install", run: function( r ) { var a = [ "pkg", "install", r.name ]; if ( r.source == "aur" ) a.append( "--aur" ); return { action: "cli", title: "Install " & r.name, args: a }; } },
+            { key: "x", label: "remove", run: function( r ) { return { action: "cli", title: "Remove " & r.name, args: [ "pkg", "remove", r.name ] }; } },
+            { key: "n", label: "info", run: function( r ) { return { action: "show", title: "Info: " & r.name, args: [ "pkg", "info", r.name ] }; } }
+        ];
+    }
+
+    function load( q = "" ) {
+        if ( !len( arguments.q ) ) return [];
+        var res = variables.demo ? demo( arguments.q ) : ( variables.sys.bx( [ "pkg", "search", arguments.q, "--limit=40" ] ).results ?: [] );
+        var rows = [];
+        for ( var p in res ) rows.append( { mark: p.installed ? "✓" : " ", name: p.name, version: p.version, source: p.source, installed: p.installed, description: p.description ?: "" } );
+        return rows;
+    }
+
+    function demo( q ) {
+        var all = [ { name: "docker", version: "27.3.1-1", source: "repo", installed: true, description: "Container platform" }, { name: "docker-compose", version: "2.30.3-1", source: "repo", installed: true, description: "Multi-container apps" },
+            { name: "lazydocker", version: "0.24.1-1", source: "repo", installed: false, description: "TUI for Docker" }, { name: "docker-desktop", version: "4.35.1-1", source: "aur", installed: false, description: "Docker Desktop" } ];
+        var out = [];
+        for ( var p in all ) if ( find( lCase( arguments.q ), lCase( p.name ) ) ) out.append( p );
+        return out;
+    }
+}

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# `bxcachy setup shell` end to end with fake pacman, sudo, id, chsh: packages, Starship + shell config, login shell. Usage: shell-setup-test.sh [binary]
+# `bxrig setup shell` end to end with fake pacman, sudo, id, chsh: packages, Starship + shell config, login shell. Usage: shell-setup-test.sh [binary]
 set -euo pipefail
 binary="$(realpath "${1:?native executable required}")"
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
@@ -22,7 +22,7 @@ printf '#!/usr/bin/env bash\nif [[ "$1" == -u ]]; then echo "${MOCK_UID:-1000}";
 printf '#!/usr/bin/env bash\necho x86_64\n' > "$tmp/bin/uname"
 chmod +x "$tmp/bin/"*
 printf 'ID=cachyos\n' > "$tmp/os"
-run() { env BXCACHY_OS_RELEASE="$tmp/os" BXCACHY_STATE_HOME="$tmp/state" BXCACHY_CONFIG_HOME="$tmp/cfg" HOME="$tmp/home" USER=dev SHELL="${LOGIN_SHELL:-/usr/bin/fish}" PATH="$tmp/bin:$PATH" LOG="$LOG" "$@"; }
+run() { env BXRIG_OS_RELEASE="$tmp/os" BXRIG_STATE_HOME="$tmp/state" BXRIG_CONFIG_HOME="$tmp/cfg" HOME="$tmp/home" USER=dev SHELL="${LOGIN_SHELL:-/usr/bin/fish}" PATH="$tmp/bin:$PATH" LOG="$LOG" "$@"; }
 code() { set +e; run "$@" >/dev/null 2>&1; local c=$?; set -e; echo "$c"; }
 
 # plan only: nothing written; zsh is the default
@@ -38,9 +38,9 @@ echo "$out" | jq -e '.ok and (.data.done | map(.id) == ["packages","config","log
 grep -q 'pacman -S --needed --noconfirm zsh zsh-autosuggestions' "$LOG" || fail 'packages installed'
 grep -q 'chsh -s /usr/bin/zsh dev' "$LOG" || fail 'login shell changed'
 grep -q '^# my zshrc' "$tmp/home/.zshrc" && grep -q 'alias ll=' "$tmp/home/.zshrc" || fail 'user .zshrc content lost'
-[[ "$(grep -c '>>> bxcachy shell' "$tmp/home/.zshrc")" == 1 ]] || fail 'exactly one block in .zshrc'
-grep -q "source \"$tmp/cfg/bxcachy/shell.zsh\"" "$tmp/home/.zshrc" || fail 'block sources the managed init'
-grep -q 'starship init zsh' "$tmp/cfg/bxcachy/shell.zsh" && grep -q 'zsh-autosuggestions.zsh' "$tmp/cfg/bxcachy/shell.zsh" && grep -q 'zsh-syntax-highlighting.zsh' "$tmp/cfg/bxcachy/shell.zsh" || fail 'zsh init has starship and the plugins'
+[[ "$(grep -c '>>> bxrig shell' "$tmp/home/.zshrc")" == 1 ]] || fail 'exactly one block in .zshrc'
+grep -q "source \"$tmp/cfg/bxrig/shell.zsh\"" "$tmp/home/.zshrc" || fail 'block sources the managed init'
+grep -q 'starship init zsh' "$tmp/cfg/bxrig/shell.zsh" && grep -q 'zsh-autosuggestions.zsh' "$tmp/cfg/bxrig/shell.zsh" && grep -q 'zsh-syntax-highlighting.zsh' "$tmp/cfg/bxrig/shell.zsh" || fail 'zsh init has starship and the plugins'
 grep -q "palette = 'catppuccin_mocha'" "$tmp/cfg/starship.toml" && grep -q 'fg:peach)' "$tmp/cfg/starship.toml" && grep -q '^\$directory.' "$tmp/cfg/starship.toml" || fail 'starship config written'
 grep -q '^\${custom.boxlang}\\$' "$tmp/cfg/starship.toml" && grep -q '^\[custom.boxlang\]' "$tmp/cfg/starship.toml" || fail 'starship has the boxlang module in the format'
 # the module is gated by files (no `when`, which would show it everywhere) and its command prints nothing without bvm
@@ -57,15 +57,15 @@ rm -f "$tmp/bvm/current"
 # again: nothing duplicated, a changed starship.toml is kept
 echo '# mine' >> "$tmp/cfg/starship.toml"
 LOGIN_SHELL=/usr/bin/zsh run "$binary" setup shell --yes --json | jq -e '.ok and (.data.done | map(.id) == ["packages","config"])' >/dev/null || fail 'second run has no login step (already zsh)'
-[[ "$(grep -c '>>> bxcachy shell' "$tmp/home/.zshrc")" == 1 ]] || fail 'block added twice'
+[[ "$(grep -c '>>> bxrig shell' "$tmp/home/.zshrc")" == 1 ]] || fail 'block added twice'
 grep -q '^# mine' "$tmp/cfg/starship.toml" || fail 'edited starship.toml was overwritten'
 
 # fish: conf.d file, no rc edit; bash: rc block
 rm -rf "$tmp/cfg" "$tmp/home/.zshrc"
 LOGIN_SHELL=/usr/bin/bash run "$binary" setup shell --shell=fish --yes >/dev/null || fail 'fish failed'
-grep -q 'starship init fish' "$tmp/cfg/fish/conf.d/bxcachy.fish" || fail 'fish conf.d written'
+grep -q 'starship init fish' "$tmp/cfg/fish/conf.d/bxrig.fish" || fail 'fish conf.d written'
 [[ ! -e "$tmp/home/.zshrc" && ! -e "$tmp/home/.bashrc" ]] || fail 'fish must not touch an rc file'
 LOGIN_SHELL=/usr/bin/bash run "$binary" setup shell --shell=bash --yes >/dev/null || fail 'bash failed'
-grep -q 'starship init bash' "$tmp/cfg/bxcachy/shell.bash" || fail 'bash init written'
-grep -q '>>> bxcachy shell' "$tmp/home/.bashrc" || fail 'bash rc block written'
+grep -q 'starship init bash' "$tmp/cfg/bxrig/shell.bash" || fail 'bash init written'
+grep -q '>>> bxrig shell' "$tmp/home/.bashrc" || fail 'bash rc block written'
 echo "shell setup tests passed"

@@ -1,0 +1,48 @@
+// Maven and Gradle pages: everything SDKMAN offers for one tool, with the installed versions marked and the default starred.
+// Rows: [ * default | ● installed ] version. i installs the highlighted version, d makes it the default, x removes it. / filters.
+class SdkProvider {
+    function init( cand, demo = false ) { variables.cand = arguments.cand; variables.demo = arguments.demo; variables.sys = new bxrig.TuiSys(); variables.ready = true; return this; }
+    function id() { return variables.cand; }
+    function icon() { return variables.cand == "maven" ? "wrench" : "gear"; }
+    function title() { return uCase( left( variables.cand, 1 ) ) & mid( variables.cand, 2, 20 ); }
+    function hint() { return variables.ready ? "through SDKMAN · * default · ● installed" : "SDKMAN is not installed. Press S to set it up."; }
+    function live() { return false; }
+    function refreshSeconds() { return 0; }
+    function detailLines() { return 2; }
+    function emptyText() { return "Could not read the version list. Check your network."; }
+    function columns() { return [ { key: "mark", label: "", w: 4 }, { key: "version", label: "version", w: 20 }, { key: "state", label: "", w: 0 } ]; }
+    function style( r ) { return r.default ? "ok" : ( r.installed ? "" : "dim" ); }
+    function detail( r ) { return [ title() & " " & r.version, r.default ? "The default for new shells." : ( r.installed ? "Installed. Press d to make it the default." : "Not installed. Press i to install it." ) ]; }
+
+    function actions() {
+        var c = variables.cand;
+        return [
+            { key: "i", label: "install", run: function( r ) { return { action: "cli", title: "Install " & c & " " & r.version, args: [ "sdk", "install", c, r.version ] }; } },
+            { key: "d", label: "default", run: function( r ) { return r.installed ? { action: "cli", title: "Default " & c & " " & r.version, args: [ "sdk", "default", c, r.version ] } : {}; } },
+            { key: "x", label: "remove", run: function( r ) { return r.installed ? { action: "cli", title: "Remove " & c & " " & r.version, args: [ "sdk", "remove", c, r.version ] } : {}; } },
+            { key: "S", label: "set up SDKMAN", run: function( r ) { return { action: "cli", title: "Set up SDKMAN", args: [ "sdk", "setup" ] }; } }
+        ];
+    }
+
+    function load( q = "" ) {
+        var avail = [];
+        var have = [];
+        var def = "";
+        if ( variables.demo ) {
+            avail = variables.cand == "maven" ? [ "4.0.0-rc-7", "3.10.0", "3.9.9", "3.9.8", "3.8.9" ] : [ "9.9.1", "9.9.0", "8.14.3", "8.10.2", "7.6.4" ];
+            have = variables.cand == "maven" ? [ "3.9.9", "3.9.8" ] : [ "9.9.1" ];
+            def = variables.cand == "maven" ? "3.9.9" : "9.9.1";
+        } else {
+            variables.ready = ( variables.sys.bx( [ "sdk", "status" ] ).installed ?: false );
+            for ( var a in ( variables.sys.bx( [ "sdk", "available", variables.cand ] ).available ?: [] ) ) avail.append( a.version );
+            var l = variables.sys.bx( [ "sdk", "list", variables.cand ] );
+            have = l.versions ?: [];
+            def = l.default ?: "";
+        }
+        var rows = [];
+        var seen = {};
+        for ( var v in have ) { seen[ v ] = true; rows.append( { mark: v == def ? "*" : "●", version: v, state: v == def ? "default" : "installed", installed: true, default: v == def } ); }
+        for ( var v2 in avail ) if ( !structKeyExists( seen, v2 ) ) rows.append( { mark: " ", version: v2, state: "", installed: false, default: false } );
+        return rows;
+    }
+}

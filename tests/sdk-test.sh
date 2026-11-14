@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# `bxcachy sdk` and Java through SDKMAN, with a fake SDKMAN and a local copy of its version API. Usage: sdk-test.sh BINARY
+# `bxrig sdk` and Java through SDKMAN, with a fake SDKMAN and a local copy of its version API. Usage: sdk-test.sh BINARY
 set -euo pipefail
 binary="$(realpath "${1:?native executable required}")"
 tmp="$(mktemp -d)"; srv=""; trap '[[ -n "$srv" ]] && kill "$srv" 2>/dev/null; rm -rf "${tmp:?}"' EXIT
 fail() { echo "FAIL: $*" >&2; exit 1; }
-export HOME="$tmp/home" BXCACHY_CONFIG_HOME="$tmp/cfg" BXCACHY_STATE_HOME="$tmp/state" BXCACHY_SDKMAN_DIR="$tmp/sdkman" BXCACHY_JAVA_DIR="$tmp/data/java" BXCACHY_JAVA_SYSTEM_DIR="$tmp/jvm" LOG="$tmp/log"
+export HOME="$tmp/home" BXRIG_CONFIG_HOME="$tmp/cfg" BXRIG_STATE_HOME="$tmp/state" BXRIG_SDKMAN_DIR="$tmp/sdkman" BXRIG_JAVA_DIR="$tmp/data/java" BXRIG_JAVA_SYSTEM_DIR="$tmp/jvm" LOG="$tmp/log"
 mkdir -p "$HOME"; : > "$LOG"
 code() { set +e; "$@" >/dev/null 2>&1; echo $?; set -e; }
 
@@ -40,7 +40,7 @@ echo 3.10.0 > "$tmp/api/candidates/default/maven"
 for _ in $(seq 1 50); do port="$(grep -o 'port [0-9]*' "$tmp/srv.log" 2>/dev/null | head -1 | grep -o '[0-9]*' || true)"; [[ -n "${port:-}" ]] && break; sleep 0.1; done
 [[ -n "${port:-}" ]] || { # older python prints "Serving HTTP on 127.0.0.1 port N"; wait a little more
   sleep 1; port="$(grep -o 'port [0-9]*' "$tmp/srv.log" | head -1 | grep -o '[0-9]*')"; }
-export BXCACHY_SDKMAN_API="http://127.0.0.1:$port"
+export BXRIG_SDKMAN_API="http://127.0.0.1:$port"
 
 # a fake installer that creates a fake SDKMAN with a `sdk` function
 cat > "$tmp/installer.sh" <<'F'
@@ -59,7 +59,7 @@ sdk() {
 }
 G
 F
-export BXCACHY_SDKMAN_INSTALLER="file://$tmp/installer.sh"
+export BXRIG_SDKMAN_INSTALLER="file://$tmp/installer.sh"
 
 # status and setup
 "$binary" sdk status --json | jq -e '.data.installed == false and (.data.candidates.maven.versions | length == 0)' >/dev/null || fail 'status before setup'
@@ -69,8 +69,8 @@ export BXCACHY_SDKMAN_INSTALLER="file://$tmp/installer.sh"
 "$binary" sdk setup --dry-run --json | jq -e '.dry_run' >/dev/null || fail 'setup dry run'
 "$binary" sdk setup --yes >/dev/null
 [[ -f "$tmp/sdkman/bin/sdkman-init.sh" ]] || fail 'setup installed SDKMAN'
-grep -q 'MAVEN_HOME' "$tmp/cfg/bxcachy/sdk.sh" && grep -q 'fish_add_path' "$tmp/cfg/bxcachy/sdk.fish" || fail 'shell env files'
-! grep -q 'JAVA_HOME' "$tmp/cfg/bxcachy/sdk.sh" || fail 'Java stays with bxcachy java default'
+grep -q 'MAVEN_HOME' "$tmp/cfg/bxrig/sdk.sh" && grep -q 'fish_add_path' "$tmp/cfg/bxrig/sdk.fish" || fail 'shell env files'
+! grep -q 'JAVA_HOME' "$tmp/cfg/bxrig/sdk.sh" || fail 'Java stays with bxrig java default'
 "$binary" sdk setup --yes --json | jq -e '.data.already == true' >/dev/null || fail 'setup twice is a no-op'
 
 # what SDKMAN offers

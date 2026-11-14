@@ -1,0 +1,33 @@
+// The AI providers whose API keys BxRig knows, with the environment variable each one is read from. Names are from models.dev
+// (the registry OpenCode uses), checked 2026-11-11; Gemini CLI reads GEMINI_API_KEY. Any other secret name can still be stored,
+// with `secrets set NAME --type=ai`.
+class AiProviders {
+    function all() {
+        return [
+            { id: "anthropic", name: "Anthropic", env: "ANTHROPIC_API_KEY" },
+            { id: "openai", name: "OpenAI", env: "OPENAI_API_KEY" },
+            { id: "google", name: "Google Gemini", env: "GEMINI_API_KEY" },
+            { id: "openrouter", name: "OpenRouter", env: "OPENROUTER_API_KEY" },
+            { id: "novita", name: "Novita AI", env: "NOVITA_API_KEY" },
+            { id: "opencode", name: "OpenCode", env: "OPENCODE_API_KEY" },
+            { id: "groq", name: "Groq", env: "GROQ_API_KEY" },
+            { id: "mistral", name: "Mistral", env: "MISTRAL_API_KEY" },
+            { id: "deepseek", name: "DeepSeek", env: "DEEPSEEK_API_KEY" },
+            { id: "xai", name: "xAI", env: "XAI_API_KEY" },
+            { id: "together", name: "Together AI", env: "TOGETHER_API_KEY" }
+        ];
+    }
+
+    function ids() { return all().map( function( p ) { return p.id; } ); }
+
+    function find( id ) {
+        for ( var p in all() ) if ( p.id == arguments.id ) return p;
+        return {};
+    }
+
+    // The provider that reads this environment variable, or an empty struct.
+    function byEnv( env ) {
+        for ( var p in all() ) if ( p.env == arguments.env ) return p;
+        return {};
+    }
+}

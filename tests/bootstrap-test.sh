@@ -40,7 +40,7 @@ done
 repo="$tmp/repo"; mkdir -p "$repo/bootstrap" "$repo/src"
 cp "$root/bootstrap/install.sh" "$repo/bootstrap/install.sh"; cp -r "$root/src/." "$repo/src/"
 cat > "$repo/box.json" <<'JSON'
-{ "name": "bxcachy", "version": "0.11.0-dev",
+{ "name": "bxrig", "version": "0.11.0-dev",
   "toolchain": {
     "java": { "version": "21", "package": "jdk21-openjdk" },
     "boxlang": { "version": "latest" },
@@ -57,7 +57,7 @@ reset_mocks() { rm -f "$bin"/*;
   mock sudo 'echo "sudo must not run in read-only modes" >&2; exit 9'
   mock id '[[ "$1" == -u ]] && echo "${MOCK_UID:-1000}" || /usr/bin/id "$@"'
 }
-run() { env -i HOME="$home" PATH="$bin:$sys" BXCACHY_SKIP_NETWORK=1 BXCACHY_OS_RELEASE="${OSREL:-$tmp/os-arch}" MOCK_INSTALLED="${MOCK_INSTALLED:-}" MOCK_UID="${MOCK_UID:-1000}" "$@"; }
+run() { env -i HOME="$home" PATH="$bin:$sys" BXRIG_SKIP_NETWORK=1 BXRIG_OS_RELEASE="${OSREL:-$tmp/os-arch}" MOCK_INSTALLED="${MOCK_INSTALLED:-}" MOCK_UID="${MOCK_UID:-1000}" "$@"; }
 printf 'ID=cachyos\nID_LIKE=arch\n' > "$tmp/os-arch"
 printf 'ID=ubuntu\nID_LIKE=debian\n' > "$tmp/os-ubuntu"
 need() { grep -Fq -- "$2" <<<"$1" || { echo "FAIL: expected '$2' in output:" >&2; echo "$1" >&2; exit 1; }; }
@@ -66,7 +66,7 @@ refuse() { if grep -Fq -- "$2" <<<"$1"; then echo "FAIL: unexpected '$2' in outp
 # 1. Everything missing.
 reset_mocks; MOCK_INSTALLED=""
 out="$(run bash "$repo/bootstrap/install.sh" check)"
-for s in 'os: cachyos (supported)' 'user: normal' 'sudo: available' 'network: skipped' 'missing: jdk21-openjdk' 'missing: base-devel' 'missing: yay' 'missing: jq' 'java: missing (want 21)' 'matchbox: missing (want 0.12.0)' 'boxlang: missing (want latest, version lookup unavailable)' 'bxcachy: missing' 'step(s) needed'; do need "$out" "$s"; done
+for s in 'os: cachyos (supported)' 'user: normal' 'sudo: available' 'network: skipped' 'missing: jdk21-openjdk' 'missing: base-devel' 'missing: yay' 'missing: jq' 'java: missing (want 21)' 'matchbox: missing (want 0.12.0)' 'boxlang: missing (want latest, version lookup unavailable)' 'bxrig: missing' 'step(s) needed'; do need "$out" "$s"; done
 plan="$(run bash "$repo/bootstrap/install.sh" --dry-run)"
 for s in 'Nothing below has been run' '1. packages' 'sudo pacman -Syu --needed jdk21-openjdk git curl unzip rustup base-devel' 'upgrades the system' 'sudo pacman -S --needed yay' 'download and run https://install-bvm.boxlang.io' 'mvm install 0.12.0' 'bvm install latest' 'rustup default stable' 'install.sh binary --yes' 'external script, shown and run'; do need "$plan" "$s"; done
 
@@ -81,25 +81,25 @@ mock boxlang 'echo "Ortus BoxLang v1.19.0+67"'
 mock rustc 'echo "rustc 1.90.0 (abc 2026-01-01)"'
 mock rustup 'exit 0'
 mock yay 'exit 0'
-mock bxcachy '[[ "$1" == version ]] && echo "BxCachy 0.11.0-dev"'
-cp "$bin/bxcachy" "$home/.local/bin/bxcachy"; rm "$bin/bxcachy"
+mock bxrig '[[ "$1" == version ]] && echo "BxRig 0.11.0-dev"'
+cp "$bin/bxrig" "$home/.local/bin/bxrig"; rm "$bin/bxrig"
 # nvm and Node.js present (a fake nvm.sh and node)
 mkdir -p "$home/.nvm/bin"
 printf '%s\n' 'nvm() { case "$1" in --version) echo 0.41.0 ;; esac; }' '[ -x "$NVM_DIR/bin/node" ] && export PATH="$NVM_DIR/bin:$PATH"' 'true' > "$home/.nvm/nvm.sh"
 printf '#!/usr/bin/env bash\necho v22.11.0\n' > "$home/.nvm/bin/node"; chmod +x "$home/.nvm/bin/node"
 out="$(run bash "$repo/bootstrap/install.sh" check)"
-for s in 'installed: yay' 'java: 21.0.13' 'matchbox: 0.12.0' 'boxlang: 1.19.0' 'rust: 1.90.0' 'bxcachy: 0.11.0' 'bin-dir: '; do need "$out" "$s"; done
+for s in 'installed: yay' 'java: 21.0.13' 'matchbox: 0.12.0' 'boxlang: 1.19.0' 'rust: 1.90.0' 'bxrig: 0.11.0' 'bin-dir: '; do need "$out" "$s"; done
 need "$out" 'not-on-PATH'; need "$out" '1 step(s) needed'   # only the PATH step remains
 plan="$(run bash "$repo/bootstrap/install.sh" --dry-run)"; need "$plan" 'add '; need "$plan" '/.local/bin to PATH'
-out="$(env -i HOME="$home" PATH="$home/.local/bin:$bin:$sys" BXCACHY_SKIP_NETWORK=1 BXCACHY_OS_RELEASE="$tmp/os-arch" MOCK_INSTALLED="$MOCK_INSTALLED" bash "$repo/bootstrap/install.sh" check)"
+out="$(env -i HOME="$home" PATH="$home/.local/bin:$bin:$sys" BXRIG_SKIP_NETWORK=1 BXRIG_OS_RELEASE="$tmp/os-arch" MOCK_INSTALLED="$MOCK_INSTALLED" bash "$repo/bootstrap/install.sh" check)"
 need "$out" 'summary: ready'
-plan="$(env -i HOME="$home" PATH="$home/.local/bin:$bin:$sys" BXCACHY_SKIP_NETWORK=1 BXCACHY_OS_RELEASE="$tmp/os-arch" MOCK_INSTALLED="$MOCK_INSTALLED" bash "$repo/bootstrap/install.sh" --dry-run)"
+plan="$(env -i HOME="$home" PATH="$home/.local/bin:$bin:$sys" BXRIG_SKIP_NETWORK=1 BXRIG_OS_RELEASE="$tmp/os-arch" MOCK_INSTALLED="$MOCK_INSTALLED" bash "$repo/bootstrap/install.sh" --dry-run)"
 need "$plan" 'Nothing to do'
 
 # 3. Wrong versions are planned for replacement, right ones are left alone.
 mock boxlang 'echo "Ortus BoxLang v1.18.0+10"'; mock matchbox 'echo "MatchBox 0.11.0"'
 mock curl 'printf "version=1.19.0+67\nbuildDate=x\n"'
-plan="$(env -i HOME="$home" PATH="$home/.local/bin:$bin:$sys" BXCACHY_SKIP_NETWORK=1 BXCACHY_OS_RELEASE="$tmp/os-arch" MOCK_INSTALLED="$MOCK_INSTALLED" bash "$repo/bootstrap/install.sh" --dry-run)"
+plan="$(env -i HOME="$home" PATH="$home/.local/bin:$bin:$sys" BXRIG_SKIP_NETWORK=1 BXRIG_OS_RELEASE="$tmp/os-arch" MOCK_INSTALLED="$MOCK_INSTALLED" bash "$repo/bootstrap/install.sh" --dry-run)"
 need "$plan" 'update BoxLang 1.18.0 to 1.19.0'; need "$plan" 'bvm install latest'; need "$plan" 'mvm install 0.12.0'; refuse "$plan" 'download and run'; refuse "$plan" 'sudo pacman'
 
 # 4. Root, unsupported OS, wrong arguments.
@@ -160,14 +160,14 @@ case "$url" in
   *version-latest.properties*) printf "version=%s+1\nbuildDate=x\n" "${MOCK_LATEST:-1.19.0}" ;;
   *) exit 22 ;;
 esac'
-trun() { env -i HOME="$home" MOCK_LATEST="${MOCK_LATEST:-1.19.0}" PATH="$bin:$sys" BXCACHY_SKIP_NETWORK=1 BXCACHY_OS_RELEASE="$tmp/os-arch" MOCK_INSTALLED="$MOCK_INSTALLED" CURL_LOG="$tmp/curl.log" MVM_FAKE="$MVM_FAKE" BVM_FAKE="$BVM_FAKE" NVM_FAKE="$NVM_FAKE" "$@"; }
+trun() { env -i HOME="$home" MOCK_LATEST="${MOCK_LATEST:-1.19.0}" PATH="$bin:$sys" BXRIG_SKIP_NETWORK=1 BXRIG_OS_RELEASE="$tmp/os-arch" MOCK_INSTALLED="$MOCK_INSTALLED" CURL_LOG="$tmp/curl.log" MVM_FAKE="$MVM_FAKE" BVM_FAKE="$BVM_FAKE" NVM_FAKE="$NVM_FAKE" "$@"; }
 
 # 1. Runs unattended; end state is at the pins; each script shows its url and sha256.
 fresh_home
 out="$(trun bash "$repo/bootstrap/install.sh" toolchains --yes </dev/null 2>&1)"
 for x in 'External script: mvm' 'External script: bvm' 'sha256: ' 'MatchBox 0.12.0 installed and verified.' 'BoxLang 1.19.0 installed and verified.'; do need "$out" "$x"; done
 chk="$(trun env PATH="$home/.local/bin:$bin:$sys" bash "$repo/bootstrap/install.sh" check)"; need "$chk" 'matchbox: 0.12.0'; need "$chk" 'boxlang: 1.19.0'
-[[ "$(stat -c %a "$home/.cache/bxcachy/external")" == 700 ]] || { echo 'FAIL: cache dir not private' >&2; exit 1; }
+[[ "$(stat -c %a "$home/.cache/bxrig/external")" == 700 ]] || { echo 'FAIL: cache dir not private' >&2; exit 1; }
 
 # 4. Second run: nothing to do, nothing downloaded.
 : > "$tmp/curl.log"
@@ -206,7 +206,7 @@ esac'
   mock rustup '[[ "${MOCK_RUSTUP_FAIL:-0}" == 1 ]] && exit 1; if [[ "$1 $2" == "default stable" ]]; then echo "rustup $*" >> "$PLOG"; printf "#!/usr/bin/env bash\necho \"rustc 1.90.0\"\n" > "$BINDIR/rustc"; chmod +x "$BINDIR/rustc"; fi'
   mock java 'echo "openjdk version \"21.0.13\" 2026-04-21" >&2'
 }
-irun() { env -i HOME="$home" PATH="$bin:$sys" BXCACHY_SKIP_NETWORK=1 BXCACHY_OS_RELEASE="$tmp/os-arch" STATE="$tmp/state" PLOG="$tmp/pacman.log" BINDIR="$bin" REALJQ="$REALJQ" SYSDIR="$sys" MOCK_UID="${MOCK_UID:-1000}" MOCK_YAY_FAIL="${MOCK_YAY_FAIL:-0}" MOCK_SYU_FAIL="${MOCK_SYU_FAIL:-0}" MOCK_RUSTUP_FAIL="${MOCK_RUSTUP_FAIL:-0}" "$@"; }
+irun() { env -i HOME="$home" PATH="$bin:$sys" BXRIG_SKIP_NETWORK=1 BXRIG_OS_RELEASE="$tmp/os-arch" STATE="$tmp/state" PLOG="$tmp/pacman.log" BINDIR="$bin" REALJQ="$REALJQ" SYSDIR="$sys" MOCK_UID="${MOCK_UID:-1000}" MOCK_YAY_FAIL="${MOCK_YAY_FAIL:-0}" MOCK_SYU_FAIL="${MOCK_SYU_FAIL:-0}" MOCK_RUSTUP_FAIL="${MOCK_RUSTUP_FAIL:-0}" "$@"; }
 
 install_mocks; fresh_home
 out="$(irun bash "$repo/bootstrap/install.sh" packages --yes 2>&1)"
@@ -225,7 +225,7 @@ log="$(cat "$tmp/pacman.log")"; need "$log" 'Syu --noconfirm --needed jdk21-open
 
 # At a terminal pacman is left to ask itself: no --noconfirm.
 install_mocks; fresh_home
-irun env BXCACHY_INTERACTIVE=1 bash "$repo/bootstrap/install.sh" packages --yes >/dev/null 2>&1
+irun env BXRIG_INTERACTIVE=1 bash "$repo/bootstrap/install.sh" packages --yes >/dev/null 2>&1
 log="$(cat "$tmp/pacman.log")"; need "$log" 'Syu --needed jdk21-openjdk'; refuse "$log" '--noconfirm'
 
 # Failure paths: yay unavailable, root.
@@ -236,8 +236,8 @@ if out="$(MOCK_UID=0 irun bash "$repo/bootstrap/install.sh" packages --yes 2>&1)
 [[ ! -s "$tmp/pacman.log" ]] || { echo 'FAIL: root run touched the system' >&2; exit 1; }
 echo 'bootstrap install tests passed'
 
-# ---- B5: binary builds (or accepts) bxcachy, verifies it first, installs atomically ----
-SRCVER="$(grep -m1 -oE 'BxCachy [0-9][0-9A-Za-z.+-]*' "$root/src/Main.bx")"
+# ---- B5: binary builds (or accepts) bxrig, verifies it first, installs atomically ----
+SRCVER="$(grep -m1 -oE 'BxRig [0-9][0-9A-Za-z.+-]*' "$root/src/Main.bx")"
 fake_bin() { printf '#!/usr/bin/env bash\n[[ "$1" == version ]] && echo "%s" || echo "other"\n' "$1"; }
 b_mocks() {
   reset_mocks; fresh_home
@@ -245,17 +245,17 @@ b_mocks() {
   mock matchbox 'if [[ "$1" == --version ]]; then echo "MatchBox ${MOCK_MB:-0.12.0}"; exit 0; fi
 [[ "${MOCK_BUILD_FAIL:-0}" == 1 ]] && { echo "boom: compile error" >&2; exit 1; }
 echo "$*" >> "$BLOG"
-out=bxcachy; while [[ $# -gt 0 ]]; do [[ "$1" == --output ]] && { out="$2"; break; }; shift; done
+out=bxrig; while [[ $# -gt 0 ]]; do [[ "$1" == --output ]] && { out="$2"; break; }; shift; done
 cp "$FAKE" "$out"; chmod 755 "$out"'
   : > "$tmp/build.log"; fake_bin "$SRCVER" > "$tmp/fake_built"
 }
-brun() { env -i HOME="$home" PATH="$bin:$sys" BXCACHY_SKIP_NETWORK=1 BLOG="$tmp/build.log" FAKE="$tmp/fake_built" MOCK_UID="${MOCK_UID:-1000}" MOCK_MB="${MOCK_MB:-0.12.0}" MOCK_BUILD_FAIL="${MOCK_BUILD_FAIL:-0}" "$@"; }
-dest="$home/.local/bin/bxcachy"
+brun() { env -i HOME="$home" PATH="$bin:$sys" BXRIG_SKIP_NETWORK=1 BLOG="$tmp/build.log" FAKE="$tmp/fake_built" MOCK_UID="${MOCK_UID:-1000}" MOCK_MB="${MOCK_MB:-0.12.0}" MOCK_BUILD_FAIL="${MOCK_BUILD_FAIL:-0}" "$@"; }
+dest="$home/.local/bin/bxrig"
 
 # 1. Build from source and install.
 b_mocks
 out="$(brun bash "$repo/bootstrap/install.sh" binary --yes 2>&1)"
-need "$out" 'Building bxcachy with MatchBox 0.12.0'; need "$out" "Installed $dest ($SRCVER)"
+need "$out" 'Building bxrig with MatchBox 0.12.0'; need "$out" "Installed $dest ($SRCVER)"
 [[ -x "$dest" ]] && [[ "$("$dest" version)" == "$SRCVER" ]] || { echo 'FAIL: binary not installed or not working' >&2; exit 1; }
 need "$(cat "$tmp/build.log")" '--target native --output'; need "$(cat "$tmp/build.log")" 'src/Main.bx'
 # 2. Same version again: nothing built, nothing replaced. --force rebuilds.
@@ -264,7 +264,7 @@ out="$(brun bash "$repo/bootstrap/install.sh" binary --yes 2>&1)"; need "$out" '
 [[ ! -s "$tmp/build.log" && "$(stat -c %Y-%i "$dest")" == "$stamp" ]] || { echo 'FAIL: rerun rebuilt or replaced the binary' >&2; exit 1; }
 brun bash "$repo/bootstrap/install.sh" binary --yes --force >/dev/null 2>&1; [[ -s "$tmp/build.log" ]] || { echo 'FAIL: --force did not rebuild' >&2; exit 1; }
 # 3. A failed build or a bad result never touches the installed copy.
-fake_bin "BxCachy 0.0.1-old" > "$dest"; chmod 755 "$dest"; old="$(cat "$dest")"
+fake_bin "BxRig 0.0.1-old" > "$dest"; chmod 755 "$dest"; old="$(cat "$dest")"
 if out="$(MOCK_BUILD_FAIL=1 brun bash "$repo/bootstrap/install.sh" binary --yes --force 2>&1)"; then echo 'FAIL: build failure ignored' >&2; exit 1; fi
 need "$out" 'installed copy was not touched'; need "$out" 'compile error'; [[ "$(cat "$dest")" == "$old" ]] || { echo 'FAIL: failed build changed the install' >&2; exit 1; }
 fake_bin "oops not it" > "$tmp/fake_built"
@@ -274,14 +274,14 @@ need "$out" 'self-check'; [[ "$(cat "$dest")" == "$old" ]] || { echo 'FAIL: bad 
 if out="$(MOCK_MB=0.11.0 brun bash "$repo/bootstrap/install.sh" binary --yes --force 2>&1)"; then echo 'FAIL: wrong MatchBox accepted' >&2; exit 1; fi; need "$out" 'MatchBox 0.12.0 is required'
 if out="$(MOCK_UID=0 brun bash "$repo/bootstrap/install.sh" binary --yes 2>&1)"; then echo 'FAIL: root accepted' >&2; exit 1; fi; need "$out" 'regular user'
 # 5. --binary: installs a given file after verifying it; rejects symlinks, non-executables and impostors.
-b_mocks; good="$tmp/good"; fake_bin "BxCachy 9.9.9" > "$good"; chmod 755 "$good"
-out="$(brun bash "$repo/bootstrap/install.sh" binary --yes --binary "$good" 2>&1)"; need "$out" 'Installed'; [[ "$("$dest" version)" == "BxCachy 9.9.9" ]] || { echo 'FAIL: --binary not installed' >&2; exit 1; }
+b_mocks; good="$tmp/good"; fake_bin "BxRig 9.9.9" > "$good"; chmod 755 "$good"
+out="$(brun bash "$repo/bootstrap/install.sh" binary --yes --binary "$good" 2>&1)"; need "$out" 'Installed'; [[ "$("$dest" version)" == "BxRig 9.9.9" ]] || { echo 'FAIL: --binary not installed' >&2; exit 1; }
 need "$(brun bash "$repo/bootstrap/install.sh" binary --yes --binary "$good" 2>&1)" 'identical'
-ln -sf "$good" "$tmp/link"; printf 'x' > "$tmp/plain"; fake_bin "BxCachy" | sed 's/BxCachy/Other/' > "$tmp/imp"; chmod 755 "$tmp/imp"
+ln -sf "$good" "$tmp/link"; printf 'x' > "$tmp/plain"; fake_bin "BxRig" | sed 's/BxRig/Other/' > "$tmp/imp"; chmod 755 "$tmp/imp"
 for bad in "$tmp/link" "$tmp/plain" "$tmp/imp" "$tmp/missing"; do
   if brun bash "$repo/bootstrap/install.sh" binary --yes --binary "$bad" >/dev/null 2>&1; then echo "FAIL: --binary accepted $bad" >&2; exit 1; fi
 done
-[[ "$("$dest" version)" == "BxCachy 9.9.9" ]] || { echo 'FAIL: rejected --binary changed the install' >&2; exit 1; }
+[[ "$("$dest" version)" == "BxRig 9.9.9" ]] || { echo 'FAIL: rejected --binary changed the install' >&2; exit 1; }
 # 6. Arguments.
 if brun bash "$repo/bootstrap/install.sh" binary >/dev/null 2>&1; then echo 'FAIL: binary without --yes' >&2; exit 1; fi
 if brun bash "$repo/bootstrap/install.sh" binary --yes --bogus >/dev/null 2>&1; then echo 'FAIL: unknown flag' >&2; exit 1; fi
@@ -291,12 +291,12 @@ echo 'bootstrap binary tests passed'
 # ---- B6: failure paths. Every one must say why, and leave the system as it was ----
 # Network unreachable is reported, not fatal, for the read-only report.
 reset_mocks; mock curl 'exit 22'
-out="$(env -i HOME="$home" PATH="$bin:$sys" BXCACHY_OS_RELEASE="$tmp/os-arch" MOCK_INSTALLED="" bash "$repo/bootstrap/install.sh" check 2>&1)"; need "$out" 'network: unreachable'
+out="$(env -i HOME="$home" PATH="$bin:$sys" BXRIG_OS_RELEASE="$tmp/os-arch" MOCK_INSTALLED="" bash "$repo/bootstrap/install.sh" check 2>&1)"; need "$out" 'network: unreachable'
 
 # Unsupported OS and too little disk stop every installing mode before anything runs.
 install_mocks; fresh_home; mock curl 'exit 22'
 for m in "packages --yes" "toolchains --yes"; do
-  if out="$(OSREL="$tmp/os-ubuntu" env -i HOME="$home" PATH="$bin:$sys" BXCACHY_SKIP_NETWORK=1 BXCACHY_OS_RELEASE="$tmp/os-ubuntu" STATE="$tmp/state" PLOG="$tmp/pacman.log" BINDIR="$bin" bash "$repo/bootstrap/install.sh" $m 2>&1 </dev/null)"; then echo "FAIL: '$m' ran on an unsupported OS" >&2; exit 1; fi
+  if out="$(OSREL="$tmp/os-ubuntu" env -i HOME="$home" PATH="$bin:$sys" BXRIG_SKIP_NETWORK=1 BXRIG_OS_RELEASE="$tmp/os-ubuntu" STATE="$tmp/state" PLOG="$tmp/pacman.log" BINDIR="$bin" bash "$repo/bootstrap/install.sh" $m 2>&1 </dev/null)"; then echo "FAIL: '$m' ran on an unsupported OS" >&2; exit 1; fi
   need "$out" 'Unsupported OS: ubuntu'
 done
 [[ ! -s "$tmp/pacman.log" ]] || { echo 'FAIL: unsupported OS touched the system' >&2; exit 1; }
@@ -365,7 +365,7 @@ out="$(MOCK_LATEST=1.20.0 trun bash "$repo/bootstrap/install.sh" toolchains --ye
 mock curl 'exit 22'   # curl exists but the lookup fails (offline)
 out="$(trun bash "$repo/bootstrap/install.sh" toolchains --yes </dev/null 2>&1)"; need "$out" 'could not look up the latest version'
 # A pinned BoxLang is honored.
-chk="$(trun env BXCACHY_BOXLANG_VERSION=1.19.0 bash "$repo/bootstrap/install.sh" check)"; need "$chk" '(want 1.19.0 (pinned))'
+chk="$(trun env BXRIG_BOXLANG_VERSION=1.19.0 bash "$repo/bootstrap/install.sh" check)"; need "$chk" '(want 1.19.0 (pinned))'
 echo 'bootstrap latest-BoxLang tests passed'
 
 # ---- box.json: the one place that names tool versions ----
@@ -373,20 +373,20 @@ echo 'bootstrap latest-BoxLang tests passed'
 for k in .name .version .toolchain.java.version .toolchain.java.package .toolchain.boxlang.version .toolchain.bvm.installer .toolchain.mvm.installer .toolchain.matchbox.version .toolchain.rust.channel; do
   jq -e "$k" "$root/box.json" >/dev/null || { echo "FAIL: real box.json lacks $k" >&2; exit 1; }
 done
-[[ "BxCachy $(jq -r .version "$root/box.json")" == "$(grep -m1 -oE 'BxCachy [0-9][0-9A-Za-z.+-]*' "$root/src/Main.bx")" ]] || { echo 'FAIL: box.json version differs from the version in src/Main.bx' >&2; exit 1; }
+[[ "BxRig $(jq -r .version "$root/box.json")" == "$(grep -m1 -oE 'BxRig [0-9][0-9A-Za-z.+-]*' "$root/src/Main.bx")" ]] || { echo 'FAIL: box.json version differs from the version in src/Main.bx' >&2; exit 1; }
 # A different pin in box.json changes the plan (no copy of the version lives in the script).
 reset_mocks; MOCK_INSTALLED="jdk21-openjdk git curl unzip rustup base-devel jq"; mock sudo 'exit 9'
 jq '.toolchain.matchbox.version="0.13.0" | .toolchain.rust.channel="beta" | .toolchain.java.package="jdk-test-openjdk"' "$repo/box.json" > "$tmp/box-other.json"
-plan="$(run env BXCACHY_MANIFEST="$tmp/box-other.json" bash "$repo/bootstrap/install.sh" --dry-run)"
+plan="$(run env BXRIG_MANIFEST="$tmp/box-other.json" bash "$repo/bootstrap/install.sh" --dry-run)"
 need "$plan" 'mvm install 0.13.0'; need "$plan" 'rustup default beta'; need "$plan" 'jdk-test-openjdk'
-# BXCACHY_BOXLANG_VERSION still beats the manifest.
-chk="$(run env BXCACHY_BOXLANG_VERSION=1.18.0 bash "$repo/bootstrap/install.sh" check)"; need "$chk" '(want 1.18.0 (pinned))'
+# BXRIG_BOXLANG_VERSION still beats the manifest.
+chk="$(run env BXRIG_BOXLANG_VERSION=1.18.0 bash "$repo/bootstrap/install.sh" check)"; need "$chk" '(want 1.18.0 (pinned))'
 # A broken manifest is an error that says what is wrong.
 echo '{ not json' > "$tmp/box-bad.json"
-if out="$(run env BXCACHY_MANIFEST="$tmp/box-bad.json" bash "$repo/bootstrap/install.sh" check 2>&1)"; then echo 'FAIL: invalid box.json accepted' >&2; exit 1; fi; need "$out" 'not valid JSON'
+if out="$(run env BXRIG_MANIFEST="$tmp/box-bad.json" bash "$repo/bootstrap/install.sh" check 2>&1)"; then echo 'FAIL: invalid box.json accepted' >&2; exit 1; fi; need "$out" 'not valid JSON'
 jq 'del(.toolchain.matchbox.version)' "$repo/box.json" > "$tmp/box-gap.json"
-if out="$(run env BXCACHY_MANIFEST="$tmp/box-gap.json" bash "$repo/bootstrap/install.sh" --dry-run 2>&1)"; then echo 'FAIL: incomplete box.json accepted' >&2; exit 1; fi; need "$out" 'missing toolchain.matchbox.version'
-if out="$(run env BXCACHY_MANIFEST="$tmp/nope.json" bash "$repo/bootstrap/install.sh" toolchains --yes </dev/null 2>&1)"; then echo 'FAIL: missing box.json accepted' >&2; exit 1; fi; need "$out" 'box.json not found'
+if out="$(run env BXRIG_MANIFEST="$tmp/box-gap.json" bash "$repo/bootstrap/install.sh" --dry-run 2>&1)"; then echo 'FAIL: incomplete box.json accepted' >&2; exit 1; fi; need "$out" 'missing toolchain.matchbox.version'
+if out="$(run env BXRIG_MANIFEST="$tmp/nope.json" bash "$repo/bootstrap/install.sh" toolchains --yes </dev/null 2>&1)"; then echo 'FAIL: missing box.json accepted' >&2; exit 1; fi; need "$out" 'box.json not found'
 # Without jq the read-only modes explain what to do, and the installing modes point at --install.
 rm -f "$sys/jq"
 out="$(run bash "$repo/bootstrap/install.sh" check 2>&1)"; need "$out" 'jq is required to read box.json'
@@ -418,15 +418,15 @@ esac
 M
 chmod +x "$HOME/.mvm/bin/mvm"'
 fresh_home
-out="$(MVM_FAKE="$FLAKY_MVM" trun env BXCACHY_RETRY_WAITS="0 0 0" MVM_FAIL_TIMES=2 bash "$repo/bootstrap/install.sh" toolchains --yes </dev/null 2>&1)"
+out="$(MVM_FAKE="$FLAKY_MVM" trun env BXRIG_RETRY_WAITS="0 0 0" MVM_FAIL_TIMES=2 bash "$repo/bootstrap/install.sh" toolchains --yes </dev/null 2>&1)"
 need "$out" 'MatchBox 0.12.0 installed and verified.'; [[ "$(cat "$home/mvm-tries")" == 3 ]] || { echo 'FAIL: expected exactly 3 install attempts' >&2; exit 1; }
 fresh_home
-if out="$(MVM_FAKE="$FLAKY_MVM" trun env BXCACHY_RETRY_WAITS="0 0 0" MVM_FAIL_TIMES=9 bash "$repo/bootstrap/install.sh" toolchains --yes </dev/null 2>&1)"; then echo 'FAIL: persistent failure treated as success' >&2; exit 1; fi
+if out="$(MVM_FAKE="$FLAKY_MVM" trun env BXRIG_RETRY_WAITS="0 0 0" MVM_FAIL_TIMES=9 bash "$repo/bootstrap/install.sh" toolchains --yes </dev/null 2>&1)"; then echo 'FAIL: persistent failure treated as success' >&2; exit 1; fi
 need "$out" 'Failed after 3 attempts'; need "$out" 'HTTP 403'
 echo 'bootstrap retry tests passed'
 
 # ---- MatchBox from the published bxcachy-branch build (box.json "downloads"): download, sha256, no mvm ----
-jq '.toolchain.matchbox = { "version": "0.13.0", "downloads": "https://downloads.example.test/bxcachy/matchbox" }' "$repo/box.json" > "$tmp/box-dl.json"
+jq '.toolchain.matchbox = { "version": "0.13.0", "downloads": "https://downloads.example.test/bxrig/matchbox" }' "$repo/box.json" > "$tmp/box-dl.json"
 MB_BIN='#!/usr/bin/env bash
 [[ "$1" == --version ]] && echo "matchbox version 0.13.0" || echo "matchbox"'
 printf '%s\n' "$MB_BIN" > "$tmp/mb-good"; chmod 755 "$tmp/mb-good"
@@ -437,24 +437,24 @@ mock curl 'url=""; out=""; while [[ $# -gt 0 ]]; do case "$1" in -o) out="$2"; s
 [[ -n "$out" ]] && echo "$url" >> "$CURL_LOG"
 [[ "${MOCK_CURL_FAIL:-0}" == 1 ]] && exit 22
 case "$url" in
-  *bxcachy/matchbox/matchbox-linux-x86_64.sha256) echo "${MB_SUM:-$GOOD_SUM}  matchbox-linux-x86_64" > "$out" ;;
-  *bxcachy/matchbox/matchbox-linux-x86_64) cat "$MB_FILE" > "$out" ;;
+  *bxrig/matchbox/matchbox-linux-x86_64.sha256) echo "${MB_SUM:-$GOOD_SUM}  matchbox-linux-x86_64" > "$out" ;;
+  *bxrig/matchbox/matchbox-linux-x86_64) cat "$MB_FILE" > "$out" ;;
   *matchbox-quick-installer*) printf "%s\n" "$MVM_FAKE" > "$out" ;;
   *install-bvm*) printf "%s\n" "$BVM_FAKE" > "$out" ;; *nvm-sh/nvm*) printf "%s\n" "$NVM_FAKE" > "$out" ;;
   *version-latest.properties*) printf "version=1.19.0+1\n" ;;
   *) exit 22 ;;
 esac'
-drun() { env -i MVM_FAKE="$MVM_FAKE" NVM_FAKE="$NVM_FAKE" HOME="$home" PATH="$bin:$sys" BXCACHY_SKIP_NETWORK=1 BXCACHY_OS_RELEASE="$tmp/os-arch" MOCK_INSTALLED="$MOCK_INSTALLED" CURL_LOG="$tmp/curl.log" BVM_FAKE="$BVM_FAKE" MB_FILE="$tmp/mb-good" GOOD_SUM="$GOOD_SUM" MB_SUM="${MB_SUM:-$GOOD_SUM}" MOCK_UID="${MOCK_UID:-1000}" BXCACHY_MANIFEST="$tmp/box-dl.json" "$@"; }
+drun() { env -i MVM_FAKE="$MVM_FAKE" NVM_FAKE="$NVM_FAKE" HOME="$home" PATH="$bin:$sys" BXRIG_SKIP_NETWORK=1 BXRIG_OS_RELEASE="$tmp/os-arch" MOCK_INSTALLED="$MOCK_INSTALLED" CURL_LOG="$tmp/curl.log" BVM_FAKE="$BVM_FAKE" MB_FILE="$tmp/mb-good" GOOD_SUM="$GOOD_SUM" MB_SUM="${MB_SUM:-$GOOD_SUM}" MOCK_UID="${MOCK_UID:-1000}" BXRIG_MANIFEST="$tmp/box-dl.json" "$@"; }
 fresh_home
 plan="$(drun bash "$repo/bootstrap/install.sh" --dry-run)"
-need "$plan" 'download https://downloads.example.test/bxcachy/matchbox/matchbox-linux-x86_64 and check its sha256'; refuse "$plan" 'mvm install'
+need "$plan" 'download https://downloads.example.test/bxrig/matchbox/matchbox-linux-x86_64 and check its sha256'; refuse "$plan" 'mvm install'
 need "$plan" 'download and run https://raw.githubusercontent.com/ortus-boxlang/matchbox-quick-installer'   # mvm is always installed
-# install: downloaded, verified, kept under ~/.local/share/bxcachy/matchbox; mvm is installed too but does not manage this MatchBox
+# install: downloaded, verified, kept under ~/.local/share/bxrig/matchbox; mvm is installed too but does not manage this MatchBox
 out="$(drun bash "$repo/bootstrap/install.sh" toolchains --yes </dev/null 2>&1)"
 need "$out" 'MatchBox 0.13.0 installed and verified.'
-[[ -x "$home/.local/share/bxcachy/matchbox/bin/matchbox" && -x "$home/.mvm/bin/mvm" ]] || { echo 'FAIL: MatchBox not under the bxcachy home, or mvm missing' >&2; exit 1; }
+[[ -x "$home/.local/share/bxrig/matchbox/bin/matchbox" && -x "$home/.mvm/bin/mvm" ]] || { echo 'FAIL: MatchBox not under the bxrig home, or mvm missing' >&2; exit 1; }
 [[ ! -e "$home/.mvm/bin/matchbox" ]] || { echo 'FAIL: mvm installed a MatchBox of its own' >&2; exit 1; }
-need "$(cat "$tmp/curl.log")" 'bxcachy/matchbox/matchbox-linux-x86_64.sha256'; need "$(cat "$tmp/curl.log")" 'matchbox-quick-installer'
+need "$(cat "$tmp/curl.log")" 'bxrig/matchbox/matchbox-linux-x86_64.sha256'; need "$(cat "$tmp/curl.log")" 'matchbox-quick-installer'
 # a second run changes nothing
 : > "$tmp/curl.log"; drun bash "$repo/bootstrap/install.sh" toolchains --yes </dev/null >/dev/null 2>&1
 refuse "$(cat "$tmp/curl.log")" 'matchbox-linux-x86_64'
@@ -463,10 +463,10 @@ chk="$(drun bash "$repo/bootstrap/install.sh" check)"; need "$chk" 'matchbox: 0.
 mock curl 'url=""; out=""; while [[ $# -gt 0 ]]; do case "$1" in -o) out="$2"; shift 2 ;; http*) url="$1"; shift ;; *) shift ;; esac; done
 [[ -n "$out" ]] && echo "$url" >> "$CURL_LOG"
 case "$url" in
-  *bxcachy/matchbox/version-latest.properties) printf "version=0.13.0\ncommit=abc1234\n" ;;
-  *bxcachy/matchbox/0.13.0-abc1234/matchbox-linux-x86_64.sha256) echo "$GOOD_SUM  matchbox-linux-x86_64" > "$out" ;;
-  *bxcachy/matchbox/0.13.0-abc1234/matchbox-linux-x86_64) cat "$MB_FILE" > "$out" ;;
-  *bxcachy/matchbox/matchbox-linux-x86_64*) echo "stale evergreen file must not be used" >&2; exit 22 ;;
+  *bxrig/matchbox/version-latest.properties) printf "version=0.13.0\ncommit=abc1234\n" ;;
+  *bxrig/matchbox/0.13.0-abc1234/matchbox-linux-x86_64.sha256) echo "$GOOD_SUM  matchbox-linux-x86_64" > "$out" ;;
+  *bxrig/matchbox/0.13.0-abc1234/matchbox-linux-x86_64) cat "$MB_FILE" > "$out" ;;
+  *bxrig/matchbox/matchbox-linux-x86_64*) echo "stale evergreen file must not be used" >&2; exit 22 ;;
   *matchbox-quick-installer*) printf "%s\n" "$MVM_FAKE" > "$out" ;;
   *install-bvm*) printf "%s\n" "$BVM_FAKE" > "$out" ;; *nvm-sh/nvm*) printf "%s\n" "$NVM_FAKE" > "$out" ;;
   *version-latest.properties*) printf "version=1.19.0+1\n" ;;
@@ -474,14 +474,14 @@ case "$url" in
 esac'
 fresh_home; : > "$tmp/curl.log"
 out="$(drun bash "$repo/bootstrap/install.sh" toolchains --yes </dev/null 2>&1)" || { echo "FAIL: versioned folder download: $out" >&2; exit 1; }
-need "$out" 'MatchBox 0.13.0 installed and verified.'; need "$(cat "$tmp/curl.log")" '0.13.0-abc1234/matchbox-linux-x86_64'; refuse "$(cat "$tmp/curl.log")" 'bxcachy/matchbox/matchbox-linux-x86_64'
+need "$out" 'MatchBox 0.13.0 installed and verified.'; need "$(cat "$tmp/curl.log")" '0.13.0-abc1234/matchbox-linux-x86_64'; refuse "$(cat "$tmp/curl.log")" 'bxrig/matchbox/matchbox-linux-x86_64'
 # restore the evergreen-only mock for the tests below
 mock curl 'url=""; out=""; while [[ $# -gt 0 ]]; do case "$1" in -o) out="$2"; shift 2 ;; http*) url="$1"; shift ;; *) shift ;; esac; done
 [[ -n "$out" ]] && echo "$url" >> "$CURL_LOG"
 [[ "${MOCK_CURL_FAIL:-0}" == 1 ]] && exit 22
 case "$url" in
-  *bxcachy/matchbox/matchbox-linux-x86_64.sha256) echo "${MB_SUM:-$GOOD_SUM}  matchbox-linux-x86_64" > "$out" ;;
-  *bxcachy/matchbox/matchbox-linux-x86_64) cat "$MB_FILE" > "$out" ;;
+  *bxrig/matchbox/matchbox-linux-x86_64.sha256) echo "${MB_SUM:-$GOOD_SUM}  matchbox-linux-x86_64" > "$out" ;;
+  *bxrig/matchbox/matchbox-linux-x86_64) cat "$MB_FILE" > "$out" ;;
   *matchbox-quick-installer*) printf "%s\n" "$MVM_FAKE" > "$out" ;;
   *install-bvm*) printf "%s\n" "$BVM_FAKE" > "$out" ;; *nvm-sh/nvm*) printf "%s\n" "$NVM_FAKE" > "$out" ;;
   *version-latest.properties*) printf "version=1.19.0+1\n" ;;
@@ -490,14 +490,14 @@ esac'
 # a checksum mismatch installs nothing
 fresh_home; : > "$tmp/curl.log"
 if out="$(MB_SUM=deadbeef drun bash "$repo/bootstrap/install.sh" toolchains --yes </dev/null 2>&1)"; then echo 'FAIL: checksum mismatch accepted' >&2; exit 1; fi
-need "$out" 'checksum mismatch'; [[ ! -e "$home/.local/share/bxcachy/matchbox/bin/matchbox" ]] || { echo 'FAIL: unverified MatchBox was installed' >&2; exit 1; }
+need "$out" 'checksum mismatch'; [[ ! -e "$home/.local/share/bxrig/matchbox/bin/matchbox" ]] || { echo 'FAIL: unverified MatchBox was installed' >&2; exit 1; }
 # a download that does not run installs nothing
 printf '#!/usr/bin/env bash\nexit 3\n' > "$tmp/mb-broken"; chmod 755 "$tmp/mb-broken"; fresh_home
 if out="$(MB_SUM="$(sha256sum "$tmp/mb-broken" | awk '{print $1}')" drun env MB_FILE="$tmp/mb-broken" bash "$repo/bootstrap/install.sh" toolchains --yes </dev/null 2>&1)"; then echo 'FAIL: broken MatchBox accepted' >&2; exit 1; fi
 need "$out" 'does not run'
 # a local build (CI) is installed without any download
 fresh_home; : > "$tmp/curl.log"
-out="$(drun env BXCACHY_MATCHBOX_FILE="$tmp/mb-good" bash "$repo/bootstrap/install.sh" toolchains --yes </dev/null 2>&1)"
+out="$(drun env BXRIG_MATCHBOX_FILE="$tmp/mb-good" bash "$repo/bootstrap/install.sh" toolchains --yes </dev/null 2>&1)"
 need "$out" 'MatchBox 0.13.0 installed and verified.'; refuse "$(cat "$tmp/curl.log")" 'matchbox-linux-x86_64'
 echo 'bootstrap matchbox download tests passed'
 
@@ -511,28 +511,28 @@ echo "$*" >> "$ALL_LOG"
 exit 0
 STAGE
 : > "$tmp/all/log"
-out="$(env PATH="$tmp/all/bin:$PATH" ALL_LOG="$tmp/all/log" BXCACHY_ALL_SCRIPT="$tmp/all/stage.sh" bash "$root/bootstrap/install.sh" --yes 2>&1)"
+out="$(env PATH="$tmp/all/bin:$PATH" ALL_LOG="$tmp/all/log" BXRIG_ALL_SCRIPT="$tmp/all/stage.sh" bash "$root/bootstrap/install.sh" --yes 2>&1)"
 [[ "$(paste -sd'|' "$tmp/all/log")" == 'packages --yes|toolchains --yes|binary --yes|core --yes' ]] || { echo "FAIL: the whole install stage order or flags: $(paste -sd'|' "$tmp/all/log")" >&2; exit 1; }
 : > "$tmp/all/log"
-if env PATH="$tmp/all/bin:$PATH" ALL_FAIL=toolchains ALL_LOG="$tmp/all/log" BXCACHY_ALL_SCRIPT="$tmp/all/stage.sh" bash "$root/bootstrap/install.sh" --yes >/dev/null 2>&1; then echo 'FAIL: the whole install ignored a failing stage' >&2; exit 1; fi
+if env PATH="$tmp/all/bin:$PATH" ALL_FAIL=toolchains ALL_LOG="$tmp/all/log" BXRIG_ALL_SCRIPT="$tmp/all/stage.sh" bash "$root/bootstrap/install.sh" --yes >/dev/null 2>&1; then echo 'FAIL: the whole install ignored a failing stage' >&2; exit 1; fi
 [[ "$(wc -l < "$tmp/all/log")" == 2 ]] || { echo 'FAIL: the whole install went on after a failing stage' >&2; exit 1; }
 if bash "$root/bootstrap/install.sh" </dev/null >/dev/null 2>&1; then echo 'FAIL: the whole install without --yes accepted' >&2; exit 1; fi
-out="$(env PATH="$tmp/all/bin:$PATH" ALL_LOG="$tmp/all/log" BXCACHY_ALL_SCRIPT="$tmp/all/stage.sh" bash "$root/bootstrap/install.sh" --dry-run 2>&1)" || { echo 'FAIL: --dry-run exited non-zero' >&2; exit 1; }
-[[ "$out" == *'bxcachy profile-install core --yes'* && "$out" == *'Dry run: nothing was changed.'* ]] || { echo "FAIL: --dry-run plan lacks the core step: $out" >&2; exit 1; }
+out="$(env PATH="$tmp/all/bin:$PATH" ALL_LOG="$tmp/all/log" BXRIG_ALL_SCRIPT="$tmp/all/stage.sh" bash "$root/bootstrap/install.sh" --dry-run 2>&1)" || { echo 'FAIL: --dry-run exited non-zero' >&2; exit 1; }
+[[ "$out" == *'bxrig profile-install core --yes'* && "$out" == *'Dry run: nothing was changed.'* ]] || { echo "FAIL: --dry-run plan lacks the core step: $out" >&2; exit 1; }
 : > "$tmp/all/log"
-out="$(printf 'n\n' | env BXCACHY_INTERACTIVE=1 PATH="$tmp/all/bin:$PATH" ALL_LOG="$tmp/all/log" BXCACHY_ALL_SCRIPT="$tmp/all/stage.sh" bash "$root/bootstrap/install.sh" 2>&1)" && { echo 'FAIL: answering n went on' >&2; exit 1; }
+out="$(printf 'n\n' | env BXRIG_INTERACTIVE=1 PATH="$tmp/all/bin:$PATH" ALL_LOG="$tmp/all/log" BXRIG_ALL_SCRIPT="$tmp/all/stage.sh" bash "$root/bootstrap/install.sh" 2>&1)" && { echo 'FAIL: answering n went on' >&2; exit 1; }
 [[ ! -s "$tmp/all/log" ]] || { echo 'FAIL: a stage ran after answering n' >&2; exit 1; }
-printf 'y\n' | env BXCACHY_INTERACTIVE=1 PATH="$tmp/all/bin:$PATH" ALL_LOG="$tmp/all/log" BXCACHY_ALL_SCRIPT="$tmp/all/stage.sh" bash "$root/bootstrap/install.sh" >/dev/null 2>&1 || { echo 'FAIL: answering y did not run the install' >&2; exit 1; }
+printf 'y\n' | env BXRIG_INTERACTIVE=1 PATH="$tmp/all/bin:$PATH" ALL_LOG="$tmp/all/log" BXRIG_ALL_SCRIPT="$tmp/all/stage.sh" bash "$root/bootstrap/install.sh" >/dev/null 2>&1 || { echo 'FAIL: answering y did not run the install' >&2; exit 1; }
 [[ "$(paste -sd'|' "$tmp/all/log")" == 'packages --yes|toolchains --yes|binary --yes|core --yes|wizard' ]] || { echo "FAIL: stages after answering y (the wizard follows at a terminal): $(paste -sd'|' "$tmp/all/log")" >&2; exit 1; }
 echo 'bootstrap whole-install tests passed'
 
-# ---- nvm and Node.js are not part of the required install (they are the optional JavaScript toolchain: `bxcachy toolchain node`) ----
+# ---- nvm and Node.js are not part of the required install (they are the optional JavaScript toolchain: `bxrig toolchain node`) ----
 reset_mocks; MOCK_INSTALLED="jdk21-openjdk git curl unzip rustup base-devel jq"
 mock java 'echo "openjdk version \"21.0.13\" 2026-04-21" >&2'; mock mvm 'echo "MVM version: 2.0.1"'; mock matchbox 'echo "MatchBox 0.12.0"'
 mock bvm 'echo "bvm 1.40.0"'; mock boxlang 'echo "Ortus BoxLang v1.19.0+67"'; mock rustc 'echo "rustc 1.90.0"'; mock rustup 'exit 0'; mock yay 'exit 0'
-mock bxcachy '[[ "$1" == version ]] && echo "BxCachy 0.11.0-dev"'
-rm -rf "$home"; mkdir -p "$home/.local/bin"; cp "$bin/bxcachy" "$home/.local/bin/bxcachy"; rm "$bin/bxcachy"
-nplan() { env -i HOME="$home" PATH="$home/.local/bin:$bin:$sys" BXCACHY_SKIP_NETWORK=1 BXCACHY_OS_RELEASE="$tmp/os-arch" MOCK_INSTALLED="$MOCK_INSTALLED" bash "$repo/bootstrap/install.sh" "$@"; }
+mock bxrig '[[ "$1" == version ]] && echo "BxRig 0.11.0-dev"'
+rm -rf "$home"; mkdir -p "$home/.local/bin"; cp "$bin/bxrig" "$home/.local/bin/bxrig"; rm "$bin/bxrig"
+nplan() { env -i HOME="$home" PATH="$home/.local/bin:$bin:$sys" BXRIG_SKIP_NETWORK=1 BXRIG_OS_RELEASE="$tmp/os-arch" MOCK_INSTALLED="$MOCK_INSTALLED" bash "$repo/bootstrap/install.sh" "$@"; }
 plan="$(nplan --dry-run)"
 refuse "$plan" 'nvm'; refuse "$plan" 'Node.js'; refuse "$(nplan check)" 'nvm:'; refuse "$(nplan check)" 'node:'
 echo 'bootstrap required-toolchain tests passed'

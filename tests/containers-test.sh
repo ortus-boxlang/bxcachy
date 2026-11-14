@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# `bxcachy containers` and `bxcachy editor lazyvim` with fake podman, docker, pacman, sudo, systemctl and git. Usage: containers-test.sh BINARY
+# `bxrig containers` and `bxrig editor lazyvim` with fake podman, docker, pacman, sudo, systemctl and git. Usage: containers-test.sh BINARY
 set -euo pipefail
 binary="$(realpath "${1:?native executable required}")"
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
@@ -17,13 +17,13 @@ if [[ "$1" == -S ]]; then for a in "$@"; do [[ "$a" != -* ]] && touch "$INSTALLE
 SH
 printf '#!/usr/bin/env bash\necho "git $*" >> "$LOG"\nif [[ "$1" == clone ]]; then mkdir -p "$3/.git" "$3/lua"; echo init > "$3/init.lua"; fi\n' > "$tmp/bin/git"
 chmod +x "$tmp/bin"/*
-run() { env HOME="$tmp/home" USER=ada BXCACHY_ETC="$tmp/etc" XDG_RUNTIME_DIR=/run/user/1000 XDG_CONFIG_HOME="$tmp/home/.config" INSTALLED="$tmp/installed" LOG="$LOG" ROOTLESS="${ROOTLESS:-true}" SOCK="${SOCK:-}" PATH="$tmp/bin:$PATH" "$@"; }
+run() { env HOME="$tmp/home" USER=ada BXRIG_ETC="$tmp/etc" XDG_RUNTIME_DIR=/run/user/1000 XDG_CONFIG_HOME="$tmp/home/.config" INSTALLED="$tmp/installed" LOG="$LOG" ROOTLESS="${ROOTLESS:-true}" SOCK="${SOCK:-}" PATH="$tmp/bin:$PATH" "$@"; }
 code() { set +e; run "$@" >/dev/null 2>&1; local c=$?; set -e; echo "$c"; }
 
 # doctor: everything missing it can fix is reported with the command that fixes it
 echo "ada:100000:65536" > "$tmp/etc/subuid"; echo "ada:100000:65536" > "$tmp/etc/subgid"
 out="$(run "$binary" containers doctor)" && fail 'doctor must exit 4 while something needs fixing' || true
-[[ "$out" == *'FIX   compose'* && "$out" == *'bxcachy containers docker-compat'* && "$out" == *'FIX   socket'* && "$out" == *'ok    docker-shim'* && "$out" == *'ok    subuid'* && "$out" == *'ok    rootless'* ]] || fail "doctor report: $out"
+[[ "$out" == *'FIX   compose'* && "$out" == *'bxrig containers docker-compat'* && "$out" == *'FIX   socket'* && "$out" == *'ok    docker-shim'* && "$out" == *'ok    subuid'* && "$out" == *'ok    rootless'* ]] || fail "doctor report: $out"
 touch "$tmp/installed/x"; ln -sf "$tmp/bin/podman" "$tmp/bin/podman-compose"
 SOCK=active run "$binary" containers doctor --json | jq -e '.ok == true and (.data.checks | length) == 6' >/dev/null || fail "doctor when all is well: $(SOCK=active run "$binary" containers doctor --json)"
 { ROOTLESS=false SOCK=active run "$binary" containers doctor --json || true; } | jq -e '.data.checks[] | select(.id=="rootless") | .ok == false' >/dev/null || fail 'doctor rootless'

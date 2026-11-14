@@ -1,0 +1,30 @@
+// Runs the setup wizard: draws WizardView frames on the MatchBox terminal canvas and feeds keys, clicks and the mouse
+// wheel to WizardApp until the user finishes (Enter on the review) or cancels (Ctrl+C). It runs nothing itself:
+// the caller acts on the answers.
+//
+//   result = new bxrig.Wizard( spec, preset ).run();   // { outcome: "done"|"cancelled", answers: {...} }
+class Wizard {
+    function init( spec, preset = {} ) {
+        variables.app = new bxrig.WizardApp( arguments.spec, arguments.preset );
+        return this;
+    }
+
+    function app() { return variables.app; }
+
+    // One event from the terminal: a key, a click, the wheel (resizes just redraw).
+    function handle( ev ) {
+        if ( arguments.ev.type == "key" ) variables.app.onKey( arguments.ev.key );
+        else if ( arguments.ev.type == "click" ) variables.app.act( variables.view.hitAt( arguments.ev.x, arguments.ev.y ) );
+        else if ( arguments.ev.type == "scroll" ) variables.app.onScroll( arguments.ev.direction );
+        return this;
+    }
+
+    function run() {
+        var me = this;
+        new bxrig.TuiRunner().run(
+            variables.app,
+            function( tui ) { variables.tui = tui; variables.view = new bxrig.WizardView( tui ); return variables.view; }
+        );
+        return { outcome: variables.app.outcome(), answers: variables.app.finalAnswers() };
+    }
+}

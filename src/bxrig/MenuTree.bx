@@ -1,0 +1,352 @@
+// The BxRig menu as data. It follows Omarchy's skeleton (Apps, Install, Remove, Appearance, Trigger, Setup, Update, Agent, Learn, About,
+// System) and adds Develop for what is ours (BoxLang, databases, virtual machines, containers, the editor).
+// Entry kinds:
+//   sub        children
+//   spawn      starts `bxrig ARGV` detached (no window)
+//   run        runs `bxrig ARGV` in a terminal window and waits for Enter (for output and for sudo prompts)
+//   open       opens a URL with xdg-open
+//   pick       asks you to choose from `source` (see Menu.choices), then runs argv with {} replaced by the choice (mode spawn or run)
+//   pkgsearch  asks for text, lists matching packages (source all, repo or aur), asks, then runs `pkg install`
+//   ask        asks for one line of text, then runs argv with {} replaced by it
+//   catalog    lists the catalog apps of one group (`group`), asks, then runs `install ID --yes`
+//   db, webcreate, webrm   the existing special flows
+// `confirm` on an entry asks "Are you sure?" first ({} is the choice). Every entry is a command you can run by hand: the menu mirrors the CLI.
+class MenuTree {
+    function init() {
+        return this;
+    }
+
+    function spawn( label, argv, confirm = "" ) {
+        var e = { label: arguments.label, kind: "spawn", argv: arguments.argv };
+        if ( len( arguments.confirm ) ) e.confirm = arguments.confirm;
+        return e;
+    }
+
+    function run( label, argv ) { return { label: arguments.label, kind: "run", argv: arguments.argv }; }
+    function link( label, url ) { return { label: arguments.label, kind: "open", url: arguments.url }; }
+    function sub( label, children ) { return { label: arguments.label, kind: "sub", children: arguments.children }; }
+
+    function pick( label, source, argv, mode = "spawn", confirm = "" ) {
+        var e = { label: arguments.label, kind: "pick", source: arguments.source, argv: arguments.argv, mode: arguments.mode };
+        if ( len( arguments.confirm ) ) e.confirm = arguments.confirm;
+        return e;
+    }
+
+    // catalogGroups: [ { id, title } ] from the catalog, in order.
+    function sections( catalogGroups = [] ) {
+        var groupEntries = arguments.catalogGroups.map( function( g ) { return { label: g.title, kind: "catalog", group: g.id }; } );
+        return [
+            { label: "Apps", kind: "spawn", argv: [ "apps" ] },
+            sub( "Install", [
+                { label: "Package (repos and AUR)", kind: "pkgsearch", source: "all" },
+                { label: "AUR package", kind: "pkgsearch", source: "aur" },
+                sub( "Catalog", groupEntries ),
+                sub( "Web app", [
+                    { label: "Create web app", kind: "webcreate" },
+                    run( "Install all Google apps", [ "web", "install", "google", "--yes" ] ),
+                    run( "Install all Microsoft apps", [ "web", "install", "microsoft", "--yes" ] ),
+                    run( "Install all Apple apps", [ "web", "install", "apple", "--yes" ] ),
+                    run( "BoxLang web apps", [ "web", "install", "boxlang", "--yes" ] )
+                ] ),
+                sub( "Virtual machine", [
+                    run( "Windows (asks which version)", [ "vm", "create", "windows" ] ),
+                    { label: "Linux desktop (asks a name)", kind: "ask", prompt: "Name for the new desktop", argv: [ "vm", "create", "linux", "{}", "--yes" ], mode: "run" },
+                    run( "Linux desktops: the tags", [ "vm", "versions", "linux" ] ),
+                    run( "Check this machine (KVM, GPU)", [ "vm", "doctor" ] )
+                ] ),
+                run( "Node.js (nvm)", [ "toolchain", "node", "--yes" ] ),
+                run( "Neovim with LazyVim and BoxLang", [ "editor", "lazyvim", "--yes" ] ),
+                run( "Agent skills", [ "skills", "install", "--yes" ] ),
+                run( "Dictation", [ "dictation", "setup" ] ),
+                { label: "AI", kind: "catalog", group: "ai" },
+                { label: "Development", kind: "catalog", group: "development" },
+                { label: "Terminal", kind: "catalog", group: "terminal" },
+                { label: "Gaming", kind: "catalog", group: "gaming" },
+                pick( "Font", "fonts-uninstalled", [ "appearance", "font", "install", "{}", "--yes" ], "run" )
+            ] ),
+            sub( "Remove", [
+                pick( "Package", "packages", [ "pkg", "remove", "{}", "--yes" ], "run", "Remove the package {} and its unused dependencies?" ),
+                pick( "App from the catalog", "apps-installed", [ "remove", "{}", "--yes" ], "run", "Remove {}?" ),
+                { label: "Web app", kind: "webrm" },
+                pick( "Theme", "user-themes", [ "theme", "remove", "{}" ], "run" ),
+                pick( "Virtual machine", "vms", [ "vm", "remove", "{}", "--yes" ], "run", "Remove the VM {} and DELETE its data?" ),
+                pick( "Agent skill", "skills-installed", [ "skills", "remove", "{}", "--yes" ], "run", "Remove the skill {}?" )
+            ] ),
+            sub( "Appearance", [
+                pick( "Theme", "themes", [ "theme", "set", "{}" ] ),
+                spawn( "Next theme", [ "theme", "next" ] ),
+                spawn( "Random theme", [ "theme", "random" ] ),
+                sub( "Mode", [
+                    spawn( "Follow the theme", [ "theme", "mode", "theme" ] ),
+                    spawn( "Dark", [ "theme", "mode", "dark" ] ),
+                    spawn( "Light", [ "theme", "mode", "light" ] ),
+                    spawn( "Auto (day and night)", [ "theme", "mode", "auto" ] )
+                ] ),
+                run( "Theme status", [ "theme", "status" ] ),
+                pick( "Font", "fonts", [ "appearance", "font", "{}" ] ),
+                pick( "Install a font", "fonts-uninstalled", [ "appearance", "font", "install", "{}", "--yes" ], "run" ),
+                sub( "Background", [
+                    pick( "Pick", "backgrounds", [ "appearance", "background", "set", "{}" ] ),
+                    spawn( "Next", [ "appearance", "background", "next" ] ),
+                    spawn( "Random", [ "appearance", "background", "random" ] )
+                ] ),
+                sub( "Bar", [
+                    spawn( "Show", [ "appearance", "bar", "show" ] ), spawn( "Hide", [ "appearance", "bar", "hide" ] ), spawn( "Toggle", [ "appearance", "bar", "toggle" ] ),
+                    sub( "Position", [ spawn( "Top", [ "appearance", "bar", "position", "top" ] ), spawn( "Bottom", [ "appearance", "bar", "position", "bottom" ] ), spawn( "Left", [ "appearance", "bar", "position", "left" ] ), spawn( "Right", [ "appearance", "bar", "position", "right" ] ) ] ),
+                    sub( "Style", [ spawn( "Opaque", [ "appearance", "bar", "style", "opaque" ] ), spawn( "Glassy", [ "appearance", "bar", "style", "glassy" ] ), spawn( "Clear", [ "appearance", "bar", "style", "clear" ] ) ] ),
+                    sub( "Clock", [ spawn( "24 hour", [ "appearance", "bar", "clock", "time-24h" ] ), spawn( "12 hour", [ "appearance", "bar", "clock", "time-12h" ] ), spawn( "With the weekday", [ "appearance", "bar", "clock", "sunday-24h" ] ), spawn( "With the date", [ "appearance", "bar", "clock", "date-24h" ] ), spawn( "ISO date", [ "appearance", "bar", "clock", "iso" ] ) ] ),
+                    sub( "Battery percentage", [ spawn( "Show", [ "appearance", "bar", "battery", "on" ] ), spawn( "Hide", [ "appearance", "bar", "battery", "off" ] ) ] )
+                ] ),
+                sub( "Dock", [
+                    spawn( "Show", [ "appearance", "dock", "show" ] ), spawn( "Hide", [ "appearance", "dock", "hide" ] ), spawn( "Toggle", [ "appearance", "dock", "toggle" ] ),
+                    sub( "Mode", [ spawn( "Always visible", [ "appearance", "dock", "mode", "always" ] ), spawn( "Auto hide", [ "appearance", "dock", "mode", "autohide" ] ), spawn( "Off", [ "appearance", "dock", "mode", "off" ] ) ] ),
+                    sub( "Position", [ spawn( "Bottom", [ "appearance", "dock", "position", "bottom" ] ), spawn( "Left", [ "appearance", "dock", "position", "left" ] ), spawn( "Right", [ "appearance", "dock", "position", "right" ] ) ] )
+                ] ),
+                sub( "Windows", [
+                    sub( "Gaps", [ spawn( "Default", [ "appearance", "windows", "gaps", "on" ] ), spawn( "None", [ "appearance", "windows", "gaps", "off" ] ) ] ),
+                    sub( "Corners", [ spawn( "Follow the theme", [ "appearance", "windows", "corners", "theme" ] ), spawn( "Rounded", [ "appearance", "windows", "corners", "rounded" ] ), spawn( "Sharp", [ "appearance", "windows", "corners", "sharp" ] ) ] ),
+                    sub( "Opacity", [ spawn( "Opaque", [ "appearance", "windows", "opacity", "opaque" ] ), spawn( "Glassy", [ "appearance", "windows", "opacity", "glassy" ] ) ] ),
+                    sub( "Single window aspect ratio", [ spawn( "Square (1:1)", [ "appearance", "windows", "one-window-ratio", "on" ] ), spawn( "Full", [ "appearance", "windows", "one-window-ratio", "off" ] ) ] ),
+                    sub( "Layout", [ spawn( "Dwindle", [ "appearance", "layout", "dwindle" ] ), spawn( "Scrolling", [ "appearance", "layout", "scrolling" ] ), spawn( "Floating", [ "appearance", "layout", "floating" ] ) ] )
+                ] ),
+                sub( "Animations", [ spawn( "On", [ "appearance", "animations", "on" ] ), spawn( "Off", [ "appearance", "animations", "off" ] ) ] ),
+                run( "Appearance status", [ "appearance", "status" ] ),
+                spawn( "Re-apply saved appearance", [ "appearance", "apply" ] ),
+                { label: "Install a theme from git", kind: "ask", prompt: "Theme git URL (https)", argv: [ "theme", "install", "{}" ], mode: "run" }
+            ] ),
+            sub( "Trigger", [
+                sub( "Capture", [
+                    spawn( "Screenshot menu", [ "screenshot", "menu" ] ),
+                    spawn( "Screen", [ "screenshot", "screen" ] ),
+                    spawn( "Region", [ "screenshot", "region" ] ),
+                    spawn( "Window", [ "screenshot", "window" ] ),
+                    spawn( "Text (OCR)", [ "screenshot", "ocr" ] ),
+                    spawn( "QR code", [ "screenshot", "qr" ] ),
+                    spawn( "Screen recording: start or stop", [ "record", "toggle" ] )
+                ] ),
+                sub( "Toggle", [
+                    spawn( "Do Not Disturb", [ "notify", "dnd", "toggle" ] ),
+                    spawn( "Snooze notifications for 30 minutes", [ "notify", "snooze", "30m" ] ),
+                    spawn( "Snooze notifications for 2 hours", [ "notify", "snooze", "2h" ] ),
+                    spawn( "Turn snooze off", [ "notify", "snooze", "off" ] ),
+                    spawn( "Clear notifications", [ "notify", "clear" ] ),
+                    spawn( "Stay awake", [ "toggle", "stay-awake" ] ),
+                    spawn( "Night light", [ "nightshift", "toggle" ] ),
+                    spawn( "Window layout: tile or float", [ "layout", "toggle" ] )
+                ] ),
+                spawn( "Emoji", [ "emoji" ] ),
+                spawn( "Clipboard history", [ "clipboard", "pick" ] ),
+                spawn( "Force quit an app", [ "forcequit" ] ),
+                spawn( "Minimize window", [ "window", "minimize" ] ),
+                spawn( "Restore window", [ "window", "restore" ] ),
+                spawn( "Overview", [ "overview" ] )
+            ] ),
+            sub( "Setup", [
+                sub( "Power", [
+                    run( "Status", [ "power", "status" ] ),
+                    sub( "Profile", [ spawn( "Performance", [ "power", "profile", "performance" ] ), spawn( "Balanced", [ "power", "profile", "balanced" ] ), spawn( "Power saver", [ "power", "profile", "saver" ] ) ] ),
+                    sub( "Closing the lid", [ run( "Suspend", [ "power", "lid", "suspend", "--yes" ] ), run( "Lock only", [ "power", "lid", "lock", "--yes" ] ), run( "Do nothing", [ "power", "lid", "ignore", "--yes" ] ) ] ),
+                    run( "Set up laptop power tools", [ "power", "setup", "--yes" ] ),
+                    run( "Power doctor", [ "power", "doctor" ] )
+                ] ),
+                sub( "Display", [
+                    run( "Monitors", [ "display", "list" ] ),
+                    pick( "Scale", "monitors", [ "display", "scale", "{}", "1.5" ] ),
+                    sub( "Laptop panel", [ spawn( "On", [ "display", "laptop", "on" ] ), spawn( "Off", [ "display", "laptop", "off" ] ) ] ),
+                    sub( "Mirror the laptop panel", [ spawn( "On", [ "display", "mirror", "on" ] ), spawn( "Off", [ "display", "mirror", "off" ] ) ] ),
+                    sub( "Brightness", [ spawn( "Up", [ "display", "brightness", "up" ] ), spawn( "Down", [ "display", "brightness", "down" ] ), spawn( "50%", [ "display", "brightness", "set", "50" ] ), spawn( "100%", [ "display", "brightness", "set", "100" ] ) ] ),
+                    spawn( "Re-apply saved display settings", [ "display", "apply" ] ),
+                    spawn( "Forget saved display settings", [ "display", "reset" ] )
+                ] ),
+                sub( "Defaults", [
+                    pick( "Browser", "browsers", [ "default", "browser", "{}", "--yes" ] ),
+                    pick( "Terminal", "terminals", [ "default", "terminal", "{}", "--yes" ] ),
+                    pick( "File manager", "filemanagers", [ "default", "filemanager", "{}", "--yes" ] ),
+                    run( "Show the defaults", [ "default", "show" ] )
+                ] ),
+                sub( "Keyboard", [
+                    run( "Shortcuts", [ "keys", "show" ] ),
+                    spawn( "Shortcut cheat sheet", [ "keys", "sheet" ] ),
+                    run( "Shortcut conflicts", [ "keys", "conflicts" ] ),
+                    spawn( "Mac-style keys on", [ "keys", "mac", "on", "--yes" ] ),
+                    spawn( "Mac-style keys off", [ "keys", "mac", "off", "--yes" ] )
+                ] ),
+                sub( "Security", [
+                    run( "Status", [ "security", "status" ] ),
+                    run( "SSH key", [ "ssh", "key" ] ),
+                    run( "API keys and secrets", [ "secrets", "list" ] ),
+                    run( "Keyring check", [ "secrets", "status" ] ),
+                    sub( "Fingerprint for sudo", [ run( "Turn on", [ "security", "fingerprint", "on", "--yes" ] ), run( "Enroll a finger", [ "security", "fingerprint", "enroll", "--yes" ] ), run( "Turn off", [ "security", "fingerprint", "off", "--yes" ] ) ] ),
+                    sub( "Security key for sudo", [ run( "Register a key", [ "security", "fido2", "register", "--yes" ] ), run( "Turn on", [ "security", "fido2", "on", "--yes" ] ), run( "Turn off", [ "security", "fido2", "off", "--yes" ] ) ] ),
+                    sub( "SSH server", [ run( "Turn on", [ "security", "ssh-server", "on", "--yes" ] ), run( "Turn off", [ "security", "ssh-server", "off", "--yes" ] ) ] ),
+                    sub( "Passwordless sudo", [ run( "Turn on", [ "security", "passwordless-sudo", "on", "--yes" ] ), run( "Turn off", [ "security", "passwordless-sudo", "off", "--yes" ] ) ] )
+                ] ),
+                sub( "Time", [
+                    run( "Status", [ "time", "status" ] ),
+                    pick( "Set the time zone", "zones", [ "time", "zone", "{}", "--yes" ], "run" ),
+                    run( "Set the zone from my IP address (after travel)", [ "time", "sync", "--yes" ] ),
+                    run( "Follow my location automatically: on", [ "time", "auto", "on", "--yes" ] ),
+                    run( "Follow my location automatically: off", [ "time", "auto", "off", "--yes" ] ),
+                    run( "Network time: on", [ "time", "ntp", "on", "--yes" ] )
+                ] ),
+                sub( "DNS", [
+                    run( "Show", [ "dns" ] ),
+                    run( "Cloudflare", [ "dns", "cloudflare", "--yes" ] ),
+                    run( "Google", [ "dns", "google", "--yes" ] ),
+                    run( "Quad9", [ "dns", "quad9", "--yes" ] ),
+                    { label: "Custom (asks the addresses)", kind: "ask", prompt: "DNS server IPs, comma separated", argv: [ "dns", "custom", "{}", "--yes" ], mode: "run" },
+                    run( "Back to DHCP (the router's)", [ "dns", "dhcp", "--yes" ] )
+                ] ),
+                sub( "Kernel", [
+                    run( "Installed and available", [ "kernel", "list" ] ),
+                    { label: "Install a kernel (asks the package)", kind: "ask", prompt: "Kernel package, for example linux-cachyos-lts", argv: [ "kernel", "install", "{}", "--yes" ], mode: "run" },
+                    { label: "Remove a kernel (asks the package)", kind: "ask", prompt: "Kernel package to remove", argv: [ "kernel", "remove", "{}", "--yes" ], mode: "run" }
+                ] ),
+                sub( "Cloud storage", [
+                    run( "Remotes", [ "cloud", "remotes" ] ),
+                    run( "Add or configure a remote", [ "cloud", "configure" ] ),
+                    run( "Mounted folders: status", [ "cloud", "status" ] )
+                ] ),
+                sub( "Hardware", [
+                    run( "GPU check", [ "gpu", "doctor" ] ),
+                    run( "Input devices and gestures", [ "input", "doctor" ] ),
+                    spawn( "AirPlay receiver on", [ "airplay", "on" ] ),
+                    spawn( "AirPlay receiver off", [ "airplay", "off" ] )
+                ] ),
+                sub( "Backup", [
+                    run( "BxTimeMachine: every backup on one timeline", [ "timemachine" ] ),
+                    run( "Status", [ "backup", "data", "status" ] ),
+                    sub( "My BxRig setup", [
+                        run( "Take a snapshot now", [ "backup", "config", "now" ] ),
+                        run( "List the snapshots", [ "backup", "config", "list" ] ),
+                        run( "Automatic snapshots: on", [ "backup", "config", "auto", "on" ] ),
+                        run( "Automatic snapshots: off", [ "backup", "config", "auto", "off" ] )
+                    ] ),
+                    sub( "The whole system", [
+                        run( "Status", [ "backup", "snapshots", "status" ] ),
+                        run( "Set up snapshots", [ "backup", "snapshots", "setup", "--yes" ] ),
+                        run( "List", [ "backup", "snapshots", "list" ] ),
+                        run( "Take a snapshot now", [ "backup", "snapshots", "create", "--yes" ] )
+                    ] ),
+                    sub( "My files", [
+                        run( "Backup places", [ "backup", "data", "targets" ] ),
+                        run( "Back up now (every place)", [ "backup", "data", "run", "--all", "--yes" ] ),
+                        run( "Snapshots", [ "backup", "data", "list" ] ),
+                        run( "Check the backups are readable", [ "backup", "data", "verify" ] ),
+                        run( "Apply the retention (deletes old backups)", [ "backup", "data", "forget" ] ),
+                        sub( "Schedule", [ run( "Every day", [ "backup", "data", "schedule", "daily", "--yes" ] ), run( "Every hour", [ "backup", "data", "schedule", "hourly", "--yes" ] ), run( "Off", [ "backup", "data", "schedule", "off", "--yes" ] ) ] )
+                    ] )
+                ] ),
+                sub( "NAS", [
+                    run( "Find NAS boxes on the network", [ "nas", "discover" ] ),
+                    run( "My NAS boxes", [ "nas", "list" ] ),
+                    run( "Install the NAS tools", [ "nas", "setup", "--yes" ] ),
+                    pick( "Shares of a NAS", "nas", [ "nas", "shares", "{}" ], "run" ),
+                    pick( "Test a NAS", "nas", [ "nas", "test", "{}" ], "run" ),
+                    pick( "Forget a NAS", "nas", [ "nas", "remove", "{}", "--yes" ], "run", "Forget the NAS {}? (the files on it are not touched)" )
+                ] ),
+                run( "App launcher check", [ "runner", "doctor" ] ),
+                run( "Setup status", [ "setup", "status" ] ),
+                run( "Dotfiles status", [ "dotfiles", "status" ] ),
+                run( "Export my settings", [ "settings", "export", "bxrig-settings.tar.gz" ] )
+            ] ),
+            sub( "Update", [
+                run( "Check for a BxRig update", [ "update", "check" ] ),
+                run( "Install the BxRig update", [ "update", "apply", "--yes" ] ),
+                run( "System update (snapshot first)", [ "system", "update", "--yes" ] ),
+                run( "Agent skills: update", [ "skills", "update", "--yes" ] ),
+                spawn( "Re-apply appearance", [ "appearance", "apply" ] ),
+                spawn( "Re-apply display settings", [ "display", "apply" ] ),
+                sub( "Channel", [
+                    run( "Stable", [ "update", "channel", "stable" ] ),
+                    run( "Beta (bleeding edge)", [ "update", "channel", "beta" ] )
+                ] ),
+                sub( "Notifications", [
+                    run( "On", [ "update", "notifications", "on" ] ),
+                    run( "Off", [ "update", "notifications", "off" ] )
+                ] ),
+                sub( "Refresh a config to the default", [
+                    run( "Hyprland", [ "refresh", "hyprland", "--yes" ] ),
+                    run( "Noctalia", [ "refresh", "noctalia", "--yes" ] ),
+                    run( "Terminals", [ "refresh", "terminals", "--yes" ] ),
+                    run( "Shell and prompt", [ "refresh", "shell", "--yes" ] ),
+                    run( "Neovim layer", [ "refresh", "nvim", "--yes" ] ),
+                    run( "Theme", [ "refresh", "theme", "--yes" ] ),
+                    run( "Everything", [ "refresh", "all", "--yes" ] )
+                ] )
+            ] ),
+            sub( "Develop", [
+                sub( "BoxLang", [
+                    run( "Status", [ "boxlang", "status" ] ),
+                    spawn( "Welcome and getting started", [ "boxlang", "welcome" ] ),
+                    run( "Browse modules (ForgeBox)", [ "boxlang", "modules", "list" ] ),
+                    run( "Update modules", [ "boxlang", "modules", "update" ] ),
+                    run( "Add the VS Code extension", [ "boxlang", "vscode" ] ),
+                    run( "Docs, sites and links", [ "boxlang", "links" ] )
+                ] ),
+                { label: "Databases", kind: "db" },
+                sub( "Mail catcher", [
+                    run( "Status", [ "mail", "status" ] ),
+                    run( "Start (mail is thrown away when it stops)", [ "mail", "start", "--yes" ] ),
+                    run( "Start and keep the mail", [ "mail", "start", "--keep", "--yes" ] ),
+                    run( "List messages", [ "mail", "list" ] ),
+                    run( "Open the web inbox", [ "mail", "open" ] ),
+                    run( "Send a test message", [ "mail", "test" ] ),
+                    run( "SMTP settings for my app", [ "mail", "env" ] ),
+                    run( "Delete every message", [ "mail", "clear", "--yes" ] ),
+                    run( "Stop", [ "mail", "stop" ] ),
+                    run( "Remove (container and kept mail)", [ "mail", "remove", "--yes" ] )
+                ] ),
+                sub( "Virtual machines", [
+                    run( "List VMs", [ "vm", "list" ] ),
+                    run( "VM disk sizes", [ "vm", "size" ] ),
+                    pick( "Open a VM", "vms", [ "vm", "open", "{}" ] ),
+                    pick( "Start a VM", "vms", [ "vm", "start", "{}" ] ),
+                    pick( "Stop a VM", "vms", [ "vm", "stop", "{}" ] ),
+                    run( "Check this machine (KVM, GPU)", [ "vm", "doctor" ] ),
+                    run( "Windows versions", [ "vm", "versions", "windows" ] ),
+                    run( "Linux desktops (tags)", [ "vm", "versions", "linux" ] )
+                ] ),
+                sub( "Containers", [
+                    run( "Podman check", [ "containers", "doctor" ] ),
+                    run( "Enable the Podman socket", [ "containers", "socket", "enable", "--yes" ] ),
+                    run( "docker commands on Podman", [ "containers", "docker-compat", "--yes" ] )
+                ] ),
+                sub( "Editor", [
+                    run( "Neovim config status", [ "editor", "status" ] ),
+                    run( "Refresh the Neovim layer", [ "editor", "refresh", "--yes" ] ),
+                    run( "Add BoxLang syntax to Neovim", [ "editor", "boxlang", "--yes" ] )
+                ] )
+            ] ),
+            sub( "Agent", [
+                spawn( "Open the default agent", [ "ai", "launch" ] ),
+                pick( "Open an agent", "agents", [ "ai", "launch", "{}" ] ),
+                spawn( "Pull-down AI shell", [ "ai", "shell" ] ),
+                run( "Agent session: start", [ "ai", "session", "start" ] ),
+                run( "Agent sessions: list", [ "ai", "session", "list" ] ),
+                run( "Local models: list", [ "ai", "models", "list" ] ),
+                run( "Local models: running", [ "ai", "models", "ps" ] ),
+                run( "API keys: list", [ "secrets", "list" ] ),
+                run( "Agent skills: status", [ "skills", "status" ] )
+            ] ),
+            sub( "Learn", [
+                spawn( "Shortcut cheat sheet", [ "keys", "sheet" ] ),
+                link( "BxRig docs", "https://bxcachy.boxlang.io/" ),
+                run( "BoxLang docs, sites and links", [ "boxlang", "links" ] ),
+                link( "Hyprland wiki", "https://wiki.hypr.land/" ),
+                link( "Noctalia docs", "https://docs.noctalia.dev/" ),
+                link( "Arch wiki", "https://wiki.archlinux.org/title/Main_page" ),
+                link( "CachyOS wiki", "https://wiki.cachyos.org/" ),
+                link( "LazyVim keymaps", "https://www.lazyvim.org/keymaps" )
+            ] ),
+            run( "About", [ "status" ] ),
+            sub( "System", [
+                spawn( "Lock", [ "system", "lock" ] ),
+                spawn( "Suspend", [ "system", "suspend" ] ),
+                spawn( "Logout", [ "system", "logout", "--yes" ], "Log out now?" ),
+                spawn( "Reboot", [ "system", "reboot", "--yes" ], "Reboot now?" ),
+                spawn( "Shutdown", [ "system", "shutdown", "--yes" ], "Shut down now?" )
+            ] )
+        ];
+    }
+}

@@ -1,4 +1,4 @@
-# BxCachy shell setup for zsh (managed by `bxcachy setup shell`; your own settings belong in ~/.zshrc).
+# BxRig shell setup for zsh (managed by `bxrig setup shell`; your own settings belong in ~/.zshrc).
 # Plugins come from pacman (zsh-autosuggestions, zsh-syntax-highlighting, zsh-completions), not from a plugin manager.
 HISTFILE="${HISTFILE:-$HOME/.zsh_history}"
 HISTSIZE=50000
@@ -16,9 +16,9 @@ command -v zoxide >/dev/null && eval "$(zoxide init zsh)"
 [[ -r /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]] && source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 # Starship prompt (the same prompt in every shell; config: ~/.config/starship.toml)
 command -v starship >/dev/null && eval "$(starship init zsh)"
-# API keys: per-command loaders written by `bxcachy secrets` (no values in this file)
-[ -r "${XDG_CONFIG_HOME:-$HOME/.config}/bxcachy/secrets.sh" ] && . "${XDG_CONFIG_HOME:-$HOME/.config}/bxcachy/secrets.sh"
-# Java: the default home chosen with `bxcachy java default` (no file, no change)
-[ -r "${XDG_CONFIG_HOME:-$HOME/.config}/bxcachy/java.sh" ] && . "${XDG_CONFIG_HOME:-$HOME/.config}/bxcachy/java.sh"
-# Maven and Gradle from SDKMAN, set by `bxcachy sdk` (no file, no change)
-[ -r "${XDG_CONFIG_HOME:-$HOME/.config}/bxcachy/sdk.sh" ] && . "${XDG_CONFIG_HOME:-$HOME/.config}/bxcachy/sdk.sh"
+# API keys: per-command loaders written by `bxrig secrets` (no values in this file)
+[ -r "${XDG_CONFIG_HOME:-$HOME/.config}/bxrig/secrets.sh" ] && . "${XDG_CONFIG_HOME:-$HOME/.config}/bxrig/secrets.sh"
+# Java: the default home chosen with `bxrig java default` (no file, no change)
+[ -r "${XDG_CONFIG_HOME:-$HOME/.config}/bxrig/java.sh" ] && . "${XDG_CONFIG_HOME:-$HOME/.config}/bxrig/java.sh"
+# Maven and Gradle from SDKMAN, set by `bxrig sdk` (no file, no change)
+[ -r "${XDG_CONFIG_HOME:-$HOME/.config}/bxrig/sdk.sh" ] && . "${XDG_CONFIG_HOME:-$HOME/.config}/bxrig/sdk.sh"

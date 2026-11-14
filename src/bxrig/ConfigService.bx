@@ -1,0 +1,186 @@
+// Safe config files: atomic replace, backups, journal, drift, lock (docs/architecture/COMMAND-CONTRACT.md section 6).
+class ConfigService {
+    function init() {
+     variables.silent = false;
+     return this;
+    }
+    // Silences the progress lines (used when a caller prints one --json envelope itself).
+    function quiet( flag ) {
+     variables.silent = arguments.flag;
+     return this;
+    }
+    // Prints one progress line unless quiet( true ) was set.
+    function say( text ) {
+     if ( !variables.silent ) println( arguments.text );
+    }
+    function cfgHome() {
+     return getSystemSetting( "BXRIG_CONFIG_HOME", getSystemSetting( "HOME", "" ) & "/.config" );
+    }
+    function stateDir() {
+     return getSystemSetting( "BXRIG_STATE_HOME", getSystemSetting( "HOME", "" ) & "/.local/state" ) & "/bxrig";
+    }
+    function pathKind( path ) {
+     if ( fileExists( path ) || directoryExists( path ) ) {
+      info = getFileInfo( path );
+      if ( info.is_symlink ) return "link";
+      if ( info.is_file ) return "file";
+      return "other";
+     }
+     try {
+      info = getFileInfo( path );
+      if ( info.is_symlink ) return "link";
+     } catch ( any e ) {
+     }
+     return "none";
+    }
+    function hashOf( text ) {
+     return lCase( hash( text, "SHA-256" ) );
+    }
+    function fileHashOf( path ) {
+     return hashOf( fileRead( path ) );
+    }
+    function nowText() {
+     return dateTimeFormat( now(), "yyyy-MM-dd'T'HH:mm:ss" );
+    }
+    function modeOf( path ) {
+     r = systemExecute( "stat", [ "-c", "%a", path ], 10, true );
+     return r.exitCode == 0 ? trim( r.output ) : "";
+    }
+    function journalEntries( name ) {
+     dir = stateDir() & "/journal";
+     out = [];
+     if ( !directoryExists( dir ) ) return out;
+     names = directoryList( dir, false, "name" );
+     arraySort( names, "text", "desc" );
+     for ( n in names ) {
+      if ( !reFind( "\.json$", n ) ) continue;
+      e = jsonDeserialize( fileRead( dir & "/" & n ) );
+      if ( !len( name ) || e.name == name ) out.append( e );
+     }
+     return out;
+    }
+    function configState( entry ) {
+     kind = pathKind( entry.target );
+     if ( kind == "none" ) return "missing";
+     if ( kind != "file" ) return "blocked";
+     current = fileHashOf( entry.target );
+     if ( current == hashOf( entry.content ) ) return "clean";
+     last = journalEntries( entry.name );
+     if ( last.len() && last[1].after == current ) return "outdated";
+     return "drifted";
+    }
+    function writeAtomic( target, content, mode ) {
+     directoryCreate( getDirectoryFromPath( target ), true, true );
+     tmp = target & ".bxrig-" & left( createUUID(), 8 ) & ".tmp";
+     fileWriteExclusive( tmp, content, mode );
+     fileMove( tmp, target );
+    }
+    function lockTake() {
+     directoryCreate( stateDir(), true, true );
+     try {
+      fileWriteExclusive( stateDir() & "/lock", nowText(), "600" );
+     } catch ( any e ) {
+      return false;
+     }
+     return true;
+    }
+    function lockDrop() {
+     if ( fileExists( stateDir() & "/lock" ) ) fileDelete( stateDir() & "/lock" );
+    }
+    function recordJournal( entry, action, before, backup, after ) {
+     id = dateTimeFormat( now(), "yyyyMMdd'T'HHmmssSSS" ) & "-" & left( createUUID(), 8 );
+     directoryCreate( stateDir() & "/journal", true, true );
+     rec = { id: id, action: action, name: entry.name, target: entry.target, time: nowText(), before: before, after: after, backup: backup };
+     fileWriteExclusive( stateDir() & "/journal/" & id & ".json", jsonSerialize( rec ), "600" );
+     return id;
+    }
+    function pruneHistory( name ) {
+     all = journalEntries( name );
+     for ( i = 21; i <= all.len(); i++ ) {
+      if ( len( all[i].backup ) && fileExists( all[i].backup ) ) fileDelete( all[i].backup );
+      fileDelete( stateDir() & "/journal/" & all[i].id & ".json" );
+     }
+    }
+    function takeBackup( entry ) {
+     if ( pathKind( entry.target ) == "none" ) return "";
+     dir = stateDir() & "/backups/" & entry.name;
+     directoryCreate( dir, true, true );
+     dest = dir & "/" & dateTimeFormat( now(), "yyyyMMdd'T'HHmmssSSS" ) & "-" & left( createUUID(), 8 ) & ".bak";
+     fileCopy( entry.target, dest );
+     fileSetAccessMode( dest, "600" );
+     return dest;
+    }
+    // Shared by apply and restore. Returns an exit code, never exits itself.
+    function configWrite( entry, content, action, yes, dryRun ) {
+     kind = pathKind( entry.target );
+     if ( kind == "link" || kind == "other" ) {
+      say( entry.name & ": refusing to write, target is a symlink or special file: " & entry.target );
+      return 8;
+     }
+     say( action & " " & entry.name & " -> " & entry.target );
+     if ( !yes ) {
+      say( "Nothing changed. Pass --yes to proceed." );
+      return 2;
+     }
+     if ( dryRun ) {
+      say( "Dry run, nothing changed." );
+      return 0;
+     }
+     if ( !lockTake() ) {
+      say( "Another BxRig run holds the lock: " & stateDir() & "/lock (a file; remove it if no run is active)" );
+      return 8;
+     }
+     code = 0;
+     try {
+      before = kind == "file" ? fileHashOf( entry.target ) : "";
+      backup = takeBackup( entry );
+      writeAtomic( entry.target, content, entry.mode );
+      after = fileHashOf( entry.target );
+      if ( after != hashOf( content ) ) {
+       say( entry.name & ": verification failed after write" );
+       code = 9;
+      } else {
+       if ( modeOf( entry.target ) != entry.mode ) say( "warning: mode is " & modeOf( entry.target ) & ", expected " & entry.mode );
+       id = recordJournal( entry, action, before, backup, after );
+       pruneHistory( entry.name );
+       say( entry.name & ": " & action & " done (journal " & id & ")" );
+      }
+     } catch ( any e ) {
+      say( entry.name & ": failed: " & e.message );
+      code = 9;
+     }
+     lockDrop();
+     return code;
+    }
+    function configApply( entry, yes, dryRun, force ) {
+     st = configState( entry );
+     if ( st == "blocked" ) return configWrite( entry, entry.content, "apply", yes, dryRun );
+     if ( st == "clean" ) {
+      say( entry.name & ": unchanged" );
+      return 0;
+     }
+     if ( st == "drifted" && !force ) {
+      say( entry.name & ": target was changed outside BxRig. Run 'config diff " & entry.name & "', then --force to overwrite (a backup is kept)." );
+      return 8;
+     }
+     return configWrite( entry, entry.content, "apply", yes, dryRun );
+    }
+    function configRestore( entry, id, yes, dryRun ) {
+     found = journalEntries( entry.name ).filter( function( e ) { return e.id == id; } );
+     if ( !found.len() ) {
+      say( "Unknown journal id for " & entry.name & ": " & id );
+      return 3;
+     }
+     rec = found[1];
+     if ( !len( rec.backup ) || !fileExists( rec.backup ) ) {
+      say( id & ": no backup to restore (the file did not exist before, or the backup was pruned)" );
+      return 3;
+     }
+     old = fileRead( rec.backup );
+     if ( hashOf( old ) != rec.before ) {
+      say( id & ": backup does not match its recorded hash, refusing" );
+      return 8;
+     }
+     return configWrite( entry, old, "restore", yes, dryRun );
+    }
+}

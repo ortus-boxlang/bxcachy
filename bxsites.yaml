@@ -1,5 +1,5 @@
-name: "BxCachy"
-description: "Your developer machine, set up in minutes. A CachyOS setup tool written in BoxLang."
+name: "BxRig"
+description: "BxRig brings an opinionated, beautiful and efficient desktop to Linux, built for developers."
 baseURL: "https://bxcachy.boxlang.io/"
 source: docs
 theme:
@@ -11,7 +11,7 @@ theme:
     tocPosition: sticky
     accentColor: "#00C853"
     accentColorDark: "#00FF78"
-  logo: "assets/bxcachy-logo.svg"
+  logo: "assets/bxrig-logo.svg"
   favicon: "assets/favicon.png"
 search: true
 mcp: true
@@ -24,12 +24,12 @@ markdown:
 # and set versions.default to "1.0.x" so the release is at the root and docs/ becomes /next/ (see docs/guides/contributing.md).
 variables:
   version: "1.0.x"
-  installUrl: "https://downloads.ortussolutions.com/ortussolutions/bxcachy/install.sh"
+  installUrl: "https://downloads.ortussolutions.com/ortussolutions/bxrig/install.sh"
 # English only for now. A language is one folder: bxSites i18n:new --code=es
 i18n:
   defaultLocale: { code: en, label: English }
 repo:
-  url: "https://github.com/ortus-boxlang/bxcachy"
+  url: "https://github.com/ortus-boxlang/bxrig"
   editUri: "edit/development/docs/"
 social:
   - url: "https://github.com/ortus-boxlang/BoxLang"

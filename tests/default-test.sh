@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# `bxcachy default browser|terminal|show` with fake xdg-settings and kwriteconfig6. Usage: default-test.sh BINARY
+# `bxrig default browser|terminal|show` with fake xdg-settings and kwriteconfig6. Usage: default-test.sh BINARY
 set -euo pipefail
 binary="$(realpath "${1:?native executable required}")"
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
@@ -7,7 +7,7 @@ fail() { echo "FAIL: $*" >&2; exit 1; }
 mkdir -p "$tmp/bin" "$tmp/home" "$tmp/apps" "$tmp/nobin"; export LOG="$tmp/log"; : > "$LOG"
 printf '#!/usr/bin/env bash\necho "xdg-settings $*" >> "$LOG"\ncase "$1" in get) echo "firefox.desktop" ;; esac\n' > "$tmp/bin/xdg-settings"
 chmod +x "$tmp/bin/xdg-settings"
-run() { env HOME="$tmp/home" BXCACHY_CONFIG_HOME="$tmp/cfg" BXCACHY_STATE_HOME="$tmp/state" BXCACHY_APPS_DIRS="$tmp/apps" PATH="$tmp/bin:$PATH" LOG="$LOG" "$@"; }
+run() { env HOME="$tmp/home" BXRIG_CONFIG_HOME="$tmp/cfg" BXRIG_STATE_HOME="$tmp/state" BXRIG_APPS_DIRS="$tmp/apps" PATH="$tmp/bin:$PATH" LOG="$LOG" "$@"; }
 code() { set +e; run "$@" >/dev/null 2>&1; local c=$?; set -e; echo "$c"; }
 d() { run "$binary" default "$@"; }
 
@@ -23,7 +23,7 @@ d browser brave --yes >/dev/null; grep -q 'default-web-browser brave-browser.des
 [[ "$(code "$binary" default browser zen --yes)" == 4 ]] || fail 'a browser without a known desktop entry exits 4'
 [[ "$(code "$binary" default browser nope --yes)" == 4 ]] || fail 'an unknown browser exits 4'
 PATH_BACKUP="$PATH"; rm "$tmp/bin/xdg-settings"
-rc=0; env HOME="$tmp/home" BXCACHY_APPS_DIRS="$tmp/apps" PATH="$tmp/nobin" "$binary" default browser firefox --yes >/dev/null 2>&1 || rc=$?; [[ "$rc" == 4 ]] || fail "no xdg-settings exits 4 (got $rc)"
+rc=0; env HOME="$tmp/home" BXRIG_APPS_DIRS="$tmp/apps" PATH="$tmp/nobin" "$binary" default browser firefox --yes >/dev/null 2>&1 || rc=$?; [[ "$rc" == 4 ]] || fail "no xdg-settings exits 4 (got $rc)"
 printf '#!/usr/bin/env bash\necho "xdg-settings $*" >> "$LOG"\ncase "$1" in get) echo "firefox.desktop" ;; esac\n' > "$tmp/bin/xdg-settings"; chmod +x "$tmp/bin/xdg-settings"
 
 # terminal

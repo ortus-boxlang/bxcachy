@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# `bxcachy backup data ...` with a fake restic (logs its arguments and the variables it was given), a fake systemctl and a temp home. Usage: backup-data-test.sh BINARY
+# `bxrig backup data ...` with a fake restic (logs its arguments and the variables it was given), a fake systemctl and a temp home. Usage: backup-data-test.sh BINARY
 set -euo pipefail
 binary="$(realpath "${1:?native executable required}")"
 tmp="$(mktemp -d)"; trap 'rm -rf "${tmp:?}"' EXIT
@@ -11,7 +11,7 @@ cat > "$tmp/bin/restic" <<'F'
 echo "restic $*" >> "$LOG"
 echo "ENV repo=$RESTIC_REPOSITORY pw=${RESTIC_PASSWORD:+set} aws=${AWS_ACCESS_KEY_ID:-} secret=${AWS_SECRET_ACCESS_KEY:+set} region=${AWS_DEFAULT_REGION:-} b2=${B2_ACCOUNT_ID:-} gproj=${GOOGLE_PROJECT_ID:-} gcred=${GOOGLE_APPLICATION_CREDENTIALS:-}" >> "$LOG"
 case "$1" in
-  snapshots) printf '[{"id":"aaaaaaaaaaaa1111","short_id":"aaaaaaaa","time":"2026-11-10T10:00:00Z","hostname":"box","paths":["/home/dev/Projects"],"tags":["bxcachy"]},{"id":"bbbbbbbbbbbb2222","short_id":"bbbbbbbb","time":"2026-11-12T10:00:00Z","hostname":"box","paths":["/home/dev/Projects"],"tags":["bxcachy"]}]\n' ;;
+  snapshots) printf '[{"id":"aaaaaaaaaaaa1111","short_id":"aaaaaaaa","time":"2026-11-10T10:00:00Z","hostname":"box","paths":["/home/dev/Projects"],"tags":["bxrig"]},{"id":"bbbbbbbbbbbb2222","short_id":"bbbbbbbb","time":"2026-11-12T10:00:00Z","hostname":"box","paths":["/home/dev/Projects"],"tags":["bxrig"]}]\n' ;;
   ls) printf '{"struct_type":"snapshot","id":"aaaaaaaa"}\n{"name":"main.bx","type":"file","path":"/home/dev/Projects/app/main.bx","size":5,"struct_type":"node"}\n' ;;
   backup) echo "snapshot cccccccc saved" ;;
 esac
@@ -23,7 +23,7 @@ printf '#!/usr/bin/env bash\necho "notify $*" >> "$LOG"\n' > "$tmp/bin/notify-se
 chmod +x "$tmp/bin"/*
 echo '{"type":"service_account"}' > "$tmp/gcs.json"
 printf 'AWS_ACCESS_KEY_ID=AKIAEXAMPLE\nAWS_SECRET_ACCESS_KEY=s3cr3tvalue\n' > "$tmp/keys"
-run() { env HOME="$H" USER=dev BXCACHY_CONFIG_HOME="$H/.config" BXCACHY_DATA_HOME="$tmp/data" BXCACHY_USER_UNIT_DIR="$tmp/units" BXCACHY_SELF=/usr/bin/bxcachy PATH="$tmp/bin:$PATH" LOG="$LOG" "$@"; }
+run() { env HOME="$H" USER=dev BXRIG_CONFIG_HOME="$H/.config" BXRIG_DATA_HOME="$tmp/data" BXRIG_USER_UNIT_DIR="$tmp/units" BXRIG_SELF=/usr/bin/bxrig PATH="$tmp/bin:$PATH" LOG="$LOG" "$@"; }
 code() { set +e; run "$@" >/dev/null 2>&1; local c=$?; set -e; echo "$c"; }
 has() { grep -qF -- "$1" "$LOG"; }
 
@@ -60,7 +60,7 @@ run "$binary" backup data targets --json | jq -e '.data.targets | map(select(.na
 : > "$LOG"; [[ "$(code "$binary" backup data run --target=do)" == 2 ]] || fail 'run without --yes is a plan'
 ! has 'restic backup' || fail 'the plan ran restic'
 run "$binary" backup data run --target=do --yes >/dev/null
-has "restic backup --tag bxcachy --exclude-caches --one-file-system --exclude node_modules" && has "$H/Projects" && has "$H/Documents" && has "$H/.ssh" || fail "run: $(cat "$LOG")"
+has "restic backup --tag bxrig --exclude-caches --one-file-system --exclude node_modules" && has "$H/Projects" && has "$H/Documents" && has "$H/.ssh" || fail "run: $(cat "$LOG")"
 ! has "$H/code" || fail 'a folder that does not exist was added'
 
 # ---- default and --all ----
@@ -85,7 +85,7 @@ has "restic restore aaaaaaaa --target $tmp/out --include /home/dev/Projects/app"
 : > "$LOG"; run "$binary" backup data verify --target=do >/dev/null; has 'restic check' || fail 'verify'
 run "$binary" backup data verify --target=do --deep >/dev/null; has 'restic check --read-data-subset 5%' || fail 'verify --deep'
 [[ "$(code "$binary" backup data forget --target=do)" == 2 ]] || fail 'forget without --yes is a plan'
-: > "$LOG"; run "$binary" backup data forget --target=do --yes >/dev/null; has 'restic forget --tag bxcachy --keep-daily 7 --keep-weekly 4 --keep-monthly 6 --prune' || fail 'retention flags'
+: > "$LOG"; run "$binary" backup data forget --target=do --yes >/dev/null; has 'restic forget --tag bxrig --keep-daily 7 --keep-weekly 4 --keep-monthly 6 --prune' || fail 'retention flags'
 
 run "$binary" backup data retention --daily=14 --monthly=12 --json | jq -e '.data.retention == {"daily":14,"weekly":4,"monthly":12}' >/dev/null || fail 'retention'
 [[ "$(code "$binary" backup data retention --daily=lots)" == 2 ]] || fail 'bad retention exits 2'
@@ -93,13 +93,13 @@ run "$binary" backup data retention --daily=14 --monthly=12 --json | jq -e '.dat
 
 # ---- schedule ----
 [[ "$(code "$binary" backup data schedule daily)" == 2 ]] || fail 'schedule without --yes is a plan'
-[[ ! -e "$tmp/units/bxcachy-backup.timer" ]] || fail 'the plan wrote a timer'
+[[ ! -e "$tmp/units/bxrig-backup.timer" ]] || fail 'the plan wrote a timer'
 : > "$LOG"; run "$binary" backup data schedule daily --yes >/dev/null
-grep -q '^OnCalendar=daily$' "$tmp/units/bxcachy-backup.timer" && grep -q '^Persistent=true$' "$tmp/units/bxcachy-backup.timer" || fail 'timer'
-grep -q '^ExecStart=/usr/bin/bxcachy backup data run --all --yes --scheduled$' "$tmp/units/bxcachy-backup.service" && grep -q '^ConditionACPower=true$' "$tmp/units/bxcachy-backup.service" || fail 'service skips on battery'
-has 'systemctl --user enable --now bxcachy-backup.timer' || fail 'timer enabled'
+grep -q '^OnCalendar=daily$' "$tmp/units/bxrig-backup.timer" && grep -q '^Persistent=true$' "$tmp/units/bxrig-backup.timer" || fail 'timer'
+grep -q '^ExecStart=/usr/bin/bxrig backup data run --all --yes --scheduled$' "$tmp/units/bxrig-backup.service" && grep -q '^ConditionACPower=true$' "$tmp/units/bxrig-backup.service" || fail 'service skips on battery'
+has 'systemctl --user enable --now bxrig-backup.timer' || fail 'timer enabled'
 run "$binary" backup data status --json | jq -e '.data.schedule == "daily"' >/dev/null || fail 'status shows the schedule'
-run "$binary" backup data schedule off --yes >/dev/null; [[ ! -e "$tmp/units/bxcachy-backup.timer" ]] && has 'disable --now bxcachy-backup.timer' || fail 'schedule off'
+run "$binary" backup data schedule off --yes >/dev/null; [[ ! -e "$tmp/units/bxrig-backup.timer" ]] && has 'disable --now bxrig-backup.timer' || fail 'schedule off'
 
 # ---- a failed scheduled backup tells you ----
 printf '#!/usr/bin/env bash\necho "boom" >&2\nexit 1\n' > "$tmp/bin/restic"
@@ -112,7 +112,7 @@ run "$binary" backup data exclude add '*.iso' >/dev/null; run "$binary" backup d
 [[ "$(code "$binary" backup data include add 'a;b')" == 2 && "$(code "$binary" backup data include add '../x')" == 2 ]] || fail 'bad include exits 2'
 
 # ---- a NAS target made by `nas use` ----
-mkdir -p "$H/.config/bxcachy"; jq '.targets["nas-syn"] = {"type":"nas","nas":"syn","share":"backups","path":"restic"}' "$H/.config/bxcachy/backup.json" > "$tmp/b.json" && cp "$tmp/b.json" "$H/.config/bxcachy/backup.json"
+mkdir -p "$H/.config/bxrig"; jq '.targets["nas-syn"] = {"type":"nas","nas":"syn","share":"backups","path":"restic"}' "$H/.config/bxrig/backup.json" > "$tmp/b.json" && cp "$tmp/b.json" "$H/.config/bxrig/backup.json"
 run "$binary" backup data targets --json | jq -e '.data.targets | map(select(.name == "nas-syn" and (.repository | test("/NAS/syn/backups/restic$")))) | length == 1' >/dev/null || fail 'the NAS target is listed'
 [[ "$(code "$binary" backup data init nas-syn --yes)" == 4 ]] || fail 'an unmounted NAS share exits 4'
 echo "backup-data-test: ok"

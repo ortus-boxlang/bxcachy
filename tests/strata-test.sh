@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# `bxcachy strata integrations` with a fake curl. Usage: strata-test.sh BINARY
+# `bxrig strata integrations` with a fake curl. Usage: strata-test.sh BINARY
 set -euo pipefail
 binary="$(realpath "${1:?native executable required}")"
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT

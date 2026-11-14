@@ -1,0 +1,68 @@
+// The BxRig brand in text: the logo as block-character art in three sizes, the tagline and the descriptions used by the README, `--help` and the screens.
+// The TUIs paint these with the brand gradient (cyan #00DBFF to green #00FF78); `ansi( lines )` does the same for plain terminal output.
+// docs/brand/bxrig-ascii.txt shows every size.
+class Brand {
+    function name() { return "BxRig"; }
+    function tagline() { return "Your dev rig. Beautiful by default."; }
+    function oneLiner() { return "BxRig brings an opinionated, beautiful and efficient desktop to Linux, built for developers."; }
+    function description() { return "BxRig turns a fresh Linux install into a polished developer rig: a themed desktop, the languages and tools you use, and one terminal screen to manage it all."; }
+
+    // 40 columns, 7 rows: a lowercase x, an i with its dot and a g that drops below the line, so it reads BxRig.
+    function large() {
+        return [
+            "██████╗           ██████╗  ██╗",
+            "██╔══██╗ ██╗  ██╗ ██╔══██╗ ╚═╝  ██████╗",
+            "██████╔╝ ╚██╗██╔╝ ██████╔╝ ██╗ ██╔════╝",
+            "██╔══██╗  ██╔██╗  ██╔══██╗ ██║ ██║  ███╗",
+            "██████╔╝ ██╔╝ ██╗ ██║  ██║ ██║ ██║   ██║",
+            "╚═════╝  ╚═╝  ╚═╝ ╚═╝  ╚═╝ ╚═╝ ╚██████╔╝",
+            "                                ╚═════╝"
+        ];
+    }
+
+    // 19 columns, 3 rows.
+    function small() {
+        return [
+            "┏┓      ┏━┓ • ┏━╸",
+            "┣┻┓ ▀▄▀ ┣┳┛ ┃ ┃╺┓",
+            "┗━┛ ▄▀▄ ╹┗╸ ╹ ┗━┛"
+        ];
+    }
+
+    function word() { return "▌BxRig▐"; }
+
+    // "large", "small" or "word".
+    function lines( size = "large" ) {
+        if ( arguments.size == "small" ) return small();
+        if ( arguments.size == "word" ) return [ word() ];
+        return large();
+    }
+
+    function width( size = "large" ) {
+        var w = 0;
+        for ( var l in lines( arguments.size ) ) w = max( w, len( l ) );
+        return w;
+    }
+
+    function hex( n ) { return right( "0" & formatBaseN( int( min( 255, max( 0, arguments.n ) ) ), 16 ), 2 ); }
+
+    // Lines painted left to right from cyan to green with 24-bit colour escapes. Without a colour terminal (NO_COLOR set, or `plain`) the lines come back as they are.
+    function ansi( lines, plain = false ) {
+        if ( arguments.plain || len( getSystemSetting( "NO_COLOR", "" ) ) ) return arguments.lines;
+        var esc = chr( 27 );
+        var w = 1;
+        for ( var l in arguments.lines ) w = max( w, len( l ) );
+        var out = [];
+        for ( var line in arguments.lines ) {
+            var s = "";
+            for ( var i = 1; i <= len( line ); i++ ) {
+                var ch = mid( line, i, 1 );
+                if ( ch == " " ) { s &= ch; continue; }
+                var t = ( i - 1 ) / max( 1, w - 1 );
+                s &= esc & "[38;2;" & round( 0 + 0 * t ) & ";" & round( 219 + 36 * t ) & ";" & round( 255 - 135 * t ) & "m" & ch;
+            }
+            out.append( s & esc & "[0m" );
+        }
+        return out;
+    }
+}

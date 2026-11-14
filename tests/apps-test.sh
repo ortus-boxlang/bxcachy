@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# `bxcachy apps` (the all-apps window) with fake desktop entries and a fake Rofi. Usage: apps-test.sh BINARY
+# `bxrig apps` (the all-apps window) with fake desktop entries and a fake Rofi. Usage: apps-test.sh BINARY
 set -euo pipefail
 binary="$(realpath "${1:?native executable required}")"
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
@@ -17,7 +17,7 @@ printf '[Desktop Entry]\nType=Application\nName=Other group\nExec=x\n[Desktop Ac
 printf '#!/usr/bin/env bash\ncat > "$FAKE/menu.in"\nn=$(( $(cat "$FAKE/n" 2>/dev/null || echo 0) + 1 )); echo $n > "$FAKE/n"\nsed -n "${n}p" "$FAKE/answers"\n' > "$tmp/bin/rofi"
 printf '#!/usr/bin/env bash\necho "launched $*" >> "$FAKE/launch.log"\n' > "$tmp/bin/calc"
 chmod +x "$tmp/bin"/*
-run() { env HOME="$tmp/home" BXCACHY_CONFIG_HOME="$tmp/cfg" BXCACHY_APPS_DIRS="$tmp/sys:$tmp/usr" FAKE="$FAKE" PATH="$tmp/bin:$PATH" "$@"; }
+run() { env HOME="$tmp/home" BXRIG_CONFIG_HOME="$tmp/cfg" BXRIG_APPS_DIRS="$tmp/sys:$tmp/usr" FAKE="$FAKE" PATH="$tmp/bin:$PATH" "$@"; }
 code() { set +e; run "$@" >/dev/null 2>&1; local c=$?; set -e; echo "$c"; }
 
 # list: only applications, no hidden ones, the later folder wins for the same file name, field codes removed, sorted by name
@@ -35,6 +35,6 @@ grep -q 'Calculator' "$FAKE/menu.in" && grep -q 'Kitty (mine)' "$FAKE/menu.in" |
 rm -f "$FAKE/n" "$FAKE/launch.log"; : > "$FAKE/answers"; run "$binary" apps || fail 'cancel exits 0'; sleep 0.4
 [[ ! -s "$FAKE/launch.log" ]] || fail 'a cancelled grid started something'
 # nothing to show, or no menu program: exit 4
-set +e; env HOME="$tmp/home" BXCACHY_CONFIG_HOME="$tmp/cfg" BXCACHY_APPS_DIRS="$tmp/none" FAKE="$FAKE" PATH="$tmp/bin:$PATH" "$binary" apps >/dev/null 2>&1; rc=$?; set -e; [[ "$rc" == 4 ]] || fail "no apps exits 4 (got $rc)"
+set +e; env HOME="$tmp/home" BXRIG_CONFIG_HOME="$tmp/cfg" BXRIG_APPS_DIRS="$tmp/none" FAKE="$FAKE" PATH="$tmp/bin:$PATH" "$binary" apps >/dev/null 2>&1; rc=$?; set -e; [[ "$rc" == 4 ]] || fail "no apps exits 4 (got $rc)"
 rm "$tmp/bin/rofi"; [[ "$(code "$binary" apps)" == 4 ]] || fail 'a missing menu program exits 4'
 echo "apps-test: ok"

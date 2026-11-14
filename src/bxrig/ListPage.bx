@@ -1,0 +1,196 @@
+// A page of the Control Center made of a table: rows, a cursor, a filter, a detail box and one-key actions. Most pages are this, so each only needs a provider.
+// provider (any class with these methods):
+//   id() title() columns() -> [ { key, label, w } ]   (w 0 = takes the rest)
+//   load( query ) -> array of structs (query is "" unless the provider is live-searched)
+//   actions() -> [ { key, label, run( row ) -> intent } ]
+//   detail( row ) -> array of lines       style( row ) -> "" | "warn" | "error" | "dim" | "ok"
+//   hint() -> a line under the title      live() -> true when / sends the query to load() (a search) instead of filtering rows already loaded
+//   emptyText() -> what to say with no rows
+// Keys: Up Down PgUp PgDn Home End, / to filter or search (Enter keeps it, Escape clears it), r reloads, and the provider's own action keys.
+class ListPage {
+    function init( provider ) {
+        variables.p = arguments.provider;
+        variables.rows = [];
+        variables.list = new bxrig.TuiList( [], function( r ) { return r.__text ?: ""; } );
+        variables.mode = "list";
+        variables.input = "";
+        variables.query = "";
+        variables.loaded = false;
+        variables.rowsShown = 10;
+        variables.tickNow = 0;
+        variables.lastLoad = 0;
+        return this;
+    }
+
+    function id() { return variables.p.id(); }
+    function title() { return variables.p.title(); }
+    function icon() { return variables.p.icon(); }
+    function state() {
+        var items = [];
+        for ( var r in variables.rows ) { var c = {}; for ( var k in r ) if ( k != "__text" ) c[ k ] = r[ k ]; items.append( c ); }
+        return { rows: variables.rows.len(), shown: variables.list.count(), cursor: variables.list.cursor(), mode: variables.mode, filter: variables.list.query(), query: variables.query, items: items };
+    }
+    function selected() { return variables.list.selected(); }
+
+    function usesLeft() { return variables.mode != "list"; }
+
+    function keys() {
+        if ( variables.mode != "list" ) return [ [ "Enter", "keep" ], [ "Esc", "clear" ] ];
+        var out = [ [ "↑↓", "move" ] ];
+        for ( var a in variables.p.actions() ) out.append( [ a.key, a.label ] );
+        out.append( [ "/", variables.p.live() ? "search" : "filter" ] );
+        return out;
+    }
+
+    function searchText( r ) {
+        var t = "";
+        for ( var cd in variables.p.columns() ) t &= " " & ( r[ cd.key ] ?: "" );
+        return lCase( t );
+    }
+
+    function setRows( rows ) {
+        variables.rows = arguments.rows;
+        for ( var r in variables.rows ) r.__text = searchText( r );
+        variables.list.setItems( variables.rows );
+        variables.loaded = true;
+    }
+
+    function load() {
+        variables.lastLoad = variables.tickNow;
+        setRows( variables.p.load( variables.query ) );
+        if ( !variables.p.live() && len( variables.list.query() ) ) variables.list.filter( variables.list.query() );
+        return this;
+    }
+
+    // Reloads the rows without losing the place: the cursor stays on the same row when it has an `id` that still exists.
+    function reloadKeepingCursor() {
+        var sel = variables.list.selected();
+        var keepId = !isSimpleValue( sel ) && structKeyExists( sel, "id" ) ? sel.id : "";
+        var was = variables.list.cursor();
+        load();
+        if ( len( keepId ) ) {
+            var i = 0;
+            for ( var r in variables.list.items() ) { i++; if ( structKeyExists( r, "id" ) && r.id == keepId ) { variables.list.select( i ); return; } }
+        }
+        variables.list.select( was );
+    }
+
+    function intentFor( key ) {
+        var row = variables.list.selected();
+        for ( var a in variables.p.actions() ) if ( compare( a.key, arguments.key ) == 0 ) return isSimpleValue( row ) ? {} : a.run( row );
+        return {};
+    }
+
+    function onKey( key ) {
+        var k = arguments.key;
+        if ( variables.mode != "list" ) {
+            if ( k == "Enter" ) {
+                if ( variables.p.live() ) { variables.query = variables.input; load(); } else variables.list.filter( variables.input );
+                variables.mode = "list";
+            } else if ( k == "Escape" ) {
+                variables.input = ""; variables.query = "";
+                if ( variables.p.live() ) load(); else variables.list.filter( "" );
+                variables.mode = "list";
+            } else if ( k == "Backspace" ) {
+                variables.input = len( variables.input ) ? left( variables.input, len( variables.input ) - 1 ) : "";
+                if ( !variables.p.live() ) variables.list.filter( variables.input );
+            } else if ( len( k ) == 1 || k == "Space" ) {
+                variables.input &= ( k == "Space" ? " " : k );
+                if ( !variables.p.live() ) variables.list.filter( variables.input );
+            }
+            return {};
+        }
+        if ( k == "Up" || compare( k, "k" ) == 0 ) { variables.list.move( -1 ); return {}; }
+        if ( k == "Down" || compare( k, "j" ) == 0 ) { variables.list.move( 1 ); return {}; }
+        if ( k == "PageUp" ) { variables.list.page( -1, variables.rowsShown ); return {}; }
+        if ( k == "PageDown" ) { variables.list.page( 1, variables.rowsShown ); return {}; }
+        if ( k == "Home" ) { variables.list.home(); return {}; }
+        if ( k == "End" ) { variables.list.end(); return {}; }
+        if ( k == "/" ) { variables.mode = "input"; variables.input = variables.p.live() ? variables.query : variables.list.query(); return {}; }
+        if ( compare( k, "r" ) == 0 ) { load(); return {}; }
+        return intentFor( k );
+    }
+
+    function act( hit ) {
+        if ( arguments.hit.kind == "row" ) { variables.list.select( arguments.hit.n ); return {}; }
+        if ( arguments.hit.kind == "action" ) return intentFor( variables.p.actions()[ arguments.hit.n ].key );
+        return {};
+    }
+
+    function onScroll( dir ) { variables.list.move( arguments.dir == "up" ? -3 : 3 ); return {}; }
+
+    function padText( s, w ) { var t = s & ""; return len( t ) >= w ? left( t, max( 0, w - 1 ) ) & " " : t & repeatString( " ", w - len( t ) ); }
+
+    function paint( kit, x, y, w, h, tick, phase ) {
+        var k = arguments.kit;
+        var C = function( n ) { return k.color( n ); };
+        variables.tickNow = arguments.tick;
+        var every = variables.p.refreshSeconds();
+        if ( every > 0 && variables.loaded && variables.mode == "list" && arguments.tick - variables.lastLoad >= every * 20 ) reloadKeepingCursor();
+        var ico = k.icon( variables.p.icon() );
+        if ( len( ico ) ) k.put( arguments.x + 1, arguments.y, ico, C( "GREEN" ), C( "BASE" ) );
+        var tx = arguments.x + 1 + ( len( ico ) ? 2 : 0 );
+        k.put( tx, arguments.y, variables.p.title(), C( "TEXT" ), C( "BASE" ), true );
+        var hint = variables.p.hint();
+        k.put( tx + 2 + len( variables.p.title() ), arguments.y, k.trunc( hint, arguments.w - len( variables.p.title() ) - 28 ), C( "OVERLAY" ), C( "BASE" ) );
+        var fl = variables.mode != "list" ? "/ " & variables.input & "▌" : ( len( variables.list.query() ) ? "/ " & variables.list.query() : ( len( variables.query ) ? "/ " & variables.query : "" ) );
+        if ( len( fl ) ) k.put( arguments.x + arguments.w - len( fl ) - 2, arguments.y, fl, variables.mode != "list" ? C( "GREEN" ) : C( "CYAN" ), C( "BASE" ), true );
+        var nd = variables.p.detailLines();
+        var detailH = 4 + nd;
+        var tableH = arguments.h - detailH - 1;
+        k.panel( arguments.x, arguments.y + 2, arguments.w, tableH, "", false, arguments.phase );
+        var cols = variables.p.columns();
+        var cx = arguments.x + 3;
+        var widths = [];
+        var used = 0;
+        for ( var colDef in cols ) { widths.append( colDef.w ); used += colDef.w; }
+        for ( var ci = 1; ci <= cols.len(); ci++ ) if ( widths[ ci ] == 0 ) widths[ ci ] = max( 8, arguments.w - 6 - used );
+        var hx = cx;
+        for ( var ci = 1; ci <= cols.len(); ci++ ) { k.put( hx, arguments.y + 3, padText( cols[ ci ].label, widths[ ci ] ), C( "OVERLAY" ), C( "MANTLE" ), true ); hx += widths[ ci ]; }
+        variables.rowsShown = max( 1, tableH - 4 );
+        variables.list.fit( variables.rowsShown );
+        var win = variables.list.window( variables.rowsShown );
+        var ry = arguments.y + 4;
+        if ( !win.len() ) k.put( cx, ry, variables.loaded ? variables.p.emptyText() : "Reading...", C( "OVERLAY" ), C( "MANTLE" ) );
+        for ( var item in win ) {
+            var r = item.item;
+            var on = item.index == variables.list.cursor();
+            var st = variables.p.style( r );
+            var base = st == "error" ? C( "RED" ) : st == "warn" ? C( "YELLOW" ) : st == "dim" ? C( "OVERLAY" ) : st == "ok" ? C( "GREEN" ) : C( "TEXT" );
+            var bg = on ? C( "SURFACE0" ) : C( "MANTLE" );
+            if ( on ) k.fillRect( arguments.x + 1, ry, arguments.w - 2, 1, C( "SURFACE0" ) );
+            k.put( arguments.x + 1, ry, on ? "▸" : " ", C( "GREEN" ), bg, true );
+            var px = cx;
+            for ( var ci = 1; ci <= cols.len(); ci++ ) {
+                k.put( px, ry, padText( k.trunc( r[ cols[ ci ].key ] ?: "", widths[ ci ] - 1 ), widths[ ci ] ), on ? C( "GREEN" ) : base, bg, on );
+                px += widths[ ci ];
+            }
+            k.hit( "row", arguments.x + 1, ry, arguments.w - 2, 1, item.index );
+            ry++;
+        }
+        if ( variables.list.count() > variables.rowsShown ) k.put( arguments.x + arguments.w - 12, arguments.y + 2, " " & variables.list.cursor() & "/" & variables.list.count() & " ", C( "OVERLAY" ), C( "MANTLE" ) );
+        // detail and actions
+        var dy = arguments.y + 2 + tableH;
+        k.panel( arguments.x, dy, arguments.w, detailH, "Selected", false, arguments.phase );
+        var sel = variables.list.selected();
+        if ( !isSimpleValue( sel ) ) {
+            var lines = variables.p.detail( sel );
+            var li = 0;
+            for ( var l in lines ) {
+                var parts = nd > 2 && len( l ) > arguments.w - 4 ? k.wrap( l, arguments.w - 4 ) : [ l ];
+                for ( var part in parts ) { li++; if ( li > nd ) break; k.put( arguments.x + 2, dy + li, k.trunc( part, arguments.w - 4 ), C( "SUB" ), C( "MANTLE" ) ); }
+                if ( li > nd ) break;
+            }
+            var ax = arguments.x + 2;
+            var ai = 0;
+            for ( var a in variables.p.actions() ) {
+                ai++;
+                var lab = " " & a.key & " " & a.label & " ";
+                if ( ax + len( lab ) > arguments.x + arguments.w - 2 ) break;
+                k.put( ax, dy + nd + 2, lab, C( "CRUST" ), C( "GREEN" ), true );
+                k.hit( "action", ax, dy + nd + 2, len( lab ), 1, ai );
+                ax += len( lab ) + 1;
+            }
+        }
+    }
+}

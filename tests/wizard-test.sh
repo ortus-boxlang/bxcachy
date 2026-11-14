@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# `bxcachy wizard` end to end in a real pseudo-terminal: pages in, keys typed, answers out (and cancel writes nothing).
-# Needs the native bxcachy built with MatchBox's TUI. Usage: wizard-test.sh BXCACHY_BINARY
+# `bxrig wizard` end to end in a real pseudo-terminal: pages in, keys typed, answers out (and cancel writes nothing).
+# Needs the native bxrig built with MatchBox's TUI. Usage: wizard-test.sh BXRIG_BINARY
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
-bin="$(realpath "${1:?native bxcachy executable required}")"
+bin="$(realpath "${1:?native bxrig executable required}")"
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 fail() { echo "FAIL: $*" >&2; exit 1; }
 cat > "$tmp/pages.json" <<'JSON'

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# `bxcachy theme list|show|set|mode|status|random|next` with fake desktop tools. Usage: theme-test.sh BINARY
+# `bxrig theme list|show|set|mode|status|random|next` with fake desktop tools. Usage: theme-test.sh BINARY
 set -euo pipefail
 binary="$(realpath "${1:?native executable required}")"
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
@@ -8,15 +8,15 @@ mkdir -p "$tmp/bin" "$tmp/home" "$tmp/state"; export LOG="$tmp/log"; : > "$LOG"
 logger() { printf '#!/usr/bin/env bash\necho "%s $*" >> "$LOG"\n%s\n' "$1" "${2:-}" > "$tmp/bin/$1"; }
 for t in noctalia plasma-apply-colorscheme hyprctl; do logger $t; done
 chmod +x "$tmp/bin"/*
-run() { env HOME="$tmp/home" BXCACHY_CONFIG_HOME="$tmp/cfg" BXCACHY_STATE_HOME="$tmp/state" PATH="$tmp/bin:$PATH" LOG="$LOG" "$@"; }
+run() { env HOME="$tmp/home" BXRIG_CONFIG_HOME="$tmp/cfg" BXRIG_STATE_HOME="$tmp/state" PATH="$tmp/bin:$PATH" LOG="$LOG" "$@"; }
 code() { set +e; run "$@" >/dev/null 2>&1; local c=$?; set -e; echo "$c"; }
 
 # list: 15 bundled themes, both origins, nothing current yet
-run "$binary" theme list --json | jq -e '.ok and (.data.themes | length == 15) and (.data.themes | map(select(.valid)) | length == 15) and (.data.themes | map(select(.light)) | map(.name) | sort == ["bxcachy-light","catppuccin-latte","flexoki-light","rose-pine"])' >/dev/null || fail 'list'
-run "$binary" theme show bxcachy | grep -q 'accent #00ff78' || fail 'show'
+run "$binary" theme list --json | jq -e '.ok and (.data.themes | length == 15) and (.data.themes | map(select(.valid)) | length == 15) and (.data.themes | map(select(.light)) | map(.name) | sort == ["bxrig-light","catppuccin-latte","flexoki-light","rose-pine"])' >/dev/null || fail 'list'
+run "$binary" theme show bxrig | grep -q 'accent #00ff78' || fail 'show'
 [[ "$(code "$binary" theme show nope)" == 4 ]] || fail 'unknown theme exits 4'
 [[ "$(code "$binary" theme set nope)" == 4 ]] || fail 'set unknown exits 4'
-[[ "$(code "$binary" theme set bxcachy --mode=purple)" == 2 ]] || fail 'bad mode exits 2'
+[[ "$(code "$binary" theme set bxrig --mode=purple)" == 2 ]] || fail 'bad mode exits 2'
 [[ "$(code "$binary" theme)" == 2 ]] || fail 'usage exits 2'
 
 # dry run changes nothing
@@ -25,37 +25,37 @@ run "$binary" theme set catppuccin --dry-run --json | jq -e '.dry_run and (.data
 
 # set a dark theme: files, then the desktop is told
 run "$binary" theme set catppuccin >/dev/null
-for f in noctalia/palettes/BxCachyTheme.json bxcachy/theme/ghostty bxcachy/theme/kitty.conf bxcachy/theme/alacritty.toml bxcachy/theme/foot.ini bxcachy/theme/hypr.lua btop/themes/bxcachy.theme; do [[ -s "$tmp/cfg/$f" ]] || fail "missing $f"; done
-[[ -s "$tmp/state/bxcachy/current/theme/neovim.lua" ]] && grep -q 'catppuccin-mocha' "$tmp/state/bxcachy/current/theme/neovim.lua" || fail 'neovim.lua for the current theme'
-jq -e '.version == 2 and .dark.primary == "#89b4fa" and .light.surface == "#1e1e2e"' "$tmp/cfg/noctalia/palettes/BxCachyTheme.json" >/dev/null || fail 'palette content'
-grep -q 'background = #1e1e2e' "$tmp/cfg/bxcachy/theme/ghostty" && grep -q '^palette = 15=#cdd6f4' "$tmp/cfg/bxcachy/theme/ghostty" || fail 'ghostty content'
-grep -q 'rgba(89b4faee)' "$tmp/cfg/bxcachy/theme/hypr.lua" || fail 'hypr accent'
-grep -q 'noctalia msg color-scheme-set custom BxCachyTheme' "$LOG" && grep -q 'noctalia msg theme-mode-set dark' "$LOG" || fail "noctalia: $(cat "$LOG")"
+for f in noctalia/palettes/BxRigTheme.json bxrig/theme/ghostty bxrig/theme/kitty.conf bxrig/theme/alacritty.toml bxrig/theme/foot.ini bxrig/theme/hypr.lua btop/themes/bxrig.theme; do [[ -s "$tmp/cfg/$f" ]] || fail "missing $f"; done
+[[ -s "$tmp/state/bxrig/current/theme/neovim.lua" ]] && grep -q 'catppuccin-mocha' "$tmp/state/bxrig/current/theme/neovim.lua" || fail 'neovim.lua for the current theme'
+jq -e '.version == 2 and .dark.primary == "#89b4fa" and .light.surface == "#1e1e2e"' "$tmp/cfg/noctalia/palettes/BxRigTheme.json" >/dev/null || fail 'palette content'
+grep -q 'background = #1e1e2e' "$tmp/cfg/bxrig/theme/ghostty" && grep -q '^palette = 15=#cdd6f4' "$tmp/cfg/bxrig/theme/ghostty" || fail 'ghostty content'
+grep -q 'rgba(89b4faee)' "$tmp/cfg/bxrig/theme/hypr.lua" || fail 'hypr accent'
+grep -q 'noctalia msg color-scheme-set custom BxRigTheme' "$LOG" && grep -q 'noctalia msg theme-mode-set dark' "$LOG" || fail "noctalia: $(cat "$LOG")"
 ! grep -q 'plasma-apply-colorscheme' "$LOG" || fail 'plasma only on KDE'
-jq -e '.name == "catppuccin" and .mode == "theme"' "$tmp/cfg/bxcachy/theme.json" >/dev/null || fail 'state file'
+jq -e '.name == "catppuccin" and .mode == "theme"' "$tmp/cfg/bxrig/theme.json" >/dev/null || fail 'state file'
 
 # the same theme again: nothing rewritten; a light theme sets light; KDE gets Breeze; Hyprland reloads
 run "$binary" theme set catppuccin --json | jq -e '(.data.written | length == 0) and (.data.unchanged | length == 18)' >/dev/null || fail 'second set is a no-op'
 : > "$LOG"; XDG_CURRENT_DESKTOP=KDE HYPRLAND_INSTANCE_SIGNATURE=x run "$binary" theme set catppuccin-latte --json | jq -e '.data.applied_mode == "light" and .data.plasma == "applied" and .data.hyprland == "reloaded"' >/dev/null || fail 'light theme on KDE and Hyprland'
 grep -q 'noctalia msg theme-mode-set light' "$LOG" && grep -q 'plasma-apply-colorscheme BreezeLight' "$LOG" && grep -q 'hyprctl reload' "$LOG" || fail "light: $(cat "$LOG")"
 
-# bundled BxCachy themes bring a wallpaper (only when the file exists); --keep-wallpaper skips it
-mkdir -p "$tmp/home/Pictures/BxCachy"; : > "$tmp/home/Pictures/BxCachy/aurora.jpg"; : > "$LOG"
-run "$binary" theme set bxcachy-cyan >/dev/null; grep -q "noctalia msg wallpaper-set $tmp/home/Pictures/BxCachy/aurora.jpg" "$LOG" || fail "wallpaper: $(cat "$LOG")"
-: > "$LOG"; run "$binary" theme set bxcachy-cyan --keep-wallpaper >/dev/null; ! grep -q wallpaper-set "$LOG" || fail 'keep wallpaper'
+# bundled BxRig themes bring a wallpaper (only when the file exists); --keep-wallpaper skips it
+mkdir -p "$tmp/home/Pictures/BxRig"; : > "$tmp/home/Pictures/BxRig/aurora.jpg"; : > "$LOG"
+run "$binary" theme set bxrig-cyan >/dev/null; grep -q "noctalia msg wallpaper-set $tmp/home/Pictures/BxRig/aurora.jpg" "$LOG" || fail "wallpaper: $(cat "$LOG")"
+: > "$LOG"; run "$binary" theme set bxrig-cyan --keep-wallpaper >/dev/null; ! grep -q wallpaper-set "$LOG" || fail 'keep wallpaper'
 
 # mode: pinned, auto, back to the theme's own
 : > "$LOG"; run "$binary" theme mode light >/dev/null; grep -q 'noctalia msg theme-mode-set light' "$LOG" || fail 'mode light'
 run "$binary" theme mode auto >/dev/null; grep -q 'theme-mode-set auto' "$LOG" || fail 'mode auto'
-jq -e '.mode == "auto" and .name == "bxcachy-cyan"' "$tmp/cfg/bxcachy/theme.json" >/dev/null || fail 'mode kept in state'
-run "$binary" theme set catppuccin >/dev/null; jq -e '.mode == "auto"' "$tmp/cfg/bxcachy/theme.json" >/dev/null || fail 'a pinned mode survives set'
-run "$binary" theme mode theme >/dev/null; jq -e '.mode == "theme"' "$tmp/cfg/bxcachy/theme.json" >/dev/null || fail 'mode theme'
+jq -e '.mode == "auto" and .name == "bxrig-cyan"' "$tmp/cfg/bxrig/theme.json" >/dev/null || fail 'mode kept in state'
+run "$binary" theme set catppuccin >/dev/null; jq -e '.mode == "auto"' "$tmp/cfg/bxrig/theme.json" >/dev/null || fail 'a pinned mode survives set'
+run "$binary" theme mode theme >/dev/null; jq -e '.mode == "theme"' "$tmp/cfg/bxrig/theme.json" >/dev/null || fail 'mode theme'
 [[ "$(code "$binary" theme mode sideways)" == 2 ]] || fail 'bad mode value'
 
 # status, next, random
 run "$binary" theme status --json | jq -e '.data.name == "catppuccin" and (.data.files | map(select(.state == "clean")) | length == 18)' >/dev/null || fail 'status'
 run "$binary" theme next --json | jq -e '.ok and .data.theme != "catppuccin"' >/dev/null || fail 'next'
-before="$(jq -r .name "$tmp/cfg/bxcachy/theme.json")"; run "$binary" theme random >/dev/null; [[ "$(jq -r .name "$tmp/cfg/bxcachy/theme.json")" != "$before" ]] || fail 'random picks another theme'
+before="$(jq -r .name "$tmp/cfg/bxrig/theme.json")"; run "$binary" theme random >/dev/null; [[ "$(jq -r .name "$tmp/cfg/bxrig/theme.json")" != "$before" ]] || fail 'random picks another theme'
 
 # Noctalia absent: files still written, the note says so
 mv "$tmp/bin/noctalia" "$tmp/noctalia.off"
@@ -87,7 +87,7 @@ echo "accent = nope" > "$tmp/cfg/omarchy/themes/mine/colors.toml"
 mkdir -p "$tmp/cfg/ghostty" "$tmp/cfg/btop"; echo 'font-size = 12' > "$tmp/cfg/ghostty/config"; echo 'color_theme = "Default"' > "$tmp/cfg/btop/btop.conf"
 run "$binary" theme set nord --json | jq -e '(.data.hints | length == 2) and (.data.hints[0] | test("ghostty: add .config-file = \\?")) and (.data.hints[1] | test("btop"))' >/dev/null || fail "hints: $(run "$binary" theme set nord --json | jq -c .data.hints)"
 [[ "$(cat "$tmp/cfg/ghostty/config")" == 'font-size = 12' ]] || fail 'your ghostty config was edited'
-echo "config-file = ?$tmp/cfg/bxcachy/theme/ghostty" >> "$tmp/cfg/ghostty/config"; echo 'color_theme = "bxcachy"' > "$tmp/cfg/btop/btop.conf"
+echo "config-file = ?$tmp/cfg/bxrig/theme/ghostty" >> "$tmp/cfg/ghostty/config"; echo 'color_theme = "bxrig"' > "$tmp/cfg/btop/btop.conf"
 run "$binary" theme set nord --json | jq -e '.data.hints | length == 0' >/dev/null || fail 'no hints once the includes are there'
 rm -rf "$tmp/cfg/ghostty" "$tmp/cfg/btop"
 
@@ -108,29 +108,29 @@ chmod +x "$tmp/bin/git"
 [[ "$(code "$binary" theme install http://example.com/omarchy-x-theme)" == 2 ]] || fail 'only https urls'
 [[ "$(code "$binary" theme install 'https://example.com/a;rm -rf')" == 2 ]] || fail 'url characters are checked'
 run "$binary" theme install https://github.com/someone/omarchy-sunset-theme --json | jq -e '.ok and .data.theme == "sunset"' >/dev/null || fail 'install names the theme from the repository'
-[[ -s "$tmp/cfg/bxcachy/themes/sunset/colors.toml" && ! -e "$tmp/cfg/bxcachy/themes/sunset/.git" ]] || fail 'the theme is copied without .git'
-[[ -s "$tmp/cfg/bxcachy/nvim-themes/sunset.lua" ]] || fail 'its neovim.lua is synced for the editor'
+[[ -s "$tmp/cfg/bxrig/themes/sunset/colors.toml" && ! -e "$tmp/cfg/bxrig/themes/sunset/.git" ]] || fail 'the theme is copied without .git'
+[[ -s "$tmp/cfg/bxrig/nvim-themes/sunset.lua" ]] || fail 'its neovim.lua is synced for the editor'
 run "$binary" theme list --json | jq -e '.data.themes | map(select(.name == "sunset" and .origin == "user")) | length == 1' >/dev/null || fail 'installed theme is listed as yours'
 [[ "$(code "$binary" theme install https://github.com/someone/omarchy-sunset-theme)" == 4 ]] || fail 'installing over an existing theme exits 4'
 run "$binary" theme install https://github.com/someone/omarchy-sunset-theme --force >/dev/null || fail '--force replaces it'
 THEME_FAKE_BAD=1 run "$binary" theme install https://github.com/someone/omarchy-bad-theme >/dev/null 2>&1 && fail 'an invalid theme must be rejected'
-[[ ! -e "$tmp/cfg/bxcachy/themes/bad" ]] || fail 'an invalid theme was copied'
-[[ "$(THEME_FAKE_LINK=1 bash -c '. /dev/null; set +e; env HOME="$0" BXCACHY_CONFIG_HOME="$1" BXCACHY_STATE_HOME="$2" PATH="$3:$PATH" LOG="$4" THEME_FAKE_LINK=1 "$5" theme install https://github.com/someone/omarchy-link-theme >/dev/null 2>&1; echo $?' "$tmp/home" "$tmp/cfg" "$tmp/state" "$tmp/bin" "$LOG" "$binary")" == 4 ]] || fail 'symlinks in a theme are rejected'
-run "$binary" theme set sunset >/dev/null; grep -q 'ff8800' "$tmp/cfg/noctalia/palettes/BxCachyTheme.json" || fail 'the installed theme can be set'
+[[ ! -e "$tmp/cfg/bxrig/themes/bad" ]] || fail 'an invalid theme was copied'
+[[ "$(THEME_FAKE_LINK=1 bash -c '. /dev/null; set +e; env HOME="$0" BXRIG_CONFIG_HOME="$1" BXRIG_STATE_HOME="$2" PATH="$3:$PATH" LOG="$4" THEME_FAKE_LINK=1 "$5" theme install https://github.com/someone/omarchy-link-theme >/dev/null 2>&1; echo $?' "$tmp/home" "$tmp/cfg" "$tmp/state" "$tmp/bin" "$LOG" "$binary")" == 4 ]] || fail 'symlinks in a theme are rejected'
+run "$binary" theme set sunset >/dev/null; grep -q 'ff8800' "$tmp/cfg/noctalia/palettes/BxRigTheme.json" || fail 'the installed theme can be set'
 [[ "$(code "$binary" theme remove sunset)" == 4 ]] || fail 'the current theme cannot be removed'
 run "$binary" theme set nord >/dev/null
-mkdir -p "$tmp/mine2"; cp "$tmp/cfg/bxcachy/themes/sunset/colors.toml" "$tmp/mine2/"
-run "$binary" theme import "$tmp/mine2" --name=ember >/dev/null; [[ -s "$tmp/cfg/bxcachy/themes/ember/colors.toml" ]] || fail 'import'
+mkdir -p "$tmp/mine2"; cp "$tmp/cfg/bxrig/themes/sunset/colors.toml" "$tmp/mine2/"
+run "$binary" theme import "$tmp/mine2" --name=ember >/dev/null; [[ -s "$tmp/cfg/bxrig/themes/ember/colors.toml" ]] || fail 'import'
 [[ "$(code "$binary" theme import "$tmp/mine2" --name='Bad Name')" == 2 ]] || fail 'bad names exit 2'
 [[ "$(code "$binary" theme import "$tmp/nope")" == 4 ]] || fail 'import of a missing folder exits 4'
-run "$binary" theme remove sunset >/dev/null; [[ ! -e "$tmp/cfg/bxcachy/themes/sunset" && ! -e "$tmp/cfg/bxcachy/nvim-themes/sunset.lua" ]] || fail 'remove'
+run "$binary" theme remove sunset >/dev/null; [[ ! -e "$tmp/cfg/bxrig/themes/sunset" && ! -e "$tmp/cfg/bxrig/nvim-themes/sunset.lua" ]] || fail 'remove'
 [[ "$(code "$binary" theme remove nord)" == 4 ]] || fail 'a bundled theme cannot be removed'
 [[ "$(code "$binary" theme remove nope)" == 4 ]] || fail 'unknown theme exits 4'
 
 # the wider machine: GTK, Qt, tmux, fzf, launchers
 run "$binary" theme set catppuccin >/dev/null
 grep -q '@define-color window_bg_color #1e1e2e' "$tmp/cfg/gtk-4.0/gtk.css" || fail 'gtk4 css'
-grep -q 'set -g status-style' "$tmp/cfg/bxcachy/theme/tmux.conf" || fail 'tmux conf'
+grep -q 'set -g status-style' "$tmp/cfg/bxrig/theme/tmux.conf" || fail 'tmux conf'
 
 # theme vscode: plan first, then plain-JSON merge with a backup; files with comments are left alone
 mkdir -p "$tmp/cfg/Code/User" "$tmp/cfg/VSCodium/User"

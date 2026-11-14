@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# `bxcachy refresh ...` with a fake bxcachy (logs the commands it is asked to run), a fake terminal and a temp home. Usage: refresh-test.sh BINARY
+# `bxrig refresh ...` with a fake bxrig (logs the commands it is asked to run), a fake terminal and a temp home. Usage: refresh-test.sh BINARY
 set -euo pipefail
 binary="$(realpath "${1:?native executable required}")"
 tmp="$(mktemp -d)"; trap 'rm -rf "${tmp:?}"' EXIT
@@ -10,7 +10,7 @@ printf '#!/usr/bin/env bash\n:\n' > "$tmp/bin/ghostty"
 printf '#!/usr/bin/env bash\necho "noctalia $*" >> "$LOG"\n' > "$tmp/bin/noctalia"
 printf '#!/usr/bin/env bash\nif [[ "$1" == -u ]]; then echo 1000; else /usr/bin/id "$@"; fi\n' > "$tmp/bin/id"
 chmod +x "$tmp/self" "$tmp/bin"/*
-run() { env HOME="$tmp/home" SHELL=/usr/bin/zsh BXCACHY_CONFIG_HOME="$tmp/cfg" BXCACHY_STATE_HOME="$tmp/state" BXCACHY_SELF="$tmp/self" PATH="$tmp/bin:$PATH" LOG="$LOG" "$@"; }
+run() { env HOME="$tmp/home" SHELL=/usr/bin/zsh BXRIG_CONFIG_HOME="$tmp/cfg" BXRIG_STATE_HOME="$tmp/state" BXRIG_SELF="$tmp/self" PATH="$tmp/bin:$PATH" LOG="$LOG" "$@"; }
 code() { set +e; run "$@" >/dev/null 2>&1; local c=$?; set -e; echo "$c"; }
 has() { grep -qF -- "$1" "$LOG"; }
 
@@ -36,7 +36,7 @@ find "$tmp/state" -name '*.bak' | grep -q . || fail "--force took no backup: $(f
 
 # ---- shell ----
 run "$binary" refresh shell --yes >/dev/null
-[[ -s "$tmp/cfg/starship.toml" ]] && grep -q 'bxcachy shell' "$tmp/home/.zshrc" || fail 'shell files'
+[[ -s "$tmp/cfg/starship.toml" ]] && grep -q 'bxrig shell' "$tmp/home/.zshrc" || fail 'shell files'
 echo '# my prompt' >> "$tmp/cfg/starship.toml"
 run "$binary" refresh shell --yes | grep -q 'kept (you edited it): starship' || fail 'an edited starship.toml is kept'
 grep -q '^# my prompt' "$tmp/cfg/starship.toml" || fail 'starship.toml was overwritten'

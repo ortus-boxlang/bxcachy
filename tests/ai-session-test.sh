@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# `bxcachy ai session` and `bxcachy ai models` with fake tmux, ollama, systemctl and sudo. Usage: ai-session-test.sh BINARY
+# `bxrig ai session` and `bxrig ai models` with fake tmux, ollama, systemctl and sudo. Usage: ai-session-test.sh BINARY
 set -euo pipefail
 binary="$(realpath "${1:?native executable required}")"
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 fail() { echo "FAIL: $*" >&2; exit 1; }
-mkdir -p "$tmp/bin" "$tmp/home" "$tmp/cfg/bxcachy" "$tmp/tm" "$tmp/work"
+mkdir -p "$tmp/bin" "$tmp/home" "$tmp/cfg/bxrig" "$tmp/tm" "$tmp/work"
 export LOG="$tmp/log"; : > "$LOG"
 cat > "$tmp/bin/tmux" <<'SH'
 #!/usr/bin/env bash
@@ -30,31 +30,31 @@ SH
 printf '#!/usr/bin/env bash\necho "systemctl $*" >> "$LOG"\n[[ "$1" == is-active ]] && echo "${SVC:-inactive}"\nexit 0\n' > "$tmp/bin/systemctl"
 printf '#!/usr/bin/env bash\necho "sudo $*" >> "$LOG"\nexec "$@"\n' > "$tmp/bin/sudo"
 chmod +x "$tmp/bin"/*
-run() { env -u ANTHROPIC_API_KEY HOME="$tmp/home" BXCACHY_CONFIG_HOME="$tmp/cfg" BXCACHY_DATA_HOME="$tmp/data" BXCACHY_SELF=bxcachy TM="$tmp/tm" LOG="$LOG" SVC="${SVC:-}" NO_SERVER="${NO_SERVER:-}" PWD="$tmp/work" PATH="$tmp/bin:$PATH" "$@"; }
+run() { env -u ANTHROPIC_API_KEY HOME="$tmp/home" BXRIG_CONFIG_HOME="$tmp/cfg" BXRIG_DATA_HOME="$tmp/data" BXRIG_SELF=bxrig TM="$tmp/tm" LOG="$LOG" SVC="${SVC:-}" NO_SERVER="${NO_SERVER:-}" PWD="$tmp/work" PATH="$tmp/bin:$PATH" "$@"; }
 code() { set +e; run "$@" >/dev/null 2>&1; local c=$?; set -e; echo "$c"; }
-printf '{"default":"claude-code"}\n' > "$tmp/cfg/bxcachy/ai.json"; printf '{"backend":"file"}\n' > "$tmp/cfg/bxcachy/secrets.json"
+printf '{"default":"claude-code"}\n' > "$tmp/cfg/bxrig/ai.json"; printf '{"backend":"file"}\n' > "$tmp/cfg/bxrig/secrets.json"
 
 # ---- sessions ----
 run "$binary" ai session list | grep -q 'No agent sessions are running' || fail 'empty list'
-run "$binary" ai session start --dry-run --json | jq -e ".data.session == \"bxcachy-claude-code\" and .data.dir == \"$tmp/work\" and .data.command[0:6] == [\"tmux\",\"new-session\",\"-d\",\"-s\",\"bxcachy-claude-code\",\"-c\"]" >/dev/null || fail "dry-run: $(run "$binary" ai session start --dry-run --json)"
+run "$binary" ai session start --dry-run --json | jq -e ".data.session == \"bxrig-claude-code\" and .data.dir == \"$tmp/work\" and .data.command[0:6] == [\"tmux\",\"new-session\",\"-d\",\"-s\",\"bxrig-claude-code\",\"-c\"]" >/dev/null || fail "dry-run: $(run "$binary" ai session start --dry-run --json)"
 [[ ! -s "$LOG" || "$(grep -vc 'list-sessions' "$LOG")" == 0 ]] || fail 'dry-run created a session'
-run "$binary" ai session start | grep -q 'Started bxcachy-claude-code' || fail 'start'
-grep -q "tmux new-session -d -s bxcachy-claude-code -c $tmp/work 'bxcachy' 'secrets' 'run' 'ANTHROPIC_API_KEY' '--' 'claude'" "$LOG" || fail "tmux command: $(grep new-session "$LOG")"
+run "$binary" ai session start | grep -q 'Started bxrig-claude-code' || fail 'start'
+grep -q "tmux new-session -d -s bxrig-claude-code -c $tmp/work 'bxrig' 'secrets' 'run' 'ANTHROPIC_API_KEY' '--' 'claude'" "$LOG" || fail "tmux command: $(grep new-session "$LOG")"
 run "$binary" ai session start | grep -q 'already running' || fail 'start is idempotent'
 [[ "$(grep -c new-session "$LOG")" == 1 ]] || fail 'a second session was created'
-run "$binary" ai session start claude-code --name=api --dir="$tmp" --json | jq -e '.data.session == "bxcachy-claude-code-api" and .data.dir == "'"$tmp"'"' >/dev/null || fail 'named session in another folder'
-run "$binary" ai session list --json | jq -e '.data.sessions == ["bxcachy-claude-code","bxcachy-claude-code-api"]' >/dev/null || fail 'list'
+run "$binary" ai session start claude-code --name=api --dir="$tmp" --json | jq -e '.data.session == "bxrig-claude-code-api" and .data.dir == "'"$tmp"'"' >/dev/null || fail 'named session in another folder'
+run "$binary" ai session list --json | jq -e '.data.sessions == ["bxrig-claude-code","bxrig-claude-code-api"]' >/dev/null || fail 'list'
 touch "$tmp/tm/other-session"; run "$binary" ai session list --json | jq -e '(.data.sessions | index("other-session")) == null' >/dev/null || fail "other tmux sessions are not listed"
-run "$binary" ai session attach claude-code-api | grep -q 'attached bxcachy-claude-code-api' || fail 'attach by short name'
+run "$binary" ai session attach claude-code-api | grep -q 'attached bxrig-claude-code-api' || fail 'attach by short name'
 [[ "$(code "$binary" ai session attach nope)" == 4 ]] || fail 'attach to a missing session exits 4'
 [[ "$(code "$binary" ai session start --name='a b')" == 4 ]] || fail 'a bad name exits 4'
 [[ "$(code "$binary" ai session start codex-cli)" == 4 ]] || fail 'an agent that is not installed exits 4'
 [[ "$(code "$binary" ai session stop claude-code-api)" == 2 ]] || fail 'stop without --yes exits 2'
-[[ -e "$tmp/tm/bxcachy-claude-code-api" ]] || fail 'the plan ended the session'
+[[ -e "$tmp/tm/bxrig-claude-code-api" ]] || fail 'the plan ended the session'
 run "$binary" ai session stop claude-code-api --yes | grep -q 'was ended' || fail 'stop --yes'
-[[ ! -e "$tmp/tm/bxcachy-claude-code-api" ]] || fail 'stop did not end it'
+[[ ! -e "$tmp/tm/bxrig-claude-code-api" ]] || fail 'stop did not end it'
 mkdir -p "$tmp/nobin"; ln -sf "$(command -v sh)" "$tmp/nobin/sh"; ln -sf "$tmp/bin/claude" "$tmp/nobin/claude"
-set +e; env HOME="$tmp/home" BXCACHY_CONFIG_HOME="$tmp/cfg" PATH="$tmp/nobin" "$binary" ai session start >/dev/null 2>&1; rc=$?; set -e; [[ "$rc" == 4 ]] || fail "no tmux exits 4 (got $rc)"
+set +e; env HOME="$tmp/home" BXRIG_CONFIG_HOME="$tmp/cfg" PATH="$tmp/nobin" "$binary" ai session start >/dev/null 2>&1; rc=$?; set -e; [[ "$rc" == 4 ]] || fail "no tmux exits 4 (got $rc)"
 
 # ---- models ----
 run "$binary" ai models list | grep -q 'qwen3:8b' || fail 'models list'

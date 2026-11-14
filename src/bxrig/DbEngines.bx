@@ -1,0 +1,70 @@
+// The database services `bxrig db` can run as local containers (Podman by default, Docker by choice). Each engine is DATA:
+// adding one means adding one entry here. Images were checked on Docker Hub (and Elastic's docs) on 2026-11-10 and are pinned to a
+// major or minor version, never `latest`.
+//
+// An engine:
+//   id, title, kind   kind: sql | cache | document | vector | search
+//   image             the pinned image
+//   port              the default host port (on 127.0.0.1); `internal` is the port inside the container
+//   ports             extra fixed host:container port pairs (Couchbase), published 1:1 on 127.0.0.1; `--port` is not accepted then
+//   volume            where the container keeps its data (a named volume is mounted there, never a bind mount: rootless
+//                     containers cannot write to a host folder as the image's own user)
+//   secret            null, or { env: [env names that receive the generated password], user, urlTemplate }
+//   env               fixed environment (name=value)
+//   args              arguments after the image
+//   minMapCount       host sysctl vm.max_map_count the engine needs (0 = none)
+//   note              what to know after it starts (shown by `db info`)
+//   unsupported       a reason: the engine is listed but never started (Milvus)
+class DbEngines {
+    function all() {
+        return [
+            { id: "postgres", title: "PostgreSQL", kind: "sql", image: "docker.io/library/postgres:17", port: 5432, internal: 5432, ports: [], volume: "/var/lib/postgresql/data", env: [], args: [], minMapCount: 0,
+              secret: { env: [ "POSTGRES_PASSWORD" ], user: "postgres", urlTemplate: "postgresql://postgres:{password}@127.0.0.1:{port}/postgres" }, note: "" },
+            { id: "mysql", title: "MySQL", kind: "sql", image: "docker.io/library/mysql:8.4", port: 3306, internal: 3306, ports: [], volume: "/var/lib/mysql", env: [], args: [], minMapCount: 0,
+              secret: { env: [ "MYSQL_ROOT_PASSWORD" ], user: "root", urlTemplate: "mysql://root:{password}@127.0.0.1:{port}" }, note: "" },
+            { id: "mariadb", title: "MariaDB", kind: "sql", image: "docker.io/library/mariadb:11.8", port: 3306, internal: 3306, ports: [], volume: "/var/lib/mysql", env: [], args: [], minMapCount: 0,
+              secret: { env: [ "MARIADB_ROOT_PASSWORD" ], user: "root", urlTemplate: "mysql://root:{password}@127.0.0.1:{port}" }, note: "" },
+            { id: "redis", title: "Redis", kind: "cache", image: "docker.io/library/redis:7.4", port: 6379, internal: 6379, ports: [], volume: "/data", env: [], args: [ "redis-server", "--appendonly", "yes" ], minMapCount: 0,
+              secret: {}, note: "No password: it listens on 127.0.0.1 only." },
+            { id: "mongodb", title: "MongoDB", kind: "document", image: "docker.io/library/mongo:8.0", port: 27017, internal: 27017, ports: [], volume: "/data/db", env: [ "MONGO_INITDB_ROOT_USERNAME=root" ], args: [], minMapCount: 0,
+              secret: { env: [ "MONGO_INITDB_ROOT_PASSWORD" ], user: "root", urlTemplate: "mongodb://root:{password}@127.0.0.1:{port}" }, note: "" },
+            { id: "couchbase", title: "Couchbase", kind: "document", image: "docker.io/library/couchbase:community-8.0.2", port: 8091, internal: 8091, ports: [ "8092:8092", "8093:8093", "8094:8094", "8095:8095", "8096:8096", "11210:11210", "11211:11211" ], volume: "/opt/couchbase/var", env: [], args: [], minMapCount: 0,
+              secret: {}, note: "Finish the setup in the web console: open http://127.0.0.1:8091, choose Setup New Cluster, and set the administrator name and password there (BxRig does not generate them). The ports are fixed, so only one Couchbase instance can run." },
+            { id: "pgvector", title: "PostgreSQL with pgvector", kind: "vector", image: "docker.io/pgvector/pgvector:pg17", port: 5432, internal: 5432, ports: [], volume: "/var/lib/postgresql/data", env: [], args: [], minMapCount: 0,
+              secret: { env: [ "POSTGRES_PASSWORD" ], user: "postgres", urlTemplate: "postgresql://postgres:{password}@127.0.0.1:{port}/postgres" }, note: "Run CREATE EXTENSION vector; in the database to turn it on." },
+            { id: "chroma", title: "Chroma", kind: "vector", image: "docker.io/chromadb/chroma:1.5.9", port: 8000, internal: 8000, ports: [], volume: "/data", env: [], args: [], minMapCount: 0,
+              secret: {}, note: "No authentication: it listens on 127.0.0.1 only." },
+            { id: "qdrant", title: "Qdrant", kind: "vector", image: "docker.io/qdrant/qdrant:v1.20.0", port: 6333, internal: 6333, ports: [], volume: "/qdrant/storage", env: [], args: [], minMapCount: 0,
+              secret: {}, note: "No API key: it listens on 127.0.0.1 only." },
+            { id: "weaviate", title: "Weaviate", kind: "vector", image: "docker.io/semitechnologies/weaviate:1.39.15", port: 8080, internal: 8080, ports: [], volume: "/var/lib/weaviate",
+              env: [ "QUERY_DEFAULTS_LIMIT=25", "AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=true", "PERSISTENCE_DATA_PATH=/var/lib/weaviate", "DEFAULT_VECTORIZER_MODULE=none", "CLUSTER_HOSTNAME=node1" ], args: [], minMapCount: 0,
+              secret: {}, note: "Anonymous access is on: it listens on 127.0.0.1 only. Never publish this port." },
+            { id: "meilisearch", title: "Meilisearch", kind: "search", image: "docker.io/getmeili/meilisearch:v1.56", port: 7700, internal: 7700, ports: [], volume: "/meili_data", env: [ "MEILI_ENV=production" ], args: [], minMapCount: 0,
+              secret: { env: [ "MEILI_MASTER_KEY" ], user: "", urlTemplate: "http://127.0.0.1:{port}  (master key: {password})" }, note: "Send the master key as Authorization: Bearer KEY. Create search-only keys for apps." },
+            { id: "opensearch", title: "OpenSearch", kind: "search", image: "docker.io/opensearchproject/opensearch:3.9.0", port: 9200, internal: 9200, ports: [], volume: "/usr/share/opensearch/data", env: [ "discovery.type=single-node" ], args: [], minMapCount: 262144,
+              secret: { env: [ "OPENSEARCH_INITIAL_ADMIN_PASSWORD" ], user: "admin", urlTemplate: "https://admin:{password}@127.0.0.1:{port}", suffix: "-Aa1!" }, note: "HTTPS with a self-signed demo certificate: use curl -k. It can take a minute to start." },
+            { id: "elasticsearch", title: "Elasticsearch", kind: "search", image: "docker.elastic.co/elasticsearch/elasticsearch:9.5.6", port: 9200, internal: 9200, ports: [], volume: "/usr/share/elasticsearch/data", env: [ "discovery.type=single-node", "ES_JAVA_OPTS=-Xms1g -Xmx1g" ], args: [], minMapCount: 262144,
+              secret: { env: [ "ELASTIC_PASSWORD" ], user: "elastic", urlTemplate: "https://elastic:{password}@127.0.0.1:{port}" }, note: "HTTPS with a self-signed certificate: use curl -k. Uses about 1 GB of memory. It can take a minute to start." },
+            { id: "milvus", title: "Milvus", kind: "vector", image: "", port: 19530, internal: 19530, ports: [], volume: "", env: [], args: [], minMapCount: 0, secret: {}, note: "",
+              unsupported: "Milvus needs several services (etcd and object storage), so a single container would not work. It is not supported yet." }
+        ];
+    }
+
+    function ids() { return all().map( function( e ) { return e.id; } ); }
+
+    // One engine by id, or an empty struct.
+    function get( id ) {
+        for ( var e in all() ) if ( e.id == arguments.id ) return e;
+        return {};
+    }
+
+    // Host ports an engine publishes, as "host:container" pairs for `-p 127.0.0.1:...`, given the chosen main port.
+    function portMaps( engine, port ) {
+        var out = [ arguments.port & ":" & arguments.engine.internal ];
+        for ( var pair in arguments.engine.ports ) out.append( pair );
+        return out;
+    }
+
+    // Whether the main port can be changed (not for engines with fixed extra ports).
+    function portIsFixed( engine ) { return arguments.engine.ports.len() > 0; }
+}

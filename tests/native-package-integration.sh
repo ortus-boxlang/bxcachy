@@ -94,7 +94,7 @@ reset
 reset
 "$binary" install gmail --yes >/dev/null 2>&1 || fail 'install gmail'
 grep -Fq 'brave-bin' "$INSTALL_TEST_LOG" || fail 'gmail pulls in brave'
-launcher="$HOME/.local/share/applications/bxcachy-gmail.desktop"
+launcher="$HOME/.local/share/applications/bxrig-gmail.desktop"
 [[ -f "$launcher" ]] || fail 'launcher file written'
 grep -Fq 'Exec=brave --app=https://mail.google.com' "$launcher" || fail 'launcher runs brave in app mode'
 [[ "$(env PATH="$PATH" HOME="$HOME" "$binary" package-status gmail)" == 'gmail: installed' ]] || fail 'package-status sees the launcher'

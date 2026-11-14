@@ -11,12 +11,12 @@ parent="$(dirname -- "$destination")"
 [[ -d "$parent" && ! -L "$parent" ]] || { echo "Destination parent must exist and not be a symlink" >&2; exit 2; }
 if [[ -e "$destination" && ! -f "$destination" ]]; then echo "Destination is not a regular file" >&2; exit 2; fi
 if [[ -f "$destination" ]] && cmp -s -- "$source" "$destination"; then echo "unchanged: $destination"; exit 0; fi
-temp="$(mktemp "$parent/.bxcachy.XXXXXXXX")"
+temp="$(mktemp "$parent/.bxrig.XXXXXXXX")"
 trap 'rm -f -- "$temp"' EXIT
 cat -- "$source" > "$temp"
 chmod --reference="$source" "$temp"
 if [[ -f "$destination" ]]; then
-  backup="$destination.bxcachy.$(date -u +%Y%m%dT%H%M%SZ).$$.bak"
+  backup="$destination.bxrig.$(date -u +%Y%m%dT%H%M%SZ).$$.bak"
   cp -p -- "$destination" "$backup"
   echo "backup: $backup"
 fi

@@ -1,0 +1,331 @@
+// The state of BxTimeMachine and what each key does. No drawing and no commands here: onKey() returns an "intent" (a struct
+// with an action) when something has to run, and TimeMachine.bx runs it and feeds the result back with setFiles(), showPlan() or showResult().
+//
+// Modes:   timeline  the rows of backups across time (the home screen)
+//          browse    the files of the chosen backup, with a filter box
+//          confirm   the plan of a change, y to run it, n to leave it
+//          result    what a command printed, any key to go on
+//          pick      choose a destination (send)
+//          help      the keys
+// Keys on the timeline: Left/Right (or h l) move through one place's backups, Up/Down (k j) change place, + and - zoom the time axis,
+// Enter or o open (browse), d what changed, r restore, e export, s send to another place, n back up now, ? help, q quit.
+// Intents: browse, diff, restore, export, send, now. TimeMachine.bx turns each into a bxrig command with commandFor().
+class TimeMachineApp {
+    function init( timeline, home = "" ) {
+        variables.tl = arguments.timeline;
+        variables.home = arguments.home;
+        variables.rowIdx = 1;
+        variables.sel = {};
+        variables.zoomIdx = 3;
+        variables.mode = "timeline";
+        variables.browse = { files: [], filter: "", cursor: 1, top: 0, loading: false, typing: false, title: "", error: "" };
+        variables.modal = { title: "", lines: [], intent: {} };
+        variables.pickList = [];
+        variables.pickCursor = 1;
+        variables.pickIntent = {};
+        variables.message = "";
+        variables.outcome = "running";
+        variables.helper = new bxrig.BackupTimeline( {} );
+        for ( var r in variables.tl.rows ) variables.sel[ r.id ] = 1;
+        // start on the first place that has backups
+        for ( var i = 1; i <= variables.tl.rows.len(); i++ ) if ( variables.tl.rows[ i ].points.len() ) { variables.rowIdx = i; break; }
+        ensureVisible();
+        return this;
+    }
+
+    // ---- reading the state ----
+    function outcome() { return variables.outcome; }
+    function mode() { return variables.mode; }
+    function message() { return variables.message; }
+    function timeline() { return variables.tl; }
+    function rows() { return variables.tl.rows; }
+    function rowIndex() { return variables.rowIdx; }
+    function row() { return variables.tl.rows.len() ? variables.tl.rows[ variables.rowIdx ] : { id: "", label: "", kind: "", target: "", points: [], error: "" }; }
+    function selIndex( rowId = "" ) { var id = len( arguments.rowId ) ? arguments.rowId : row().id; return structKeyExists( variables.sel, id ) ? variables.sel[ id ] : 1; }
+    function point() { var r = row(); return r.points.len() ? r.points[ min( selIndex(), r.points.len() ) ] : {}; }
+    function hasPoint() { return !structIsEmpty( point() ); }
+    function modal() { return variables.modal; }
+    function browseState() { return variables.browse; }
+    function pickState() { return { list: variables.pickList, cursor: variables.pickCursor }; }
+    function now() { return variables.tl.now; }
+    function ago( p ) { return variables.helper.ago( variables.tl.now - arguments.p.epoch ); }
+
+    // ---- the time axis ----
+    function zooms() { return [ { name: "1 day", span: 86400 }, { name: "1 week", span: 7 * 86400 }, { name: "1 month", span: 31 * 86400 }, { name: "3 months", span: 92 * 86400 }, { name: "1 year", span: 366 * 86400 }, { name: "all", span: 0 } ]; }
+    function zoom() { return zooms()[ variables.zoomIdx ]; }
+    function span() {
+        var z = zoom();
+        if ( z.span > 0 ) return z.span;
+        var oldest = variables.tl.now;
+        for ( var r in variables.tl.rows ) for ( var p in r.points ) if ( p.epoch < oldest ) oldest = p.epoch;
+        return max( 86400, variables.tl.now - oldest + 86400 );
+    }
+    function windowStart() { return variables.tl.now - span(); }
+
+    // The column of a point inside a plot that starts at `left` and is `width` wide (newest on the right).
+    function xFor( epoch, left, width ) {
+        var f = ( arguments.epoch - windowStart() ) / span();
+        return arguments.left + int( min( 1, max( 0, f ) ) * ( arguments.width - 1 ) );
+    }
+
+    function inWindow( p ) { return arguments.p.epoch >= windowStart(); }
+
+    // Zooms out until the chosen point is on the axis.
+    function ensureVisible() {
+        if ( !hasPoint() ) return;
+        while ( !inWindow( point() ) && variables.zoomIdx < zooms().len() ) variables.zoomIdx++;
+    }
+
+    // ---- moving ----
+    function setSelection( n ) {
+        var r = row();
+        if ( !r.points.len() ) return;
+        variables.sel[ r.id ] = min( r.points.len(), max( 1, arguments.n ) );
+        ensureVisible();
+    }
+
+    // Keeps the time of the selection when changing place: the nearest point in the new row.
+    function moveRow( d ) {
+        if ( !variables.tl.rows.len() ) return;
+        var t = hasPoint() ? point().epoch : variables.tl.now;
+        variables.rowIdx = min( variables.tl.rows.len(), max( 1, variables.rowIdx + arguments.d ) );
+        var r = row();
+        if ( !r.points.len() ) return;
+        var best = 1;
+        var bestD = 1e18;
+        for ( var i = 1; i <= r.points.len(); i++ ) { var dd = abs( r.points[ i ].epoch - t ); if ( dd < bestD ) { bestD = dd; best = i; } }
+        variables.sel[ r.id ] = best;
+        ensureVisible();
+    }
+
+    // Left is older, Right is newer; points are stored newest first.
+    function moveTime( d ) { setSelection( selIndex() - arguments.d ); }
+
+    function selectAt( rowIndex, pointIndex ) {
+        if ( arguments.rowIndex < 1 || arguments.rowIndex > variables.tl.rows.len() ) return;
+        variables.rowIdx = arguments.rowIndex;
+        setSelection( arguments.pointIndex );
+    }
+
+    function zoomBy( d ) {
+        variables.zoomIdx = min( zooms().len(), max( 1, variables.zoomIdx + arguments.d ) );
+        ensureVisible();
+    }
+
+    function onScroll( direction ) { if ( variables.mode == "timeline" ) moveTime( arguments.direction == "up" ? 1 : -1 ); else if ( variables.mode == "browse" ) moveFile( arguments.direction == "up" ? -3 : 3 ); }
+
+    // ---- browse ----
+    function filteredFiles() {
+        var f = variables.browse.filter;
+        if ( !len( f ) ) return variables.browse.files;
+        return variables.browse.files.filter( function( x ) { return findNoCase( f, x.path ) > 0; } );
+    }
+
+    function moveFile( d ) {
+        var n = filteredFiles().len();
+        variables.browse.cursor = min( max( 1, n ), max( 1, variables.browse.cursor + arguments.d ) );
+    }
+
+    function selectedFile() { var f = filteredFiles(); return f.len() ? f[ min( variables.browse.cursor, f.len() ) ] : {}; }
+
+    function setFiles( files, title = "", error = "" ) {
+        variables.browse.files = arguments.files;
+        variables.browse.title = arguments.title;
+        variables.browse.error = arguments.error;
+        variables.browse.cursor = 1;
+        variables.browse.filter = "";
+        variables.browse.typing = false;
+        variables.mode = "browse";
+    }
+
+    // A click or tap on something the view drew (see TimeMachineView.hitAt).
+    function act( h ) {
+        if ( variables.mode == "timeline" ) {
+            if ( arguments.h.kind == "point" ) selectAt( arguments.h.n, arguments.h.m );
+            else if ( arguments.h.kind == "row" ) { variables.rowIdx = arguments.h.n; ensureVisible(); }
+            else if ( arguments.h.kind == "zoom" ) { variables.zoomIdx = arguments.h.n; ensureVisible(); }
+        } else if ( variables.mode == "browse" && arguments.h.kind == "file" ) variables.browse.cursor = arguments.h.n;
+    }
+
+    // Takes a fresh timeline (after a backup was made) and keeps the place, the zoom and, where it still exists, the chosen backup.
+    function reload( timeline ) {
+        var keepId = hasPoint() ? point().id : "";
+        var keepRow = row().id;
+        variables.tl = arguments.timeline;
+        variables.sel = {};
+        for ( var r in variables.tl.rows ) variables.sel[ r.id ] = 1;
+        for ( var i = 1; i <= variables.tl.rows.len(); i++ ) {
+            if ( variables.tl.rows[ i ].id == keepRow ) {
+                variables.rowIdx = i;
+                for ( var j = 1; j <= variables.tl.rows[ i ].points.len(); j++ ) if ( variables.tl.rows[ i ].points[ j ].id == keepId ) variables.sel[ keepRow ] = j;
+            }
+        }
+        variables.rowIdx = min( max( 1, variables.rowIdx ), max( 1, variables.tl.rows.len() ) );
+        ensureVisible();
+    }
+
+    // ---- the modal screens ----
+    function showPlan( title, text, intent ) {
+        variables.modal = { title: arguments.title, lines: listToArray( arguments.text, chr( 10 ), true ), intent: arguments.intent };
+        variables.mode = "confirm";
+    }
+
+    function showResult( title, text ) {
+        variables.modal = { title: arguments.title, lines: listToArray( arguments.text, chr( 10 ), true ), intent: {} };
+        variables.mode = "result";
+    }
+
+    function say( text ) { variables.message = arguments.text; }
+
+    function leave() { variables.mode = variables.browse.files.len() && variables.mode == "confirm" && structKeyExists( variables.modal.intent, "fromBrowse" ) ? "browse" : "timeline"; }
+
+    // Data targets other than this row's, for send.
+    function sendChoices() {
+        var out = [];
+        for ( var r in variables.tl.rows ) if ( r.kind == "files" && r.target != row().target ) out.append( { label: r.label, target: r.target } );
+        return out;
+    }
+
+    // ---- keys ----
+    // Returns an intent struct (empty when the key only changed the screen).
+    function onKey( key ) {
+        var k = arguments.key;
+        if ( k == "Ctrl+c" ) { variables.outcome = "quit"; return {}; }
+        variables.message = "";
+        if ( variables.mode == "help" ) { variables.mode = "timeline"; return {}; }
+        if ( variables.mode == "result" ) { variables.mode = variables.browse.files.len() && structKeyExists( variables.modal, "back" ) ? "browse" : "timeline"; return {}; }
+        if ( variables.mode == "confirm" ) {
+            if ( k == "y" || k == "Y" || k == "Enter" ) { var it = variables.modal.intent; it.confirmed = true; return it; }
+            if ( k == "n" || k == "N" || k == "Escape" || k == "q" ) leaveConfirm();
+            return {};
+        }
+        if ( variables.mode == "pick" ) return onPickKey( k );
+        if ( variables.mode == "browse" ) return onBrowseKey( k );
+        return onTimelineKey( k );
+    }
+
+    function leaveConfirm() {
+        variables.mode = structKeyExists( variables.modal.intent, "fromBrowse" ) ? "browse" : "timeline";
+    }
+
+    function onTimelineKey( k ) {
+        if ( k == "q" || k == "Escape" ) { variables.outcome = "quit"; return {}; }
+        if ( k == "Left" || k == "h" ) { moveTime( -1 ); return {}; }
+        if ( k == "Right" || k == "l" ) { moveTime( 1 ); return {}; }
+        if ( k == "Up" || k == "k" ) { moveRow( -1 ); return {}; }
+        if ( k == "Down" || k == "j" ) { moveRow( 1 ); return {}; }
+        if ( k == "Tab" ) { moveRow( 1 ); return {}; }
+        if ( k == "BackTab" ) { moveRow( -1 ); return {}; }
+        if ( k == "Home" ) { setSelection( row().points.len() ); return {}; }
+        if ( k == "End" ) { setSelection( 1 ); return {}; }
+        if ( k == "PageUp" ) { moveTime( -10 ); return {}; }
+        if ( k == "PageDown" ) { moveTime( 10 ); return {}; }
+        if ( k == "+" || k == "=" ) { zoomBy( -1 ); return {}; }
+        if ( k == "-" || k == "_" ) { zoomBy( 1 ); return {}; }
+        if ( k == "?" ) { variables.mode = "help"; return {}; }
+        if ( k == "n" ) return { action: "now", row: row() };
+        if ( !hasPoint() ) { variables.message = "Nothing here yet. Press n to make the first backup."; return {}; }
+        if ( k == "Enter" || k == "o" ) return { action: "browse", row: row(), point: point() };
+        if ( k == "d" ) return { action: "diff", row: row(), point: point() };
+        if ( k == "r" ) return { action: "restore", row: row(), point: point(), path: "" };
+        if ( k == "e" ) return { action: "export", row: row(), point: point() };
+        if ( k == "s" ) return startSend( { action: "send", row: row(), point: point() } );
+        return {};
+    }
+
+    function startSend( intent ) {
+        if ( row().kind != "files" ) { variables.message = "Only file backups can be sent to another place (config snapshots travel inside them)."; return {}; }
+        var ch = sendChoices();
+        if ( !ch.len() ) { variables.message = "Add a second place first: bxrig backup data target add, or bxrig nas use"; return {}; }
+        variables.pickList = ch;
+        variables.pickCursor = 1;
+        variables.pickIntent = arguments.intent;
+        variables.mode = "pick";
+        return {};
+    }
+
+    function onPickKey( k ) {
+        if ( k == "Escape" || k == "q" ) { variables.mode = "timeline"; return {}; }
+        if ( k == "Up" || k == "k" ) variables.pickCursor = max( 1, variables.pickCursor - 1 );
+        if ( k == "Down" || k == "j" ) variables.pickCursor = min( variables.pickList.len(), variables.pickCursor + 1 );
+        if ( k == "Enter" ) { var it = variables.pickIntent; it.dest = variables.pickList[ variables.pickCursor ].target; variables.mode = "timeline"; return it; }
+        return {};
+    }
+
+    function onBrowseKey( k ) {
+        var b = variables.browse;
+        if ( b.typing ) {
+            if ( k == "Escape" ) { b.typing = false; b.filter = ""; b.cursor = 1; return {}; }
+            if ( k == "Enter" ) { b.typing = false; return {}; }
+            if ( k == "Backspace" ) { b.filter = len( b.filter ) > 1 ? left( b.filter, len( b.filter ) - 1 ) : ""; b.cursor = 1; return {}; }
+            if ( len( k ) == 1 ) { b.filter &= k; b.cursor = 1; }
+            return {};
+        }
+        if ( k == "Escape" || k == "q" || k == "Left" || k == "h" ) { variables.mode = "timeline"; return {}; }
+        if ( k == "/" ) { b.typing = true; return {}; }
+        if ( k == "Up" || k == "k" ) { moveFile( -1 ); return {}; }
+        if ( k == "Down" || k == "j" ) { moveFile( 1 ); return {}; }
+        if ( k == "PageUp" ) { moveFile( -10 ); return {}; }
+        if ( k == "PageDown" ) { moveFile( 10 ); return {}; }
+        if ( k == "Home" ) { b.cursor = 1; return {}; }
+        if ( k == "End" ) { b.cursor = max( 1, filteredFiles().len() ); return {}; }
+        var f = selectedFile();
+        if ( structIsEmpty( f ) ) return {};
+        if ( k == "r" || k == "Enter" ) return { action: "restore", row: row(), point: point(), path: f.path, fromBrowse: true };
+        if ( k == "e" ) return { action: "export", row: row(), point: point(), path: f.path, fromBrowse: true };
+        return {};
+    }
+
+    // ---- turning an intent into a bxrig command (arguments only, without the program name) ----
+    // mode: "plan" adds --dry-run, "run" adds --yes where the command takes one.
+    function commandFor( intent, mode = "plan" ) {
+        var it = arguments.intent;
+        var flag = arguments.mode == "run" ? "--yes" : "--dry-run";
+        var r = it.row;
+        var id = structKeyExists( it, "point" ) ? it.point.id : "";
+        var path = structKeyExists( it, "path" ) ? it.path : "";
+        var a = it.action;
+        if ( a == "browse" || a == "diff" ) {
+            if ( r.kind == "files" ) return a == "diff" ? [] : [ "backup", "data", "files", id, "--target=" & r.target, "--json" ];
+            if ( r.kind == "config" ) return a == "diff" ? [ "backup", "config", "diff", id ] : [ "backup", "config", "show", id, "--json" ];
+            if ( r.kind == "system" ) return [ "backup", "snapshots", "changes", it.point.number & "" ];
+            return [];
+        }
+        if ( a == "restore" ) {
+            if ( r.kind == "files" ) {
+                var c = [ "backup", "data", "restore", id, "--to=" & variables.home & "/Restored/" & id, "--target=" & r.target ];
+                if ( len( path ) ) c.append( "--include=" & path );
+                c.append( flag );
+                return c;
+            }
+            if ( r.kind == "config" ) {
+                var c2 = [ "backup", "config", "restore", id ];
+                if ( len( path ) ) c2.append( "--only=" & path );
+                c2.append( flag );
+                return c2;
+            }
+            if ( r.kind == "system" ) return len( path ) ? [ "backup", "snapshots", "restore", it.point.number & "", path, flag ] : [];
+            return [];
+        }
+        if ( a == "export" ) {
+            if ( r.kind == "files" ) {
+                var c3 = [ "backup", "export", "data", id, "--to=" & variables.home & "/bxrig-" & id & ( len( path ) ? ".zip" : ".tar" ), "--target=" & r.target ];
+                if ( len( path ) ) c3.append( "--path=" & path );
+                c3.append( flag );
+                return c3;
+            }
+            if ( r.kind == "config" ) return [ "backup", "export", "config", id, "--to=" & variables.home & "/bxrig-config-" & id & ".tar.gz", flag ];
+            return [];
+        }
+        if ( a == "send" ) return [ "backup", "send", id, "--from=" & r.target, "--to=" & it.dest, flag ];
+        if ( a == "now" ) {
+            if ( r.kind == "files" ) return [ "backup", "data", "run", "--target=" & r.target, flag ];
+            if ( r.kind == "config" ) return [ "backup", "config", "now" ];
+            if ( r.kind == "system" ) return [ "backup", "snapshots", "create", flag ];
+        }
+        return [];
+    }
+
+    // Does this intent change something (so it needs the plan screen first)?
+    function changes( intent ) { return arrayFind( [ "restore", "export", "send", "now" ], arguments.intent.action ) > 0; }
+}

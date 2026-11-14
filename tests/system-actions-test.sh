@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# `bxcachy system lock|suspend|logout|reboot|shutdown` with fake noctalia, loginctl and systemctl. Usage: system-actions-test.sh BINARY
+# `bxrig system lock|suspend|logout|reboot|shutdown` with fake noctalia, loginctl and systemctl. Usage: system-actions-test.sh BINARY
 set -euo pipefail
 binary="$(realpath "${1:?native executable required}")"
 tmp="$(mktemp -d)"; trap 'rm -rf "${tmp:?}"' EXIT

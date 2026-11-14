@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Embeds catalog/apps.json in src/bxcachy/CatalogData.bx (a generated class).
+# Embeds catalog/apps.json in src/bxrig/CatalogData.bx (a generated class).
 # The compiled binary has no data files, so the catalog travels inside the source.
-#   gen-catalog.sh           rewrite src/bxcachy/CatalogData.bx
+#   gen-catalog.sh           rewrite src/bxrig/CatalogData.bx
 #   gen-catalog.sh --check   fail if the generated class is out of date (CI)
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
-out="$root/src/bxcachy/CatalogData.bx"
+out="$root/src/bxrig/CatalogData.bx"
 command -v jq >/dev/null || { echo 'jq is required' >&2; exit 4; }
 json="$(jq -c . "$root/catalog/apps.json")"
 # MatchBox string literals do not keep backslashes.
@@ -20,9 +20,9 @@ new="$(printf '%s\n%s\n%s\n%s\n%s\n%s\n%s\n' \
   '    }' \
   '}' '')"
 if [[ "${1:-}" == --check ]]; then
-  [[ -f "$out" && "$new" == "$(cat "$out")" ]] || { echo 'src/bxcachy/CatalogData.bx is out of date: run bootstrap/gen-catalog.sh' >&2; exit 1; }
+  [[ -f "$out" && "$new" == "$(cat "$out")" ]] || { echo 'src/bxrig/CatalogData.bx is out of date: run bootstrap/gen-catalog.sh' >&2; exit 1; }
   echo 'catalog embed is current'
 else
   printf '%s\n' "$new" > "$out"
-  echo "embedded $(jq '.apps|length' "$root/catalog/apps.json") apps into src/bxcachy/CatalogData.bx"
+  echo "embedded $(jq '.apps|length' "$root/catalog/apps.json") apps into src/bxrig/CatalogData.bx"
 fi

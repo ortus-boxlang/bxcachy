@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# `bxcachy appearance ...` with fake noctalia, hyprctl, fc-list, pacman and sudo. Usage: appearance-test.sh BINARY
+# `bxrig appearance ...` with fake noctalia, hyprctl, fc-list, pacman and sudo. Usage: appearance-test.sh BINARY
 set -euo pipefail
 binary="$(realpath "${1:?native executable required}")"
 tmp="$(mktemp -d)"; trap 'rm -rf "${tmp:?}"' EXIT
 fail() { echo "FAIL: $*" >&2; exit 1; }
-mkdir -p "$tmp/bin" "$tmp/home/Pictures/BxCachy" "$tmp/fake/installed"; export LOG="$tmp/log"; : > "$LOG"
+mkdir -p "$tmp/bin" "$tmp/home/Pictures/BxRig" "$tmp/fake/installed"; export LOG="$tmp/log"; : > "$LOG"
 for t in noctalia hyprctl; do printf '#!/usr/bin/env bash\necho "%s $*" >> "$LOG"\n' "$t" > "$tmp/bin/$t"; done
 printf '#!/usr/bin/env bash\necho "self $*" >> "$LOG"\n' > "$tmp/self"
 printf '#!/usr/bin/env bash\ncat "$FAKE/fonts" 2>/dev/null\n' > "$tmp/bin/fc-list"
@@ -24,11 +24,11 @@ printf '#!/usr/bin/env bash\nif [[ "$1" == -u ]]; then echo 1000; else /usr/bin/
 printf '#!/usr/bin/env bash\necho x86_64\n' > "$tmp/bin/uname"; printf 'ID=cachyos\n' > "$tmp/os"
 chmod +x "$tmp/bin"/* "$tmp/self"
 printf 'CaskaydiaMono Nerd Font,CaskaydiaMono NF\nJetBrainsMono Nerd Font,JetBrainsMono NF\nIosevka Nerd Font,Iosevka NF\n' > "$tmp/fake/fonts"
-run() { env HOME="$tmp/home" USER=dev BXCACHY_OS_RELEASE="$tmp/os" BXCACHY_STATE_HOME="$tmp/state" BXCACHY_CONFIG_HOME="$tmp/cfg" BXCACHY_SELF="$tmp/self" PATH="$tmp/bin:$PATH" LOG="$LOG" FAKE="$tmp/fake" "$@"; }
+run() { env HOME="$tmp/home" USER=dev BXRIG_OS_RELEASE="$tmp/os" BXRIG_STATE_HOME="$tmp/state" BXRIG_CONFIG_HOME="$tmp/cfg" BXRIG_SELF="$tmp/self" PATH="$tmp/bin:$PATH" LOG="$LOG" FAKE="$tmp/fake" "$@"; }
 hypr() { run env HYPRLAND_INSTANCE_SIGNATURE=x "$@"; }
 code() { set +e; run "$@" >/dev/null 2>&1; local c=$?; set -e; echo "$c"; }
 has() { grep -qF -- "$1" "$LOG"; }
-look="$tmp/cfg/bxcachy/theme/look.lua"
+look="$tmp/cfg/bxrig/theme/look.lua"
 lookhas() { grep -qF -- "$1" "$look"; }
 
 run "$binary" appearance status --json | jq -e '.ok and .data.layout == ""' >/dev/null || fail 'status on a fresh machine'
@@ -72,7 +72,7 @@ hypr "$binary" appearance animations off >/dev/null; lookhas 'animations = { ena
 hypr "$binary" appearance animations on >/dev/null; ! lookhas 'animations' || fail 'animations on'
 [[ "$(code "$binary" appearance windows gaps maybe)" == 2 && "$(code "$binary" appearance animations sometimes)" == 2 ]] || fail 'bad window values exit 2'
 # the file is the one the managed Hyprland module loads
-run "$binary" keys render hyprland | grep -q 'theme/look.lua' || fail 'bxcachy.lua loads look.lua'
+run "$binary" keys render hyprland | grep -q 'theme/look.lua' || fail 'bxrig.lua loads look.lua'
 # without Hyprland the file is written and nothing is reloaded
 : > "$LOG"; run "$binary" appearance windows gaps off --json | jq -e '.data.applied.hyprland == "written"' >/dev/null || fail 'no Hyprland: written'
 ! has 'hyprctl reload' || fail 'reload without Hyprland'
@@ -98,9 +98,9 @@ run "$binary" appearance font iosevka --json | jq -e '.data.notes | map(test("gh
 grep -q '^# mine' "$tmp/cfg/ghostty/config" && grep -q 'CaskaydiaMono' "$tmp/cfg/ghostty/config" || fail 'your ghostty config was rewritten'
 
 # ---- backgrounds ----
-: > "$tmp/home/Pictures/BxCachy/aurora.jpg"; : > "$tmp/home/Pictures/BxCachy/notes.txt"
+: > "$tmp/home/Pictures/BxRig/aurora.jpg"; : > "$tmp/home/Pictures/BxRig/notes.txt"
 run "$binary" appearance background list --json | jq -e '.data.images | map(.name) == ["aurora.jpg"]' >/dev/null || fail 'background list'
-: > "$LOG"; run "$binary" appearance background set aurora.jpg >/dev/null; has "noctalia msg wallpaper-set $tmp/home/Pictures/BxCachy/aurora.jpg" || fail "background set: $(cat "$LOG")"
+: > "$LOG"; run "$binary" appearance background set aurora.jpg >/dev/null; has "noctalia msg wallpaper-set $tmp/home/Pictures/BxRig/aurora.jpg" || fail "background set: $(cat "$LOG")"
 run "$binary" appearance background next >/dev/null; has 'noctalia msg wallpaper-next' || fail 'next'
 run "$binary" appearance background random >/dev/null; has 'noctalia msg wallpaper-random' || fail 'random'
 [[ "$(code "$binary" appearance background set nothing.png)" == 4 ]] || fail 'unknown image exits 4'
@@ -110,6 +110,6 @@ run "$binary" appearance background random >/dev/null; has 'noctalia msg wallpap
 has "config-set bar.main.position 'bottom'" && has "config-set dock.position 'left'" && has "config-set shell.font_family 'Iosevka Nerd Font'" && has 'hyprctl reload' || fail "apply: $(cat "$LOG")"
 mv "$tmp/bin/noctalia" "$tmp/noctalia.off"
 run "$binary" appearance bar position top --json | jq -e '.ok and (.data.applied.noctalia | test("saved only"))' >/dev/null || fail 'no Noctalia: saved only, not an error'
-jq -e '.bar.position == "top"' "$tmp/cfg/bxcachy/appearance.json" >/dev/null || fail 'the choice is remembered'
+jq -e '.bar.position == "top"' "$tmp/cfg/bxrig/appearance.json" >/dev/null || fail 'the choice is remembered'
 mv "$tmp/noctalia.off" "$tmp/bin/noctalia"
 echo "appearance-test: ok"

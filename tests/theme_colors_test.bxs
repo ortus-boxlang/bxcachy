@@ -1,10 +1,10 @@
 // ThemeColors and ThemeData: parse, light/dark, Noctalia palette, terminal and btop files. Run from src/: (cd src && matchbox ../tests/theme_colors_test.bxs)
 failures = 0;
 function check( label, ok ) { if ( ok ) println( "ok   " & label ); else { println( "FAIL " & label ); failures++; } }
-tc = new bxcachy.ThemeColors();
-td = new bxcachy.ThemeData();
+tc = new bxrig.ThemeColors();
+td = new bxrig.ThemeData();
 names = td.names();
-check( "data: 15 themes (10 omarchy + 5 bxcachy)", names.len() == 15 && names.filter( function( n ) { return td.origin( n ) == "bxcachy"; } ).len() == 5 );
+check( "data: 15 themes (10 omarchy + 5 bxrig)", names.len() == 15 && names.filter( function( n ) { return td.origin( n ) == "bxrig"; } ).len() == 5 );
 allOk = true; badRoles = [];
 roleNames = [ "primary", "on_primary", "secondary", "on_secondary", "tertiary", "on_tertiary", "error", "on_error", "surface", "on_surface", "surface_container", "on_surface_variant", "outline_variant", "shadow", "hover", "on_hover" ];
 for ( n in names ) {
@@ -19,12 +19,12 @@ for ( n in names ) {
 check( "every bundled theme parses and maps to a complete palette (" & badRoles.toList( "; " ) & ")", allOk && !badRoles.len() );
 light = [];
 for ( n in names ) if ( tc.isLight( tc.parse( td.colors( n ) ).colors ) ) light.append( n );
-check( "light themes are detected by luminance: " & light.toList( "," ), light.len() == 4 && arrayFind( light, "catppuccin-latte" ) > 0 && arrayFind( light, "rose-pine" ) > 0 && arrayFind( light, "flexoki-light" ) > 0 && arrayFind( light, "bxcachy-light" ) > 0 );
+check( "light themes are detected by luminance: " & light.toList( "," ), light.len() == 4 && arrayFind( light, "catppuccin-latte" ) > 0 && arrayFind( light, "rose-pine" ) > 0 && arrayFind( light, "flexoki-light" ) > 0 && arrayFind( light, "bxrig-light" ) > 0 );
 check( "maths: mix endpoints and middle", tc.mix( "##000000", "##ffffff", 0 ) == "##000000" && tc.mix( "##000000", "##ffffff", 1 ) == "##ffffff" && tc.mix( "##000000", "##ffffff", 0.5 ) == "##808080" );
 check( "maths: luminance of black and white, contrast 21", tc.lum( "##000000" ) == 0 && abs( tc.lum( "##ffffff" ) - 1 ) < 0.001 && round( tc.contrast( "##000000", "##ffffff" ) ) == 21 );
 bad = tc.parse( 'accent = "#zzz"' & chr( 10 ) & 'foreground = "#ffffff"' );
 check( "parse: a bad colour and missing keys are errors, not a half theme", !bad.ok && bad.errors.len() > 3 );
-c = tc.parse( td.colors( "bxcachy" ) ).colors;
+c = tc.parse( td.colors( "bxrig" ) ).colors;
 g = tc.ghostty( c );
 check( "ghostty: 16 palette lines, background, header", reFind( "palette = 15=##[0-9a-f]{6}", g ) && find( "palette = 0=", g ) > 0 && find( "background = ##303446", g ) > 0 && left( g, 1 ) == "##" );
 k = tc.kitty( c );

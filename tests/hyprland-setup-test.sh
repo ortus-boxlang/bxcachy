@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# `bxcachy setup hyprland --yes` end to end with fake pacman, sudo, id: packages, images, starter configs, shortcut files. Usage: hyprland-setup-test.sh [binary]
+# `bxrig setup hyprland --yes` end to end with fake pacman, sudo, id: packages, images, starter configs, shortcut files. Usage: hyprland-setup-test.sh [binary]
 set -euo pipefail
 binary="$(realpath "${1:?native executable required}")"
 root="$(cd "$(dirname "$0")/.." && pwd)"
@@ -22,7 +22,7 @@ printf '#!/usr/bin/env bash\nif [[ "$1" == -u ]]; then echo "${MOCK_UID:-1000}";
 printf '#!/usr/bin/env bash\necho x86_64\n' > "$tmp/bin/uname"
 chmod +x "$tmp/bin/"*
 printf 'ID=cachyos\n' > "$tmp/os"
-run() { env BXCACHY_OS_RELEASE="$tmp/os" BXCACHY_STATE_HOME="$tmp/state" BXCACHY_CONFIG_HOME="$tmp/cfg" HOME="$tmp/home" USER=dev PATH="$tmp/bin:$PATH" XDG_CURRENT_DESKTOP=Hyprland LOG="$LOG" "$@"; }
+run() { env BXRIG_OS_RELEASE="$tmp/os" BXRIG_STATE_HOME="$tmp/state" BXRIG_CONFIG_HOME="$tmp/cfg" HOME="$tmp/home" USER=dev PATH="$tmp/bin:$PATH" XDG_CURRENT_DESKTOP=Hyprland LOG="$LOG" "$@"; }
 code() { set +e; run "$@" >/dev/null 2>&1; local c=$?; set -e; echo "$c"; }
 
 # plan only: nothing written
@@ -36,15 +36,15 @@ out="$(run "$binary" setup hyprland --yes --json)" || fail 'setup hyprland --yes
 echo "$out" | jq -e '.ok and (.data.done | map(.id) == ["packages","images","starter","keys"])' >/dev/null || fail "stdout is not one clean JSON envelope with all four steps done: $out"
 [[ "$(cat "$tmp/cfg/hypr/hyprland.lua")" == '-- mine' ]] || fail 'existing hyprland.lua was overwritten'
 grep -q 'pacman -S --needed --noconfirm hyprland' "$LOG" || fail 'packages installed'
-cmp "$tmp/home/Pictures/BxCachy/box.jpg" "$root/assets/wallpapers/box.jpg" || fail 'wallpaper written'
-grep -q 'custom_palette = "BxCachy"' "$tmp/cfg/noctalia/config.toml" || fail 'noctalia config written'
-[[ -f "$tmp/cfg/noctalia/palettes/BxCachy.json" ]] || fail 'palette written'
-[[ -f "$tmp/cfg/hypr/bxcachy.lua" && -f "$tmp/cfg/xremap/config.yml" ]] || fail 'shortcut files written'
+cmp "$tmp/home/Pictures/BxRig/box.jpg" "$root/assets/wallpapers/box.jpg" || fail 'wallpaper written'
+grep -q 'custom_palette = "BxRig"' "$tmp/cfg/noctalia/config.toml" || fail 'noctalia config written'
+[[ -f "$tmp/cfg/noctalia/palettes/BxRig.json" ]] || fail 'palette written'
+[[ -f "$tmp/cfg/hypr/bxrig.lua" && -f "$tmp/cfg/xremap/config.yml" ]] || fail 'shortcut files written'
 
 # fresh machine: hyprland.lua is created, loads the module; a changed Noctalia file is kept on re-run
 rm -rf "$tmp/cfg" "$tmp/home/Pictures" "$tmp/state"
 [[ "$(code "$binary" setup hyprland --yes)" == 0 ]] || fail 'fresh setup exits 0'
-grep -q 'require("bxcachy")' "$tmp/cfg/hypr/hyprland.lua" || fail 'starter hyprland.lua loads the bxcachy module'
+grep -q 'require("bxrig")' "$tmp/cfg/hypr/hyprland.lua" || fail 'starter hyprland.lua loads the bxrig module'
 grep -q 'hl.dsp.window.close()' "$tmp/cfg/hypr/hyprland.lua" || fail 'starter has Super+Q close'
 grep -q 'workspace = "2", persistent = true' "$tmp/cfg/hypr/hyprland.lua" || fail 'two persistent workspaces'
 grep -q 'natural_scroll = false' "$tmp/cfg/hypr/hyprland.lua" || fail 'natural scrolling is off'
@@ -53,5 +53,5 @@ echo '# mine' >> "$tmp/cfg/noctalia/config.toml"; echo '-- also mine' >> "$tmp/c
 grep -q '# mine' "$tmp/cfg/noctalia/config.toml" || fail 'a changed noctalia config was overwritten'
 grep -q -- '-- also mine' "$tmp/cfg/hypr/hyprland.lua" || fail 'hyprland.lua was overwritten'
 # the starter is valid Lua when a Lua is around
-if command -v luac >/dev/null; then luac -p "$tmp/cfg/hypr/hyprland.lua" "$tmp/cfg/hypr/bxcachy.lua" || fail 'starter Lua does not parse'; fi
+if command -v luac >/dev/null; then luac -p "$tmp/cfg/hypr/hyprland.lua" "$tmp/cfg/hypr/bxrig.lua" || fail 'starter Lua does not parse'; fi
 echo "hyprland setup tests passed"

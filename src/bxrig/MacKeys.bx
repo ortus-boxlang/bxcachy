@@ -1,0 +1,39 @@
+// `bxrig keys mac [on|off|status] [--yes]`: the Mac-style Super keys (Super+C, Super+V, Super+Tab) are xremap's job; this turns that
+// service on or off without removing anything (`systemctl --user enable --now xremap` / `disable --now xremap`). The unit is the one
+// `setup xremap` wrote. Exit: 0 done, 2 plan without --yes, 4 precondition (the unit is not installed), 6 systemctl failed.
+class MacKeys {
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.inst = new bxrig.Installer( arguments.runner );
+        variables.config = new bxrig.ConfigService().quiet( true );
+        return this;
+    }
+
+    function say( command, code, data, asJson, lines = [] ) {
+        if ( arguments.asJson ) println( variables.cli.envelope( arguments.command, arguments.code, arguments.data, false ) );
+        else for ( var l in arguments.lines ) println( l );
+        return arguments.code;
+    }
+
+    function tryExec( argv, timeout = 30 ) {
+        try { return variables.inst.exec( arguments.argv, arguments.timeout ); } catch ( any e ) { return { exitCode: 127, output: e.message }; }
+    }
+
+    function unitFile() { return variables.config.cfgHome() & "/systemd/user/xremap.service"; }
+    function active() { return trim( tryExec( [ "systemctl", "--user", "is-active", "xremap" ], 10 ).output ) == "active"; }
+
+    function status( asJson ) {
+        var on = active();
+        return say( "keys mac status", 0, { installed: fileExists( unitFile() ), active: on }, arguments.asJson, [ "Mac-style keys: " & ( on ? "on" : "off" ) & ( fileExists( unitFile() ) ? "" : " (not set up: bxrig setup xremap)" ) ] );
+    }
+
+    function set( on, yes, asJson ) {
+        var cmd = "keys mac " & ( arguments.on ? "on" : "off" );
+        if ( !fileExists( unitFile() ) ) return say( cmd, 4, { error: "xremap is not set up" }, arguments.asJson, [ "error: xremap is not set up. Run: bxrig setup xremap --yes" ] );
+        var argv = [ "systemctl", "--user", arguments.on ? "enable" : "disable", "--now", "xremap" ];
+        if ( !arguments.yes ) return say( cmd, 2, { command: argv }, arguments.asJson, [ "Plan: " & argv.toList( " " ), "Nothing was changed. Add --yes to apply." ] );
+        var r = tryExec( argv, 30 );
+        if ( r.exitCode != 0 ) return say( cmd, 6, { error: trim( r.output ) }, arguments.asJson, [ "error: " & trim( r.output ) ] );
+        return say( cmd, 0, { active: arguments.on }, arguments.asJson, [ "Mac-style keys are " & ( arguments.on ? "on." : "off. Super+C and Super+V are plain Super shortcuts again." ) ] );
+    }
+}

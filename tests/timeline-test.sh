@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# `bxcachy backup timeline` and `bxcachy timemachine` outside a terminal. Usage: timeline-test.sh BINARY
+# `bxrig backup timeline` and `bxrig timemachine` outside a terminal. Usage: timeline-test.sh BINARY
 set -euo pipefail
 binary="$(realpath "${1:?native executable required}")"
 tmp="$(mktemp -d)"; trap 'rm -rf "${tmp:?}"' EXIT
@@ -15,12 +15,12 @@ F
 printf '#!/usr/bin/env bash\ncase "$1" in -Qqe|-Qqm) echo git ;; esac\n' > "$tmp/bin/pacman"
 printf '#!/usr/bin/env bash\nif [[ "$1" == -u ]]; then echo 1000; else /usr/bin/id "$@"; fi\n' > "$tmp/bin/id"
 chmod +x "$tmp/bin"/*
-run() { env HOME="$H" USER=dev BXCACHY_CONFIG_HOME="$H/.config" BXCACHY_DATA_HOME="$tmp/data" BXCACHY_SELF=/usr/bin/bxcachy BXCACHY_NOW_EPOCH=1794736800 PATH="$tmp/bin:$PATH" LOG="$LOG" "$@"; }
+run() { env HOME="$H" USER=dev BXRIG_CONFIG_HOME="$H/.config" BXRIG_DATA_HOME="$tmp/data" BXRIG_SELF=/usr/bin/bxrig BXRIG_NOW_EPOCH=1794736800 PATH="$tmp/bin:$PATH" LOG="$LOG" "$@"; }
 code() { set +e; run "$@" >/dev/null 2>&1 < /dev/null; local c=$?; set -e; echo "$c"; }
 
 # ---- an injected timeline is passed through ----
 printf '{"now":1794000000,"total":1,"rows":[{"id":"config","label":"Config","kind":"config","target":"","points":[{"id":"x","time":"2026-11-01T00:00:00","epoch":1793000000,"label":"manual","tier":"monthly","size":1}],"error":""}]}' > "$tmp/tl.json"
-BXCACHY_TIMELINE_FILE="$tmp/tl.json" run "$binary" backup timeline --json | jq -e '.data.total == 1 and .data.rows[0].points[0].id == "x"' >/dev/null || fail 'injected timeline'
+BXRIG_TIMELINE_FILE="$tmp/tl.json" run "$binary" backup timeline --json | jq -e '.data.total == 1 and .data.rows[0].points[0].id == "x"' >/dev/null || fail 'injected timeline'
 
 # ---- the real thing: config snapshots and restic snapshots ----
 run "$binary" backup config now --reason=first >/dev/null

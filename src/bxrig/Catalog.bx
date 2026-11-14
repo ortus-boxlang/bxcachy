@@ -1,0 +1,73 @@
+// The embedded app catalog (catalog/apps.json, schema 3): lookup and offline validation.
+class Catalog {
+    function load() {
+     return jsonDeserialize( new bxrig.CatalogData().json() );
+    }
+    function find( cat, id ) {
+     for ( a in cat.apps ) if ( a.id == id ) return a;
+     return {};
+    }
+    // Offline validation: returns { errors: [], warnings: [] }.
+    function check( cat ) {
+     errors = []; warnings = [];
+     if ( cat.schema != 3 ) errors.append( "schema must be 3, found " & cat.schema );
+     groupIds = cat.groups.map( function( g ) { return g.id; } );
+     pairs = cat.categories.map( function( c ) { return c.group & "/" & c.title; } );
+     profileIds = [];
+     if ( !structKeyExists( cat, "profiles" ) ) errors.append( "profiles are missing" );
+     else for ( pr in cat.profiles ) {
+      if ( !reFind( "^[a-z0-9][a-z0-9-]*$", pr.id ) ) errors.append( "profile " & pr.id & ": id must be lowercase letters, digits and dashes" );
+      if ( arrayFind( profileIds, pr.id ) ) errors.append( "profile " & pr.id & ": duplicate id" );
+      profileIds.append( pr.id );
+      if ( !len( pr.title ?: "" ) || !len( pr.blurb ?: "" ) ) errors.append( "profile " & pr.id & ": title and blurb are required" );
+     }
+     defaults = {};
+     seen = {};
+     for ( a in cat.apps ) {
+      who = a.id;
+      if ( structKeyExists( seen, a.id ) ) errors.append( who & ": duplicate id" );
+      seen[a.id] = true;
+      if ( !reFind( "^[a-z0-9][a-z0-9-]*$", a.id ) ) errors.append( who & ": id must be lowercase letters, digits and dashes" );
+      if ( !arrayFind( [ "desktop", "tui", "web" ], a.kind ) ) errors.append( who & ": unknown kind " & a.kind );
+      if ( !arrayFind( [ "default", "optional" ], a.tier ) ) errors.append( who & ": unknown tier " & a.tier );
+      if ( !arrayFind( [ "pacman", "aur", "pkgbuild", "web", "script", "unresolved" ], a.source ) ) errors.append( who & ": unknown source " & a.source );
+      if ( !arrayFind( groupIds, a.group ) ) errors.append( who & ": unknown group " & a.group );
+      else if ( !arrayFind( pairs, a.group & "/" & a.category ) ) errors.append( who & ": category " & a.category & " is not in group " & a.group );
+      if ( !structKeyExists( a, "description" ) || !len( a.description ) ) errors.append( who & ": missing description" );
+      if ( arrayFind( [ "pacman", "aur", "pkgbuild", "unresolved" ], a.source ) ) {
+       if ( !structKeyExists( a, "targets" ) || !a.targets.len() ) errors.append( who & ": " & a.source & " needs targets" );
+       else for ( t in a.targets ) if ( !reFind( "^[a-zA-Z0-9@._+-]+$", t ) ) errors.append( who & ": unsafe package name " & t );
+      }
+      if ( a.source == "web" ) {
+       if ( !structKeyExists( a, "url" ) || !reFind( "^https://[^/@\s]+(/\S*)?$", a.url ) ) errors.append( who & ": web url must be https without credentials" );
+      }
+      if ( structKeyExists( a, "bundle" ) && !arrayFind( [ "google", "microsoft", "apple", "boxlang" ], a.bundle ) ) errors.append( who & ": unknown bundle " & a.bundle );
+      if ( a.source == "script" ) {
+       if ( !structKeyExists( a, "script" ) || !structKeyExists( a.script, "url" ) || !reFind( "^https://[^/@\s]+(/\S*)?$", a.script.url ) ) errors.append( who & ": script needs an https url without credentials" );
+       if ( structKeyExists( a, "script" ) && structKeyExists( a.script, "shell" ) && !arrayFind( [ "sh", "bash" ], a.script.shell ) ) errors.append( who & ": script shell must be sh or bash" );
+       if ( structKeyExists( a, "script" ) && structKeyExists( a.script, "args" ) ) for ( sa in a.script.args ) if ( !reFind( "^[a-zA-Z0-9=._/:-]+$", sa ) ) errors.append( who & ": unsafe script argument " & sa );
+      }
+      if ( a.source == "pkgbuild" ) {
+       if ( !structKeyExists( a, "pkgbuild" ) || !structKeyExists( a.pkgbuild, "repo" ) || !structKeyExists( a.pkgbuild, "path" ) || !structKeyExists( a.pkgbuild, "ref" ) ) errors.append( who & ": pkgbuild needs repo, path and ref" );
+       else if ( !reFind( "^[0-9a-f]{40}$", a.pkgbuild.ref ) ) errors.append( who & ": pkgbuild ref must be a full 40-character commit, found " & a.pkgbuild.ref );
+      }
+      if ( structKeyExists( a, "shells" ) ) {
+       if ( !isArray( a.shells ) || !a.shells.len() ) errors.append( who & ": shells must be a non-empty list" );
+       else for ( sh in a.shells ) if ( !arrayFind( [ "hyprland", "plasma" ], sh ) ) errors.append( who & ": unknown shell " & sh );
+      }
+      if ( structKeyExists( a, "profiles" ) ) {
+       for ( pid in structKeyArray( a.profiles ) ) {
+        if ( !arrayFind( profileIds, pid ) ) errors.append( who & ": unknown profile " & pid );
+        else if ( !arrayFind( [ "default", "optional" ], a.profiles[pid] ) ) errors.append( who & ": profile " & pid & " must be default or optional, found " & a.profiles[pid] );
+        else if ( a.profiles[pid] == "default" ) defaults[pid] = true;
+       }
+      }
+      if ( a.source == "unresolved" && a.tier == "default" ) warnings.append( who & ": default entry has no installable package yet" );
+     }
+     for ( pid in profileIds ) if ( !structKeyExists( defaults, pid ) ) errors.append( "profile " & pid & ": needs at least one default app" );
+     return { errors: errors, warnings: warnings };
+    }
+    function row( a ) {
+     return a.id & "  [" & a.tier & "]  " & a.group & "/" & a.category & "  " & a.name;
+    }
+}

@@ -1,7 +1,7 @@
 // Runner: providers, defaults, argv resolution (pure parts). Run from src/: (cd src && matchbox ../tests/runner_test.bxs)
 failures = 0;
 function check( label, ok ) { if ( ok ) println( "ok   " & label ); else { println( "FAIL " & label ); failures++; } }
-r = new bxcachy.Runner();
+r = new bxrig.Runner();
 check( "legacy launcher providers are all there", r.launcherProviders().toList( "," ) == "system,noctalia,walker,rofi,fuzzel,wofi,krunner,vicinae,custom" );
 check( "menu providers", r.menuProviders().toList( "," ) == "walker,rofi,fuzzel,wofi,vicinae" );
 check( "default launcher on Hyprland is Noctalia", r.defaults( "Hyprland" ).provider == "noctalia" );
@@ -24,7 +24,7 @@ check( "a menu override takes {prompt} too", r.menuCommand( "vicinae", cfg, "My 
 check( "argv validation: arrays of non-empty strings only", r.validArgv( [ "a", "b" ] ) && !r.validArgv( [] ) && !r.validArgv( "rofi -show drun" ) && !r.validArgv( [ "a", "" ] ) );
 check( "every provider with a package maps to a catalog app", r.catalogId( "rofi" ) == "rofi" && r.catalogId( "walker" ) == "walker" && r.catalogId( "vicinae" ) == "vicinae" && r.catalogId( "fuzzel" ) == "fuzzel" && r.catalogId( "wofi" ) == "wofi" && r.catalogId( "noctalia" ) == "" && r.catalogId( "system" ) == "" );
 // ---- the abstraction: one select() for every menu provider (a stub runner plays the launcher) ----
-reg = new bxcachy.RunnerProviders();
+reg = new bxrig.RunnerProviders();
 check( "the registry lists every provider once, and the menu ones have a dmenu protocol", reg.ids().len() == 9 && reg.menuIds().toList( "," ) == "walker,rofi,fuzzel,wofi,vicinae" && reg.get( "rofi" ).menu.returns == "index" && reg.get( "wofi" ).menu.returns == "text" );
 check( "providers without a dmenu mode have an empty menu", structIsEmpty( reg.get( "noctalia" ).menu ) && structIsEmpty( reg.get( "krunner" ).menu ) );
 seen = { payload: "", argv: [] };
@@ -36,8 +36,8 @@ function stub( answer ) {
     };
 }
 function sel( provider, answer, entries ) {
-    var cfg = new bxcachy.Runner().defaults( "Hyprland" ); cfg.menu_provider = provider;
-    return new bxcachy.Runner( "", stub( answer ) ).select( "Menu", entries, cfg );
+    var cfg = new bxrig.Runner().defaults( "Hyprland" ); cfg.menu_provider = provider;
+    return new bxrig.Runner( "", stub( answer ) ).select( "Menu", entries, cfg );
 }
 entries = [ "Apps", { label: "Settings", icon: "gear" }, "Quit" ];
 check( "rofi: 0-based index in, 1-based position out; icon protocol sent", sel( "rofi", "1", entries ) == 2 && find( "Settings" & chr( 0 ) & "icon" & chr( 31 ) & "gear", seen.payload ) > 0 );

@@ -1,6 +1,6 @@
--- BxCachy starter Hyprland config (Hyprland 0.55+, Lua). Written once by `bxcachy setup hyprland`; from here on it is yours.
+-- BxRig starter Hyprland config (Hyprland 0.55+, Lua). Written once by `bxrig setup hyprland`; from here on it is yours.
 -- Based on Hyprland's own example config. Reference: https://wiki.hypr.land/configuring/
--- The managed part (Noctalia autostart and panels, Alt+Tab switcher, logout) lives in bxcachy.lua, loaded at the bottom.
+-- The managed part (Noctalia autostart and panels, Alt+Tab switcher, logout) lives in bxrig.lua, loaded at the bottom.
 
 ------------------
 ---- MONITORS ----
@@ -103,7 +103,7 @@ hl.animation({ leaf = "workspacesIn",  enabled = true,  speed = 1.21, bezier = "
 hl.animation({ leaf = "workspacesOut", enabled = true,  speed = 1.94, bezier = "almostLinear", style = "fade" })
 hl.animation({ leaf = "zoomFactor",    enabled = true,  speed = 7,    bezier = "quick" })
 
--- BXCACHY-WORKSPACES
+-- BXRIG-WORKSPACES
 
 hl.config({ dwindle   = { preserve_split = true } })
 hl.config({ master    = { new_status = "master" } })
@@ -148,7 +148,7 @@ hl.gesture({
 ---------------------
 local mainMod = "SUPER"
 
--- Windows (Super acts like Cmd; Super+C, Super+V and Super+Tab come from xremap, see `bxcachy keys show`)
+-- Windows (Super acts like Cmd; Super+C, Super+V and Super+Tab come from xremap, see `bxrig keys show`)
 hl.bind(mainMod .. " + Q", hl.dsp.window.close())
 hl.bind(mainMod .. " + Return", hl.dsp.exec_cmd(terminal))
 hl.bind(mainMod .. " + B", hl.dsp.exec_cmd(browser))
@@ -180,7 +180,7 @@ hl.bind(mainMod .. " + mouse_up",   hl.dsp.focus({ workspace = "e-1" }))
 hl.bind(mainMod .. " + mouse:272", hl.dsp.window.drag(),   { mouse = true })
 hl.bind(mainMod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
 
--- Screenshots (Super+Shift+3/4/5, like Cmd+Shift+3/4/5 on a Mac) come from the bxcachy module below; lock (hyprlock)
+-- Screenshots (Super+Shift+3/4/5, like Cmd+Shift+3/4/5 on a Mac) come from the bxrig module below; lock (hyprlock)
 hl.bind(mainMod .. " + CTRL + Q", hl.dsp.exec_cmd("hyprlock"))
 
 -- Media, volume and brightness keys
@@ -194,7 +194,7 @@ hl.bind("XF86MonBrightnessDown",hl.dsp.exec_cmd("brightnessctl -e4 -n2 set 5%-")
 --------------------------------
 ---- WINDOWS AND WORKSPACES ----
 --------------------------------
--- BXCACHY-FLOATING-RULE
+-- BXRIG-FLOATING-RULE
 hl.window_rule({
     name  = "suppress-maximize-events",
     match = { class = ".*" },
@@ -208,7 +208,7 @@ hl.window_rule({
 })
 
 ------------------------
----- BXCACHY MODULE ----
+---- BXRIG MODULE ----
 ------------------------
--- Noctalia autostart and panel keys, the Alt+Tab switcher, logout. Managed by `bxcachy keys apply`.
-require("bxcachy")
+-- Noctalia autostart and panel keys, the Alt+Tab switcher, logout. Managed by `bxrig keys apply`.
+require("bxrig")

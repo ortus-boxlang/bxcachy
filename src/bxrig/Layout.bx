@@ -1,0 +1,94 @@
+// `bxrig layout [toggle|float|tile|status]`: switch the windows of the current workspace between tiled and floating, at run time.
+//   Hyprland  every window of the active workspace (from `hyprctl clients -j` and `hyprctl activeworkspace -j`) gets
+//             `hyprctl dispatch setfloating address:ADDR` or `settiled address:ADDR`. toggle floats everything when at least one window
+//             is tiled, and tiles everything when all are floating.
+//   Plasma    HyprKwin is a switch for the whole session, so toggle flips `bxrig tiling on|off` (float = off, tile = on).
+// The Hyprland dispatchers are the documented legacy ones and have not run on a real Hyprland 0.55+ (Lua) session here.
+// Exit: 0 done, 4 precondition (no Hyprland or Plasma session, hyprctl missing), 6 a dispatch failed.
+class Layout {
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.inst = new bxrig.Installer( arguments.runner );
+        return this;
+    }
+
+    function say( command, code, data, asJson, lines = [] ) {
+        if ( arguments.asJson ) println( variables.cli.envelope( arguments.command, arguments.code, arguments.data, false ) );
+        else for ( var l in arguments.lines ) println( l );
+        return arguments.code;
+    }
+
+    function tryExec( argv, timeout = 20 ) {
+        try { return variables.inst.exec( arguments.argv, arguments.timeout ); } catch ( any e ) { return { exitCode: 127, output: e.message }; }
+    }
+
+    function backend() {
+        if ( len( getSystemSetting( "HYPRLAND_INSTANCE_SIGNATURE", "" ) ) ) return "hyprland";
+        if ( findNoCase( "KDE", getSystemSetting( "XDG_CURRENT_DESKTOP", "" ) ) ) return "plasma";
+        return "";
+    }
+
+    // The windows of the active workspace: [ { address, floating } ].
+    function windows() {
+        var ws = tryExec( [ "hyprctl", "activeworkspace", "-j" ], 10 );
+        var cl = tryExec( [ "hyprctl", "clients", "-j" ], 10 );
+        if ( ws.exitCode != 0 || cl.exitCode != 0 ) return { ok: false, rows: [], id: 0 };
+        var id = 0;
+        var rows = [];
+        try {
+            id = jsonDeserialize( ws.output ).id;
+            for ( var c in jsonDeserialize( cl.output ) ) if ( ( c.workspace.id ?: -999 ) == id && ( c.mapped ?: true ) ) rows.append( { address: c.address, floating: c.floating ?: false } );
+        } catch ( any e ) { return { ok: false, rows: [], id: 0 }; }
+        return { ok: true, rows: rows, id: id };
+    }
+
+    function status( asJson ) {
+        var be = backend();
+        if ( be == "hyprland" ) {
+            var w = windows();
+            if ( !w.ok ) return say( "layout status", 4, { error: "hyprctl failed" }, arguments.asJson, [ "error: could not read the workspace from hyprctl" ] );
+            var tiled = w.rows.filter( function( r ) { return !r.floating; } ).len();
+            return say( "layout status", 0, { backend: be, workspace: w.id, windows: w.rows.len(), tiled: tiled, floating: w.rows.len() - tiled }, arguments.asJson, [ "Workspace " & w.id & ": " & w.rows.len() & " windows, " & tiled & " tiled, " & ( w.rows.len() - tiled ) & " floating" ] );
+        }
+        if ( be == "plasma" ) {
+            var t = new bxrig.Tiling( variables.cli, variables.inst.runner() ).state();
+            return say( "layout status", 0, { backend: be, tiling: t.enabled }, arguments.asJson, [ "Plasma tiling (HyprKwin): " & ( t.enabled ? "on" : "off" ) ] );
+        }
+        return say( "layout status", 4, { error: "No backend" }, arguments.asJson, [ "error: a Hyprland session or KDE Plasma is needed" ] );
+    }
+
+    // `layout toggle|float|tile`
+    function apply( mode, dryRun, asJson ) {
+        var cmd = "layout " & arguments.mode;
+        var be = backend();
+        if ( be == "plasma" ) {
+            var tl = new bxrig.Tiling( variables.cli, variables.inst.runner() );
+            var on = arguments.mode == "tile" ? true : ( arguments.mode == "float" ? false : !tl.state().enabled );
+            if ( arguments.dryRun ) return say( cmd, 0, { backend: be, tiling: on }, arguments.asJson, [ "Dry run: tiling " & ( on ? "on" : "off" ) ], true );
+            return tl.set( on, arguments.asJson );
+        }
+        if ( be != "hyprland" ) return say( cmd, 4, { error: "No backend" }, arguments.asJson, [ "error: a Hyprland session or KDE Plasma is needed" ] );
+        var w = windows();
+        if ( !w.ok ) return say( cmd, 4, { error: "hyprctl failed" }, arguments.asJson, [ "error: could not read the workspace from hyprctl" ] );
+        if ( !w.rows.len() ) return say( cmd, 0, { backend: be, changed: 0 }, arguments.asJson, [ "No windows on this workspace." ] );
+        var anyTiled = w.rows.filter( function( r ) { return !r.floating; } ).len() > 0;
+        var makeFloat = arguments.mode == "float" ? true : ( arguments.mode == "tile" ? false : anyTiled );
+        var verb = makeFloat ? "setfloating" : "settiled";
+        var todo = w.rows.filter( function( r ) { return r.floating != makeFloat; } );
+        var cmds = todo.map( function( r ) { return [ "hyprctl", "dispatch", verb, "address:" & r.address ]; } );
+        var data = { backend: be, workspace: w.id, to: makeFloat ? "floating" : "tiled", changed: todo.len(), commands: cmds };
+        if ( arguments.dryRun ) return say( cmd, 0, data, arguments.asJson, [ "Dry run: " & todo.len() & " window(s) become " & data.to ], true );
+        for ( var c in cmds ) {
+            var r = tryExec( c, 10 );
+            if ( r.exitCode != 0 ) return say( cmd, 6, merge( data, { error: trim( r.output ) } ), arguments.asJson, [ "error: " & c.toList( " " ) & ": " & trim( r.output ) ] );
+        }
+        return say( cmd, 0, data, arguments.asJson, [ todo.len() & " window(s) on workspace " & w.id & " are now " & data.to & "." ] );
+    }
+
+    function merge( base, extra ) {
+        var out = {};
+        for ( var k in structKeyArray( arguments.base ) ) out[ k ] = arguments.base[ k ];
+        for ( var k in structKeyArray( arguments.extra ) ) out[ k ] = arguments.extra[ k ];
+        return out;
+    }
+}

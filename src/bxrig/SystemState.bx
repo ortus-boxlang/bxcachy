@@ -1,0 +1,145 @@
+// What this machine already has, in the wizard's own terms. `scan( spec )` reads the system (pacman's package list, the default terminal and
+// browser, the login shell, BxRig's own settings) and returns the answers that match it plus, per question, the option values that are
+// already installed. The wizard fills its pages from that and marks installed options; `status` prints it. Nothing here changes anything.
+//
+// Rules: an option whose catalog app is installed is "installed" (an app counts when every pacman package it names is there). Multi-choice
+// questions preselect what is installed; a choice is preselected when the system says so (default terminal, browser, shell, runner, AI
+// default, desktops, container engine). What cannot be read reliably (databases, toolchains, keyboard layouts, app lists you never made)
+// is left alone: those answers come from your saved answers or the defaults.
+class SystemState {
+    function init( installed = "" ) {
+        variables.cat = new bxrig.Catalog().load();
+        // `installed` (a struct of package names) lets tests skip pacman
+        variables.names = isStruct( arguments.installed ) ? arguments.installed : new bxrig.Packages().installedNames();
+        variables.byId = {};
+        for ( var a in variables.cat.apps ) variables.byId[ a.id ] = a;
+        return this;
+    }
+
+    function names() { return variables.names; }
+    function catalogData() { return variables.cat; }
+
+    // True when the catalog app's pacman packages are all installed (apps that only exist as a launcher file, source web, are not detected).
+    function appInstalled( id ) {
+        if ( !structKeyExists( variables.byId, arguments.id ) ) return false;
+        var app = variables.byId[ arguments.id ];
+        if ( app.source == "web" || !structKeyExists( app, "targets" ) || !app.targets.len() ) return false;
+        for ( var t in app.targets ) if ( !structKeyExists( variables.names, t ) ) return false;
+        return true;
+    }
+
+    // The catalog id an option stands for ("" when it is not an app).
+    function catalogId( qid, value ) {
+        var vpn = { tailscale: "tailscale", wireguard: "wireguard", openvpn: "openvpn", mullvad: "mullvad", proton: "proton-vpn", nordvpn: "nordvpn" };
+        if ( arguments.qid == "vpn" ) return structKeyExists( vpn, arguments.value ) ? vpn[ arguments.value ] : "";
+        if ( arguments.qid == "launcher" || arguments.qid == "menu" ) return new bxrig.Runner().catalogId( arguments.value );
+        return structKeyExists( variables.byId, arguments.value ) ? arguments.value : "";
+    }
+
+    function readJson( file ) {
+        if ( !fileExists( arguments.file ) ) return {};
+        try { var d = jsonDeserialize( fileRead( arguments.file ) ); return isStruct( d ) ? d : {}; } catch ( any e ) { return {}; }
+    }
+
+    // The first line of xdg-terminals.list that names a terminal BxRig knows.
+    function defaultTerminal() {
+        var f = new bxrig.ConfigService().quiet( true ).cfgHome() & "/xdg-terminals.list";
+        if ( !fileExists( f ) ) return "";
+        var tc = new bxrig.TerminalConfig( true );
+        for ( var l in listToArray( fileRead( f ), chr( 10 ) ) ) for ( var id in tc.ids() ) if ( trim( l ) == tc.desktopId( id ) ) return id;
+        return "";
+    }
+
+    function defaultBrowser() {
+        var out = "";
+        try { out = trim( systemExecute( "xdg-settings", [ "get", "default-web-browser" ], 10, true ).output ); } catch ( any e ) { return ""; }
+        var dft = new bxrig.Defaults( new bxrig.Cli( "0" ) );
+        for ( var id in [ "firefox", "chromium", "brave", "google-chrome", "edge" ] ) if ( len( dft.browserDesktop( id ) ) && dft.browserDesktop( id ) == out ) return id;
+        return "";
+    }
+
+    // The answers the system implies for one question, or "" when it says nothing: { value, installed }.
+    function question( q ) {
+        var res = { value: "", installed: [] };
+        if ( !structKeyExists( arguments.q, "options" ) ) return res;
+        var cfgHome = new bxrig.ConfigService().quiet( true ).cfgHome() & "/bxrig";
+        for ( var o in arguments.q.options ) {
+            var cid = catalogId( arguments.q.id, o.value );
+            if ( len( cid ) && appInstalled( cid ) ) res.installed.append( o.value );
+        }
+        var id = arguments.q.id;
+        if ( id == "desktops" ) {
+            var hypr = structKeyExists( variables.names, "hyprland" );
+            var plasma = structKeyExists( variables.names, "plasma-desktop" ) || structKeyExists( variables.names, "plasma-workspace" );
+            res.value = hypr && plasma ? "both" : ( hypr ? "hyprland" : ( plasma ? "plasma" : "" ) );
+        } else if ( id == "shell" ) {
+            var sh = listLast( getSystemSetting( "SHELL", "" ), "/" );
+            res.value = arrayFind( [ "zsh", "fish", "bash" ], sh ) ? sh : "";
+        } else if ( id == "terminal" ) res.value = defaultTerminal();
+        else if ( id == "default_browser" ) res.value = defaultBrowser();
+        else if ( id == "ai_default" ) res.value = readJson( cfgHome & "/ai.json" ).default ?: "";
+        else if ( id == "launcher" ) res.value = readJson( cfgHome & "/runner.json" ).provider ?: "";
+        else if ( id == "menu" ) res.value = readJson( cfgHome & "/runner.json" ).menu_provider ?: "";
+        else if ( id == "container_engine" ) {
+            var db = readJson( cfgHome & "/db.json" ).engine ?: "";
+            res.value = arrayFind( [ "podman", "docker" ], db ) ? db : ( structKeyExists( variables.names, "podman" ) ? "podman" : ( structKeyExists( variables.names, "docker" ) ? "docker" : "" ) );
+        } else if ( q.type == "choice" && res.installed.len() == 1 && !arrayFind( [ "desktops", "shell", "terminal", "default_browser", "ai_default", "launcher", "menu", "container_engine" ], id ) ) res.value = res.installed[ 1 ];
+        // no default set but exactly one terminal or browser installed: that is the one in use
+        if ( !len( res.value ) && res.installed.len() == 1 && arrayFind( [ "terminal", "default_browser" ], id ) ) res.value = res.installed[ 1 ];
+        // a detected value must be one of the options
+        if ( len( res.value ) && q.type == "choice" && !arrayFind( q.options.map( function( o ) { return o.value; } ), res.value ) ) res.value = "";
+        return res;
+    }
+
+    // `scan( spec )`: { answers: { qid: value or [values] }, installed: { qid: [values] } }; only questions the system has something to say about appear.
+    // Is there a battery (a laptop)? BXRIG_POWER_DIR overrides /sys/class/power_supply for tests.
+    function hasBattery() {
+        var dir = getSystemSetting( "BXRIG_POWER_DIR", "/sys/class/power_supply" );
+        if ( !directoryExists( dir ) ) return false;
+        for ( var d in directoryList( dir, false, "name" ) ) if ( reFind( "^BAT", d ) ) return true;
+        return false;
+    }
+
+    function scan( spec ) {
+        var out = { answers: {}, installed: {} };
+        // the laptop power question is a yes on a laptop and a no (ignored) on a desktop
+        for ( var pg0 in arguments.spec.pages ) for ( var q0 in pg0.questions ) if ( q0.id == "power_setup" ) out.answers.power_setup = hasBattery();
+        for ( var pg in arguments.spec.pages ) for ( var q in pg.questions ) {
+            if ( !arrayFind( [ "choice", "multi" ], q.type ) ) continue;
+            var r = question( q );
+            if ( r.installed.len() ) out.installed[ q.id ] = r.installed;
+            if ( q.type == "multi" && r.installed.len() ) out.answers[ q.id ] = r.installed;
+            else if ( q.type == "choice" && len( r.value ) ) out.answers[ q.id ] = r.value;
+        }
+        return out;
+    }
+
+    // The wizard's starting answers for a mode: tune (saved answers merged with what the system has), rerun (saved only) or fresh (none).
+    // Lists are joined (nothing you saved is dropped, nothing installed is missed); a single choice follows the system when it says something.
+    function merge( saved, detected, mode ) {
+        if ( arguments.mode == "fresh" ) return structKeyExists( arguments.detected, "power_setup" ) ? { power_setup: arguments.detected.power_setup } : {};
+        if ( arguments.mode == "rerun" ) return arguments.saved;
+        var out = {};
+        for ( var k in structKeyArray( arguments.saved ) ) out[ k ] = arguments.saved[ k ];
+        for ( var k2 in structKeyArray( arguments.detected ) ) {
+            var d = arguments.detected[ k2 ];
+            if ( isArray( d ) ) {
+                var cur = structKeyExists( out, k2 ) && isArray( out[ k2 ] ) ? out[ k2 ] : [];
+                var joined = [];
+                for ( var v in cur ) joined.append( v );
+                for ( var v2 in d ) if ( !arrayFind( joined, v2 ) ) joined.append( v2 );
+                out[ k2 ] = joined;
+            } else out[ k2 ] = d;
+        }
+        return out;
+    }
+
+    // Marks installed options in the spec (option.installed = true) so the wizard can show them.
+    function annotate( spec, installed ) {
+        for ( var pg in arguments.spec.pages ) for ( var q in pg.questions ) {
+            if ( !structKeyExists( arguments.installed, q.id ) || !structKeyExists( q, "options" ) ) continue;
+            for ( var o in q.options ) if ( arrayFind( arguments.installed[ q.id ], o.value ) ) o.installed = true;
+        }
+        return arguments.spec;
+    }
+}

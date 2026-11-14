@@ -1,0 +1,465 @@
+// `bxrig backup data ...`: your files, backed up with restic to a NAS, a disk, SFTP, a REST server, an rclone remote (FTP and 40 other
+// services) or the cloud (S3-compatible such as AWS and DigitalOcean Spaces, Backblaze B2, Azure Blob, Google Cloud Storage).
+// restic is encrypted and deduplicated; a repository is a folder or bucket that only holds ciphertext.
+//   backup data targets [--json]                              the places you can back up to
+//   backup data target add NAME --type=TYPE [options] [--ask-keys | --keys-file=F] [--yes]
+//        local   --path=DIR                                   a disk or folder (a USB drive, a mounted share)
+//        sftp    --host=H --user=U --path=P [--port=N]        over SSH (your ssh keys; the host key must already be known)
+//        rest    --url=https://host:8000/                     a restic REST server (keys: RESTIC_REST_USERNAME, RESTIC_REST_PASSWORD)
+//        s3      --bucket=B [--endpoint=URL] [--region=R] [--path=P]   AWS, DigitalOcean Spaces, Wasabi, MinIO ... (keys: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY)
+//        b2      --bucket=B [--path=P]                        Backblaze B2 (keys: B2_ACCOUNT_ID, B2_ACCOUNT_KEY)
+//        azure   --container=C [--path=P]                     Azure Blob (keys: AZURE_ACCOUNT_NAME, AZURE_ACCOUNT_KEY)
+//        gs      --bucket=B --project=ID --credentials=FILE   Google Cloud Storage (a service account JSON file)
+//        rclone  --remote=NAME [--path=P]                     any rclone remote (FTP, WebDAV, Dropbox ... `bxrig cloud configure`)
+//        NAS shares are added with `bxrig nas use NAME SHARE` and show up here as nas-NAME.
+//   backup data target remove NAME [--yes]
+//   backup data init NAME [--yes]                             create the repository; the repository password is made for you and kept in the keyring
+//   backup data run [--target=NAME | --all] [--yes]           back up now (--all: every place that is set up)
+//   backup data default NAME                                  the place used when --target is not given
+//   backup data list [--target=NAME] [--json]                 the snapshots (restic snapshots)
+//   backup data files ID [PATH] [--target=NAME]               the files in a snapshot (restic ls)
+//   backup data restore ID --to=DIR [--include=PATH] [--yes]  restore into DIR (never over your files unless you give their own folder)
+//   backup data verify [--deep] | forget [--yes] | retention [--daily=N --weekly=N --monthly=N] | status
+//   backup data schedule hourly|daily|off [--yes]             a systemd user timer (skips on battery; notifies when a backup fails)
+//   backup data include | exclude  [add PATH_OR_PATTERN | remove PATH_OR_PATTERN]    what is backed up
+// Keys and the repository password live in the keyring (bxrig secrets), never in a file; restic is given them in its environment.
+// Retention: 7 daily, 4 weekly, 6 monthly (change with `retention`).
+// Exit: 0 ok, 2 bad usage or a plan without --yes, 4 precondition (no restic, no target, not initialized), 6 a command failed.
+class BackupData {
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.inst = new bxrig.Installer( arguments.runner );
+        variables.cfgSvc = new bxrig.ConfigService().quiet( true );
+        return this;
+    }
+
+    function self() { return getSystemSetting( "BXRIG_SELF", "bxrig" ); }
+    function home() { return getSystemSetting( "HOME", "" ); }
+    function settingsFile() { return variables.cfgSvc.cfgHome() & "/bxrig/backup.json"; }
+    function unitDir() { return getSystemSetting( "BXRIG_USER_UNIT_DIR", variables.cfgSvc.cfgHome() & "/systemd/user" ); }
+    function secrets() { return new bxrig.Secrets( variables.cli ); }
+
+    function tryExec( argv, timeout = 60 ) {
+        try { return variables.inst.exec( arguments.argv, arguments.timeout ); } catch ( any e ) { return { exitCode: 127, output: e.message }; }
+    }
+
+    function has( name ) { return tryExec( [ "sh", "-c", 'command -v "$1"', "_", arguments.name ], 10 ).exitCode == 0; }
+    function say( code, data, asJson, lines = [], dry = false ) {
+        if ( arguments.asJson ) println( variables.cli.envelope( "backup", arguments.code, arguments.data, arguments.dry ) );
+        else for ( var l in arguments.lines ) println( l );
+        return arguments.code;
+    }
+    function fail( code, msg, asJson ) { return say( arguments.code, { error: arguments.msg }, arguments.asJson, [ "error: " & arguments.msg ] ); }
+
+    // ---- settings ----
+    function readAll() {
+        var s = { targets: {}, data: {} };
+        if ( fileExists( settingsFile() ) ) { try { var j = jsonDeserialize( fileRead( settingsFile() ) ); for ( var k in j ) s[ k ] = j[ k ]; } catch ( any e ) {} }
+        if ( !structKeyExists( s, "targets" ) ) s.targets = {};
+        if ( !structKeyExists( s, "data" ) ) s.data = {};
+        var d = s.data;
+        if ( !structKeyExists( d, "include" ) ) d.include = [ "Projects", "code", "dev", "Documents", ".ssh", ".local/share/bxrig/backups/config" ];
+        if ( !structKeyExists( d, "exclude" ) ) d.exclude = [ "node_modules", "target", ".gradle", "__pycache__", ".venv", "venv", ".cache", ".next", "*.tmp" ];
+        if ( !structKeyExists( d, "retention" ) ) d.retention = { daily: 7, weekly: 4, monthly: 6 };
+        if ( !structKeyExists( d, "schedule" ) ) d.schedule = "off";
+        if ( !structKeyExists( d, "default" ) ) d.default = "";
+        return s;
+    }
+
+    function writeAll( s ) {
+        directoryCreate( getDirectoryFromPath( settingsFile() ), true, true );
+        fileWrite( settingsFile(), jsonSerialize( arguments.s ) & chr( 10 ) );
+    }
+
+    function validName( n ) { return reFind( "^[a-z][a-z0-9-]{0,30}$", arguments.n ) > 0; }
+    function validPart( x ) { return reFind( "^[A-Za-z0-9._/:@+-]{1,200}$", arguments.x ) > 0 && find( "..", arguments.x ) == 0; }
+    function validUrl( x ) { return reFind( "^https?://[A-Za-z0-9._:@/-]{1,200}$", arguments.x ) > 0; }
+
+    function keyNames( type ) {
+        var m = { s3: [ "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY" ], b2: [ "B2_ACCOUNT_ID", "B2_ACCOUNT_KEY" ], azure: [ "AZURE_ACCOUNT_NAME", "AZURE_ACCOUNT_KEY" ], rest: [ "RESTIC_REST_USERNAME", "RESTIC_REST_PASSWORD" ] };
+        return structKeyExists( m, arguments.type ) ? m[ arguments.type ] : [];
+    }
+
+    function secretFor( name, key ) { return "BXRIG_BACKUP_" & uCase( replace( arguments.name, "-", "_", "all" ) ) & "_" & arguments.key; }
+    function passwordKey( name ) { return secretFor( arguments.name, "PASSWORD" ); }
+
+    // The restic repository string of a target.
+    function repositoryOf( name, t ) {
+        var ty = arguments.t.type;
+        var path = arguments.t.path ?: "";
+        if ( ty == "local" ) return path;
+        if ( ty == "nas" ) return getSystemSetting( "BXRIG_NAS_HOME", home() & "/NAS" ) & "/" & arguments.t.nas & "/" & listLast( arguments.t.share, "/" ) & "/" & ( len( path ) ? path : "bxrig-backup" );
+        if ( ty == "sftp" ) return "sftp:" & ( len( arguments.t.port ?: "" ) ? "-p " & arguments.t.port & " " : "" ) & arguments.t.user & "@" & arguments.t.host & ":" & path;
+        if ( ty == "rest" ) return "rest:" & arguments.t.url;
+        if ( ty == "s3" ) return "s3:" & ( len( arguments.t.endpoint ?: "" ) ? reReplace( arguments.t.endpoint, "/+$", "" ) & "/" : "s3.amazonaws.com/" ) & arguments.t.bucket & ( len( path ) ? "/" & path : "" );
+        if ( ty == "b2" ) return "b2:" & arguments.t.bucket & ":" & path;
+        if ( ty == "azure" ) return "azure:" & arguments.t.container & ":/" & path;
+        if ( ty == "gs" ) return "gs:" & arguments.t.bucket & ":/" & path;
+        if ( ty == "rclone" ) return "rclone:" & arguments.t.remote & ":" & path;
+        return "";
+    }
+
+    // The environment restic runs with (secrets come from the keyring; nothing goes on a command line).
+    function envFor( name, t, opts = {} ) {
+        var env = { RESTIC_REPOSITORY: repositoryOf( arguments.name, arguments.t ), RESTIC_PASSWORD: secrets().fetch( passwordKey( arguments.name ) ) };
+        for ( var k in keyNames( arguments.t.type ) ) { var v = secrets().fetch( secretFor( arguments.name, k ) ); if ( len( v ) ) env[ k ] = v; }
+        if ( arguments.t.type == "s3" && len( arguments.t.region ?: "" ) ) env.AWS_DEFAULT_REGION = arguments.t.region;
+        if ( arguments.t.type == "gs" ) { env.GOOGLE_PROJECT_ID = arguments.t.project; env.GOOGLE_APPLICATION_CREDENTIALS = arguments.t.credentials; }
+        if ( arguments.t.type == "nas" && !directoryExists( getDirectoryFromPath( env.RESTIC_REPOSITORY ) ) ) env.__unmounted = "1";
+        return env;
+    }
+
+    // Runs restic with an environment. Returns { exitCode, output }.
+    function restic( env, args, timeout = 3600 ) {
+        var rest = arguments.args;
+        var e = duplicate( arguments.env );
+        structDelete( e, "__unmounted" );
+        try { return systemExecute( "restic", rest, arguments.timeout, true, ".", "", "", true, e, false ); } catch ( any x ) { return { exitCode: 127, output: x.message }; }
+    }
+
+    function pickTarget( s, opts ) {
+        var nm = arguments.opts.target ?: arguments.s.data.default;
+        if ( !len( nm ) ) { var keys = structKeyArray( arguments.s.targets ); if ( keys.len() == 1 ) nm = keys[ 1 ]; }
+        if ( !len( nm ) ) return { error: "no target chosen: add one with `bxrig backup data target add`, or pass --target=NAME" };
+        if ( !structKeyExists( arguments.s.targets, nm ) ) return { error: "no target called " & nm & " (bxrig backup data targets)" };
+        return { name: nm, target: arguments.s.targets[ nm ] };
+    }
+
+    function plan( title, lines, yes, dry, asJson, data = {} ) {
+        if ( !arguments.yes || arguments.dry ) {
+            var out = [ ( arguments.dry ? "Dry run: " : "Plan: " ) & arguments.title ];
+            for ( var l in arguments.lines ) out.append( "  " & l );
+            out.append( arguments.dry ? "Nothing was changed." : "Nothing was changed. Add --yes to apply." );
+            return { done: false, code: say( arguments.dry ? 0 : 2, arguments.data, arguments.asJson, out, arguments.dry ) };
+        }
+        return { done: true, code: 0 };
+    }
+
+    // ---- targets ----
+    function targetsCmd( asJson ) {
+        var s = readAll();
+        var rows = [];
+        for ( var n in structKeyArray( s.targets ) ) {
+            var t = s.targets[ n ];
+            rows.append( { name: n, type: t.type, repository: repositoryOf( n, t ), password: len( secrets().fetch( passwordKey( n ) ) ) > 0, default: s.data.default == n } );
+        }
+        arraySort( rows, function( a, b ) { return compare( a.name, b.name ); } );
+        return say( 0, { targets: rows }, arguments.asJson, rows.len() ? rows.map( function( r ) { return r.name & "   " & r.type & "   " & r.repository & ( r.password ? "" : "   (not initialized)" ) & ( r.default ? "   default" : "" ); } ) : [ "No targets yet. For a NAS: bxrig nas use NAME SHARE. Others: bxrig backup data target add NAME --type=s3|b2|azure|gs|sftp|rest|rclone|local" ] );
+    }
+
+    function targetAdd( name, opts, yes, dry, asJson ) {
+        if ( !validName( arguments.name ) ) return fail( 2, "NAME is lower case letters, digits and dashes, starting with a letter", arguments.asJson );
+        var ty = lCase( arguments.opts.type ?: "" );
+        if ( !arrayFind( [ "local", "sftp", "rest", "s3", "b2", "azure", "gs", "rclone" ], ty ) ) return fail( 2, "--type is local, sftp, rest, s3, b2, azure, gs or rclone (a NAS: bxrig nas use)", arguments.asJson );
+        var t = { type: ty };
+        var need = { local: [ "path" ], sftp: [ "host", "user", "path" ], rest: [ "url" ], s3: [ "bucket" ], b2: [ "bucket" ], azure: [ "container" ], gs: [ "bucket", "project", "credentials" ], rclone: [ "remote" ] };
+        for ( var f in need[ ty ] ) {
+            if ( !structKeyExists( arguments.opts, f ) || !len( arguments.opts[ f ] ) ) return fail( 2, "--type=" & ty & " needs --" & f & "=...", arguments.asJson );
+            t[ f ] = arguments.opts[ f ];
+        }
+        for ( var o in [ "path", "port", "region", "endpoint" ] ) if ( structKeyExists( arguments.opts, o ) && !structKeyExists( t, o ) ) t[ o ] = arguments.opts[ o ];
+        for ( var k in structKeyArray( t ) ) {
+            if ( k == "type" ) continue;
+            if ( k == "url" || k == "endpoint" ) { if ( !validUrl( t[ k ] ) ) return fail( 2, "--" & k & " is an http or https address", arguments.asJson ); }
+            else if ( !validPart( t[ k ] ) ) return fail( 2, "--" & k & " has characters that are not allowed in a repository address", arguments.asJson );
+        }
+        if ( ty == "gs" && !fileExists( t.credentials ) ) return fail( 4, "the credentials file " & t.credentials & " was not found (a service account JSON key)", arguments.asJson );
+        var keys = keyNames( ty );
+        var given = {};
+        if ( structKeyExists( arguments.opts, "keys-file" ) ) {
+            if ( !fileExists( arguments.opts[ "keys-file" ] ) ) return fail( 4, "the keys file was not found", arguments.asJson );
+            for ( var line in listToArray( fileRead( arguments.opts[ "keys-file" ] ), chr( 10 ) ) ) { var ln = trim( line ); if ( len( ln ) && find( "=", ln ) ) given[ trim( listFirst( ln, "=" ) ) ] = trim( listRest( ln, "=" ) ); }
+        }
+        var s = readAll();
+        var d = { name: arguments.name, type: ty, repository: repositoryOf( arguments.name, t ), keys: keys.map( function( k ) { return secretFor( name, k ); } ) };
+        if ( arguments.dry ) return say( 0, d, arguments.asJson, [ "Dry run: would add the target " & arguments.name & " (" & d.repository & ")" ], true );
+        for ( var kn in keys ) {
+            var v = given[ kn ] ?: "";
+            if ( !len( v ) && structKeyExists( arguments.opts, "ask-keys" ) ) v = secrets().ask( kn & ": " );
+            if ( !len( v ) && !len( secrets().fetch( secretFor( arguments.name, kn ) ) ) ) return fail( 2, ty & " needs " & kn & ": add --ask-keys (typed hidden) or --keys-file=FILE with KEY=VALUE lines", arguments.asJson );
+            if ( len( v ) ) { var err = secrets().store( secretFor( arguments.name, kn ), v ); if ( len( err ) ) return fail( 6, "could not store " & kn & ": " & err, arguments.asJson ); }
+        }
+        s.targets[ arguments.name ] = t;
+        if ( !len( s.data.default ) ) s.data.default = arguments.name;
+        writeAll( s );
+        return say( 0, d, arguments.asJson, [ "Added " & arguments.name & ": " & d.repository, "Next: bxrig backup data init " & arguments.name & " --yes" ] );
+    }
+
+    function targetRemove( name, yes, dry, asJson ) {
+        var s = readAll();
+        if ( !structKeyExists( s.targets, arguments.name ) ) return fail( 4, "no target called " & arguments.name, arguments.asJson );
+        var p = plan( "forget the target " & arguments.name & " and its stored keys (the backup data itself is NOT deleted)", [], arguments.yes, arguments.dry, arguments.asJson, { name: arguments.name } );
+        if ( !p.done ) return p.code;
+        var t = s.targets[ arguments.name ];
+        for ( var k in keyNames( t.type ) ) secrets().drop( secretFor( arguments.name, k ) );
+        structDelete( s.targets, arguments.name );
+        if ( s.data.default == arguments.name ) s.data.default = "";
+        writeAll( s );
+        return say( 0, { removed: arguments.name }, arguments.asJson, [ "Forgot " & arguments.name & ". The repository password stays in your keyring (" & passwordKey( arguments.name ) & ") so you can still open the backups." ] );
+    }
+
+    // ---- restic work ----
+    function needRestic( asJson ) {
+        if ( !has( "restic" ) ) return { code: fail( 4, "restic was not found (bxrig install restic)", arguments.asJson ) };
+        return {};
+    }
+
+    function newPassword() {
+        var r = tryExec( [ "sh", "-c", 'head -c 24 /dev/urandom | od -An -tx1 | tr -d " \n"' ], 10 );
+        return r.exitCode == 0 ? trim( r.output ) : "";
+    }
+
+    function initCmd( name, yes, dry, asJson ) {
+        var nr = needRestic( arguments.asJson ); if ( structKeyExists( nr, "code" ) ) return nr.code;
+        var s = readAll();
+        if ( !structKeyExists( s.targets, arguments.name ) ) return fail( 4, "no target called " & arguments.name & " (bxrig backup data targets)", arguments.asJson );
+        var t = s.targets[ arguments.name ];
+        var repo = repositoryOf( arguments.name, t );
+        var p = plan( "create the encrypted repository " & repo, [ "restic init (a repository password is generated and kept in your keyring as " & passwordKey( arguments.name ) & ")", "keep it safe: without it the backups cannot be opened. Show it with: bxrig secrets get " & passwordKey( arguments.name ) & " --show" ], arguments.yes, arguments.dry, arguments.asJson, { name: arguments.name, repository: repo } );
+        if ( !p.done ) return p.code;
+        if ( t.type == "nas" && !directoryExists( getDirectoryFromPath( repo ) ) ) return fail( 4, "the NAS share is not mounted (bxrig nas mount " & t.nas & " " & t.share & " --yes)", arguments.asJson );
+        if ( !len( secrets().fetch( passwordKey( arguments.name ) ) ) ) {
+            var pw = newPassword();
+            if ( len( pw ) < 32 ) return fail( 6, "could not make a password", arguments.asJson );
+            var err = secrets().store( passwordKey( arguments.name ), pw );
+            if ( len( err ) ) return fail( 6, "could not store the repository password: " & err, arguments.asJson );
+        }
+        var r = restic( envFor( arguments.name, t ), [ "init" ], 600 );
+        if ( r.exitCode != 0 ) return say( 6, { error: trim( r.output ) }, arguments.asJson, [ "error: restic init failed: " & trim( r.output ) ] );
+        return say( 0, { name: arguments.name, repository: repo }, arguments.asJson, [ "Repository created at " & repo, "Back up now: bxrig backup data run --target=" & arguments.name & " --yes", "The repository password is in your keyring (" & passwordKey( arguments.name ) & ")." ] );
+    }
+
+    function sources( s ) {
+        var out = [];
+        for ( var i in arguments.s.data.include ) {
+            var abs = left( i, 1 ) == "/" ? i : home() & "/" & i;
+            if ( fileExists( abs ) || directoryExists( abs ) ) out.append( abs );
+        }
+        return out;
+    }
+
+    function runCmd( opts, yes, dry, asJson, scheduled = false ) {
+        var nr = needRestic( arguments.asJson ); if ( structKeyExists( nr, "code" ) ) return nr.code;
+        var s = readAll();
+        var pt = pickTarget( s, arguments.opts );
+        if ( structKeyExists( pt, "error" ) ) return fail( 4, pt.error, arguments.asJson );
+        var src = sources( s );
+        if ( !src.len() ) return fail( 4, "nothing to back up: none of " & s.data.include.toList( ", " ) & " exists (bxrig backup data include add PATH)", arguments.asJson );
+        var argv = [ "backup", "--tag", "bxrig", "--exclude-caches", "--one-file-system" ];
+        for ( var x in s.data.exclude ) { argv.append( "--exclude" ); argv.append( x ); }
+        for ( var a in src ) argv.append( a );
+        var p = plan( "back up " & src.len() & " folders to " & pt.name & " (" & repositoryOf( pt.name, pt.target ) & ")", [ src.toList( ", " ), "skips: " & s.data.exclude.toList( ", " ) ], arguments.yes, arguments.dry, arguments.asJson, { target: pt.name, sources: src, exclude: s.data.exclude } );
+        if ( !p.done ) return p.code;
+        var env = envFor( pt.name, pt.target );
+        if ( structKeyExists( env, "__unmounted" ) ) return fail( 4, "the NAS share is not mounted (bxrig nas mount " & pt.target.nas & " " & pt.target.share & " --yes)", arguments.asJson );
+        if ( !len( env.RESTIC_PASSWORD ) ) return fail( 4, "this target is not initialized (bxrig backup data init " & pt.name & " --yes)", arguments.asJson );
+        var r = restic( env, argv );
+        if ( r.exitCode != 0 ) {
+            if ( arguments.scheduled ) notify( "Backup to " & pt.name & " failed", trim( listLast( trim( r.output ), chr( 10 ) ) ) );
+            return say( 6, { error: trim( r.output ) }, arguments.asJson, [ "error: the backup failed: " & trim( r.output ) ] );
+        }
+        return say( 0, { target: pt.name, output: trim( r.output ) }, arguments.asJson, [ "Backed up to " & pt.name & ".", listLast( trim( r.output ), chr( 10 ) ) ] );
+    }
+
+    // `default NAME`: the target used when no --target is given.
+    function defaultCmd( name, asJson ) {
+        var s = readAll();
+        if ( !structKeyExists( s.targets, arguments.name ) ) return fail( 4, "no target called " & arguments.name & " (bxrig backup data targets)", arguments.asJson );
+        s.data.default = arguments.name;
+        writeAll( s );
+        return say( 0, { default: arguments.name }, arguments.asJson, [ "The default backup place is " & arguments.name ] );
+    }
+
+    // `run --all`: every target that is set up, one after the other (what the schedule uses). Exit 6 when any failed, but all are tried.
+    function runAll( opts, yes, dry, asJson, scheduled ) {
+        var s = readAll();
+        var names = structKeyArray( s.targets );
+        arraySort( names, "text" );
+        var worst = 0;
+        var ran = 0;
+        for ( var n in names ) {
+            if ( !len( secrets().fetch( passwordKey( n ) ) ) ) continue;
+            ran++;
+            var o = duplicate( arguments.opts );
+            o.target = n;
+            var c = runCmd( o, arguments.yes, arguments.dry, arguments.asJson, arguments.scheduled );
+            if ( c != 0 && c != 2 ) worst = 6;
+            if ( c == 2 && worst == 0 ) worst = 2;
+        }
+        if ( !ran ) return fail( 4, "no backup place is set up yet (bxrig backup data init NAME --yes)", arguments.asJson );
+        return worst;
+    }
+
+    function notify( title, body ) {
+        if ( has( "noctalia" ) ) { tryExec( [ "noctalia", "msg", "notification-show", arguments.title, arguments.body ], 10 ); return; }
+        if ( has( "notify-send" ) ) tryExec( [ "notify-send", arguments.title, arguments.body ], 10 );
+    }
+
+    function listCmd( opts, asJson ) {
+        var nr = needRestic( arguments.asJson ); if ( structKeyExists( nr, "code" ) ) return nr.code;
+        var s = readAll();
+        var pt = pickTarget( s, arguments.opts );
+        if ( structKeyExists( pt, "error" ) ) return fail( 4, pt.error, arguments.asJson );
+        var r = restic( envFor( pt.name, pt.target ), [ "snapshots", "--json" ], 300 );
+        if ( r.exitCode != 0 ) return say( 6, { error: trim( r.output ) }, arguments.asJson, [ "error: " & trim( r.output ) ] );
+        var snaps = [];
+        try { snaps = jsonDeserialize( r.output ); } catch ( any e ) {}
+        var rows = snaps.map( function( x ) { return { id: x.short_id ?: left( x.id, 8 ), time: x.time ?: "", host: x.hostname ?: "", paths: x.paths ?: [], tags: x.tags ?: [] }; } );
+        arraySort( rows, function( a, b ) { return compare( b.time, a.time ); } );
+        return say( 0, { target: pt.name, snapshots: rows }, arguments.asJson, rows.len() ? rows.map( function( x ) { return x.id & "   " & x.time & "   " & x.paths.toList( ", " ); } ) : [ "No snapshots in " & pt.name & " yet." ] );
+    }
+
+    function filesCmd( args, opts, asJson ) {
+        var nr = needRestic( arguments.asJson ); if ( structKeyExists( nr, "code" ) ) return nr.code;
+        if ( !arguments.args.len() || !reFind( "^[a-f0-9]{4,64}$|^latest$", arguments.args[ 1 ] ) ) return fail( 2, "Usage: bxrig backup data files ID [PATH] [--target=NAME]", arguments.asJson );
+        var s = readAll();
+        var pt = pickTarget( s, arguments.opts );
+        if ( structKeyExists( pt, "error" ) ) return fail( 4, pt.error, arguments.asJson );
+        var argv = [ "ls", "--json", arguments.args[ 1 ] ];
+        if ( arguments.args.len() > 1 ) { if ( left( arguments.args[ 2 ], 1 ) != "/" || find( "..", arguments.args[ 2 ] ) > 0 ) return fail( 2, "PATH is absolute, as it was when backed up", arguments.asJson ); argv.append( arguments.args[ 2 ] ); }
+        var r = restic( envFor( pt.name, pt.target ), argv, 600 );
+        if ( r.exitCode != 0 ) return say( 6, { error: trim( r.output ) }, arguments.asJson, [ "error: " & trim( r.output ) ] );
+        var files = [];
+        for ( var line in listToArray( r.output, chr( 10 ) ) ) { try { var j = jsonDeserialize( line ); if ( structKeyExists( j, "path" ) ) files.append( { path: j.path, type: j.type ?: "", size: j.size ?: 0 } ); } catch ( any e ) {} }
+        return say( 0, { id: arguments.args[ 1 ], files: files }, arguments.asJson, files.map( function( f ) { return f.path; } ) );
+    }
+
+    function restoreCmd( args, opts, yes, dry, asJson ) {
+        var nr = needRestic( arguments.asJson ); if ( structKeyExists( nr, "code" ) ) return nr.code;
+        if ( arguments.args.len() != 1 || !reFind( "^[a-f0-9]{4,64}$|^latest$", arguments.args[ 1 ] ) || !structKeyExists( arguments.opts, "to" ) ) return fail( 2, "Usage: bxrig backup data restore ID --to=DIR [--include=PATH] [--target=NAME] [--yes]", arguments.asJson );
+        var to = arguments.opts.to;
+        if ( left( to, 1 ) != "/" && left( to, 1 ) != "~" ) to = home() & "/" & to;
+        if ( left( to, 1 ) == "~" ) to = home() & mid( to, 2, len( to ) );
+        if ( find( "..", to ) > 0 || !reFind( "^[A-Za-z0-9._/ +@-]+$", to ) ) return fail( 2, "--to is a folder without ..", arguments.asJson );
+        var s = readAll();
+        var pt = pickTarget( s, arguments.opts );
+        if ( structKeyExists( pt, "error" ) ) return fail( 4, pt.error, arguments.asJson );
+        var argv = [ "restore", arguments.args[ 1 ], "--target", to ];
+        if ( structKeyExists( arguments.opts, "include" ) ) { if ( left( arguments.opts.include, 1 ) != "/" || find( "..", arguments.opts.include ) > 0 ) return fail( 2, "--include is an absolute path as it was backed up", arguments.asJson ); argv.append( "--include" ); argv.append( arguments.opts.include ); }
+        var p = plan( "restore snapshot " & arguments.args[ 1 ] & " from " & pt.name & " into " & to, [ "files are written below " & to & " under their original paths; nothing else on your disk is touched" ], arguments.yes, arguments.dry, arguments.asJson, { id: arguments.args[ 1 ], to: to, target: pt.name } );
+        if ( !p.done ) return p.code;
+        directoryCreate( to, true, true );
+        var r = restic( envFor( pt.name, pt.target ), argv );
+        if ( r.exitCode != 0 ) return say( 6, { error: trim( r.output ) }, arguments.asJson, [ "error: " & trim( r.output ) ] );
+        return say( 0, { id: arguments.args[ 1 ], to: to }, arguments.asJson, [ "Restored into " & to ] );
+    }
+
+    function verifyCmd( opts, asJson ) {
+        var nr = needRestic( arguments.asJson ); if ( structKeyExists( nr, "code" ) ) return nr.code;
+        var s = readAll();
+        var pt = pickTarget( s, arguments.opts );
+        if ( structKeyExists( pt, "error" ) ) return fail( 4, pt.error, arguments.asJson );
+        var argv = [ "check" ];
+        if ( structKeyExists( arguments.opts, "deep" ) ) { argv.append( "--read-data-subset" ); argv.append( "5%" ); }
+        var r = restic( envFor( pt.name, pt.target ), argv, 7200 );
+        return say( r.exitCode == 0 ? 0 : 6, { target: pt.name, ok: r.exitCode == 0, output: trim( r.output ) }, arguments.asJson, [ r.exitCode == 0 ? "The repository " & pt.name & " is consistent." : "The check found a problem: " & trim( r.output ) ] );
+    }
+
+    function forgetCmd( opts, yes, dry, asJson ) {
+        var nr = needRestic( arguments.asJson ); if ( structKeyExists( nr, "code" ) ) return nr.code;
+        var s = readAll();
+        var pt = pickTarget( s, arguments.opts );
+        if ( structKeyExists( pt, "error" ) ) return fail( 4, pt.error, arguments.asJson );
+        var rt = s.data.retention;
+        var argv = [ "forget", "--tag", "bxrig", "--keep-daily", rt.daily & "", "--keep-weekly", rt.weekly & "", "--keep-monthly", rt.monthly & "", "--prune" ];
+        var p = plan( "apply the retention to " & pt.name & ": keep " & rt.daily & " daily, " & rt.weekly & " weekly, " & rt.monthly & " monthly, and delete the older backups for good", [ "restic forget --prune" ], arguments.yes, arguments.dry, arguments.asJson, { target: pt.name, retention: rt } );
+        if ( !p.done ) return p.code;
+        var r = restic( envFor( pt.name, pt.target ), argv, 7200 );
+        return say( r.exitCode == 0 ? 0 : 6, { target: pt.name, output: trim( r.output ) }, arguments.asJson, [ r.exitCode == 0 ? "Retention applied to " & pt.name & "." : "error: " & trim( r.output ) ] );
+    }
+
+    // ---- schedule ----
+    function unitTexts( when ) {
+        var svc = "## Written by `bxrig backup data schedule`." & chr( 10 ) & "[Unit]" & chr( 10 ) & "Description=BxRig backup of your files" & chr( 10 ) & "ConditionACPower=true" & chr( 10 ) & "After=network-online.target" & chr( 10 ) & chr( 10 ) & "[Service]" & chr( 10 ) & "Type=oneshot" & chr( 10 ) & "Nice=10" & chr( 10 ) & "IOSchedulingClass=idle" & chr( 10 ) & "ExecStart=" & self() & " backup data run --all --yes --scheduled" & chr( 10 );
+        var tim = "## Written by `bxrig backup data schedule`." & chr( 10 ) & "[Unit]" & chr( 10 ) & "Description=BxRig backup (" & arguments.when & ")" & chr( 10 ) & chr( 10 ) & "[Timer]" & chr( 10 ) & "OnCalendar=" & arguments.when & chr( 10 ) & "Persistent=true" & chr( 10 ) & "RandomizedDelaySec=15min" & chr( 10 ) & chr( 10 ) & "[Install]" & chr( 10 ) & "WantedBy=timers.target" & chr( 10 );
+        return { service: svc, timer: tim };
+    }
+
+    function scheduleCmd( args, yes, dry, asJson ) {
+        var v = arguments.args.len() == 1 ? arguments.args[ 1 ] : "status";
+        var s = readAll();
+        if ( v == "status" ) return say( 0, { schedule: s.data.schedule }, arguments.asJson, [ "schedule: " & s.data.schedule ] );
+        if ( !arrayFind( [ "hourly", "daily", "off" ], v ) ) return fail( 2, "Usage: bxrig backup data schedule hourly|daily|off|status", arguments.asJson );
+        var svcFile = unitDir() & "/bxrig-backup.service";
+        var timFile = unitDir() & "/bxrig-backup.timer";
+        var cmds = v == "off" ? [ [ "systemctl", "--user", "disable", "--now", "bxrig-backup.timer" ] ] : [ [ "systemctl", "--user", "daemon-reload" ], [ "systemctl", "--user", "enable", "--now", "bxrig-backup.timer" ] ];
+        var p = plan( v == "off" ? "turn the automatic backup off" : "back up " & v & " (a user timer; it skips on battery power, catches up after the computer was off, and tells you when a backup fails)", v == "off" ? [ "removes the timer's files" ] : [ "writes " & svcFile, "writes " & timFile ], arguments.yes, arguments.dry, arguments.asJson, { schedule: v } );
+        if ( !p.done ) return p.code;
+        if ( v == "off" ) {
+            for ( var c0 in cmds ) tryExec( c0, 30 );
+            for ( var f in [ svcFile, timFile ] ) {
+                try { if ( fileExists( f ) ) fileDelete( f ); } catch ( any e ) {}
+            }
+        } else {
+            var tx = unitTexts( v );
+            var worst = 0;
+            for ( var e in [ { name: "backup-service", target: svcFile, mode: "644", content: tx.service }, { name: "backup-timer", target: timFile, mode: "644", content: tx.timer } ] ) {
+                var st = variables.cfgSvc.configState( e );
+                if ( st != "clean" ) { var cc = variables.cfgSvc.configWrite( e, e.content, "schedule", true, false ); if ( cc != 0 ) worst = cc; }
+            }
+            if ( worst != 0 ) return fail( 6, "could not write the timer files", arguments.asJson );
+            for ( var c1 in cmds ) { var rr = tryExec( c1, 30 ); if ( rr.exitCode != 0 ) return fail( 6, trim( rr.output ), arguments.asJson ); }
+        }
+        s.data.schedule = v;
+        writeAll( s );
+        return say( 0, { schedule: v }, arguments.asJson, [ "schedule: " & v ] );
+    }
+
+    // ---- include, exclude, status ----
+    function listEdit( kind, args, asJson ) {
+        var s = readAll();
+        var v = arguments.args.len() ? arguments.args[ 1 ] : "list";
+        if ( v == "list" ) { var res0 = {}; res0[ arguments.kind ] = s.data[ arguments.kind ]; return say( 0, res0, arguments.asJson, s.data[ arguments.kind ] ); }
+        if ( arguments.args.len() != 2 || !arrayFind( [ "add", "remove" ], v ) || !reFind( "^[A-Za-z0-9._/*?+@ -]+$", arguments.args[ 2 ] ) || find( "..", arguments.args[ 2 ] ) > 0 ) return fail( 2, "Usage: bxrig backup data " & arguments.kind & " add|remove PATH_OR_PATTERN", arguments.asJson );
+        var x = arguments.args[ 2 ];
+        var cur = s.data[ arguments.kind ];
+        if ( v == "add" && !arrayFind( cur, x ) ) cur.append( x );
+        if ( v == "remove" ) cur = cur.filter( function( y ) { return y != x; } );
+        s.data[ arguments.kind ] = cur;
+        writeAll( s );
+        var res1 = {}; res1[ arguments.kind ] = cur;
+        return say( 0, res1, arguments.asJson, cur );
+    }
+
+    function retentionCmd( opts, asJson ) {
+        var s = readAll();
+        for ( var k in [ "daily", "weekly", "monthly" ] ) {
+            if ( !structKeyExists( arguments.opts, k ) ) continue;
+            var n = arguments.opts[ k ];
+            if ( !reFind( "^[0-9]{1,3}$", n & "" ) ) return fail( 2, "--" & k & " is a number from 0 to 999", arguments.asJson );
+            s.data.retention[ k ] = int( val( n ) );
+        }
+        writeAll( s );
+        var rt = s.data.retention;
+        return say( 0, { retention: rt }, arguments.asJson, [ "keeps " & rt.daily & " daily, " & rt.weekly & " weekly, " & rt.monthly & " monthly (applied by backup data forget)" ] );
+    }
+
+    function statusCmd( asJson ) {
+        var s = readAll();
+        var d = { targets: structKeyArray( s.targets ), default: s.data.default, schedule: s.data.schedule, include: s.data.include, exclude: s.data.exclude, retention: s.data.retention, restic: has( "restic" ) };
+        return say( 0, d, arguments.asJson, [ "targets: " & ( d.targets.len() ? d.targets.toList( ", " ) : "none" ) & ( len( d.default ) ? " (default " & d.default & ")" : "" ), "schedule: " & d.schedule, "backs up: " & d.include.toList( ", " ), "skips: " & d.exclude.toList( ", " ), "keeps: " & d.retention.daily & " daily, " & d.retention.weekly & " weekly, " & d.retention.monthly & " monthly", "restic: " & ( d.restic ? "installed" : "missing (bxrig install restic)" ) ] );
+    }
+
+    function run( words, opts = {}, yes = false, dry = false, asJson = false ) {
+        var verb = arguments.words.len() ? arguments.words[ 1 ] : "status";
+        var rest = [];
+        for ( var i = 2; i <= arguments.words.len(); i++ ) rest.append( arguments.words[ i ] );
+        if ( verb == "status" ) return statusCmd( arguments.asJson );
+        if ( verb == "targets" ) return targetsCmd( arguments.asJson );
+        if ( verb == "target" && rest.len() >= 2 && rest[ 1 ] == "add" && rest.len() == 2 ) return targetAdd( rest[ 2 ], arguments.opts, arguments.yes, arguments.dry, arguments.asJson );
+        if ( verb == "target" && rest.len() == 2 && rest[ 1 ] == "remove" ) return targetRemove( rest[ 2 ], arguments.yes, arguments.dry, arguments.asJson );
+        if ( verb == "init" && rest.len() == 1 ) return initCmd( rest[ 1 ], arguments.yes, arguments.dry, arguments.asJson );
+        if ( verb == "default" && rest.len() == 1 ) return defaultCmd( rest[ 1 ], arguments.asJson );
+        if ( verb == "run" && structKeyExists( arguments.opts, "all" ) ) return runAll( arguments.opts, arguments.yes, arguments.dry, arguments.asJson, structKeyExists( arguments.opts, "scheduled" ) );
+        if ( verb == "run" ) return runCmd( arguments.opts, arguments.yes, arguments.dry, arguments.asJson, structKeyExists( arguments.opts, "scheduled" ) );
+        if ( verb == "list" ) return listCmd( arguments.opts, arguments.asJson );
+        if ( verb == "files" ) return filesCmd( rest, arguments.opts, arguments.asJson );
+        if ( verb == "restore" ) return restoreCmd( rest, arguments.opts, arguments.yes, arguments.dry, arguments.asJson );
+        if ( verb == "verify" ) return verifyCmd( arguments.opts, arguments.asJson );
+        if ( verb == "forget" ) return forgetCmd( arguments.opts, arguments.yes, arguments.dry, arguments.asJson );
+        if ( verb == "schedule" ) return scheduleCmd( rest, arguments.yes, arguments.dry, arguments.asJson );
+        if ( verb == "retention" ) return retentionCmd( arguments.opts, arguments.asJson );
+        if ( verb == "include" || verb == "exclude" ) return listEdit( verb, rest, arguments.asJson );
+        return fail( 2, "Usage: bxrig backup data status | targets | target add NAME --type=T ... | target remove NAME | init NAME | run | list | files ID [PATH] | restore ID --to=DIR | verify | forget | schedule hourly|daily|off | include|exclude add|remove X", arguments.asJson );
+    }
+}

@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
-# `bxcachy runner`: provider choice, commands, doctor, launch. It must never touch keybindings. Usage: runner-test.sh BINARY
+# `bxrig runner`: provider choice, commands, doctor, launch. It must never touch keybindings. Usage: runner-test.sh BINARY
 set -euo pipefail
 binary="$(realpath "${1:?native executable required}")"
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 fail() { echo "FAIL: $*" >&2; exit 1; }
 mkdir -p "$tmp/bin" "$tmp/home" "$tmp/cfg/hypr"
-echo '-- my keybinds' > "$tmp/cfg/hypr/hyprland.lua"; echo '-- bxcachy' > "$tmp/cfg/hypr/bxcachy.lua"
+echo '-- my keybinds' > "$tmp/cfg/hypr/hyprland.lua"; echo '-- bxrig' > "$tmp/cfg/hypr/bxrig.lua"
 before="$(sha256sum "$tmp/cfg/hypr/"*)"
 export LOG="$tmp/log"; : > "$LOG"
 printf '#!/usr/bin/env bash\necho "noctalia $*" >> "$LOG"\n' > "$tmp/bin/noctalia"
 printf '#!/usr/bin/env bash\ntrue\n' > "$tmp/bin/rofi"
 chmod +x "$tmp/bin/"*
-run() { env BXCACHY_CONFIG_HOME="$tmp/cfg" HOME="$tmp/home" PATH="$tmp/bin:$PATH" LOG="$LOG" "$@"; }
+run() { env BXRIG_CONFIG_HOME="$tmp/cfg" HOME="$tmp/home" PATH="$tmp/bin:$PATH" LOG="$LOG" "$@"; }
 code() { set +e; run "$@" >/dev/null 2>&1; local c=$?; set -e; echo "$c"; }
 hypr() { XDG_CURRENT_DESKTOP=Hyprland run "$@"; }
 kde() { XDG_CURRENT_DESKTOP=KDE run "$@"; }
@@ -26,7 +26,7 @@ hypr "$binary" runner list --json | jq -e '(.data.launchers | map(select(.curren
 hypr "$binary" runner set rofi | grep -q 'Runner provider: rofi' || fail 'set'
 hypr "$binary" runner menu-set walker | grep -q 'Menu provider: walker' || fail 'menu-set'
 hypr "$binary" runner show --json | jq -e '.data.provider == "rofi" and .data.menu_provider == "walker"' >/dev/null || fail 'show --json'
-[[ "$(jq -r .provider "$tmp/cfg/bxcachy/runner.json")" == rofi ]] || fail 'runner.json written'
+[[ "$(jq -r .provider "$tmp/cfg/bxrig/runner.json")" == rofi ]] || fail 'runner.json written'
 [[ "$(code "$binary" runner set nope)" == 4 && "$(code "$binary" runner menu-set noctalia)" == 4 ]] || fail 'unknown providers exit 4'
 
 [[ "$(code "$binary" runner set hyprrunner)" == 4 ]] || fail 'hyprrunner is no longer a provider'
@@ -36,7 +36,7 @@ hypr "$binary" runner launcher-command rofi '["rofi","-show","run"]' >/dev/null 
 hypr "$binary" runner menu-command walker '["walker","--dmenu","-p","{prompt}"]' >/dev/null || fail 'menu-command'
 [[ "$(code "$binary" runner launcher-command rofi 'rofi -show run')" == 4 && "$(code "$binary" runner launcher-command rofi '[]')" == 4 && "$(code "$binary" runner menu-command walker '["a",""]')" == 4 && "$(code "$binary" runner launcher-command system '["x"]')" == 4 ]] || fail 'shell strings, empty arrays and empty parts are refused'
 hypr "$binary" runner doctor | grep -q 'Launcher: rofi | command: rofi -show run' || fail 'doctor shows the configured launcher'
-hypr "$binary" runner doctor | grep -q 'Menu: walker | command: walker --dmenu -p BxCachy' || fail 'doctor shows the menu with the prompt'
+hypr "$binary" runner doctor | grep -q 'Menu: walker | command: walker --dmenu -p BxRig' || fail 'doctor shows the menu with the prompt'
 hypr "$binary" runner doctor | grep -q 'launcher executable: found' || fail 'doctor finds rofi on PATH'
 hypr "$binary" runner doctor | grep -q 'menu executable: NOT FOUND' || fail 'doctor reports walker missing'
 hypr "$binary" runner doctor | grep -q 'Shortcut ownership: unchanged' || fail 'doctor says shortcuts are unchanged'
@@ -68,18 +68,18 @@ hypr "$binary" runner menu-set rofi >/dev/null
 
 # usage and bad state
 [[ "$(code "$binary" runner)" == 2 && "$(code "$binary" runner set)" == 2 && "$(code "$binary" runner list extra)" == 2 && "$(code "$binary" runner bogus)" == 2 ]] || fail 'usage exits 2'
-echo '{' > "$tmp/cfg/bxcachy/runner.json"; [[ "$(code "$binary" runner list)" == 4 ]] || fail 'a broken runner.json exits 4'
+echo '{' > "$tmp/cfg/bxrig/runner.json"; [[ "$(code "$binary" runner list)" == 4 ]] || fail 'a broken runner.json exits 4'
 
 # Super+Space: the bound command opens whichever launcher is chosen, and falls back to Noctalia when it cannot
-mkdir -p "$tmp/home/.local/bin"; cp "$binary" "$tmp/home/.local/bin/bxcachy"
+mkdir -p "$tmp/home/.local/bin"; cp "$binary" "$tmp/home/.local/bin/bxrig"
 printf '#!/usr/bin/env bash\necho "rofi $*" >> "$LOG"\n' > "$tmp/bin/rofi"; chmod +x "$tmp/bin/rofi"
 bound="$("$binary" keys render hyprland | sed -n 's/.*+Space.*\[\[\(.*\)\]\].*/\1/p')"
 [[ -n "$bound" ]] || fail 'no Super+Space bind found in the Hyprland module'
-press() { : > "$LOG"; rm -f "$tmp/cfg/bxcachy/runner.json"; [[ -z "${1:-}" ]] || hypr "$binary" runner set "$1" >/dev/null; hypr sh -c "$bound" >/dev/null 2>&1; for _ in 1 2 3 4 5 6 7 8 9 10; do [[ -s "$LOG" ]] && break; sleep 0.3; done; cat "$LOG"; }
+press() { : > "$LOG"; rm -f "$tmp/cfg/bxrig/runner.json"; [[ -z "${1:-}" ]] || hypr "$binary" runner set "$1" >/dev/null; hypr sh -c "$bound" >/dev/null 2>&1; for _ in 1 2 3 4 5 6 7 8 9 10; do [[ -s "$LOG" ]] && break; sleep 0.3; done; cat "$LOG"; }
 [[ "$(press)" == "noctalia msg panel-toggle launcher" ]] || fail 'Super+Space opens Noctalia by default'
 [[ "$(press rofi)" == "rofi -show drun" ]] || fail 'after runner set rofi, Super+Space opens Rofi'
 [[ "$(press system)" == "noctalia msg panel-toggle launcher" ]] || fail 'with the system runner it falls back to Noctalia'
-: > "$LOG"; rm -f "$tmp/cfg/bxcachy/runner.json"; hypr "$binary" runner set krunner >/dev/null
+: > "$LOG"; rm -f "$tmp/cfg/bxrig/runner.json"; hypr "$binary" runner set krunner >/dev/null
 hypr sh -c "$bound" >/dev/null 2>&1; for _ in 1 2 3 4 5 6 7 8 9 10; do [[ -s "$LOG" ]] && break; sleep 0.3; done
 [[ "$(cat "$LOG")" == "noctalia msg panel-toggle launcher" ]] || fail 'a launcher that is not installed falls back to Noctalia'
 

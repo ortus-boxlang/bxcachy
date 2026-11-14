@@ -1,0 +1,386 @@
+// `bxrig dotfiles`: apply your own dotfiles repository to this machine. The method is DETECTED from the repo's layout:
+//   chezmoi   `.chezmoiroot`, `.chezmoiignore`, or `dot_` / `.chezmoi*` names           (applied with `chezmoi apply`)
+//   yadm      `.config/yadm/`, or names with a `##` alternate suffix                    (applied with `yadm clone -f`)
+//   stow      `.stowrc`, `.stow-local-ignore`, or top-level package folders holding dotfiles (applied with `stow`)
+//   links     anything else: the repo's files are symlinked into your home directory
+//
+// Your dotfiles WIN over BxRig's own files (starter configs etc.), but nothing is replaced unasked: the files you already have
+// that would be replaced are listed as conflicts, and applying needs your approval (--overwrite, or a yes at the prompt). Every
+// replaced file is moved into ~/.local/state/bxrig/backups/dotfiles/<time>/ first, and `undo` puts it back.
+//
+// Exit codes: 0 done, 2 plan printed without --yes (or conflicts not approved), 4 precondition (clone failed, unknown method,
+// nothing to apply, tool missing and not installable), 6 a step failed.
+class Dotfiles {
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.inst = new bxrig.Installer( arguments.runner );
+        variables.config = new bxrig.ConfigService();
+        return this;
+    }
+
+    function methods() { return [ "chezmoi", "yadm", "stow", "links" ]; }
+    function toolFor( method ) { return arguments.method == "links" ? "" : arguments.method; }
+    function home() { return getSystemSetting( "HOME", "" ); }
+    function dataHome() { return getSystemSetting( "BXRIG_DATA_HOME", home() & "/.local/share/bxrig" ); }
+    function cloneDir() { return dataHome() & "/dotfiles/repo"; }
+    function journalFile() { return variables.config.stateDir() & "/dotfiles.json"; }
+
+    // Names at the top of a repo that are about the repo, not your home directory.
+    function ignored( name ) {
+        return arrayFind( [ ".git", ".github", ".gitignore", ".gitmodules", ".gitattributes", "README", "README.md", "readme.md", "LICENSE", "LICENSE.md", "COPYING", ".stow-local-ignore", ".stowrc", ".chezmoiignore", ".chezmoiroot", ".chezmoi.toml.tmpl" ], arguments.name ) > 0;
+    }
+
+    // ---- reading the repo ----
+
+    // Names directly inside a folder, split into { dirs, files }.
+    function entriesOf( dir ) {
+        var out = { dirs: [], files: [] };
+        for ( var n in directoryList( arguments.dir, false, "name" ) ) {
+            if ( directoryExists( arguments.dir & "/" & n ) ) out.dirs.append( n ); else out.files.append( n );
+        }
+        return out;
+    }
+
+    // Every file under a folder as a path relative to it.
+    function filesUnder( dir ) {
+        var out = [];
+        var root = arguments.dir;
+        for ( var p in directoryList( root, true, "path" ) ) {
+            if ( directoryExists( p ) ) continue;
+            var rel = mid( p, len( root ) + 2, len( p ) );
+            out.append( rel );
+        }
+        return out;
+    }
+
+    // The method for a cloned repo.
+    function detect( dir ) {
+        var top = entriesOf( arguments.dir );
+        var all = [];
+        for ( var d in top.dirs ) all.append( d );
+        for ( var f in top.files ) all.append( f );
+        if ( fileExists( arguments.dir & "/.chezmoiroot" ) || fileExists( arguments.dir & "/.chezmoiignore" ) ) return "chezmoi";
+        for ( var n in all ) if ( left( n, 4 ) == "dot_" || left( n, 8 ) == ".chezmoi" ) return "chezmoi";
+        var rels = filesUnder( arguments.dir ).filter( function( r ) { return left( r, 5 ) != ".git/"; } );
+        if ( directoryExists( arguments.dir & "/.config/yadm" ) ) return "yadm";
+        for ( var r in rels ) if ( find( "##", r ) ) return "yadm";
+        if ( fileExists( arguments.dir & "/.stowrc" ) || fileExists( arguments.dir & "/.stow-local-ignore" ) ) return "stow";
+        var hidden = all.filter( function( n ) { return left( n, 1 ) == "." && !ignored( n ); } );
+        var pkgs = top.dirs.filter( function( n ) { return left( n, 1 ) != "." && !ignored( n ); } );
+        if ( !hidden.len() && pkgs.len() ) {
+            var allHold = true;
+            for ( var pk in pkgs ) {
+                var inner = entriesOf( arguments.dir & "/" & pk );
+                var has = false;
+                for ( var x in inner.dirs ) if ( left( x, 1 ) == "." ) has = true;
+                for ( var x in inner.files ) if ( left( x, 1 ) == "." ) has = true;
+                if ( !has ) allHold = false;
+            }
+            if ( allHold ) return "stow";
+        }
+        return "links";
+    }
+
+    // chezmoi's source names to the path they produce (dot_ becomes ".", attribute prefixes and .tmpl are dropped).
+    function chezmoiTarget( rel ) {
+        var parts = [];
+        for ( var seg in listToArray( arguments.rel, "/" ) ) {
+            var s = seg;
+            var again = true;
+            while ( again ) {
+                again = false;
+                for ( var pre in [ "private_", "executable_", "readonly_", "exact_", "empty_", "symlink_", "once_", "run_", "create_", "modify_" ] ) {
+                    if ( left( s, len( pre ) ) == pre ) { s = mid( s, len( pre ) + 1, len( s ) ); again = true; }
+                }
+            }
+            if ( left( s, 4 ) == "dot_" ) s = "." & mid( s, 5, len( s ) );
+            if ( right( s, 5 ) == ".tmpl" ) s = left( s, len( s ) - 5 );
+            parts.append( s );
+        }
+        return parts.toList( "/" );
+    }
+
+    // The files this repo would put in the home directory with this method: [ { rel, source, target } ].
+    function mapping( dir, method ) {
+        var out = [];
+        var d = arguments.dir;
+        if ( arguments.method == "stow" ) {
+            for ( var pk in entriesOf( d ).dirs ) {
+                if ( left( pk, 1 ) == "." || ignored( pk ) ) continue;
+                for ( var rel in filesUnder( d & "/" & pk ) ) out.append( { rel: rel, source: d & "/" & pk & "/" & rel, target: home() & "/" & rel } );
+            }
+            return out;
+        }
+        for ( var rel in filesUnder( d ) ) {
+            var first = listFirst( rel, "/" );
+            if ( ignored( first ) && ( find( "/", rel ) || true ) ) continue;
+            if ( ignored( rel ) ) continue;
+            var t = rel;
+            if ( arguments.method == "chezmoi" ) t = chezmoiTarget( rel );
+            if ( arguments.method == "yadm" && find( "##", t ) ) t = left( t, find( "##", t ) - 1 );
+            out.append( { rel: rel, source: d & "/" & rel, target: home() & "/" & t } );
+        }
+        return out;
+    }
+
+    // ---- state of the targets ----
+    function isLinkTo( target, source ) {
+        var r = variables.inst.exec( [ "readlink", arguments.target ], 10 );
+        return r.exitCode == 0 && trim( r.output ) == arguments.source;
+    }
+
+    function exists( path ) { return fileExists( arguments.path ) || directoryExists( arguments.path ) || isSymlink( arguments.path ); }
+
+    function isSymlink( path ) {
+        try { return variables.inst.exec( [ "test", "-L", arguments.path ], 10 ).exitCode == 0; } catch ( any e ) { return false; }
+    }
+
+    // Splits a mapping into what is already in place, what is new and what you already have (conflicts).
+    function classify( map, method ) {
+        var out = { conflicts: [], fresh: [], same: [] };
+        for ( var m in arguments.map ) {
+            if ( !exists( m.target ) ) { out.fresh.append( m ); continue; }
+            if ( arguments.method == "links" || arguments.method == "stow" ) {
+                if ( isLinkTo( m.target, m.source ) ) { out.same.append( m ); continue; }
+                // stow folds whole folders into one link: a parent that points into the repo counts as in place
+                if ( arguments.method == "stow" && isSymlink( getDirectoryFromPath( m.target ) ) ) { out.same.append( m ); continue; }
+            }
+            if ( arguments.method != "chezmoi" && fileExists( m.target ) && !isSymlink( m.target ) ) {
+                try { if ( fileRead( m.target ) == fileRead( m.source ) ) { out.same.append( m ); continue; } } catch ( any e ) {}
+            }
+            out.conflicts.append( m );
+        }
+        return out;
+    }
+
+    // ---- getting the repo ----
+    // Clones (or updates) the repo into BxRig's data folder. Returns "" or an error message.
+    function fetch( repo ) {
+        var dir = cloneDir();
+        if ( directoryExists( dir & "/.git" ) ) {
+            var have = variables.inst.exec( [ "git", "-C", dir, "remote", "get-url", "origin" ], 20 );
+            if ( trim( have.output ) != arguments.repo ) return "A different dotfiles repository is already set up (" & trim( have.output ) & "). Run: bxrig dotfiles undo --yes first";
+            var pull = variables.inst.exec( [ "git", "-C", dir, "pull", "--ff-only" ], 300 );
+            return pull.exitCode == 0 ? "" : "Could not update the repository: " & trim( pull.output );
+        }
+        directoryCreate( getDirectoryFromPath( dir ), true, true );
+        var r = variables.inst.exec( [ "git", "clone", arguments.repo, dir ], 600 );
+        return r.exitCode == 0 ? "" : "Could not clone " & arguments.repo & ": " & trim( r.output );
+    }
+
+    // ---- the plan ----
+
+    // Builds the plan for a repo. opts: { method, repo }. Returns { error, code, method, detected, tool, packageNeeded, conflicts, fresh, same, clone }.
+    function plan( repo, method = "" ) {
+        var err = fetch( arguments.repo );
+        if ( len( err ) ) return { error: err, code: 4 };
+        var dir = cloneDir();
+        var detected = detect( dir );
+        var m = len( arguments.method ) ? arguments.method : detected;
+        if ( !arrayFind( methods(), m ) ) return { error: "Unknown method: " & m & " (use " & methods().toList( ", " ) & ")", code: 4 };
+        var map = mapping( dir, m );
+        if ( !map.len() ) return { error: "There are no dotfiles to apply in " & arguments.repo, code: 4 };
+        var cls = classify( map, m );
+        var tool = toolFor( m );
+        var needInstall = len( tool ) && variables.inst.exec( [ "sh", "-c", 'command -v "$1"', "_", tool ], 10 ).exitCode != 0;
+        return { error: "", code: 0, repo: arguments.repo, method: m, detected: detected, tool: tool, installTool: needInstall, clone: dir, conflicts: cls.conflicts, fresh: cls.fresh, same: cls.same, total: map.len() };
+    }
+
+    // Asks "replace these files?" at the terminal (a file stands in for it when BXRIG_TTY_IN is set). Returns true on y/yes.
+    function confirm( question ) {
+        var tmp = reReplace( getTempDirectory(), "/+$", "" ) & "/bxrig-yn-" & left( createUUID(), 8 );
+        var script = 'in="${BXRIG_TTY_IN:-/dev/tty}"; if [ "$in" = /dev/tty ]; then printf "%s [y/N] " "$1" > /dev/tty; fi; IFS= read -r v < "$in" || v=""; printf "%s" "$v" > "$2"';
+        try { variables.inst.exec( [ "sh", "-c", script, "_", arguments.question, tmp ], 300 ); var a = fileExists( tmp ) ? lcase( trim( fileRead( tmp ) ) ) : ""; } finally { if ( fileExists( tmp ) ) fileDelete( tmp ); }
+        return a == "y" || a == "yes";
+    }
+
+    function say( command, code, data, asJson, lines = [], dryRun = false ) {
+        if ( arguments.asJson ) println( variables.cli.envelope( arguments.command, arguments.code, arguments.data, arguments.dryRun ) );
+        else for ( var l in arguments.lines ) println( l );
+        return arguments.code;
+    }
+
+    function summary( p ) {
+        var lines = [ "Dotfiles from " & p.repo, "  method: " & p.method & ( p.method != p.detected ? " (detected: " & p.detected & ")" : " (detected from the repo)" ), "  " & p.total & " files: " & p.fresh.len() & " new, " & p.same.len() & " already in place, " & p.conflicts.len() & " you already have" ];
+        if ( p.installTool ) lines.append( "  would install " & p.tool & " first (sudo pacman -S --needed " & p.tool & ")" );
+        if ( p.conflicts.len() ) {
+            lines.append( "  Your dotfiles win. These existing files would be replaced (each is backed up first):" );
+            for ( var c in p.conflicts ) lines.append( "    " & c.target );
+        }
+        return lines;
+    }
+
+    function planData( p ) {
+        return { repo: p.repo, method: p.method, detected: p.detected, total: p.total, fresh: p.fresh.map( function( m ) { return m.target; } ), same: p.same.map( function( m ) { return m.target; } ), conflicts: p.conflicts.map( function( m ) { return m.target; } ), install_tool: p.installTool, tool: p.tool };
+    }
+
+    // `dotfiles plan REPO [--method=M]`: clones the repo into BxRig's data folder (nothing in your home directory changes).
+    function showPlan( repo, method, asJson ) {
+        var p = plan( arguments.repo, arguments.method );
+        if ( p.code != 0 ) return say( "dotfiles plan", p.code, { error: p.error }, arguments.asJson, [ "error: " & p.error ] );
+        var lines = summary( p );
+        lines.append( "Nothing in your home directory was changed. Apply with: bxrig dotfiles apply " & arguments.repo & " --yes" );
+        return say( "dotfiles plan", 0, planData( p ), arguments.asJson, lines );
+    }
+
+    // ---- apply ----
+
+    function backupRoot() { return variables.config.stateDir() & "/backups/dotfiles"; }
+
+    // Moves the files you already have out of the way (into a timestamped backup folder). Returns [ { target, backup } ].
+    function backUp( conflicts, stamp ) {
+        var done = [];
+        for ( var c in arguments.conflicts ) {
+            var rel = mid( c.target, len( home() ) + 2, len( c.target ) );
+            var dest = backupRoot() & "/" & arguments.stamp & "/" & rel;
+            variables.inst.exec( [ "mkdir", "-p", getDirectoryFromPath( dest ) ], 10 );
+            var r = variables.inst.exec( [ "mv", c.target, dest ], 60 );
+            if ( r.exitCode != 0 ) throw( message = "Could not back up " & c.target & ": " & trim( r.output ) );
+            done.append( { target: c.target, backup: dest } );
+        }
+        return done;
+    }
+
+    // Puts backed-up files back where they were (only where nothing is there now).
+    function restoreBackups( backups ) {
+        var back = 0;
+        for ( var b in arguments.backups ) {
+            if ( exists( b.target ) ) continue;
+            if ( !exists( b.backup ) ) continue;
+            variables.inst.exec( [ "mkdir", "-p", getDirectoryFromPath( b.target ) ], 10 );
+            if ( variables.inst.exec( [ "mv", b.backup, b.target ], 60 ).exitCode == 0 ) back++;
+        }
+        return back;
+    }
+
+    // Packages (top-level folders) a stow repo uses.
+    function stowPackages( dir ) {
+        return entriesOf( arguments.dir ).dirs.filter( function( n ) { return left( n, 1 ) != "." && !ignored( n ); } );
+    }
+
+    // `dotfiles apply REPO [--method=M] [--overwrite] [--yes] [--dry-run]`
+    function apply( repo, method, overwrite, yes, dryRun, asJson ) {
+        var cmd = "dotfiles apply";
+        var p = plan( arguments.repo, arguments.method );
+        if ( p.code != 0 ) return say( cmd, p.code, { error: p.error }, arguments.asJson, [ "error: " & p.error ] );
+        var data = planData( p );
+        var lines = summary( p );
+        if ( !arguments.yes || arguments.dryRun ) {
+            var code = arguments.dryRun ? 0 : 2;
+            lines.append( arguments.dryRun ? "Nothing was changed." : "Nothing was changed. Add --yes to apply" & ( p.conflicts.len() ? " (you will be asked about the files you already have, or add --overwrite)" : "" ) & "." );
+            return say( cmd, code, data, arguments.asJson, lines, arguments.dryRun );
+        }
+        // your files win, but only with your say-so
+        if ( p.conflicts.len() && !arguments.overwrite ) {
+            if ( !arguments.asJson ) for ( var l in lines ) println( l );
+            if ( !confirm( "Replace the " & p.conflicts.len() & " files you already have (originals are backed up)?" ) ) {
+                var m = "Nothing was changed: the files you already have were not approved (use --overwrite to approve them).";
+                return say( cmd, 2, merge( data, { approved: false } ), arguments.asJson, [ m ] );
+            }
+            lines = [];
+        }
+        if ( p.installTool ) {
+            var ins = variables.inst.exec( [ "sudo", "pacman", "-S", "--needed", "--noconfirm", p.tool ], 1800 );
+            if ( ins.exitCode != 0 ) return say( cmd, 4, merge( data, { error: "Could not install " & p.tool } ), arguments.asJson, [ "error: could not install " & p.tool & " (" & trim( ins.output ) & ")" ] );
+        }
+        var stamp = trim( variables.inst.exec( [ "date", "+%Y%m%d-%H%M%S" ], 10 ).output );
+        var backups = [];
+        try { backups = backUp( p.conflicts, stamp ); } catch ( any e ) {
+            restoreBackups( backups );
+            return say( cmd, 6, merge( data, { error: e.message } ), arguments.asJson, [ "error: " & e.message ] );
+        }
+        var failed = runMethod( p );
+        if ( len( failed ) ) {
+            restoreBackups( backups );
+            return say( cmd, 6, merge( data, { error: failed } ), arguments.asJson, [ "error: " & failed ] );
+        }
+        var links = [];
+        if ( p.method == "links" || p.method == "stow" ) for ( var f in p.fresh ) links.append( { target: f.target, source: f.source } );
+        if ( p.method == "links" || p.method == "stow" ) for ( var c2 in p.conflicts ) links.append( { target: c2.target, source: c2.source } );
+        // a re-apply adds to what was recorded before (so `undo` still knows every link and every backed-up original)
+        var old = journal();
+        if ( !structIsEmpty( old ) && old.repo == p.repo && old.method == p.method ) {
+            for ( var ol in old.links ) links.append( ol );
+            for ( var ob in old.backups ) backups.append( ob );
+            stamp = old.stamp;
+        }
+        variables.config.writeAtomic( journalFile(), jsonSerialize( { repo: p.repo, method: p.method, clone: p.clone, applied: now() & "", stamp: stamp, links: links, backups: backups, stow: p.method == "stow" ? stowPackages( p.clone ) : [] } ) & chr( 10 ), "600" );
+        var out = [ "Applied your dotfiles (" & p.method & "): " & ( p.fresh.len() + p.conflicts.len() ) & " files" & ( backups.len() ? ", " & backups.len() & " existing files backed up to " & backupRoot() & "/" & stamp : "" ) & ".", "Undo with: bxrig dotfiles undo --yes" ];
+        return say( cmd, 0, merge( data, { applied: true, backups: backups.map( function( b ) { return b.backup; } ) } ), arguments.asJson, out );
+    }
+
+    function merge( base, extra ) {
+        var out = {};
+        for ( var k in structKeyArray( arguments.base ) ) out[ k ] = arguments.base[ k ];
+        for ( var k in structKeyArray( arguments.extra ) ) out[ k ] = arguments.extra[ k ];
+        return out;
+    }
+
+    // Does the work for the method. Returns "" or an error message.
+    function runMethod( p ) {
+        var home = home();
+        if ( p.method == "links" ) {
+            var todo = [];
+            for ( var a in p.fresh ) todo.append( a );
+            for ( var b in p.conflicts ) todo.append( b );
+            for ( var t in todo ) {
+                variables.inst.exec( [ "mkdir", "-p", getDirectoryFromPath( t.target ) ], 10 );
+                var r = variables.inst.exec( [ "ln", "-s", t.source, t.target ], 10 );
+                if ( r.exitCode != 0 ) return "Could not link " & t.target & ": " & trim( r.output );
+            }
+            return "";
+        }
+        if ( p.method == "stow" ) {
+            var argv = [ "stow", "-d", p.clone, "-t", home, "-R" ];
+            for ( var pk in stowPackages( p.clone ) ) argv.append( pk );
+            var s = variables.inst.exec( argv, 300 );
+            return s.exitCode == 0 ? "" : "stow failed: " & trim( s.output );
+        }
+        if ( p.method == "chezmoi" ) {
+            var c = variables.inst.exec( [ "chezmoi", "apply", "--source", p.clone, "--force" ], 600 );
+            return c.exitCode == 0 ? "" : "chezmoi failed: " & trim( c.output );
+        }
+        var repoExists = directoryExists( home & "/.local/share/yadm/repo.git" );
+        var y = variables.inst.exec( repoExists ? [ "yadm", "pull" ] : [ "yadm", "clone", "-f", "--no-bootstrap", p.repo ], 600 );
+        return y.exitCode == 0 ? "" : "yadm failed: " & trim( y.output );
+    }
+
+    // ---- status and undo ----
+    function journal() {
+        if ( !fileExists( journalFile() ) ) return {};
+        try { return jsonDeserialize( fileRead( journalFile() ) ); } catch ( any e ) { return {}; }
+    }
+
+    function status( asJson ) {
+        var j = journal();
+        if ( structIsEmpty( j ) ) return say( "dotfiles status", 0, { applied: false }, arguments.asJson, [ "No dotfiles have been applied by BxRig." ] );
+        return say( "dotfiles status", 0, { applied: true, repo: j.repo, method: j.method, when: j.applied, links: j.links.len(), backups: j.backups.len() }, arguments.asJson,
+            [ "Dotfiles from " & j.repo & " (" & j.method & "), applied " & j.applied, "  " & j.links.len() & " links, " & j.backups.len() & " original files backed up in " & backupRoot() & "/" & j.stamp ] );
+    }
+
+    // `dotfiles undo --yes`: removes the links BxRig made (stow: `stow -D`) and puts the original files back.
+    function undo( yes, dryRun, asJson ) {
+        var cmd = "dotfiles undo";
+        var j = journal();
+        if ( structIsEmpty( j ) ) return say( cmd, 4, { error: "Nothing to undo: no dotfiles have been applied by BxRig" }, arguments.asJson, [ "error: nothing to undo: no dotfiles have been applied by BxRig" ] );
+        var what = [ "remove " & j.links.len() & " links into the dotfiles repository", "put back " & j.backups.len() & " original files" ];
+        if ( j.method == "chezmoi" || j.method == "yadm" ) what = [ "put back " & j.backups.len() & " original files (files " & j.method & " created stay; use " & j.method & " itself to remove them)" ];
+        if ( !arguments.yes || arguments.dryRun ) {
+            var code = arguments.dryRun ? 0 : 2;
+            var lines = [ ( arguments.dryRun ? "Dry run" : "Plan" ) & ": would " & what.toList( " and " ), arguments.dryRun ? "Nothing was changed." : "Nothing was changed. Add --yes to apply." ];
+            return say( cmd, code, { would: what }, arguments.asJson, lines, arguments.dryRun );
+        }
+        var removed = 0;
+        if ( j.method == "stow" && structKeyExists( j, "stow" ) && j.stow.len() ) {
+            var argv = [ "stow", "-d", j.clone, "-t", home(), "-D" ];
+            for ( var pk in j.stow ) argv.append( pk );
+            variables.inst.exec( argv, 300 );
+        }
+        if ( j.method == "links" || j.method == "stow" ) for ( var l in j.links ) {
+            if ( isSymlink( l.target ) && isLinkTo( l.target, l.source ) ) { variables.inst.exec( [ "rm", l.target ], 10 ); removed++; }
+        }
+        var back = restoreBackups( j.backups );
+        fileDelete( journalFile() );
+        return say( cmd, 0, { removed: removed, restored: back }, arguments.asJson, [ "Removed " & removed & " links and restored " & back & " original files." ] );
+    }
+}

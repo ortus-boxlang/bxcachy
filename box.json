@@ -1,8 +1,8 @@
 {
-  "name": "bxcachy",
-  "slug": "bxcachy",
+  "name": "bxrig",
+  "slug": "bxrig",
   "version": "0.11.0-dev",
-  "shortDescription": "Developer kickstarter for CachyOS with Hyprland and Noctalia",
+  "shortDescription": "BxRig brings an opinionated, beautiful and efficient desktop to Linux, built for developers.",
   "toolchain": {
     "java": {
       "version": "21",
@@ -27,7 +27,7 @@
       "repo": "https://github.com/ortus-boxlang/matchbox",
       "ref": "bxcachy",
       "downloads": "https://downloads.ortussolutions.com/ortussolutions/bxcachy/matchbox",
-      "note": "MatchBox 0.14.0 built by CI from the `bxcachy` branch (develop plus the open BxCachy pull requests #149-#155 and the VM fixes #156-#161, #166 and #167: break in nested loops, closed stdout, variables.fn(), switch var slots and default jump, panic messages, struct built-ins on the variables scope, len() and find() counting characters, and the terminal UI canvas with native runner support, built with the bif-tui feature) and published to S3; switch back to a released version through mvm once those pull requests ship."
+      "note": "MatchBox 0.14.0 built by CI from the `bxcachy` branch (develop plus the open BxRig pull requests #149-#155 and the VM fixes #156-#161, #166 and #167: break in nested loops, closed stdout, variables.fn(), switch var slots and default jump, panic messages, struct built-ins on the variables scope, len() and find() counting characters, and the terminal UI canvas with native runner support, built with the bif-tui feature) and published to S3; switch back to a released version through mvm once those pull requests ship."
     },
     "rust": {
       "channel": "stable"

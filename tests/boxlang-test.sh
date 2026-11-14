@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# `bxcachy boxlang` with fake bvm, mvm, bx-module, code and curl (a canned ForgeBox answer). Usage: boxlang-test.sh BINARY
+# `bxrig boxlang` with fake bvm, mvm, bx-module, code and curl (a canned ForgeBox answer). Usage: boxlang-test.sh BINARY
 set -euo pipefail
 binary="$(realpath "${1:?native executable required}")"
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
@@ -15,7 +15,7 @@ logger code 'case "$1" in --list-extensions) echo ortus-solutions.vscode-boxlang
 logger xdg-open
 printf '#!/usr/bin/env bash\necho "curl $*" >> "$LOG"\necho '"'"'{"data":{"results":[{"slug":"bx-ai","title":"BoxLang AI","summary":"AI integration","latestVersion":{"version":"3.7.0"}},{"slug":"bx-sites","title":"Sites","summary":"Static sites","latestVersion":{"version":"1.0.0"}}]}}'"'"'\n' > "$tmp/bin/curl"
 chmod +x "$tmp/bin"/*
-run() { env HOME="$tmp/home" BXCACHY_CONFIG_HOME="$tmp/cfg" PATH="$tmp/bin:$PATH" LOG="$LOG" "$@"; }
+run() { env HOME="$tmp/home" BXRIG_CONFIG_HOME="$tmp/cfg" PATH="$tmp/bin:$PATH" LOG="$LOG" "$@"; }
 code() { set +e; run "$@" >/dev/null 2>&1; local c=$?; set -e; echo "$c"; }
 
 run "$binary" boxlang status --json | jq -e '.data.boxlang == "BoxLang 1.19.0" and .data.bvm == "1.19.0" and .data.mvm and .data.bx_module and .data.vscode_extension' >/dev/null || fail "status: $(run "$binary" boxlang status --json)"
@@ -39,7 +39,7 @@ grep -q '^code --install-extension ortus-solutions.vscode-boxlang --force' "$LOG
 rc=0; env HOME="$tmp/home" PATH="$tmp/nobin" "$binary" boxlang vscode >/dev/null 2>&1 || rc=$?; [[ "$rc" == 4 ]] || fail "no code exits 4 (got $rc)"
 # links and the welcome page
 run "$binary" boxlang links --json | jq -e '(.data.links | map(.url) | index("https://try.boxlang.io") != null) and (.data.links | length) >= 10' >/dev/null || fail 'links'
-run "$binary" boxlang welcome >/dev/null; f="$tmp/cfg/bxcachy/welcome.html"
+run "$binary" boxlang welcome >/dev/null; f="$tmp/cfg/bxrig/welcome.html"
 grep -q 'Try BoxLang' "$f" && grep -q 'matchbox.boxlang.io' "$f" && grep -q 'xdg-open' "$LOG" || fail 'welcome page'
 [[ "$(code "$binary" boxlang nope)" == 2 ]] || fail 'usage exits 2'
 echo "boxlang-test ok"

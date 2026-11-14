@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Embeds the bundled themes (themes/<name>/colors.toml and neovim.lua) in src/bxcachy/ThemeData.bx (a generated class), like the templates.
-#   gen-themes.sh           rewrite src/bxcachy/ThemeData.bx
+# Embeds the bundled themes (themes/<name>/colors.toml and neovim.lua) in src/bxrig/ThemeData.bx (a generated class), like the templates.
+#   gen-themes.sh           rewrite src/bxrig/ThemeData.bx
 #   gen-themes.sh --check   fail if the generated class is out of date (CI)
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
-out="$root/src/bxcachy/ThemeData.bx"
+out="$root/src/bxrig/ThemeData.bx"
 # literal(text): a MatchBox string literal with no backslashes (a marker is turned back into chr( 92 )), # and ' doubled
 lit() { local b="$1"; b="${b//\\/@@BS@@}"; b="${b//\'/\'\'}"; b="${b//#/##}"; printf "replace( '%s', '@@BS@@', chr( 92 ), 'all' )" "$b"; }
 names=()
@@ -15,8 +15,8 @@ for d in "$root"/themes/*/; do names+=("$(basename "$d")"); done
   printf '    function names() { return [ '
   first=1; for n in "${names[@]}"; do (( first )) || printf ', '; first=0; printf '"%s"' "$n"; done
   echo ' ]; }'
-  echo '    // The bxcachy* themes are BxCachy'"'"'s own; the rest come from Omarchy (themes/NOTICE.md).'
-  echo '    function origin( name ) { return left( arguments.name, 7 ) == "bxcachy" ? "bxcachy" : "omarchy"; }'
+  echo '    // The bxrig* themes are BxRig'"'"'s own; the rest come from Omarchy (themes/NOTICE.md).'
+  echo '    function origin( name ) { return left( arguments.name, 5 ) == "bxrig" ? "bxrig" : "omarchy"; }'
   echo '    function colors( name ) {'
   echo '        switch ( arguments.name ) {'
   for n in "${names[@]}"; do
@@ -36,5 +36,5 @@ if [[ "${1:-}" == "--check" ]]; then
   cmp -s "$out.tmp" "$out" || { rm -f "$out.tmp"; echo "ThemeData.bx is out of date: run bootstrap/gen-themes.sh" >&2; exit 1; }
   rm -f "$out.tmp"; echo "ThemeData.bx is up to date"
 else
-  mv "$out.tmp" "$out"; echo "embedded ${#names[@]} themes into src/bxcachy/ThemeData.bx"
+  mv "$out.tmp" "$out"; echo "embedded ${#names[@]} themes into src/bxrig/ThemeData.bx"
 fi

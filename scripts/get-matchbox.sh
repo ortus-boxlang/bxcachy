@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Provides the MatchBox that compiles BxCachy (box.json toolchain.matchbox): the build of the MatchBox
+# Provides the MatchBox that compiles BxRig (box.json toolchain.matchbox): the build of the MatchBox
 # `bxcachy` branch that CI publishes to S3, or, when it is not published yet or --from-source is given, a
 # release build of that branch made here.
 #   get-matchbox.sh DEST_FILE [--from-source]
@@ -11,7 +11,7 @@ from_source=0
 for a in "$@"; do case "$a" in --from-source) from_source=1 ;; *) echo "unknown argument: $a" >&2; exit 2 ;; esac; done
 [[ -n "$dest" ]] || { echo "usage: get-matchbox.sh DEST_FILE [--from-source]" >&2; exit 2; }
 command -v jq >/dev/null || { echo "jq is required" >&2; exit 4; }
-manifest="${BXCACHY_MANIFEST:-$root/box.json}"
+manifest="${BXRIG_MANIFEST:-$root/box.json}"
 want="$(jq -r .toolchain.matchbox.version "$manifest")"
 repo="$(jq -r '.toolchain.matchbox.repo // empty' "$manifest")"
 ref="$(jq -r '.toolchain.matchbox.ref // empty' "$manifest")"

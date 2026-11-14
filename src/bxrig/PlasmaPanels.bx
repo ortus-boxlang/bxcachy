@@ -1,0 +1,160 @@
+// `bxrig plasma panels apply|undo|status` and `plasma desktops N`: the BxRig Plasma panel layout.
+//   top panel (status only), left to right: Application Launcher, Virtual Desktop Pager, Active Window Title | flexible spacer | clock
+//   (Digital Clock, or Event Calendar with --agenda) | flexible spacer | Weather Report (unless --without-weather), Media Controller, KVitals,
+//   System Tray (notifications live inside it). Panel Colorizer is in the same panel, with islands on: the Colorizer islands separator
+//   splits it into Launcher + Pager, Window, Clock, Media + KVitals and Tray, and a built-in Colorizer preset styles the islands.
+//   bottom panel: an application dock with the icons-only Task Manager. Your other panels are replaced; a backup of
+//   plasma-org.kde.plasma.desktop-appletsrc is taken first and `undo` puts it back (log out and in afterwards).
+// The layout is applied through Plasma's own scripting (`org.kde.PlasmaShell.evaluateScript`), which needs a running Plasma session. When
+// there is none (you are in Hyprland), the script is saved and a one-shot autostart entry applies it at your next Plasma login and removes
+// itself. Plugin ids of the widgets come from their metadata.json. Not verified on a real session: the Panel property names (location,
+// height, lengthMode) and Colorizer's config keys.
+// Exit: 0 done or queued, 2 plan without --yes, 4 precondition, 6 failed.
+class PlasmaPanels {
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.inst = new bxrig.Installer( arguments.runner );
+        variables.config = new bxrig.ConfigService();
+        return this;
+    }
+
+    function say( code, data, asJson, lines = [], dryRun = false ) {
+        if ( arguments.asJson ) println( variables.cli.envelope( "plasma panels", arguments.code, arguments.data, arguments.dryRun ) );
+        else for ( var l in arguments.lines ) println( l );
+        return arguments.code;
+    }
+
+    function tryExec( argv, timeout = 60 ) {
+        try { return variables.inst.exec( arguments.argv, arguments.timeout ); } catch ( any e ) { return { exitCode: 127, output: e.message, timeout: false }; }
+    }
+
+    function has( name ) { return tryExec( [ "sh", "-c", 'command -v "$1"', "_", arguments.name ], 10 ).exitCode == 0; }
+
+    function home() { return getSystemSetting( "HOME", "" ); }
+    function rcFile() { return variables.config.cfgHome() & "/plasma-org.kde.plasma.desktop-appletsrc"; }
+    function stateDir() { return variables.config.cfgHome() & "/bxrig/plasma-panels"; }
+    function scriptFile() { return stateDir() & "/layout.js"; }
+    function autostartFile() { return variables.config.cfgHome() & "/autostart/bxrig-plasma-panels.desktop"; }
+
+    function opts( o ) {
+        var d = { agenda: false, weather: true, desktops: 4, preset: "Rounded Widgets" };
+        if ( isStruct( arguments.o ) ) for ( var k in structKeyArray( arguments.o ) ) d[ k ] = arguments.o[ k ];
+        return d;
+    }
+
+    // The top panel's widgets in order: [ { id, island } ]. "sep" is the Colorizer islands separator, "flex" a flexible spacer.
+    function topWidgets( o ) {
+        var w = [
+            { id: "org.kde.plasma.kickoff" }, { id: "org.kde.plasma.pager" }, { id: "sep" },
+            { id: "org.kde.windowtitle" }, { id: "flex" }, { id: "sep" },
+            { id: arguments.o.agenda ? "org.kde.plasma.eventcalendar" : "org.kde.plasma.digitalclock" }, { id: "sep" }, { id: "flex" }
+        ];
+        if ( arguments.o.weather ) w.append( { id: "org.kde.plasma.weather" } );
+        w.append( { id: "org.kde.plasma.mediacontroller" } );
+        w.append( { id: "org.kde.plasma.kvitals" } );
+        w.append( { id: "sep" } );
+        w.append( { id: "org.kde.plasma.systemtray" } );
+        w.append( { id: "luisbocanegra.panel.colorizer" } );
+        return w;
+    }
+
+    // The Plasma scripting JavaScript (no backslashes, no hash signs).
+    function script( o ) {
+        var q = chr( 34 );
+        var js = [
+            "// BxRig Plasma panels: top status panel and bottom dock",
+            "var old = panels();",
+            "for (var i = old.length - 1; i >= 0; i--) { old[i].remove(); }",
+            "var top = new Panel();",
+            "top.location = " & q & "top" & q & ";",
+            "top.height = 36;"
+        ];
+        for ( var w in topWidgets( arguments.o ) ) {
+            if ( w.id == "sep" ) js.append( "top.addWidget(" & q & "luisbocanegra.panel.colorizer.islands.separator" & q & ");" );
+            else if ( w.id == "flex" ) js.append( "top.addWidget(" & q & "org.kde.plasma.panelspacer" & q & ");" );
+            else if ( w.id == "luisbocanegra.panel.colorizer" ) {
+                js.append( "var colorizer = top.addWidget(" & q & w.id & q & ");" );
+                js.append( "colorizer.currentConfigGroup = [" & q & "General" & q & "];" );
+                js.append( "colorizer.writeConfig(" & q & "islandsEnabled" & q & ", true);" );
+                js.append( "colorizer.writeConfig(" & q & "islandSeparatorWidget" & q & ", " & q & "luisbocanegra.panel.colorizer.islands.separator" & q & ");" );
+            } else js.append( "top.addWidget(" & q & w.id & q & ");" );
+        }
+        js.append( "var dock = new Panel();" );
+        js.append( "dock.location = " & q & "bottom" & q & ";" );
+        js.append( "dock.height = 52;" );
+        js.append( "dock.lengthMode = " & q & "fit" & q & ";" );
+        js.append( "dock.addWidget(" & q & "org.kde.plasma.icontasks" & q & ");" );
+        return js.toList( chr( 10 ) ) & chr( 10 );
+    }
+
+    function plasmaRunning() {
+        for ( var qd in [ "qdbus6", "qdbus" ] ) if ( has( qd ) ) return tryExec( [ qd, "org.kde.plasmashell" ], 15 ).exitCode == 0;
+        return false;
+    }
+
+    function qdbus() {
+        for ( var qd in [ "qdbus6", "qdbus" ] ) if ( has( qd ) ) return qd;
+        return "";
+    }
+
+    function backup() {
+        var dir = stateDir() & "/backup";
+        if ( !directoryExists( dir ) ) directoryCreate( dir, true );
+        var dst = dir & "/plasma-org.kde.plasma.desktop-appletsrc";
+        // keep the first backup: it is the layout from before BxRig touched it
+        if ( fileExists( rcFile() ) && !fileExists( dst ) ) fileCopy( rcFile(), dst );
+        return dst;
+    }
+
+    function desktops( n, yes, dryRun, asJson ) {
+        var count = isNumeric( arguments.n ) ? int( val( arguments.n ) ) : 0;
+        if ( count < 1 || count > 20 ) return say( 4, { error: "desktops must be 1 to 20" }, arguments.asJson, [ "error: the number of desktops must be 1 to 20" ] );
+        if ( !has( "kwriteconfig6" ) ) return say( 4, { error: "kwriteconfig6 was not found" }, arguments.asJson, [ "error: kwriteconfig6 was not found (this needs KDE Plasma)" ] );
+        var data = { desktops: count };
+        if ( !arguments.yes || arguments.dryRun ) return say( arguments.dryRun ? 0 : 2, data, arguments.asJson, [ ( arguments.dryRun ? "Dry run" : "Plan" ) & ": " & count & " virtual desktops in one row (kwinrc [Desktops] Number and Rows)", arguments.dryRun ? "Nothing was changed." : "Nothing was changed. Add --yes to apply." ], arguments.dryRun );
+        tryExec( [ "kwriteconfig6", "--file", "kwinrc", "--group", "Desktops", "--key", "Number", count ], 20 );
+        tryExec( [ "kwriteconfig6", "--file", "kwinrc", "--group", "Desktops", "--key", "Rows", "1" ], 20 );
+        if ( qdbus() != "" ) tryExec( [ qdbus(), "org.kde.KWin", "/KWin", "reconfigure" ], 20 );
+        return say( 0, data, arguments.asJson, [ count & " virtual desktops." ] );
+    }
+
+    function apply( o, yes, dryRun, asJson ) {
+        var op = opts( arguments.o );
+        var js = script( op );
+        var live = plasmaRunning();
+        var data = { desktops: op.desktops, agenda: op.agenda, weather: op.weather, preset: op.preset, widgets: topWidgets( op ).map( function( w ) { return w.id; } ), applied_now: live, script: scriptFile() };
+        if ( !arguments.yes || arguments.dryRun ) {
+            var lines = [ ( arguments.dryRun ? "Dry run" : "Plan" ) & ": replace your Plasma panels with a top status panel and a bottom dock", "  top: " & topWidgets( op ).map( function( w ) { return w.id == "sep" ? "|" : ( w.id == "flex" ? "<spacer>" : listLast( w.id, "." ) ); } ).toList( " " ), "  bottom: icons-only task manager", "  " & op.desktops & " virtual desktops, Colorizer preset " & op.preset, live ? "Plasma is running: the layout is applied now." : "Plasma is not running: the layout is applied at your next Plasma login.", arguments.dryRun ? "Nothing was changed." : "Nothing was changed. Add --yes to apply." ];
+            return say( arguments.dryRun ? 0 : 2, data, arguments.asJson, lines, arguments.dryRun );
+        }
+        var saved = backup();
+        if ( !directoryExists( stateDir() ) ) directoryCreate( stateDir(), true );
+        fileWrite( scriptFile(), js );
+        desktops( op.desktops, true, false, false );
+        if ( live ) {
+            var r = tryExec( [ qdbus(), "org.kde.plasmashell", "/PlasmaShell", "org.kde.PlasmaShell.evaluateScript", js ], 120 );
+            if ( r.exitCode != 0 ) return say( 6, { error: "Plasma refused the layout script: " & trim( r.output ) }, arguments.asJson, [ "error: Plasma refused the layout script: " & trim( r.output ) ] );
+            if ( fileExists( autostartFile() ) ) fileDelete( autostartFile() );
+            tryExec( [ "dbus-send", "--session", "--type=signal", "/preset", "luisbocanegra.panel.colorizer.all.preset", "string:/usr/share/plasma/plasmoids/luisbocanegra.panel.colorizer/contents/ui/presets/" & op.preset ], 20 );
+            return say( 0, data, arguments.asJson, [ "Plasma panels applied. Backup of the old layout: " & saved & ". Undo: bxrig plasma panels undo --yes" ] );
+        }
+        var dir = getDirectoryFromPath( autostartFile() );
+        if ( !directoryExists( dir ) ) directoryCreate( dir, true );
+        fileWrite( autostartFile(), "[Desktop Entry]" & chr( 10 ) & "Type=Application" & chr( 10 ) & "Name=BxRig Plasma panels (one time)" & chr( 10 ) & "Exec=bxrig plasma panels apply --yes --preset=" & replace( op.preset, " ", "-", "all" ) & chr( 10 ) & "X-KDE-autostart-after=panel" & chr( 10 ) );
+        return say( 0, data, arguments.asJson, [ "Plasma is not running here. The layout is saved (" & scriptFile() & ") and a one-time autostart entry applies it at your next Plasma login." ] );
+    }
+
+    function undo( yes, asJson ) {
+        var saved = stateDir() & "/backup/plasma-org.kde.plasma.desktop-appletsrc";
+        if ( !fileExists( saved ) ) return say( 4, { error: "no backup" }, arguments.asJson, [ "error: there is no backup (the panels were never changed by BxRig)" ] );
+        if ( !arguments.yes ) return say( 2, { backup: saved }, arguments.asJson, [ "Plan: put back " & saved & " as your Plasma panel layout", "Nothing was changed. Add --yes to apply." ] );
+        fileCopy( saved, rcFile(), true );
+        if ( fileExists( autostartFile() ) ) fileDelete( autostartFile() );
+        return say( 0, { restored: saved }, arguments.asJson, [ "Your old panel layout is back. Log out and in (or restart the Plasma shell) to see it." ] );
+    }
+
+    function status( asJson ) {
+        var data = { backup: fileExists( stateDir() & "/backup/plasma-org.kde.plasma.desktop-appletsrc" ), layout_saved: fileExists( scriptFile() ), queued: fileExists( autostartFile() ), plasma_running: plasmaRunning() };
+        return say( 0, data, arguments.asJson, [ "Layout saved: " & data.layout_saved, "Waiting for the next Plasma login: " & data.queued, "Backup of the old layout: " & data.backup, "Plasma running: " & data.plasma_running ] );
+    }
+}

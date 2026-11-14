@@ -1,0 +1,276 @@
+// The one shortcut table shared by Hyprland and KDE Plasma (docs/architecture/COMMAND-CONTRACT.md section 13.4).
+// The only I/O is reading your overrides (~/.config/bxrig/shortcuts.json, written by `keys set`). `render( target )` turns the table into the text each target needs:
+//   xremap   YAML for the Cmd-style keys (one file, read by both xremap builds)
+//   hyprland Hyprland `bind` lines for the keys that are not remaps
+//   plasma   kglobalshortcutsrc lines for the keys that are not remaps
+class Shortcuts {
+    function init( overrides = "" ) {
+        // overrides: { rowId: "Super+Alt+K" }; read from the config file unless given (tests pass a struct)
+        variables.overrides = isStruct( arguments.overrides ) ? arguments.overrides : loadOverrides();
+        return this;
+    }
+
+    function overridesFile() { return new bxrig.ConfigService().quiet( true ).cfgHome() & "/bxrig/shortcuts.json"; }
+
+    function loadOverrides() {
+        var f = overridesFile();
+        if ( !fileExists( f ) ) return {};
+        try { var d = jsonDeserialize( fileRead( f ) ); return isStruct( d ) ? d : {}; } catch ( any e ) { return {}; }
+    }
+
+    // ---- key combos ----
+    // Valid key names besides single letters and digits.
+    function namedKeys() {
+        return [ "Space", "Tab", "Return", "Escape", "grave", "comma", "period", "slash", "minus", "equal", "Left", "Right", "Up", "Down", "Print",
+                 "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12" ];
+    }
+
+    // Parses "Super+Shift+V" into { ok, mods (SUPER, SHIFT, ALT, CTRL; sorted), key, error }. "`" and "Enter" are accepted spellings.
+    function parseKeys( keys ) {
+        var parts = listToArray( arguments.keys, "+", true );
+        if ( parts.len() < 2 ) return { ok: false, error: "use at least one modifier and a key, like Super+Shift+V", mods: [], key: "" };
+        var map = { super: "SUPER", meta: "SUPER", win: "SUPER", shift: "SHIFT", alt: "ALT", ctrl: "CTRL", control: "CTRL" };
+        var mods = [];
+        for ( var i = 1; i < parts.len(); i++ ) {
+            var m = lcase( trim( parts[ i ] ) );
+            if ( !structKeyExists( map, m ) ) return { ok: false, error: "unknown modifier " & parts[ i ] & " (Super, Shift, Alt, Ctrl)", mods: [], key: "" };
+            if ( !arrayFind( mods, map[ m ] ) ) mods.append( map[ m ] );
+        }
+        var raw = trim( parts[ parts.len() ] );
+        var key = raw == "`" ? "grave" : ( lcase( raw ) == "enter" ? "Return" : raw );
+        if ( len( key ) == 1 && reFind( "[A-Za-z]", key ) ) key = ucase( key );
+        var okKey = ( len( key ) == 1 && reFind( "[A-Z0-9]", key ) ) || arrayFindNoCase( namedKeys(), key ) > 0;
+        if ( !okKey ) return { ok: false, error: "unknown key " & raw & " (a letter, a digit, or one of: " & namedKeys().toList( ", " ) & ")", mods: [], key: "" };
+        if ( arrayFindNoCase( namedKeys(), key ) > 0 ) key = namedKeys()[ arrayFindNoCase( namedKeys(), key ) ];
+        return { ok: true, error: "", mods: mods.sort( "text" ), key: key };
+    }
+
+    // The same combo as one comparable string, e.g. "ALT+SHIFT+SUPER+V".
+    function normalize( keys ) {
+        var k = parseKeys( arguments.keys );
+        return k.ok ? k.mods.toList( "+" ) & "+" & ucase( k.key ) : "";
+    }
+
+    // The first argument of Hyprland's hl.bind for a combo: mainMod .. " + SHIFT + V".
+    function hyprExpr( keys ) {
+        var k = parseKeys( arguments.keys );
+        var rest = [];
+        for ( var m in [ "CTRL", "ALT", "SHIFT" ] ) if ( arrayFind( k.mods, m ) ) rest.append( m );
+        rest.append( k.key );
+        return arrayFind( k.mods, "SUPER" ) ? 'mainMod .. " + ' & rest.toList( " + " ) & '"' : '"' & rest.toList( " + " ) & '"';
+    }
+
+    // Qt's spelling for kglobalshortcutsrc: Meta+Shift+Q.
+    function qtKeys( keys ) {
+        var k = parseKeys( arguments.keys );
+        var out = [];
+        for ( var m in [ "SUPER", "CTRL", "ALT", "SHIFT" ] ) if ( arrayFind( k.mods, m ) ) out.append( m == "SUPER" ? "Meta" : ( m == "CTRL" ? "Ctrl" : ( m == "ALT" ? "Alt" : "Shift" ) ) );
+        out.append( k.key == "grave" ? "`" : k.key );
+        return out.toList( "+" );
+    }
+
+    // exec_cmd for a bxrig command (PATH gets ~/.local/bin so the binary is found from a shortcut).
+    function execBxrig( words ) {
+        return 'hl.dsp.exec_cmd([[sh -c ''PATH="$HOME/.local/bin:$PATH"; bxrig ' & arguments.words & ''']])';
+    }
+
+    // A bind line for a row.
+    function bindLine( r ) {
+        return "hl.bind(" & hyprExpr( r.keys ) & ", " & r.dispatch & ")";
+    }
+
+    // Terminal window classes: in these, Cmd+C/V send Ctrl+Shift+C/V because plain Ctrl+C interrupts the running program.
+    function terminals() {
+        return [ "kitty", "Alacritty", "foot", "org.wezfurlong.wezterm", "com.mitchellh.ghostty", "org.kde.konsole", "konsole" ];
+    }
+
+    // Rows: id, keys (what the user presses), action (words), kind remap|bind.
+    // remap rows: to (key sent), termTo (key sent in terminals, optional).
+    // bind rows: hyprland (full bind line), plasma (kglobalshortcutsrc group, key, value).
+    function table() {
+        var rows = [
+            { id: "copy", keys: "Super+C", action: "Copy", kind: "remap", to: "Ctrl-c", termTo: "Ctrl-Shift-c" },
+            { id: "paste", keys: "Super+V", action: "Paste", kind: "remap", to: "Ctrl-v", termTo: "Ctrl-Shift-v" },
+            { id: "mac-z", keys: "Super+Z", action: "Undo", kind: "remap", to: "Ctrl-z", termTo: "Super-z" },
+            { id: "mac-x", keys: "Super+X", action: "Cut", kind: "remap", to: "Ctrl-x", termTo: "Super-x" },
+            { id: "mac-a", keys: "Super+A", action: "Select all", kind: "remap", to: "Ctrl-a", termTo: "Super-a" },
+            { id: "mac-s", keys: "Super+S", action: "Save", kind: "remap", to: "Ctrl-s", termTo: "Super-s" },
+            { id: "mac-f", keys: "Super+F", action: "Find", kind: "remap", to: "Ctrl-f", termTo: "Ctrl-Shift-f" },
+            { id: "mac-t", keys: "Super+T", action: "New tab", kind: "remap", to: "Ctrl-t", termTo: "Ctrl-Shift-t" },
+            { id: "mac-n", keys: "Super+N", action: "New window", kind: "remap", to: "Ctrl-n", termTo: "Ctrl-Shift-n" },
+            { id: "mac-o", keys: "Super+O", action: "Open", kind: "remap", to: "Ctrl-o", termTo: "Super-o" },
+            { id: "mac-p", keys: "Super+P", action: "Print", kind: "remap", to: "Ctrl-p", termTo: "Super-p" },
+            { id: "mac-r", keys: "Super+R", action: "Reload", kind: "remap", to: "Ctrl-r", termTo: "Super-r" },
+            { id: "mac-w", keys: "Super+W", action: "Close tab", kind: "remap", to: "Ctrl-w", termTo: "Ctrl-Shift-w" },
+            { id: "mac-l", keys: "Super+L", action: "Address bar", kind: "remap", to: "Ctrl-l", termTo: "Super-l" },
+            { id: "mac-b", keys: "Super+B", action: "Bold", kind: "remap", to: "Ctrl-b", termTo: "Super-b" },
+            { id: "mac-i", keys: "Super+I", action: "Italic", kind: "remap", to: "Ctrl-i", termTo: "Super-i" },
+            { id: "mac-u", keys: "Super+U", action: "Underline", kind: "remap", to: "Ctrl-u", termTo: "Super-u" },
+            { id: "mac-comma", keys: "Super+Comma", action: "Preferences", kind: "remap", to: "Ctrl-comma", termTo: "Super-comma" },
+            { id: "switch-windows", keys: "Super+Tab", action: "Switch windows", kind: "remap", to: "Alt-Tab" },
+            { id: "logout", keys: "Super+Shift+Q", action: "Log out to the login screen", kind: "bind", dispatch: 'hl.dsp.exec_cmd("uwsm stop")',
+              plasmaTail: "Ctrl+Alt+Del,Log Out", plasma: { group: "ksmserver", key: "Log Out", value: "" } },
+            // Hyprland only (kind hypr-bind): on Plasma the AI shell is Yakuake, whose shortcut you set in System Settings.
+            { id: "ai-shell", keys: "Super+`", action: "Pull-down AI shell", kind: "hypr-bind", dispatch: execBxrig( "ai shell" ) },
+            { id: "clipboard-history", keys: "Super+Shift+V", action: "Clipboard history", kind: "hypr-bind", dispatch: execBxrig( "clipboard pick" ) },
+            { id: "screen-record", keys: "Super+Shift+R", action: "Start or stop a screen recording", kind: "hypr-bind", dispatch: execBxrig( "record toggle" ) },
+            { id: "screen-record-region", keys: "Super+Alt+Shift+R", action: "Record a region of the screen", kind: "hypr-bind", dispatch: execBxrig( "record toggle --region" ) },
+            { id: "control-center", keys: "Super+Alt+M", action: "BxRig control center (AI, databases, settings)", kind: "hypr-bind", dispatch: execBxrig( "menu" ) },
+            { id: "emoji", keys: "Super+Ctrl+E", action: "Emoji picker", kind: "hypr-bind", dispatch: execBxrig( "emoji" ) },
+            { id: "force-quit", keys: "Super+Alt+Escape", action: "Force quit a window", kind: "hypr-bind", dispatch: execBxrig( "forcequit" ) },
+            { id: "minimize", keys: "Super+M", action: "Minimize the window", kind: "hypr-bind", dispatch: execBxrig( "window minimize" ) },
+            { id: "unminimize", keys: "Super+Shift+M", action: "Show the minimized windows", kind: "hypr-bind", dispatch: execBxrig( "window restore" ) },
+            { id: "overview", keys: "Super+Ctrl+Up", action: "Overview of all windows (Mission Control)", kind: "hypr-bind", dispatch: execBxrig( "overview" ) },
+            { id: "dictation-toggle", keys: "Super+Ctrl+X", action: "Dictation on or off (Voxtype)", kind: "hypr-bind", dispatch: 'hl.dsp.exec_cmd("voxtype record toggle")' },
+            { id: "night-shift", keys: "Super+Alt+Shift+N", action: "Night shift on or off", kind: "hypr-bind", dispatch: execBxrig( "nightshift toggle" ) },
+            { id: "key-sheet", keys: "Super+K", action: "Shortcut cheat sheet", kind: "hypr-bind", dispatch: execBxrig( "keys sheet" ) },
+            { id: "screenshot-screen", keys: "Super+Shift+3", action: "Screenshot: the whole screen", kind: "hypr-bind", dispatch: execBxrig( "screenshot screen" ) },
+            { id: "screenshot-region", keys: "Super+Shift+4", action: "Screenshot: a region", kind: "hypr-bind", dispatch: execBxrig( "screenshot region" ) },
+            { id: "screenshot-menu", keys: "Super+Shift+5", action: "Screenshot menu (region, window, OCR, QR, record)", kind: "hypr-bind", dispatch: execBxrig( "screenshot menu" ) },
+            { id: "dnd", keys: "Super+Alt+N", action: "Do Not Disturb on or off", kind: "hypr-bind", dispatch: execBxrig( "notify dnd toggle" ) },
+            { id: "all-apps", keys: "Super+Alt+Space", action: "All apps in one window (like Omarchy 4.5's app grid)", kind: "hypr-bind", dispatch: execBxrig( "apps" ) }
+        ];
+        // your overrides (only the rows that are bindings can be changed; remaps are xremap's)
+        for ( var r in rows ) {
+            if ( r.kind != "remap" && structKeyExists( variables.overrides, r.id ) && parseKeys( variables.overrides[ r.id ] ).ok ) r.keys = variables.overrides[ r.id ];
+            if ( r.kind == "bind" ) r.plasma.value = qtKeys( r.keys ) & "," & r.plasmaTail;
+        }
+        return rows;
+    }
+
+    // The rows you may change with `keys set`.
+    function editable() { return table().filter( function( r ) { return r.kind != "remap"; } ); }
+
+    // The table as text lines for `keys show`.
+    function show() {
+        return table().map( function( r ) {
+            return { id: r.id, keys: r.keys, custom: r.kind != "remap" && structKeyExists( variables.overrides, r.id ), action: r.action, how: r.kind == "remap" ? "xremap" : ( r.kind == "hypr-bind" ? "Hyprland binding" : "desktop binding" ) };
+        } );
+    }
+
+    // True for the render targets.
+    function targets() {
+        return [ "xremap", "hyprland", "plasma" ];
+    }
+
+    // Rendered text for one target.
+    function render( target ) {
+        if ( target == "xremap" ) return xremap();
+        if ( target == "hyprland" ) return hyprland();
+        if ( target == "plasma" ) return plasma();
+        throw( type = "Shortcuts.target", message = "Unknown target: " & target );
+    }
+
+    // xremap YAML: terminal rules first (only), then the general rules (not terminals).
+    function xremap() {
+        var remaps = table().filter( function( r ) { return r.kind == "remap"; } );
+        var termList = terminals().map( function( c ) { return "'" & c & "'"; } ).toList( ", " );
+        var out = [ "# Written by bxrig (keys). Cmd-style keys, same on Hyprland and Plasma.", "keymap:" ];
+        out.append( "  - name: Cmd keys in terminals" );
+        out.append( "    application:" );
+        out.append( "      only: [" & termList & "]" );
+        out.append( "    remap:" );
+        for ( var r in remaps ) out.append( "      Super-" & lcase( listLast( r.keys, "+" ) ) & ": " & ( structKeyExists( r, "termTo" ) ? r.termTo : r.to ) );
+        out.append( "  - name: Cmd keys everywhere else" );
+        out.append( "    application:" );
+        out.append( "      not: [" & termList & "]" );
+        out.append( "    remap:" );
+        for ( var r in remaps ) out.append( "      Super-" & lcase( listLast( r.keys, "+" ) ) & ": " & r.to );
+        return out.toList( chr( 10 ) ) & chr( 10 );
+    }
+
+    // The Hyprland Lua module (Hyprland 0.55+ reads hyprland.lua; Noctalia's docs use the same API).
+    // Written to ~/.config/hypr/bxrig.lua; hyprland.lua loads it with `require("bxrig")` (see hyprlandLoadLine).
+    // Lines come from the Noctalia v5 Hyprland docs: https://docs.noctalia.dev/noctalia/v5.4.0/compositor-settings/hyprland/
+    function hyprland() {
+        var out = [
+            '-- Written by bxrig (keys). Edit with `bxrig keys apply`, not by hand.',
+            'local mainMod = "SUPER"',
+            'local ipc = "noctalia msg "',
+            '',
+            '-- Noctalia starts with the session',
+            'hl.on("hyprland.start", function()',
+            '  hl.exec_cmd("noctalia")',
+            '  -- clipboard history (cliphist stores what wl-paste sees; pick it with Super+Shift+V)',
+            '  hl.exec_cmd("wl-paste --type text --watch cliphist store")',
+            '  hl.exec_cmd("wl-paste --type image --watch cliphist store")',
+            'end)',
+            '',
+            '-- Super+Space opens the launcher you chose (`bxrig runner set`; Noctalia by default). If that cannot run, Noctalia opens.',
+            'hl.bind(mainMod .. "+Space", hl.dsp.exec_cmd([[sh -c ''PATH="$HOME/.local/bin:$PATH"; bxrig runner launch || noctalia msg panel-toggle launcher'']]))',
+            '-- Noctalia panels and the window switcher (Super+Tab is remapped to Alt+Tab by xremap)',
+            'hl.bind(mainMod .. "+S", hl.dsp.exec_cmd(ipc .. "panel-toggle control-center"))',
+            'hl.bind(mainMod .. "+comma", hl.dsp.exec_cmd(ipc .. "settings-toggle"))',
+            'hl.bind("ALT + Tab", hl.dsp.exec_cmd(ipc .. "window-switcher hold"))',
+            '',
+            '-- Shared shortcuts from the bxrig table'
+        ];
+        for ( var r in table() ) if ( r.kind == "bind" || r.kind == "hypr-bind" ) out.append( bindLine( r ) );
+        out.append( '' );
+        out.append( '-- Theme accent: `bxrig theme set` writes ~/.config/bxrig/theme/hypr.lua (the focused and unfocused border colours)' );
+        out.append( 'do' );
+        out.append( '  local cfgdir = os.getenv("BXRIG_CONFIG_HOME") or ((os.getenv("HOME") or "") .. "/.config")' );
+        out.append( '  local ok, accent = pcall(dofile, cfgdir .. "/bxrig/theme/hypr.lua")' );
+        out.append( '  if ok and type(accent) == "table" then hl.config({ general = { col = { active_border = accent.active, inactive_border = accent.inactive } } }) end' );
+        out.append( 'end' );
+        out.append( '' );
+        out.append( '-- Look settings: `bxrig appearance` writes ~/.config/bxrig/theme/look.lua (gaps, corners, opacity, animations, layout, one-window ratio)' );
+        out.append( 'do' );
+        out.append( '  local cfgdir = os.getenv("BXRIG_CONFIG_HOME") or ((os.getenv("HOME") or "") .. "/.config")' );
+        out.append( '  local ok, look = pcall(dofile, cfgdir .. "/bxrig/theme/look.lua")' );
+        out.append( '  if ok and type(look) == "table" then hl.config(look) end' );
+        out.append( 'end' );
+        out.append( '' );
+        out.append( '-- Monitors: `bxrig display` writes ~/.config/bxrig/theme/monitors.lua (scale, rotation, position, mirror, laptop panel)' );
+        out.append( 'do' );
+        out.append( '  local cfgdir = os.getenv("BXRIG_CONFIG_HOME") or ((os.getenv("HOME") or "") .. "/.config")' );
+        out.append( '  local ok, mons = pcall(dofile, cfgdir .. "/bxrig/theme/monitors.lua")' );
+        out.append( '  if ok and type(mons) == "table" then for _, m in ipairs(mons) do hl.monitor(m) end end' );
+        out.append( 'end' );
+        out.append( '' );
+        out.append( '-- The pull-down AI shell (bxrig ai shell) lives on the special workspace "ai"; its window class is set by the terminal it starts' );
+        out.append( 'hl.window_rule({ name = "bxrig-ai", match = { class = "^com.bxrig.ai$" }, workspace = "special:ai", float = true })' );
+        out.append( '' );
+        out.append( '-- Noctalia settings window floats; its panels get blur and no layer animation' );
+        out.append( 'hl.window_rule({ match = { class = "dev.noctalia.Noctalia" }, float = true, size = { 1080, 920 } })' );
+        out.append( 'hl.layer_rule({ name = "noctalia", match = { namespace = "^noctalia-(bar-.+|notification|dock|panel|attached-panel|osd|window-switcher)$" }, no_anim = true, ignore_alpha = 0.5, blur = true, blur_popups = true })' );
+        return out.toList( chr( 10 ) ) & chr( 10 );
+    }
+
+    // The one line hyprland.lua needs to load the module above.
+    function hyprlandLoadLine() {
+        return 'require("bxrig")';
+    }
+
+    // kglobalshortcutsrc fragment for Plasma.
+    function plasma() {
+        var out = [ "# Written by bxrig (keys)." ];
+        for ( var r in table() ) if ( r.kind == "bind" ) {
+            out.append( "[" & r.plasma.group & "]" );
+            out.append( r.plasma.key & "=" & r.plasma.value );
+        }
+        return out.toList( chr( 10 ) ) & chr( 10 );
+    }
+
+    // The files bxrig manages for the shortcuts, in the config service entry shape (name, target, mode, content).
+    // They join `config list|diff|apply|restore`. The Hyprland file still has to be `source`d from hyprland.conf.
+    function entries( cfgHome ) {
+        return [
+            { name: "xremap", target: cfgHome & "/xremap/config.yml", mode: "644", content: xremap() },
+            { name: "hypr-keys", target: cfgHome & "/hypr/bxrig.lua", mode: "644", content: hyprland() },
+            { name: "xremap-service", target: cfgHome & "/systemd/user/xremap.service", mode: "644", content: xremapService() }
+        ];
+    }
+
+    // Plasma settings written with kwriteconfig6 into kglobalshortcutsrc: [ { group, key, value } ].
+    function plasmaSettings() {
+        return table().filter( function( r ) { return r.kind == "bind"; } ).map( function( r ) { return r.plasma; } );
+    }
+
+    // The systemd user unit that runs xremap with the shared config. Enabled by `setup xremap`.
+    function xremapService() {
+        return [ "# Written by bxrig (keys).", "[Unit]", "Description=xremap key remapper (bxrig)", "PartOf=graphical-session.target", "After=graphical-session.target",
+                 "", "[Service]", "ExecStart=/usr/bin/xremap %h/.config/xremap/config.yml", "Restart=on-failure",
+                 "", "[Install]", "WantedBy=graphical-session.target" ].toList( chr( 10 ) ) & chr( 10 );
+    }
+}

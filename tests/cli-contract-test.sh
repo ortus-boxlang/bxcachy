@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Shared CLI contract: unknown flags exit 2, --json prints one JSON object. Usage: cli-contract-test.sh [binary]
 set -euo pipefail
-bin="$(cd "$(dirname "${1:-./bxcachy}")" && pwd)/$(basename "${1:-./bxcachy}")"
+bin="$(cd "$(dirname "${1:-./bxrig}")" && pwd)/$(basename "${1:-./bxrig}")"
 fail() { echo "FAIL: $*" >&2; exit 1; }
 code() { set +e; "$@" >/dev/null 2>&1; local rc=$?; set -e; echo "$rc"; }
 [[ "$(code "$bin" version --bogus)" == 2 ]] || fail 'unknown flag on version'

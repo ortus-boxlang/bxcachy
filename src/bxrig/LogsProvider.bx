@@ -1,0 +1,52 @@
+// Logs: the journal without remembering journalctl flags. p cycles the lowest priority shown (error, warning, info); / filters the lines.
+class LogsProvider {
+    function init( demo = false ) { variables.demo = arguments.demo; variables.sys = new bxrig.TuiSys(); variables.prio = 2; return this; }
+    function id() { return "logs"; }
+    function icon() { return "file"; }
+    function title() { return "Logs"; }
+    function hint() { return "this boot · priority " & levels()[ variables.prio ] & " and worse"; }
+    function live() { return false; }
+    function refreshSeconds() { return 0; }
+    function detailLines() { return 2; }
+    function emptyText() { return "No log lines at this priority."; }
+    function levels() { return [ "error", "warning", "info" ]; }
+    function columns() { return [ { key: "time", label: "time", w: 10 }, { key: "level", label: "level", w: 9 }, { key: "unit", label: "from", w: 22 }, { key: "message", label: "message", w: 0 } ]; }
+    function style( r ) { return r.level == "error" ? "error" : ( r.level == "warning" ? "warn" : "" ); }
+    function detail( r ) { return [ r.date & " " & r.time & "  " & r.unit, r.message ]; }
+
+    function actions() {
+        var me = this;
+        return [ { key: "p", label: "priority", run: function( r ) { me.cycle(); return { action: "reload" }; } } ];
+    }
+
+    function cycle() { variables.prio = variables.prio mod 3 + 1; }
+
+    // One `journalctl -o json` line -> a row, or {}.
+    function parseLine( line ) {
+        try {
+            var j = jsonDeserialize( arguments.line );
+            var pr = int( val( j.PRIORITY ?: 6 ) );
+            var msg = j.MESSAGE ?: "";
+            if ( !isSimpleValue( msg ) ) msg = "(binary message)";
+            var us = val( j.__REALTIME_TIMESTAMP ?: 0 );
+            var secs = int( us / 1000000 );
+            var dayS = secs mod 86400;
+            return { date: "", time: right( "0" & int( dayS / 3600 ), 2 ) & ":" & right( "0" & int( ( dayS mod 3600 ) / 60 ), 2 ) & ":" & right( "0" & ( dayS mod 60 ), 2 ), level: pr <= 3 ? "error" : ( pr == 4 ? "warning" : "info" ), unit: j.SYSLOG_IDENTIFIER ?: ( j._COMM ?: "" ), message: replace( msg, chr( 9 ), " ", "all" ) };
+        } catch ( any e ) { return {}; }
+    }
+
+    function load( q = "" ) {
+        if ( variables.demo ) {
+            var d = [ { time: "12:10:44", level: "info", unit: "boxlang-app", message: "GET /health 200" }, { time: "12:10:03", level: "info", unit: "boxlang-app", message: "listening on :8080" }, { time: "12:09:18", level: "warning", unit: "kernel", message: "nvme: temperature 71 C" }, { time: "12:06:40", level: "error", unit: "podman", message: "port 5432 already in use" }, { time: "12:04:11", level: "warning", unit: "NetworkManager", message: "link flap on wlan0" } ];
+            var keep = [];
+            for ( var x in d ) if ( variables.prio == 3 || ( variables.prio == 2 && x.level != "info" ) || ( variables.prio == 1 && x.level == "error" ) ) { x.date = "today"; keep.append( x ); }
+            return keep;
+        }
+        var level = [ "3", "4", "6" ][ variables.prio ];
+        var r = variables.sys.run( "journalctl", [ "-b", "-n", "300", "--no-pager", "-o", "json", "-p", level ], 20 );
+        var rows = [];
+        var lines = listToArray( r.output, chr( 10 ) );
+        for ( var i = lines.len(); i >= 1; i-- ) { var row = parseLine( lines[ i ] ); if ( structCount( row ) ) rows.append( row ); }
+        return rows;
+    }
+}

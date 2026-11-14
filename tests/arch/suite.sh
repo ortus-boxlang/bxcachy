@@ -5,7 +5,7 @@
 set -uo pipefail
 SRC="${SRC:-/src}"
 OUT="${OUT:-/out}"
-WORK="$HOME/bxcachy"
+WORK="$HOME/bxrig"
 mkdir -p "$OUT"
 rm -rf "$WORK"; cp -a "$SRC" "$WORK"; cd "$WORK"
 : > "$OUT/results.tsv"
@@ -38,12 +38,12 @@ if curl -fsS -m 15 -o /dev/null https://api.github.com/; then NET=1; else NET=0;
 # Listing of everything a bootstrap run could change for this user (path, size, mtime), plus the pacman
 # log length. Two listings are diffed to prove that a second full run changes nothing.
 snaplist() {
-  find "$HOME" -path "$WORK" -prune -o -path "$HOME/.cache/bxcachy" -prune -o \( -type f -o -type l \) -printf '%p %s %T@\n' 2>/dev/null | sort
+  find "$HOME" -path "$WORK" -prune -o -path "$HOME/.cache/bxrig" -prune -o \( -type f -o -type l \) -printf '%p %s %T@\n' 2>/dev/null | sort
   echo "pacman.log lines: $(wc -l < /var/log/pacman.log 2>/dev/null || echo 0)"
 }
 skip() { printf 'SKIP\t%s\t%s\n' "$1" "$2" | tee -a "$OUT/results.tsv"; }
 
-export PATH="$HOME/.local/share/bxcachy/matchbox/bin:$HOME/.mvm/bin:$HOME/.cargo/bin:$PATH"
+export PATH="$HOME/.local/share/bxrig/matchbox/bin:$HOME/.mvm/bin:$HOME/.cargo/bin:$PATH"
 
 # --- Existing mocked suites, now on real Arch ---
 step mock-package-manager 0 bash tests/package-manager-test.sh
@@ -79,9 +79,9 @@ if [[ $NET == 1 ]]; then
   step bootstrap-nvm-not-required 0 bash -c "! bash bootstrap/install.sh check | grep -E '^(nvm|node):'"
   # B5: build the real binary with MatchBox and install it for the user.
   step_grep bootstrap-install-binary       0 'Installed '      bash bootstrap/install.sh binary --yes
-  step_grep bootstrap-binary-runs          0 'BxCachy 0.'      "$HOME/.local/bin/bxcachy" version
+  step_grep bootstrap-binary-runs          0 'BxRig 0.'      "$HOME/.local/bin/bxrig" version
   step_grep bootstrap-install-binary-rerun 0 'Nothing to do'   bash bootstrap/install.sh binary --yes
-  step_grep bootstrap-check-binary         0 'bxcachy: 0.'     bash bootstrap/install.sh check
+  step_grep bootstrap-check-binary         0 'bxrig: 0.'     bash bootstrap/install.sh check
   step bootstrap-binary-rejects-impostor   1 bash -c 'printf "#!/bin/sh\necho nope\n" > /tmp/impostor; chmod 755 /tmp/impostor; bash bootstrap/install.sh binary --yes --binary /tmp/impostor'
   # B7: the whole path on this clean machine is finished, and running it all again changes nothing.
   step_grep bootstrap-fullpath-ready 0 'summary: ready' env PATH="$HOME/.local/bin:$PATH" bash bootstrap/install.sh check
@@ -96,8 +96,8 @@ fi
 # --- Native build ---
 BIN=""
 if [[ $NET == 1 ]]; then
-  step native-compile 0 bash -c 'matchbox --version | grep -F "$(jq -r .toolchain.matchbox.version box.json)" && matchbox --target native --output bxcachy-built src/Main.bx'
-  BIN="$(find . -maxdepth 1 -type f -executable -name bxcachy-built -print -quit)"
+  step native-compile 0 bash -c 'matchbox --version | grep -F "$(jq -r .toolchain.matchbox.version box.json)" && matchbox --target native --output bxrig-built src/Main.bx'
+  BIN="$(find . -maxdepth 1 -type f -executable -name bxrig-built -print -quit)"
 else
   skip native-compile "GitHub unreachable (MatchBox cannot install); native and real-pacman CLI steps skipped"
   BIN=SKIP
@@ -113,10 +113,10 @@ else
   # --- Real pacman, no mocks ---
   step_grep real-pkg-status-installed   0 "installed"   "$BIN" package-status git
   step real-pkg-status-missing          1               "$BIN" package-status yazi
-  step real-pkg-status-unknown-id       3               "$BIN" package-status bxcachy-no-such-app
+  step real-pkg-status-unknown-id       3               "$BIN" package-status bxrig-no-such-app
   step_grep real-pkg-source-catalog     0 "pacman"      "$BIN" package-source git
   step_grep real-pkg-source-aur         0 "aur"         "$BIN" package-source vscode
-  step real-pkg-source-unknown-id       3               "$BIN" package-source bxcachy-no-such-app
+  step real-pkg-source-unknown-id       3               "$BIN" package-source bxrig-no-such-app
   step_grep real-plan-core              0 "to install"  "$BIN" plan --profile=core
   # setup hyprland: the plan, and every package it names must exist in the real repos (stock Arch plus CachyOS)
   step_grep real-setup-hyprland-plan    0 "Dry run"     "$BIN" setup hyprland --dry-run
@@ -132,8 +132,8 @@ else
   step real-keys-render-all             0               bash -c "for t in xremap hyprland plasma; do '$BIN' keys render \$t | grep -q . || exit 1; done"
   step real-setup-hyprland              0               "$BIN" setup hyprland --yes
   step real-hyprland-noctalia-installed 0               pacman -Q hyprland noctalia uwsm hyprlock
-  step real-starter-files-written       0               bash -c 'for f in .config/hypr/hyprland.lua .config/hypr/bxcachy.lua .config/noctalia/config.toml .config/noctalia/palettes/BxCachy.json .config/xremap/config.yml Pictures/BxCachy/box.jpg; do test -s "$HOME/$f" || { echo "missing $f"; exit 1; }; done'
-  step real-wallpapers-byte-identical   0               bash -c 'for w in box.jpg grid.jpg aurora.jpg minimal.png; do cmp "$HOME/Pictures/BxCachy/$w" "assets/wallpapers/$w" || exit 1; done'
+  step real-starter-files-written       0               bash -c 'for f in .config/hypr/hyprland.lua .config/hypr/bxrig.lua .config/noctalia/config.toml .config/noctalia/palettes/BxRig.json .config/xremap/config.yml Pictures/BxRig/box.jpg; do test -s "$HOME/$f" || { echo "missing $f"; exit 1; }; done'
+  step real-wallpapers-byte-identical   0               bash -c 'for w in box.jpg grid.jpg aurora.jpg minimal.png; do cmp "$HOME/Pictures/BxRig/$w" "assets/wallpapers/$w" || exit 1; done'
   step real-noctalia-config-valid-toml  0               python3 -c "import sys,tomllib; tomllib.load(open(sys.argv[1],'rb'))" "$HOME/.config/noctalia/config.toml"
   step real-keys-check-clean            0               "$BIN" keys check
   step real-setup-hyprland-rerun        0               "$BIN" setup hyprland --yes
@@ -156,7 +156,7 @@ fi
 step config-apply-restore 0 bash -c '
   set -e; d=$(mktemp -d); echo one > $d/src; bash scripts/config.sh apply $d/src $d/dst --yes
   echo two > $d/src; bash scripts/config.sh apply $d/src $d/dst --yes
-  b=$(ls $d/dst.bxcachy.*.bak | head -1); bash scripts/config.sh restore "$b" $d/dst --yes; grep -Fx one $d/dst'
+  b=$(ls $d/dst.bxrig.*.bak | head -1); bash scripts/config.sh restore "$b" $d/dst --yes; grep -Fx one $d/dst'
 
 echo
 echo "===== SUMMARY ====="

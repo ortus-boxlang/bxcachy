@@ -14,7 +14,7 @@ runner = function( argv, timeout ) {
  if ( len( failOn ) && find( failOn, argv.toList( " " ) ) ) return { exitCode: 1, timeout: false, output: "" };
  return { exitCode: 0, timeout: false, output: "0" };
 };
-inst = new bxcachy.Installer( runner );
+inst = new bxrig.Installer( runner );
 sel = [ app( "git", "pacman", [ "git" ] ), app( "podman", "pacman", [ "podman", "buildah", "skopeo" ] ),
         app( "vscode", "aur", [ "visual-studio-code-bin" ] ), app( "brave", "aur", [ "brave-bin" ] ) ];
 b = inst.steps( sel, false );
@@ -33,10 +33,10 @@ shortRef = inst.steps( [ app( "x", "pkgbuild", [ "x" ], { pkgbuild: { repo: "o/r
 check( "a short ref is not built", shortRef.steps.len() == 0 && shortRef.blocked.len() == 1 );
 check( "pinned pkgbuild: clone, checkout the ref, makepkg in the path", b.steps.len() == 1 && find( "https://github.com/omacom/omarchy-pkgs.git", cmds[1].toList( " " ) ) && cmds[2][6] == "65a4b0f646f7afe480fdebc7c0cf8cf2b56bf27f" && cmds[3][3] == b.steps[1].dir & "/pkgbuilds/omazed" && cmds[3][4] == "makepkg" );
 // web apps: a launcher file, written for real into a temporary home
-home = getTempDirectory() & "/bxcachy-installer-" & left( createUUID(), 8 );
+home = getTempDirectory() & "/bxrig-installer-" & left( createUUID(), 8 );
 web = { id: "gmail", name: "Gmail", description: "Google mail", source: "web", url: "https://mail.google.com/mail/u/0/#inbox?a=100%25" };
 b = inst.steps( [ web ], false, home );
-check( "web app: one step with a launcher file and no commands", b.steps.len() == 1 && b.steps[1].kind == "web" && b.steps[1].commands.len() == 0 && b.steps[1].files[1].path == home & "/.local/share/applications/bxcachy-gmail.desktop" );
+check( "web app: one step with a launcher file and no commands", b.steps.len() == 1 && b.steps[1].kind == "web" && b.steps[1].commands.len() == 0 && b.steps[1].files[1].path == home & "/.local/share/applications/bxrig-gmail.desktop" );
 content = b.steps[1].files[1].content;
 check( "launcher runs brave in app mode, % is escaped", find( "Exec=brave --app=https://mail.google.com/mail/u/0/#inbox?a=100%%25", content ) && find( "Name=Gmail", content ) && find( "[Desktop Entry]", content ) );
 r = inst.run( b.steps );
@@ -64,7 +64,7 @@ failOn = "yay"; onlyAur = inst.steps( [ app( "vscode", "aur", [ "x" ] ) ], false
 r = inst.run( onlyAur.steps );
 check( "run: only aur failed gives exit 6", inst.exitCode( r ) == 6 );
 timeoutRunner = function( argv, timeout ) { return { exitCode: 0, timeout: true, output: "" }; };
-r = new bxcachy.Installer( timeoutRunner ).run( onlyPacman.steps );
+r = new bxrig.Installer( timeoutRunner ).run( onlyPacman.steps );
 check( "run: a timeout is a failure", r.failed.len() == 1 && find( "timed out", r.failed[1].error ) );
 // script source: the vendor installer, URL and arguments passed as arguments
 scriptApp = { id: "strata", name: "Strata", source: "script", script: { url: "https://example.com/install.sh", args: [ "--non-interactive" ], shell: "sh" } };
@@ -73,6 +73,6 @@ check( "script: one script step, URL and args are separate arguments", sb.steps.
 // root detection
 rootRunner = function( argv, timeout ) { return { exitCode: 0, timeout: false, output: "0" + chr( 10 ) }; };
 userRunner = function( argv, timeout ) { return { exitCode: 0, timeout: false, output: "1000" }; };
-check( "isRoot", new bxcachy.Installer( rootRunner ).isRoot() && !new bxcachy.Installer( userRunner ).isRoot() );
+check( "isRoot", new bxrig.Installer( rootRunner ).isRoot() && !new bxrig.Installer( userRunner ).isRoot() );
 if ( failures > 0 ) { println( failures & " failed" ); CLIExit( 1 ); }
 println( "installer tests passed" );

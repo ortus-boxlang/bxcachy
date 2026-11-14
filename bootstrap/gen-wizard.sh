@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Embeds the wizard's data (assets/wizard/: the demo pages as JSON and the splash art) in src/bxcachy/WizardData.bx.
-#   gen-wizard.sh           rewrite src/bxcachy/WizardData.bx
+# Embeds the wizard's data (assets/wizard/: the demo pages as JSON and the splash art) in src/bxrig/WizardData.bx.
+#   gen-wizard.sh           rewrite src/bxrig/WizardData.bx
 #   gen-wizard.sh --check   fail if the generated class is out of date (CI)
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
-out="$root/src/bxcachy/WizardData.bx"
+out="$root/src/bxrig/WizardData.bx"
 dir="$root/assets/wizard"
 lit() {  # FILE: the file as one single-quoted BoxLang literal (quotes doubled, # doubled); backslashes are not allowed
   local body; body="$(cat "$1")"
@@ -17,14 +17,14 @@ lit() {  # FILE: the file as one single-quoted BoxLang literal (quotes doubled, 
   echo 'class WizardData {'
   echo '    // The splash icon, as half-block pixel art (one string, lines joined by newlines).'
   echo "    function icon() { return $(lit "$dir/art-icon.txt"); }"
-  echo '    // The BxCachy wordmark, same format.'
+  echo '    // The BxRig wordmark, same format.'
   echo "    function wordmark() { return $(lit "$dir/art-wordmark.txt"); }"
-  echo '    // The built-in pages (JSON, the format bxcachy-wizard --pages reads).'
+  echo '    // The built-in pages (JSON, the format bxrig-wizard --pages reads).'
   echo "    function demoPages() { return $(lit "$dir/pages-demo.json"); }"
   echo '}'
 } > "$out.new"
 if [[ "${1:-}" == --check ]]; then
-  cmp -s "$out.new" "$out" && { rm -f "$out.new"; echo 'wizard data embed is current'; } || { rm -f "$out.new"; echo 'src/bxcachy/WizardData.bx is out of date: run bootstrap/gen-wizard.sh' >&2; exit 1; }
+  cmp -s "$out.new" "$out" && { rm -f "$out.new"; echo 'wizard data embed is current'; } || { rm -f "$out.new"; echo 'src/bxrig/WizardData.bx is out of date: run bootstrap/gen-wizard.sh' >&2; exit 1; }
 else
-  mv "$out.new" "$out"; echo "embedded the wizard data into src/bxcachy/WizardData.bx ($(wc -c < "$out") bytes)"
+  mv "$out.new" "$out"; echo "embedded the wizard data into src/bxrig/WizardData.bx ($(wc -c < "$out") bytes)"
 fi

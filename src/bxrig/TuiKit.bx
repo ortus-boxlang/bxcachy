@@ -1,0 +1,258 @@
+// The shared drawing kit for every BxRig terminal screen (wizard, BxTimeMachine, Control Center and its pages), on MatchBox's canvas.
+// Catppuccin Frappe neutrals with the Ortus brand gradient (cyan #00DBFF to green #00FF78).
+//
+// Shape (one kit per screen, made with the canvas):
+//   kit = new bxrig.TuiKit( tui )
+//   colours   kit.color( "GREEN" ), kit.mix( a, b, t ), kit.brand( t ), kit.shimmer( x, w, phase ), kit.setFade( 0..1 )
+//   drawing   kit.put( x, y, s, fg, bg, bold, dim ), kit.fillRect, kit.gtext( x, y, s, bold, phase, bg ), kit.trunc, kit.wrap, kit.panel
+//   clicks    kit.clearHits(), kit.hit( kind, x, y, w, h, n, m ), kit.hitAt( x, y ) -> { kind, n, m }
+//   widgets   kit.tabs, kit.listView, kit.modal, kit.confirmModal, kit.toast, kit.keybar, kit.meter, kit.badge, kit.spark, kit.size
+// A screen paints with the kit and records hits as it paints; a test reads the frame back with tui.render_to_string( w, h ).
+// The state of a list (cursor, scroll, filter) is kept by TuiList; the event loop is TuiRunner.
+class TuiKit {
+    function init( tui ) {
+        variables.tui = arguments.tui;
+        variables.pal = {
+            BASE: "##303446", MANTLE: "##292c3c", CRUST: "##232634", SURFACE0: "##414559", SURFACE1: "##51576d", OVERLAY: "##737994",
+            TEXT: "##c6d0f5", SUB: "##a5adce", GREEN: "##00ff78", CYAN: "##00dbff", YELLOW: "##e5c890", RED: "##e78284", MAUVE: "##ca9ee6", SKY: "##99d1db", PEACH: "##ef9f76"
+        };
+        variables.hits = [];
+        variables.fade = 1;
+        variables.icons = false;
+        // Nerd Font (Font Awesome range) code points; each is one cell wide in a Nerd Font and is checked against the Symbols Nerd Font.
+        variables.glyphs = {
+            home: "f015", gear: "f013", coffee: "f0f4", terminal: "f120", server: "f233", database: "f1c0", cloud: "f0c2", key: "f084", brush: "f1fc", file: "f0f6", keyboard: "f11c",
+            cube: "f1b2", download: "f019", plug: "f1e6", desktop: "f108", hdd: "f0a0", history: "f1da", java: "e738", tags: "f02c", archive: "f187", wrench: "f0ad", envelope: "f0e0", check: "f00c"
+        };
+        return this;
+    }
+
+    function tui() { return variables.tui; }
+    function color( name ) { return variables.pal[ arguments.name ]; }
+    function setFade( f ) { variables.fade = arguments.f; return this; }
+
+    // Icons are Nerd Font glyphs, drawn only when switched on (a terminal without the font would show boxes). icon( name ) is "" when off or the name is unknown.
+    function setIcons( on ) { variables.icons = arguments.on; return this; }
+    function hasIcons() { return variables.icons; }
+    function icon( name ) { return variables.icons && structKeyExists( variables.glyphs, arguments.name ) ? chr( inputBaseN( variables.glyphs[ arguments.name ], 16 ) ) : ""; }
+
+    // ---- colours ----
+    function rgb( hex ) { var h = replace( arguments.hex, "#", "", "all" ); return [ inputBaseN( mid( h, 1, 2 ), 16 ), inputBaseN( mid( h, 3, 2 ), 16 ), inputBaseN( mid( h, 5, 2 ), 16 ) ]; }
+    function toHex( r, g, b ) { var out = "##"; for ( var v in [ arguments.r, arguments.g, arguments.b ] ) out &= right( "0" & formatBaseN( int( min( 255, max( 0, v ) ) ), 16 ), 2 ); return out; }
+    function mix( a, b, t ) {
+        var x = rgb( arguments.a ); var y = rgb( arguments.b ); var k = min( 1, max( 0, arguments.t ) );
+        return toHex( x[ 1 ] + ( y[ 1 ] - x[ 1 ] ) * k, x[ 2 ] + ( y[ 2 ] - x[ 2 ] ) * k, x[ 3 ] + ( y[ 3 ] - x[ 3 ] ) * k );
+    }
+    function brand( t ) { return mix( variables.pal.CYAN, variables.pal.GREEN, arguments.t ); }
+    function shimmer( x, w, phase ) {
+        var pos = min( 1, max( 0, arguments.x / max( 1, arguments.w ) ) );
+        var band = min( 1, max( 0, 1 - abs( pos - arguments.phase ) * 4 ) );
+        return mix( brand( pos ), "##ffffff", band * 0.45 );
+    }
+    // A colour as drawn: faded toward the background while a screen fades in.
+    function c( hex ) { return variables.fade >= 1 ? arguments.hex : mix( variables.pal.BASE, arguments.hex, variables.fade ); }
+
+    // ---- drawing ----
+    function put( x, y, s, col, bg = "", bold = false, dim = false ) {
+        var style = { fg: c( arguments.col ), bold: arguments.bold, dim: arguments.dim };
+        if ( len( arguments.bg ) ) style.bg = c( arguments.bg );
+        variables.tui.text( arguments.x, arguments.y, arguments.s, style );
+        return arguments.x + len( arguments.s );
+    }
+
+    function fillRect( x, y, w, h, bg ) { if ( arguments.w > 0 && arguments.h > 0 ) variables.tui.fill( arguments.x, arguments.y, arguments.w, arguments.h, { bg: c( arguments.bg ) } ); }
+
+    // Text in the brand gradient, in short pieces so the shimmer can travel along it.
+    function gtext( x, y, s, bold, phase, bg = "" ) {
+        var n = len( arguments.s );
+        var pos = 0;
+        while ( pos < n ) {
+            var piece = mid( arguments.s, pos + 1, 8 );
+            var style = { bold: arguments.bold };
+            if ( len( arguments.bg ) ) style.bg = c( arguments.bg );
+            variables.tui.gradient( arguments.x + pos, arguments.y, piece, c( shimmer( pos, n, arguments.phase ) ), c( shimmer( pos + len( piece ), n, arguments.phase ) ), style );
+            pos += len( piece );
+        }
+    }
+
+    function trunc( s, w ) { return len( arguments.s ) > arguments.w ? left( arguments.s, max( 0, arguments.w - 1 ) ) & "…" : arguments.s; }
+
+    function wrap( text, width ) {
+        var lines = [];
+        var cur = "";
+        for ( var word in listToArray( trim( arguments.text ), " " ) ) {
+            if ( len( cur ) && len( cur ) + 1 + len( word ) > arguments.width ) { lines.append( cur ); cur = ""; }
+            cur = len( cur ) ? cur & " " & word : word;
+        }
+        if ( len( cur ) ) lines.append( cur );
+        return lines;
+    }
+
+    // A rounded panel; `accent` draws the border in the brand gradient.
+    function panel( x, y, w, h, title, accent, phase ) {
+        var p = variables.pal;
+        variables.tui.border( arguments.x, arguments.y, arguments.w, arguments.h, { border: "rounded", fg: c( p.SURFACE1 ), bg: c( p.MANTLE ) } );
+        if ( arguments.accent ) {
+            var line = repeatString( "─", arguments.w - 2 );
+            gtext( arguments.x + 1, arguments.y, line, false, arguments.phase, p.MANTLE );
+            gtext( arguments.x + 1, arguments.y + arguments.h - 1, line, false, arguments.phase, p.MANTLE );
+            put( arguments.x, arguments.y, "╭", shimmer( 0, arguments.w, arguments.phase ), p.MANTLE );
+            put( arguments.x + arguments.w - 1, arguments.y, "╮", shimmer( arguments.w, arguments.w, arguments.phase ), p.MANTLE );
+            put( arguments.x, arguments.y + arguments.h - 1, "╰", shimmer( 0, arguments.w, arguments.phase ), p.MANTLE );
+            put( arguments.x + arguments.w - 1, arguments.y + arguments.h - 1, "╯", shimmer( arguments.w, arguments.w, arguments.phase ), p.MANTLE );
+            for ( var yy = arguments.y + 1; yy < arguments.y + arguments.h - 1; yy++ ) {
+                put( arguments.x, yy, "│", shimmer( 0, arguments.w, arguments.phase ), p.MANTLE );
+                put( arguments.x + arguments.w - 1, yy, "│", shimmer( arguments.w, arguments.w, arguments.phase ), p.MANTLE );
+            }
+        }
+        if ( len( arguments.title ) ) {
+            put( arguments.x + 2, arguments.y, " " & arguments.title & " ", p.TEXT, p.MANTLE, true );
+            gtext( arguments.x + 3, arguments.y, arguments.title, true, arguments.phase, p.MANTLE );
+        }
+    }
+
+    // The BxRig logo ("large", "small" or "word") in the brand gradient with the shimmer; returns its height. The art comes from Brand.
+    function logo( x, y, size = "large", phase = 0, bg = "" ) {
+        var ls = new bxrig.Brand().lines( arguments.size );
+        var row = 0;
+        for ( var l in ls ) { gtext( arguments.x, arguments.y + row, l, true, arguments.phase, arguments.bg ); row++; }
+        return ls.len();
+    }
+
+    // ---- clicks ----
+    function clearHits() { variables.hits = []; }
+    function hit( kind, x, y, w, h, n = 0, m = 0 ) { variables.hits.append( { kind: arguments.kind, x: arguments.x, y: arguments.y, w: arguments.w, h: arguments.h, n: arguments.n, m: arguments.m } ); }
+    // What a click at x, y does; the region painted last wins. kind "" when it hits nothing.
+    function hitAt( x, y ) {
+        for ( var i = variables.hits.len(); i >= 1; i-- ) {
+            var h = variables.hits[ i ];
+            if ( arguments.x >= h.x && arguments.x < h.x + h.w && arguments.y >= h.y && arguments.y < h.y + h.h ) return { kind: h.kind, n: h.n, m: h.m };
+        }
+        return { kind: "", n: 0, m: 0 };
+    }
+
+    // ---- widgets ----
+    // "1.4 GB", "12 MB", "900 B".
+    function size( bytes ) {
+        var b = arguments.bytes;
+        var one = function( v ) { var r = numberFormat( v, "0.0" ); return right( r, 2 ) == ".0" ? left( r, len( r ) - 2 ) : r; };
+        if ( b < 1024 ) return b & " B";
+        if ( b < 1048576 ) return one( b / 1024 ) & " KB";
+        if ( b < 1073741824 ) return one( b / 1048576 ) & " MB";
+        return one( b / 1073741824 ) & " GB";
+    }
+
+    // A row of tabs: names is an array of strings; each tab is a click region of kind `kind` with n = its index. Returns the x after the last tab.
+    function tabs( x, y, names, active, kind = "tab", phase = 0 ) {
+        var p = variables.pal;
+        var cx = arguments.x;
+        for ( var i = 1; i <= arguments.names.len(); i++ ) {
+            var label = " " & arguments.names[ i ] & " ";
+            if ( i == arguments.active ) put( cx, arguments.y, label, p.CRUST, p.GREEN, true );
+            else put( cx, arguments.y, label, p.SUB, p.SURFACE0 );
+            hit( arguments.kind, cx, arguments.y, len( label ), 1, i );
+            cx += len( label ) + 1;
+        }
+        return cx;
+    }
+
+    // A scrolling list in a box. `list` is a TuiList; each visible row is drawn by rowText( item, selected ) -> string (the row is truncated to fit);
+    // rows are click regions of kind `kind` with n = the item's index in the list. Returns how many rows were visible.
+    function listView( x, y, w, h, list, kind, rowText, bg = "" ) {
+        var p = variables.pal;
+        var back = len( arguments.bg ) ? arguments.bg : p.MANTLE;
+        list.fit( arguments.h );
+        var rows = list.window( arguments.h );
+        var row = 0;
+        for ( var r in rows ) {
+            var on = r.index == list.cursor();
+            var s = arguments.rowText( r.item, on );
+            if ( on ) fillRect( arguments.x, arguments.y + row, arguments.w, 1, p.SURFACE0 );
+            put( arguments.x, arguments.y + row, ( on ? "▸ " : "  " ) & trunc( s, arguments.w - 3 ), on ? p.GREEN : p.TEXT, on ? p.SURFACE0 : back, on );
+            hit( arguments.kind, arguments.x, arguments.y + row, arguments.w, 1, r.index );
+            row++;
+        }
+        if ( list.count() > arguments.h ) {
+            var barH = max( 1, int( arguments.h * arguments.h / list.count() ) );
+            var barY = int( ( arguments.h - barH ) * list.top() / max( 1, list.count() - arguments.h ) );
+            for ( var i = 0; i < arguments.h; i++ ) put( arguments.x + arguments.w - 1, arguments.y + i, i >= barY && i < barY + barH ? "█" : "│", i >= barY && i < barY + barH ? p.OVERLAY : p.SURFACE0, back );
+        }
+        return rows.len();
+    }
+
+    // A centered box with a title and lines of text. buttons is an array of { key, label, kind } drawn along the bottom as click regions (n = index).
+    function modal( width, height, title, lines, buttons = [], phase = 0 ) {
+        var p = variables.pal;
+        var bw = min( arguments.width - 10, 100 );
+        var bh = min( arguments.height - 6, max( 8, arguments.lines.len() + 6 ) );
+        var bx = int( ( arguments.width - bw ) / 2 );
+        var by = int( ( arguments.height - bh ) / 2 );
+        fillRect( bx, by, bw, bh, p.CRUST );
+        variables.tui.border( bx, by, bw, bh, { border: "rounded", fg: c( p.GREEN ), bg: c( p.CRUST ) } );
+        gtext( bx + 2, by, " " & trunc( arguments.title, bw - 8 ) & " ", true, arguments.phase, p.CRUST );
+        var shown = min( arguments.lines.len(), bh - 5 );
+        for ( var i = 1; i <= shown; i++ ) put( bx + 2, by + 1 + i, trunc( arguments.lines[ i ], bw - 5 ), p.TEXT, p.CRUST );
+        if ( arguments.lines.len() > shown ) put( bx + 2, by + bh - 3, "… " & ( arguments.lines.len() - shown ) & " more lines", p.OVERLAY, p.CRUST );
+        var bxx = bx + 2;
+        var n = 0;
+        for ( var b in arguments.buttons ) {
+            n++;
+            var label = " " & b.key & "  " & b.label & " ";
+            put( bxx, by + bh - 2, label, n == 1 ? p.CRUST : p.TEXT, n == 1 ? p.GREEN : p.SURFACE0, n == 1 );
+            hit( b.kind ?: "modal", bxx, by + bh - 2, len( label ), 1, n );
+            bxx += len( label ) + 2;
+        }
+        if ( !arguments.buttons.len() ) put( bx + 2, by + bh - 2, "press any key", p.OVERLAY, p.CRUST );
+    }
+
+    // The usual plan-then-confirm box.
+    function confirmModal( width, height, title, lines, phase = 0 ) {
+        modal( arguments.width, arguments.height, arguments.title, arguments.lines, [ { key: "y", label: "do it", kind: "yes" }, { key: "n", label: "not now", kind: "no" } ], arguments.phase );
+    }
+
+    // One line at the bottom of a screen, centered, in a colour that says how it went (ok, warn, error, info).
+    function toast( width, y, text, level = "info" ) {
+        var p = variables.pal;
+        var col = arguments.level == "ok" ? p.GREEN : arguments.level == "error" ? p.RED : arguments.level == "warn" ? p.YELLOW : p.CYAN;
+        var s = " " & trunc( arguments.text, arguments.width - 6 ) & " ";
+        put( int( ( arguments.width - len( s ) ) / 2 ), arguments.y, s, p.CRUST, col, true );
+    }
+
+    // The key hints along the bottom: pairs of [ key, what ].
+    function keybar( x, y, w, pairs ) {
+        var p = variables.pal;
+        fillRect( arguments.x, arguments.y, arguments.w, 1, p.CRUST );
+        var cx = arguments.x + 1;
+        for ( var kv in arguments.pairs ) {
+            if ( cx + len( kv[ 1 ] ) + len( kv[ 2 ] ) + 3 > arguments.x + arguments.w ) break;
+            cx = put( cx, arguments.y, kv[ 1 ], p.GREEN, p.CRUST, true );
+            cx = put( cx, arguments.y, " " & kv[ 2 ] & "   ", p.SUB, p.CRUST );
+        }
+    }
+
+    // A horizontal meter: value 0..1 drawn in the brand gradient on a dark track; the colour turns yellow and red when warnAt and critAt are passed.
+    function meter( x, y, w, value, warnAt = 0.75, critAt = 0.9 ) {
+        var p = variables.pal;
+        var v = min( 1, max( 0, arguments.value ) );
+        var filled = round( v * arguments.w );
+        var col = v >= arguments.critAt ? p.RED : v >= arguments.warnAt ? p.YELLOW : p.GREEN;
+        put( arguments.x, arguments.y, repeatString( "━", arguments.w ), p.SURFACE1 );
+        if ( filled > 0 ) put( arguments.x, arguments.y, repeatString( "━", filled ), col );
+    }
+
+    // A small coloured label, like " running ".
+    function badge( x, y, text, col ) {
+        return put( arguments.x, arguments.y, " " & arguments.text & " ", variables.pal.CRUST, arguments.col, true );
+    }
+
+    // A sparkline of numbers (array) in w cells, scaled to the largest value.
+    function spark( x, y, w, values, col ) {
+        var bars = [ "▁", "▂", "▃", "▄", "▅", "▆", "▇", "█" ];
+        var top = 0;
+        for ( var v in arguments.values ) top = max( top, v );
+        var out = "";
+        var n = arguments.values.len();
+        for ( var i = max( 1, n - arguments.w + 1 ); i <= n; i++ ) out &= bars[ top <= 0 ? 1 : max( 1, min( 8, ceiling( arguments.values[ i ] / top * 8 ) ) ) ];
+        put( arguments.x, arguments.y, out, arguments.col );
+    }
+}

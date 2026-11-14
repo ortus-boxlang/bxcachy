@@ -1,0 +1,73 @@
+// `bxrig strata integrations [--dry-run] [--json]`: turn on Strata's bundled LocalSend and KDE Connect "Send to" providers.
+// Strata's own Settings page does this with a button; here the same files are put in ~/.config/strata/providers/<id>/ (provider.py,
+// messages.json, LICENSE, and a provider.json that names the interpreter), fetched from the pinned Strata commit. A provider
+// folder that already exists is left alone. Strata picks them up on Refresh or restart. Exit: 0 done, 4 precondition (no curl or
+// python3), 6 a download failed.
+class Strata {
+    variables.ref = "5f17c9fdc8967e1b4ba8aaf8de113b46d824b0dd";
+    variables.providers = [
+        { id: "kdeconnect", name: "KDE Connect" },
+        { id: "localsend", name: "LocalSend" }
+    ];
+
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.inst = new bxrig.Installer( arguments.runner );
+        return this;
+    }
+
+    function providersDir() {
+        var xdg = getSystemSetting( "XDG_CONFIG_HOME", "" );
+        return ( len( xdg ) ? xdg : getSystemSetting( "HOME", "" ) & "/.config" ) & "/strata/providers";
+    }
+
+    function url( id, file ) {
+        return "https://raw.githubusercontent.com/lgse/strata/" & variables.ref & "/integrations/" & arguments.id & "/" & arguments.file;
+    }
+
+    function say( code, data, asJson, lines, dryRun = false ) {
+        if ( arguments.asJson ) println( variables.cli.envelope( "strata integrations", arguments.code, arguments.data, arguments.dryRun ) );
+        else for ( var l in arguments.lines ) println( l );
+        return arguments.code;
+    }
+
+    function integrations( dryRun, asJson ) {
+        var dir = providersDir();
+        var todo = []; var kept = [];
+        for ( var p in variables.providers ) {
+            if ( directoryExists( dir & "/" & p.id ) ) kept.append( p.id ); else todo.append( p );
+        }
+        var data = { dir: dir, install: todo.map( function( p ) { return p.id; } ), kept: kept };
+        if ( arguments.dryRun || !todo.len() ) {
+            var lines = [ ( arguments.dryRun ? "Dry run: " : "" ) & "Strata providers in " & dir ];
+            for ( var p in todo ) lines.append( "  would install " & p.id );
+            for ( var k in kept ) lines.append( "  " & k & " is already there, kept" );
+            if ( arguments.dryRun ) lines.append( "Nothing was changed." );
+            return say( 0, data, arguments.asJson, lines, arguments.dryRun );
+        }
+        for ( var tool in [ "curl", "python3" ] ) {
+            if ( variables.inst.exec( [ "sh", "-c", 'command -v "$1"', "_", tool ], 10 ).exitCode != 0 ) return say( 4, { error: tool & " was not found" }, arguments.asJson, [ "error: " & tool & " was not found" ] );
+        }
+        var py = trim( variables.inst.exec( [ "sh", "-c", "command -v python3" ], 10 ).output );
+        var done = [];
+        for ( var p in todo ) {
+            var target = dir & "/" & p.id;
+            var tmp = dir & "/." & p.id & ".tmp" & left( createUUID(), 8 );
+            directoryCreate( tmp, true );
+            for ( var f in [ "provider.py", "messages.json", "LICENSE" ] ) {
+                var r = variables.inst.exec( [ "curl", "-fsSL", "-o", tmp & "/" & f, url( p.id, f ) ], 120 );
+                if ( r.exitCode != 0 ) {
+                    try { directoryDelete( tmp, true ); } catch ( any e ) {}
+                    return say( 6, { error: "download failed: " & p.id & "/" & f }, arguments.asJson, [ "error: could not download " & p.id & "/" & f ] );
+                }
+            }
+            fileWrite( tmp & "/provider.json", serializeJSON( { version: 1, id: p.id, name: p.name, command: [ py, target & "/provider.py" ] } ) & chr( 10 ) );
+            directoryRename( tmp, target );
+            done.append( p.id );
+        }
+        data.done = done;
+        var out = [ "Strata providers installed: " & done.toList( ", " ) & ". Refresh in Strata Settings > Integrations, or restart Strata." ];
+        for ( var k in kept ) out.append( k & " was already there, kept" );
+        return say( 0, data, arguments.asJson, out );
+    }
+}

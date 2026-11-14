@@ -1,4 +1,4 @@
-// BxCachy: a kickstarter for developers on CachyOS. Entry point class: `bxcachy <command> ...`
+// BxRig: your dev rig, beautiful by default. Entry point class: `bxrig <command> ...`
 // runs main( args ) (BoxLang class entry, MatchBox PR #152). Application.bx adds the lifecycle.
 class {
 
@@ -10,9 +10,9 @@ class {
         var cmd = p.len() ? p[1] : "help";
         var appVersion = "0.11.0-dev";
         var asJson = structKeyExists( args.options, "json" );
-        var cli = new bxcachy.Cli( appVersion );
-        var catalog = new bxcachy.Catalog();
-        var config = new bxcachy.ConfigService();
+        var cli = new bxrig.Cli( appVersion );
+        var catalog = new bxrig.Catalog();
+        var config = new bxrig.ConfigService();
         // One shared flag check for every command: unknown flags are usage errors and nothing runs.
         for ( var flag in args.options ) {
             if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider", "backend", "dir", "email", "region", "browser", "path", "from", "export", "from-system", "fresh", "rerun", "fix", "edit", "history", "out", "agenda", "without-weather", "desktops", "preset", "no-open", "location", "notify", "defaults", "tag", "mode", "keep-wallpaper", "version", "tag", "ram", "cpus", "disk", "memory", "share", "gpu", "web", "fullscreen", "limit", "explicit", "aur", "list", "host", "protocol", "user", "vers", "to", "delete", "starter", "reason", "with-secrets", "only", "packages", "keep", "home", "description", "type", "url", "bucket", "endpoint", "region", "project", "credentials", "remote", "container", "keys-file", "ask-keys", "target", "include", "deep", "scheduled", "mode", "daily", "weekly", "monthly", "from", "local", "all", "unset", "icons", "smtp-port", "ui-port", "subject" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
@@ -22,15 +22,19 @@ class {
         }
         var base = [ "localsend", "mpv", "pacseek" ];
 
-        // A config snapshot before the commands that change a lot (default on; `bxcachy backup config auto off`). Quiet, never stops the command.
+        // A config snapshot before the commands that change a lot (default on; `bxrig backup config auto off`). Quiet, never stops the command.
         if ( structKeyExists( args.options, "yes" ) && !structKeyExists( args.options, "dry-run" ) && ( cmd == "refresh" || cmd == "reinstall" || cmd == "init" || ( ( cmd == "system" || cmd == "update" ) && p.len() >= 2 && ( p[ 2 ] == "update" || p[ 2 ] == "apply" ) ) ) ) {
-          new bxcachy.BackupConfig( cli ).autoSnapshot( "before " & p.toList( " " ) );
+          new bxrig.BackupConfig( cli ).autoSnapshot( "before " & p.toList( " " ) );
         }
 
         switch ( cmd ) {
          case "version":
-          if ( asJson ) println( cli.envelope( "version", 0, { name: "BxCachy", version: appVersion } ) );
-          else println( "BxCachy 0.11.0-dev" );
+          if ( asJson ) println( cli.envelope( "version", 0, { name: "BxRig", version: appVersion } ) );
+          else {
+           if ( CLIIsTerminal() ) { for ( var vl in new bxrig.Brand().ansi( new bxrig.Brand().large() ) ) println( vl ); println( "" ); }
+           println( "BxRig 0.11.0-dev" );
+           if ( CLIIsTerminal() ) println( new bxrig.Brand().tagline() );
+          }
           break;
          case "doctor":
          case "prerequisites":
@@ -43,10 +47,10 @@ class {
          case "optional-list":
          case "profile-list":
           if ( p.len() != 1 ) {
-           println( "Usage: bxcachy " & cmd & " [--json]" );
+           println( "Usage: bxrig " & cmd & " [--json]" );
            CLIExit( 2 );
           }
-          pk = new bxcachy.Packages( cli, catalog.load() );
+          pk = new bxrig.Packages( cli, catalog.load() );
           CLIExit( cmd == "profile-list" ? pk.profiles( asJson ) : pk.listApps( cmd, asJson ) );
           break;
          case "apps-doctor":
@@ -59,7 +63,7 @@ class {
          case "profile-plan":
          case "profile-install-plan":
           // Selection comes from the arguments and flags; the resolver decides, nothing is installed.
-          pk = new bxcachy.Packages( cli, catalog.load() );
+          pk = new bxrig.Packages( cli, catalog.load() );
           planReq = pk.request( cmd, p, args.options );
           if ( planReq.bad ) {
            println( planReq.usage );
@@ -70,10 +74,10 @@ class {
          case "package-status":
          case "package-source":
           if ( p.len() != 2 || !reFind( "^[a-z0-9][a-z0-9-]*$", p[2] ) ) {
-           println( "Usage: bxcachy " & cmd & " ID" );
+           println( "Usage: bxrig " & cmd & " ID" );
            CLIExit( 2 );
           }
-          pk = new bxcachy.Packages( cli, catalog.load() );
+          pk = new bxrig.Packages( cli, catalog.load() );
           CLIExit( cmd == "package-status" ? pk.status( p[2], asJson ) : pk.source( p[2], asJson ) );
           break;
          case "dev-plan":
@@ -87,7 +91,7 @@ class {
          case "optional-install":
          case "profile-install":
           // Selection as for plan; the installer runs it. Without --yes the plan is printed and nothing changes.
-          pk = new bxcachy.Packages( cli, catalog.load() );
+          pk = new bxrig.Packages( cli, catalog.load() );
           instReq = pk.request( cmd, p, args.options );
           if ( instReq.bad ) {
            println( instReq.usage );
@@ -102,7 +106,7 @@ class {
           catOpts = [ "json", "group", "category", "tier", "kind", "source" ];
           for ( var o in args.options ) if ( !arrayFind( catOpts, o ) && !arrayFind( [ "yes", "dry-run", "force", "quiet" ], o ) ) catBad = true;
           if ( catBad ) {
-           println( "Usage: bxcachy catalog list [--group=G] [--category=C] [--tier=default|optional] [--kind=K] [--source=S] [--json] | show ID | groups | check | version" );
+           println( "Usage: bxrig catalog list [--group=G] [--category=C] [--tier=default|optional] [--kind=K] [--source=S] [--json] | show ID | groups | check | version" );
            CLIExit( 2 );
           }
           cat = catalog.load();
@@ -170,16 +174,16 @@ class {
           cfgName = p.len() >= 3 ? p[3] : "";
           cfgBad = !len( getSystemSetting( "HOME", "" ) ) || p.len() > 4 || ( p.len() == 4 && cfgVerb != "restore" ) || !arrayFind( [ "list", "diff", "apply", "restore", "history" ], cfgVerb );
           if ( cfgBad ) {
-           println( "Usage: bxcachy config list|diff NAME|apply NAME|restore NAME ID|history [NAME] [--yes] [--dry-run] [--force] [--json]" );
+           println( "Usage: bxrig config list|diff NAME|apply NAME|restore NAME ID|history [NAME] [--yes] [--dry-run] [--force] [--json]" );
            CLIExit( 2 );
           }
           yes = structKeyExists( args.options, "yes" );
           dryRun = structKeyExists( args.options, "dry-run" );
           force = structKeyExists( args.options, "force" );
           nl = chr( 10 );
-          var managed = { "bxcachy": { name: "bxcachy", target: config.cfgHome() & "/bxcachy/bxcachy.json", mode: "600", content: '{' & nl & '  "schema_version": 1,' & nl & '  "desktop": "auto"' & nl & '}' & nl } };
-          for ( var se in new bxcachy.Shortcuts().entries( config.cfgHome() ) ) managed[se.name] = se;
-          for ( var ne in new bxcachy.Starter().entries() ) managed[ne.name] = ne;
+          var managed = { "bxrig": { name: "bxrig", target: config.cfgHome() & "/bxrig/bxrig.json", mode: "600", content: '{' & nl & '  "schema_version": 1,' & nl & '  "desktop": "auto"' & nl & '}' & nl } };
+          for ( var se in new bxrig.Shortcuts().entries( config.cfgHome() ) ) managed[se.name] = se;
+          for ( var ne in new bxrig.Starter().entries() ) managed[ne.name] = ne;
           if ( cfgVerb == "list" || cfgVerb == "history" ) {
            rows = [];
            if ( cfgVerb == "list" ) {
@@ -206,7 +210,7 @@ class {
            st = config.configState( entry );
            println( cfgName & ": " & st );
            if ( st == "outdated" || st == "drifted" ) {
-            tmpSrc = getTempDirectory() & "/bxcachy-src-" & left( createUUID(), 8 );
+            tmpSrc = getTempDirectory() & "/bxrig-src-" & left( createUUID(), 8 );
             fileWrite( tmpSrc, entry.content );
             d = systemExecute( "diff", [ "-u", entry.target, tmpSrc ], 15, true );
             println( d.output );
@@ -218,7 +222,7 @@ class {
            CLIExit( config.configApply( entry, yes, dryRun, force ) );
           }
           if ( p.len() != 4 ) {
-           println( "Usage: bxcachy config restore NAME ID --yes" );
+           println( "Usage: bxrig config restore NAME ID --yes" );
            CLIExit( 2 );
           }
           CLIExit( config.configRestore( entry, p[4], yes, dryRun ) );
@@ -228,7 +232,7 @@ class {
           setupSub = p.len() >= 2 ? p[2] : "";
           setupYes = structKeyExists( args.options, "yes" );
           setupDry = structKeyExists( args.options, "dry-run" );
-          st = new bxcachy.Setup( cli );
+          st = new bxrig.Setup( cli );
           if ( setupSub == "plasma" && p.len() == 2 ) {
            CLIExit( st.plasma( { keys: structKeyExists( args.options, "keys" ), undoKeys: structKeyExists( args.options, "undo-keys" ) }, setupYes, setupDry, asJson ) );
           }
@@ -251,7 +255,7 @@ class {
            CLIExit( st.shell( { shell: args.options.shell ?: "" }, setupYes, setupDry, asJson ) );
           }
           if ( setupSub == "keyboard" && p.len() == 2 ) {
-           CLIExit( new bxcachy.PlasmaKeyboard( cli ).run( args.options.layouts ?: "", setupYes, setupDry, asJson ) );
+           CLIExit( new bxrig.PlasmaKeyboard( cli ).run( args.options.layouts ?: "", setupYes, setupDry, asJson ) );
           }
           if ( setupSub == "xremap" && p.len() == 2 ) {
            CLIExit( st.xremap( { build: args.options.build ?: "" }, setupYes, setupDry, asJson ) );
@@ -259,95 +263,95 @@ class {
           if ( setupSub == "undo" && p.len() == 3 && p[3] == "xremap" ) {
            CLIExit( st.undoXremap( setupYes, setupDry, asJson ) );
           }
-          println( "Usage: bxcachy setup plasma [--keys | --undo-keys] | hyprland [--terminal=ghostty|kitty|alacritty|foot|konsole] [--layout=dwindle|master|scrolling|floating] [--workspaces=N] [--natural-scroll] [--layouts=us-intl,es] [--theme=dark|light|auto] [--wallpaper=box|grid|aurora|minimal] | terminal [--default=ghostty] [--also=a,b] | shell [--shell=zsh|fish|bash] | keyboard [--layouts=us-intl,es] | xremap [--build=hypr|kde] | undo plasma|hyprland|xremap | status [--yes] [--dry-run] [--json]" );
+          println( "Usage: bxrig setup plasma [--keys | --undo-keys] | hyprland [--terminal=ghostty|kitty|alacritty|foot|konsole] [--layout=dwindle|master|scrolling|floating] [--workspaces=N] [--natural-scroll] [--layouts=us-intl,es] [--theme=dark|light|auto] [--wallpaper=box|grid|aurora|minimal] | terminal [--default=ghostty] [--also=a,b] | shell [--shell=zsh|fish|bash] | keyboard [--layouts=us-intl,es] | xremap [--build=hypr|kde] | undo plasma|hyprland|xremap | status [--yes] [--dry-run] [--json]" );
           CLIExit( 2 );
           break;
          case "cloud":
           // Cloud storage as folders with rclone. See COMMAND-CONTRACT.md 13.21.
           clSub = p.len() >= 2 ? p[2] : "";
-          cl = new bxcachy.Cloud( cli );
+          cl = new bxrig.Cloud( cli );
           if ( clSub == "remotes" && p.len() == 2 ) CLIExit( cl.listRemotes( asJson ) );
           if ( clSub == "configure" && p.len() == 2 ) CLIExit( cl.configure() );
           if ( clSub == "mount" && p.len() == 3 ) CLIExit( cl.mount( p[3], args.options.path ?: "", structKeyExists( args.options, "yes" ), asJson ) );
           if ( clSub == "unmount" && p.len() == 3 ) CLIExit( cl.unmount( p[3], structKeyExists( args.options, "yes" ), asJson ) );
           if ( clSub == "status" && p.len() == 2 ) CLIExit( cl.status( asJson ) );
-          println( "Usage: bxcachy cloud remotes | configure | mount NAME [--path=DIR] [--yes] | unmount NAME [--yes] | status [--json]" );
+          println( "Usage: bxrig cloud remotes | configure | mount NAME [--path=DIR] [--yes] | unmount NAME [--yes] | status [--json]" );
           CLIExit( 2 );
           break;
          case "layout":
           // Tiled or floating windows on the current workspace. See COMMAND-CONTRACT.md 13.21.
           lyAct = p.len() >= 2 ? p[2] : "toggle";
-          ly = new bxcachy.Layout( cli );
+          ly = new bxrig.Layout( cli );
           if ( lyAct == "status" && p.len() <= 2 ) CLIExit( ly.status( asJson ) );
           if ( arrayFind( [ "toggle", "float", "tile" ], lyAct ) && p.len() <= 2 ) CLIExit( ly.apply( lyAct, structKeyExists( args.options, "dry-run" ), asJson ) );
-          println( "Usage: bxcachy layout [toggle|float|tile|status] [--dry-run] [--json]" );
+          println( "Usage: bxrig layout [toggle|float|tile|status] [--dry-run] [--json]" );
           CLIExit( 2 );
           break;
          case "web":
           // Your own web apps with launcher entries. See COMMAND-CONTRACT.md 13.20.
           wbSub = p.len() >= 2 ? p[2] : "";
-          wb = new bxcachy.Web( cli );
+          wb = new bxrig.Web( cli );
           if ( wbSub == "add" && p.len() == 2 ) CLIExit( wb.addInteractive( asJson ) );
           if ( wbSub == "add" && p.len() == 4 ) CLIExit( wb.add( p[3], p[4], args.options.browser ?: "", structKeyExists( args.options, "yes" ), asJson ) );
           if ( wbSub == "install" && p.len() == 3 ) CLIExit( wb.installBundle( p[3], structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
           if ( wbSub == "list" && p.len() == 2 ) CLIExit( wb.list( asJson ) );
           if ( wbSub == "rm" && p.len() == 3 ) CLIExit( wb.remove( p[3], structKeyExists( args.options, "yes" ), asJson ) );
-          println( "Usage: bxcachy web add [NAME URL] [--browser=brave|chromium|google-chrome|edge|firefox] [--yes] | list | rm NAME [--yes] | install google|microsoft|apple|boxlang|all [--yes] [--dry-run] [--json]" );
+          println( "Usage: bxrig web add [NAME URL] [--browser=brave|chromium|google-chrome|edge|firefox] [--yes] | list | rm NAME [--yes] | install google|microsoft|apple|boxlang|all [--yes] [--dry-run] [--json]" );
           CLIExit( 2 );
           break;
          case "vpn":
           // Post-install steps for VPN clients. See COMMAND-CONTRACT.md 13.20.
-          if ( p.len() == 3 && p[2] == "nordvpn" && p[3] == "setup" ) CLIExit( new bxcachy.Vpn( cli ).nordvpn( structKeyExists( args.options, "yes" ), asJson ) );
-          println( "Usage: bxcachy vpn nordvpn setup [--yes] [--json]" );
+          if ( p.len() == 3 && p[2] == "nordvpn" && p[3] == "setup" ) CLIExit( new bxrig.Vpn( cli ).nordvpn( structKeyExists( args.options, "yes" ), asJson ) );
+          println( "Usage: bxrig vpn nordvpn setup [--yes] [--json]" );
           CLIExit( 2 );
           break;
          case "clipboard":
           // Clipboard history with cliphist. See COMMAND-CONTRACT.md 13.18.
           cbSub = p.len() >= 2 ? p[2] : "";
-          cb = new bxcachy.Clipboard( cli );
+          cb = new bxrig.Clipboard( cli );
           if ( cbSub == "pick" && p.len() == 2 ) CLIExit( cb.pick( asJson ) );
           if ( cbSub == "clear" && p.len() == 2 ) CLIExit( cb.clear( structKeyExists( args.options, "yes" ), asJson ) );
           if ( cbSub == "status" && p.len() == 2 ) CLIExit( cb.status( asJson ) );
-          println( "Usage: bxcachy clipboard pick | clear [--yes] | status [--json]" );
+          println( "Usage: bxrig clipboard pick | clear [--yes] | status [--json]" );
           CLIExit( 2 );
           break;
          case "record":
           // Screen recording with wf-recorder. See COMMAND-CONTRACT.md 13.18.
           rcSub = p.len() >= 2 ? p[2] : "toggle";
-          rc = new bxcachy.Record( cli );
+          rc = new bxrig.Record( cli );
           rcRegion = structKeyExists( args.options, "region" );
           if ( rcSub == "toggle" && p.len() <= 2 ) CLIExit( rc.toggle( rcRegion, structKeyExists( args.options, "dry-run" ), asJson ) );
           if ( rcSub == "start" && p.len() == 2 ) CLIExit( rc.start( rcRegion, structKeyExists( args.options, "dry-run" ), asJson ) );
           if ( rcSub == "stop" && p.len() == 2 ) CLIExit( rc.stop( asJson ) );
           if ( rcSub == "status" && p.len() == 2 ) CLIExit( rc.status( asJson ) );
-          println( "Usage: bxcachy record [toggle|start|stop|status] [--region] [--dry-run] [--json]" );
+          println( "Usage: bxrig record [toggle|start|stop|status] [--region] [--dry-run] [--json]" );
           CLIExit( 2 );
           break;
          case "containers":
           // Podman helpers and docker compatibility. See COMMAND-CONTRACT.md 13.17.
           ctSub = p.len() >= 2 ? p[2] : "";
-          ct = new bxcachy.Containers( cli );
+          ct = new bxrig.Containers( cli );
           if ( ctSub == "doctor" && p.len() == 2 ) CLIExit( ct.doctor( asJson ) );
           if ( ctSub == "socket" && p.len() == 3 && p[3] == "enable" ) CLIExit( ct.socketEnable( structKeyExists( args.options, "yes" ), asJson ) );
           if ( ctSub == "docker-compat" && p.len() == 2 ) CLIExit( ct.dockerCompat( structKeyExists( args.options, "yes" ), asJson ) );
-          println( "Usage: bxcachy containers doctor | socket enable [--yes] | docker-compat [--yes] [--json]" );
+          println( "Usage: bxrig containers doctor | socket enable [--yes] | docker-compat [--yes] [--json]" );
           CLIExit( 2 );
           break;
          case "editor":
-          // The LazyVim starter for Neovim, the BxCachy layer and BoxLang. See COMMAND-CONTRACT.md 13.17 and 13.32.
+          // The LazyVim starter for Neovim, the BxRig layer and BoxLang. See COMMAND-CONTRACT.md 13.17 and 13.32.
           edSub = p.len() == 2 ? p[2] : "";
-          ed = new bxcachy.Editor( cli );
+          ed = new bxrig.Editor( cli );
           if ( edSub == "lazyvim" ) CLIExit( ed.lazyvim( structKeyExists( args.options, "yes" ), asJson ) );
           if ( edSub == "boxlang" ) CLIExit( ed.boxlang( structKeyExists( args.options, "yes" ), asJson ) );
           if ( edSub == "status" ) CLIExit( ed.status( asJson ) );
           if ( edSub == "refresh" ) CLIExit( ed.refresh( structKeyExists( args.options, "force" ), structKeyExists( args.options, "yes" ), asJson ) );
-          println( "Usage: bxcachy editor lazyvim [--yes] | boxlang [--yes] | status | refresh [--force] [--yes] [--json]" );
+          println( "Usage: bxrig editor lazyvim [--yes] | boxlang [--yes] | status | refresh [--force] [--yes] [--json]" );
           CLIExit( 2 );
           break;
          case "skills":
-          // Agent skills: BxCachy's own, BoxLang and MatchBox, and the skills.boxlang.io hub. See COMMAND-CONTRACT.md 13.31.
+          // Agent skills: BxRig's own, BoxLang and MatchBox, and the skills.boxlang.io hub. See COMMAND-CONTRACT.md 13.31.
           skSub = p.len() >= 2 ? p[2] : "status";
-          sk = new bxcachy.Skills( cli );
+          sk = new bxrig.Skills( cli );
           skYes = structKeyExists( args.options, "yes" );
           if ( skSub == "list" && p.len() == 2 ) CLIExit( sk.search( "", args.options.tag ?: "", asJson ) );
           if ( skSub == "search" && p.len() >= 3 ) CLIExit( sk.search( p.slice( 3 ).toList( " " ), args.options.tag ?: "", asJson ) );
@@ -358,51 +362,51 @@ class {
           if ( skSub == "remove" && p.len() == 3 ) CLIExit( sk.remove( p[3], skYes, asJson ) );
           if ( skSub == "status" && p.len() <= 2 ) CLIExit( sk.status( asJson ) );
           if ( skSub == "link" && p.len() == 2 ) CLIExit( sk.link( asJson ) );
-          println( "Usage: bxcachy skills list [--tag=T] | search TEXT | show OWNER/REPO/SLUG | install [bxcachy|boxlang|matchbox|OWNER/REPO/SLUG]... [--yes] | installed | update [--yes] | remove NAME [--yes] | status | link [--json]" );
+          println( "Usage: bxrig skills list [--tag=T] | search TEXT | show OWNER/REPO/SLUG | install [bxrig|boxlang|matchbox|OWNER/REPO/SLUG]... [--yes] | installed | update [--yes] | remove NAME [--yes] | status | link [--json]" );
           CLIExit( 2 );
           break;
          case "update":
-          // Updates for BxCachy (channels stable and beta) and notifications. See COMMAND-CONTRACT.md 13.30.
+          // Updates for BxRig (channels stable and beta) and notifications. See COMMAND-CONTRACT.md 13.30.
           upSub = p.len() >= 2 ? p[2] : "check";
-          up = new bxcachy.Update( cli );
+          up = new bxrig.Update( cli );
           if ( upSub == "check" && p.len() <= 2 ) CLIExit( up.check( structKeyExists( args.options, "notify" ), asJson ) );
           if ( upSub == "apply" && p.len() == 2 ) CLIExit( up.apply( structKeyExists( args.options, "yes" ), asJson ) );
           if ( upSub == "channel" && p.len() <= 3 ) CLIExit( up.channel( p.len() == 3 ? p[3] : "", asJson ) );
           if ( upSub == "notifications" && p.len() == 3 ) CLIExit( up.notifications( p[3], asJson ) );
-          println( "Usage: bxcachy update check [--notify] | apply [--yes] | channel [stable|beta] | notifications on|off|status [--json]" );
+          println( "Usage: bxrig update check [--notify] | apply [--yes] | channel [stable|beta] | notifications on|off|status [--json]" );
           CLIExit( 2 );
           break;
          case "system":
-          if ( p.len() == 2 && p[2] == "update" ) CLIExit( new bxcachy.Update( cli ).systemUpdate( structKeyExists( args.options, "yes" ), asJson ) );
-          if ( p.len() == 2 && arrayFind( [ "lock", "suspend", "logout", "reboot", "shutdown" ], p[2] ) ) CLIExit( new bxcachy.SystemActions( cli ).run( p[2], structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
-          println( "Usage: bxcachy system update [--yes] | lock | suspend | logout|reboot|shutdown [--yes] [--dry-run] [--json]" ); CLIExit( 2 ); break;
-         case "emoji": CLIExit( new bxcachy.MacExtras( cli ).emoji( asJson ) ); break;
-         case "forcequit": CLIExit( new bxcachy.MacExtras( cli ).forcequit( asJson ) ); break;
+          if ( p.len() == 2 && p[2] == "update" ) CLIExit( new bxrig.Update( cli ).systemUpdate( structKeyExists( args.options, "yes" ), asJson ) );
+          if ( p.len() == 2 && arrayFind( [ "lock", "suspend", "logout", "reboot", "shutdown" ], p[2] ) ) CLIExit( new bxrig.SystemActions( cli ).run( p[2], structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
+          println( "Usage: bxrig system update [--yes] | lock | suspend | logout|reboot|shutdown [--yes] [--dry-run] [--json]" ); CLIExit( 2 ); break;
+         case "emoji": CLIExit( new bxrig.MacExtras( cli ).emoji( asJson ) ); break;
+         case "forcequit": CLIExit( new bxrig.MacExtras( cli ).forcequit( asJson ) ); break;
          case "window":
-          if ( p.len() == 2 ) CLIExit( new bxcachy.MacExtras( cli ).window( p[2], asJson ) );
-          println( "Usage: bxcachy window minimize|restore" ); CLIExit( 2 ); break;
-         case "overview": CLIExit( new bxcachy.MacExtras( cli ).overview( p.len() == 2 && p[2] == "setup", asJson ) ); break;
+          if ( p.len() == 2 ) CLIExit( new bxrig.MacExtras( cli ).window( p[2], asJson ) );
+          println( "Usage: bxrig window minimize|restore" ); CLIExit( 2 ); break;
+         case "overview": CLIExit( new bxrig.MacExtras( cli ).overview( p.len() == 2 && p[2] == "setup", asJson ) ); break;
          case "nightshift":
-          if ( p.len() <= 2 && arrayFind( [ "on", "off", "toggle", "status" ], p.len() == 2 ? p[2] : "on" ) ) CLIExit( new bxcachy.MacExtras( cli ).nightshift( p.len() == 2 ? p[2] : "on", args.options.location ?: "", asJson ) );
-          println( "Usage: bxcachy nightshift [on|off|toggle|status] [--location=LAT,LON] [--json]" ); CLIExit( 2 ); break;
+          if ( p.len() <= 2 && arrayFind( [ "on", "off", "toggle", "status" ], p.len() == 2 ? p[2] : "on" ) ) CLIExit( new bxrig.MacExtras( cli ).nightshift( p.len() == 2 ? p[2] : "on", args.options.location ?: "", asJson ) );
+          println( "Usage: bxrig nightshift [on|off|toggle|status] [--location=LAT,LON] [--json]" ); CLIExit( 2 ); break;
          case "gpu":
-          if ( p.len() == 2 && p[2] == "doctor" ) CLIExit( new bxcachy.MacExtras( cli ).gpu( asJson ) );
-          println( "Usage: bxcachy gpu doctor [--json]" ); CLIExit( 2 ); break;
+          if ( p.len() == 2 && p[2] == "doctor" ) CLIExit( new bxrig.MacExtras( cli ).gpu( asJson ) );
+          println( "Usage: bxrig gpu doctor [--json]" ); CLIExit( 2 ); break;
          case "input":
-          if ( p.len() == 2 && p[2] == "doctor" ) CLIExit( new bxcachy.MacExtras( cli ).inputDoctor( asJson ) );
-          if ( p.len() == 2 && p[2] == "gestures" ) CLIExit( new bxcachy.MacExtras( cli ).gestures( structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
-          println( "Usage: bxcachy input doctor | gestures [--yes] [--dry-run] [--json]" ); CLIExit( 2 ); break;
+          if ( p.len() == 2 && p[2] == "doctor" ) CLIExit( new bxrig.MacExtras( cli ).inputDoctor( asJson ) );
+          if ( p.len() == 2 && p[2] == "gestures" ) CLIExit( new bxrig.MacExtras( cli ).gestures( structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
+          println( "Usage: bxrig input doctor | gestures [--yes] [--dry-run] [--json]" ); CLIExit( 2 ); break;
          case "airplay":
-          if ( p.len() == 2 ) CLIExit( new bxcachy.MacExtras( cli ).airplay( p[2], asJson ) );
-          println( "Usage: bxcachy airplay on|off|status [--json]" ); CLIExit( 2 ); break;
+          if ( p.len() == 2 ) CLIExit( new bxrig.MacExtras( cli ).airplay( p[2], asJson ) );
+          println( "Usage: bxrig airplay on|off|status [--json]" ); CLIExit( 2 ); break;
          case "settings":
-          if ( p.len() == 3 && p[2] == "export" ) CLIExit( new bxcachy.Settings( cli ).exportFile( p[3], structKeyExists( args.options, "force" ), asJson ) );
-          if ( p.len() == 3 && p[2] == "import" ) CLIExit( new bxcachy.Settings( cli ).importFile( p[3], structKeyExists( args.options, "yes" ), asJson ) );
-          println( "Usage: bxcachy settings export FILE.tar.gz [--force] | import FILE.tar.gz [--yes] [--json]" ); CLIExit( 2 ); break;
+          if ( p.len() == 3 && p[2] == "export" ) CLIExit( new bxrig.Settings( cli ).exportFile( p[3], structKeyExists( args.options, "force" ), asJson ) );
+          if ( p.len() == 3 && p[2] == "import" ) CLIExit( new bxrig.Settings( cli ).importFile( p[3], structKeyExists( args.options, "yes" ), asJson ) );
+          println( "Usage: bxrig settings export FILE.tar.gz [--force] | import FILE.tar.gz [--yes] [--json]" ); CLIExit( 2 ); break;
          case "boxlang":
           // The BoxLang developer ecosystem. See COMMAND-CONTRACT.md 13.28.
           blSub = p.len() >= 2 ? p[2] : "status";
-          bl = new bxcachy.Boxlang( cli );
+          bl = new bxrig.Boxlang( cli );
           if ( blSub == "status" && p.len() <= 2 ) CLIExit( bl.status( asJson ) );
           if ( blSub == "use" && p.len() == 3 ) CLIExit( bl.use( "bvm", p[3], asJson ) );
           if ( blSub == "matchbox" && p.len() == 4 && p[3] == "use" ) CLIExit( bl.use( "mvm", p[4], asJson ) );
@@ -410,13 +414,13 @@ class {
           if ( blSub == "vscode" && p.len() == 2 ) CLIExit( bl.vscode( asJson ) );
           if ( blSub == "links" && p.len() == 2 ) CLIExit( bl.showLinks( asJson ) );
           if ( blSub == "welcome" && p.len() == 2 ) CLIExit( bl.welcome( !structKeyExists( args.options, "no-open" ), asJson ) );
-          println( "Usage: bxcachy boxlang status | use VERSION | matchbox use VERSION | modules list|search TEXT|install SLUG...|installed|outdated|update | vscode | links | welcome [--json]" );
+          println( "Usage: bxrig boxlang status | use VERSION | matchbox use VERSION | modules list|search TEXT|install SLUG...|installed|outdated|update | vscode | links | welcome [--json]" );
           CLIExit( 2 );
           break;
          case "plasma":
           // The Plasma panel layout and virtual desktops. See COMMAND-CONTRACT.md 13.27.
           plSub = p.len() >= 2 ? p[2] : "";
-          plp = new bxcachy.PlasmaPanels( cli );
+          plp = new bxrig.PlasmaPanels( cli );
           plYes = structKeyExists( args.options, "yes" );
           plDry = structKeyExists( args.options, "dry-run" );
           if ( plSub == "desktops" && p.len() == 3 ) CLIExit( plp.desktops( p[3], plYes, plDry, asJson ) );
@@ -425,30 +429,30 @@ class {
             if ( p[3] == "undo" && p.len() == 3 ) CLIExit( plp.undo( plYes, asJson ) );
             if ( p[3] == "status" && p.len() == 3 ) CLIExit( plp.status( asJson ) );
           }
-          println( "Usage: bxcachy plasma panels apply [--agenda] [--without-weather] [--desktops=N] [--preset=NAME] | undo | status [--yes] [--dry-run] [--json]  |  plasma desktops N [--yes]" );
+          println( "Usage: bxrig plasma panels apply [--agenda] [--without-weather] [--desktops=N] [--preset=NAME] | undo | status [--yes] [--dry-run] [--json]  |  plasma desktops N [--yes]" );
           CLIExit( 2 );
           break;
          case "screenshot":
           // Screenshots, OCR and QR codes. See COMMAND-CONTRACT.md 13.26.
           ssMode = p.len() >= 2 ? p[2] : "menu";
-          ss = new bxcachy.Screenshot( cli );
+          ss = new bxrig.Screenshot( cli );
           ssDry = structKeyExists( args.options, "dry-run" );
           if ( p.len() <= 2 && arrayFind( [ "screen", "region", "window" ], ssMode ) ) CLIExit( ss.shot( ssMode, structKeyExists( args.options, "edit" ), ssDry, asJson ) );
           if ( p.len() <= 2 && ssMode == "ocr" ) CLIExit( ss.ocr( ssDry, asJson ) );
           if ( p.len() <= 2 && ssMode == "qr" ) CLIExit( ss.qrScan( ssDry, asJson ) );
           if ( p.len() <= 2 && ssMode == "menu" ) CLIExit( ss.menu( ssDry, asJson ) );
-          println( "Usage: bxcachy screenshot screen|region|window [--edit] | ocr | qr | menu [--dry-run] [--json]" );
+          println( "Usage: bxrig screenshot screen|region|window [--edit] | ocr | qr | menu [--dry-run] [--json]" );
           CLIExit( 2 );
           break;
          case "qr":
-          if ( p.len() == 2 ) CLIExit( new bxcachy.Screenshot( cli ).qrMake( p[2], args.options.out ?: "", asJson ) );
-          println( "Usage: bxcachy qr TEXT [--out=FILE.png] [--json]" );
+          if ( p.len() == 2 ) CLIExit( new bxrig.Screenshot( cli ).qrMake( p[2], args.options.out ?: "", asJson ) );
+          println( "Usage: bxrig qr TEXT [--out=FILE.png] [--json]" );
           CLIExit( 2 );
           break;
          case "pkg":
           // Any package from the repos or the AUR: search, info, install, remove. See COMMAND-CONTRACT.md 13.34.
           pkSub = p.len() >= 2 ? p[2] : "";
-          pkx = new bxcachy.Pkg( cli );
+          pkx = new bxrig.Pkg( cli );
           pkYes = structKeyExists( args.options, "yes" );
           pkDry = structKeyExists( args.options, "dry-run" );
           pkNames = [];
@@ -458,39 +462,39 @@ class {
           if ( pkSub == "installed" && p.len() == 2 ) CLIExit( pkx.installed( structKeyExists( args.options, "explicit" ), asJson ) );
           if ( pkSub == "install" ) CLIExit( pkx.install( pkNames, structKeyExists( args.options, "aur" ), pkYes, pkDry, asJson ) );
           if ( pkSub == "remove" ) CLIExit( pkx.remove( pkNames, pkYes, pkDry, asJson ) );
-          println( "Usage: bxcachy pkg search TEXT [--source=all|repo|aur] [--limit=N] | info NAME | installed [--explicit] | install NAME... [--aur] [--yes] [--dry-run] | remove NAME... [--yes] [--dry-run] [--json]" );
+          println( "Usage: bxrig pkg search TEXT [--source=all|repo|aur] [--limit=N] | info NAME | installed [--explicit] | install NAME... [--aur] [--yes] [--dry-run] | remove NAME... [--yes] [--dry-run] [--json]" );
           CLIExit( 2 );
           break;
          case "remove":
           // Uninstall catalog apps (their packages or web launchers) or any package. See COMMAND-CONTRACT.md 13.34.
           rmIds = [];
           for ( rmi = 2; rmi <= p.len(); rmi++ ) rmIds.append( p[ rmi ] );
-          CLIExit( new bxcachy.Pkg( cli ).removeApps( rmIds, structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
+          CLIExit( new bxrig.Pkg( cli ).removeApps( rmIds, structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
           break;
          case "appearance":
           // The look of the shell and windows: bar, dock, windows, animations, layout, font, background. See COMMAND-CONTRACT.md 13.35.
           apWords = [];
           for ( api = 2; api <= p.len(); api++ ) apWords.append( p[ api ] );
-          CLIExit( new bxcachy.Appearance( cli ).run( apWords, structKeyExists( args.options, "dry-run" ), structKeyExists( args.options, "yes" ), asJson ) );
+          CLIExit( new bxrig.Appearance( cli ).run( apWords, structKeyExists( args.options, "dry-run" ), structKeyExists( args.options, "yes" ), asJson ) );
           break;
          case "display":
           // Monitors: scale, rotation, position, mirror, laptop panel, brightness. See COMMAND-CONTRACT.md 13.36.
           dpWords = [];
           for ( dpi = 2; dpi <= p.len(); dpi++ ) dpWords.append( p[ dpi ] );
-          CLIExit( new bxcachy.Display( cli ).run( dpWords, structKeyExists( args.options, "dry-run" ), structKeyExists( args.options, "yes" ), asJson ) );
+          CLIExit( new bxrig.Display( cli ).run( dpWords, structKeyExists( args.options, "dry-run" ), structKeyExists( args.options, "yes" ), asJson ) );
           break;
          case "power":
           // Laptop and power: profile, lid, setup, doctor. See COMMAND-CONTRACT.md 13.37.
           pwWords = [];
           for ( pwi = 2; pwi <= p.len(); pwi++ ) pwWords.append( p[ pwi ] );
-          CLIExit( new bxcachy.Power( cli ).run( pwWords, structKeyExists( args.options, "dry-run" ), structKeyExists( args.options, "yes" ), asJson, structKeyExists( args.options, "force" ) ) );
+          CLIExit( new bxrig.Power( cli ).run( pwWords, structKeyExists( args.options, "dry-run" ), structKeyExists( args.options, "yes" ), asJson, structKeyExists( args.options, "force" ) ) );
           break;
          case "time":
           // The time zone: status, zone, sync, auto, ntp. See COMMAND-CONTRACT.md 13.38.
           tmWords = [];
           for ( tmi = 2; tmi <= p.len(); tmi++ ) tmWords.append( p[ tmi ] );
           if ( structKeyExists( args.options, "list" ) ) tmWords.append( "--list" );
-          CLIExit( new bxcachy.Time( cli ).run( tmWords, structKeyExists( args.options, "dry-run" ), structKeyExists( args.options, "yes" ), asJson ) );
+          CLIExit( new bxrig.Time( cli ).run( tmWords, structKeyExists( args.options, "dry-run" ), structKeyExists( args.options, "yes" ), asJson ) );
           break;
          case "toggle":
          case "dns":
@@ -498,7 +502,7 @@ class {
           // Small system switches: stay awake, DNS presets, kernels. See COMMAND-CONTRACT.md 13.39.
           twWords = [];
           for ( twi = 2; twi <= p.len(); twi++ ) twWords.append( p[ twi ] );
-          twx = new bxcachy.Tweaks( cli );
+          twx = new bxrig.Tweaks( cli );
           if ( cmd == "toggle" ) CLIExit( twx.toggle( twWords, structKeyExists( args.options, "dry-run" ), asJson ) );
           if ( cmd == "dns" ) CLIExit( twx.dns( twWords, structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
           CLIExit( twx.kernel( twWords, structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
@@ -507,38 +511,38 @@ class {
           // Fingerprint, security key, SSH server, passwordless sudo, with guards. See COMMAND-CONTRACT.md 13.39.
           scWords = [];
           for ( sci = 2; sci <= p.len(); sci++ ) scWords.append( p[ sci ] );
-          CLIExit( new bxcachy.Security( cli ).run( scWords, structKeyExists( args.options, "dry-run" ), structKeyExists( args.options, "yes" ), asJson ) );
+          CLIExit( new bxrig.Security( cli ).run( scWords, structKeyExists( args.options, "dry-run" ), structKeyExists( args.options, "yes" ), asJson ) );
           break;
          case "nas":
           // Your NAS boxes: discover, add, shares, mount, automatic mounts, test, sync, use as a backup target. See COMMAND-CONTRACT.md 13.41.
           nsWords = [];
           for ( nsi = 2; nsi <= p.len(); nsi++ ) nsWords.append( p[ nsi ] );
-          CLIExit( new bxcachy.Nas( cli ).run( nsWords, args.options, structKeyExists( args.options, "dry-run" ), structKeyExists( args.options, "yes" ), asJson ) );
+          CLIExit( new bxrig.Nas( cli ).run( nsWords, args.options, structKeyExists( args.options, "dry-run" ), structKeyExists( args.options, "yes" ), asJson ) );
           break;
          case "refresh":
-          // Put a managed config back to what BxCachy ships (a backup first; your edits are kept unless --force). See COMMAND-CONTRACT.md 13.42.
+          // Put a managed config back to what BxRig ships (a backup first; your edits are kept unless --force). See COMMAND-CONTRACT.md 13.42.
           rfWords = [];
           for ( rfi = 2; rfi <= p.len(); rfi++ ) rfWords.append( p[ rfi ] );
-          CLIExit( new bxcachy.Refresh( cli ).run( rfWords, args.options, structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), structKeyExists( args.options, "force" ), asJson ) );
+          CLIExit( new bxrig.Refresh( cli ).run( rfWords, args.options, structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), structKeyExists( args.options, "force" ), asJson ) );
           break;
          case "backup":
           // Backups: config snapshots, system snapshots, data, send and export. See COMMAND-CONTRACT.md 13.43.
           bkWords = [];
           for ( bki = 2; bki <= p.len(); bki++ ) bkWords.append( p[ bki ] );
-          CLIExit( new bxcachy.Backup( cli ).run( bkWords, args.options, structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), structKeyExists( args.options, "force" ), asJson ) );
+          CLIExit( new bxrig.Backup( cli ).run( bkWords, args.options, structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), structKeyExists( args.options, "force" ), asJson ) );
           break;
          case "bxtimemachine":
          case "timemachine":
           // BxTimeMachine, the backup screen: your backups through time. See COMMAND-CONTRACT.md 13.44.
           tmOpts = args.options;
           if ( p.len() != 1 ) {
-           println( "Usage: bxcachy timemachine [--demo] [--local]   (also: bxtimemachine)" );
+           println( "Usage: bxrig timemachine [--demo] [--local]   (also: bxtimemachine)" );
            CLIExit( 2 );
           }
           try {
-           CLIExit( new bxcachy.TimeMachine( cli ).run( tmOpts ) );
+           CLIExit( new bxrig.TimeMachine( cli ).run( tmOpts ) );
           } catch ( any tmErr ) {
-           println( "bxcachy timemachine needs a terminal (" & tmErr.message & ")." );
+           println( "bxrig timemachine needs a terminal (" & tmErr.message & ")." );
            CLIExit( 4 );
           }
           break;
@@ -546,40 +550,40 @@ class {
           // Java homes: list, install a Temurin JDK, default, remove. See COMMAND-CONTRACT.md 13.47.
           jvWords = [];
           for ( jvi = 2; jvi <= p.len(); jvi++ ) jvWords.append( p[ jvi ] );
-          CLIExit( new bxcachy.Java( cli ).run( jvWords, args.options, structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
+          CLIExit( new bxrig.Java( cli ).run( jvWords, args.options, structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
           break;
          case "sdk":
           // Java, Maven and Gradle through SDKMAN. See COMMAND-CONTRACT.md 13.47.
           sdkWords = [];
           for ( sdki = 2; sdki <= p.len(); sdki++ ) sdkWords.append( p[ sdki ] );
-          CLIExit( new bxcachy.Sdk( cli ).run( sdkWords, args.options, structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
+          CLIExit( new bxrig.Sdk( cli ).run( sdkWords, args.options, structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
           break;
          case "mail":
           // A mail catcher for development (Mailpit in a container). See COMMAND-CONTRACT.md 13.48.
           mlWords = [];
           for ( mli = 2; mli <= p.len(); mli++ ) mlWords.append( p[ mli ] );
-          CLIExit( new bxcachy.Mail( cli ).run( mlWords, args.options, structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
+          CLIExit( new bxrig.Mail( cli ).run( mlWords, args.options, structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
           break;
          case "tui":
-          // The Control Center: every BxCachy screen in one terminal. See COMMAND-CONTRACT.md 13.46.
+          // The Control Center: every BxRig screen in one terminal. See COMMAND-CONTRACT.md 13.46.
           ccPage = p.len() >= 2 ? p[ 2 ] : "dashboard";
           ccDemo = structKeyExists( args.options, "demo" );
           if ( p.len() > 2 ) {
-           println( "Usage: bxcachy tui [PAGE] [--demo] [--icons=on|off] [--json]" );
+           println( "Usage: bxrig tui [PAGE] [--demo] [--icons=on|off] [--json]" );
            CLIExit( 2 );
           }
-          if ( asJson ) CLIExit( new bxcachy.ControlCenter( cli ).dump( ccPage, ccDemo, true ) );
+          if ( asJson ) CLIExit( new bxrig.ControlCenter( cli ).dump( ccPage, ccDemo, true ) );
           try {
-           CLIExit( new bxcachy.ControlCenter( cli ).run( ccPage, ccDemo, structKeyExists( args.options, "icons" ) ? args.options.icons : "" ) );
+           CLIExit( new bxrig.ControlCenter( cli ).run( ccPage, ccDemo, structKeyExists( args.options, "icons" ) ? args.options.icons : "" ) );
           } catch ( any ccErr ) {
-           println( "bxcachy tui needs a terminal (" & ccErr.message & ")." );
+           println( "bxrig tui needs a terminal (" & ccErr.message & ")." );
            CLIExit( 4 );
           }
           break;
          case "vm":
           // Windows and Linux desktops in containers. See COMMAND-CONTRACT.md 13.33.
           vmSub = p.len() >= 2 ? p[2] : "list";
-          vmx = new bxcachy.Vm( cli );
+          vmx = new bxrig.Vm( cli );
           vmYes = structKeyExists( args.options, "yes" );
           vmDry = structKeyExists( args.options, "dry-run" );
           if ( vmSub == "list" && p.len() <= 2 ) CLIExit( vmx.list( asJson ) );
@@ -592,13 +596,13 @@ class {
           if ( vmSub == "open" && p.len() == 3 ) CLIExit( vmx.open( p[3], structKeyExists( args.options, "web" ), structKeyExists( args.options, "fullscreen" ), asJson ) );
           if ( vmSub == "remove" && p.len() == 3 ) CLIExit( vmx.remove( p[3], structKeyExists( args.options, "keep-data" ), vmYes, vmDry, asJson ) );
           if ( vmSub == "create" && p.len() >= 3 && p.len() <= 4 ) CLIExit( vmx.create( p[3], p.len() == 4 ? p[4] : "", { version: args.options.version ?: "", tag: args.options.tag ?: "", ram: args.options.ram ?: "", cpus: args.options.cpus ?: "", disk: args.options.disk ?: "", memory: args.options.memory ?: "", share: args.options.share ?: "", gpu: args.options.gpu ?: "" }, vmYes, vmDry, asJson ) );
-          println( "Usage: bxcachy vm list | status [NAME] | size [NAME] | info NAME [--show-password] | doctor | versions linux|windows | create windows [NAME] [--version=V] [--ram=8G] [--cpus=N] [--disk=64G] [--share=PATH|none] | create linux NAME [--tag=ubuntu-xfce] [--cpus=N] [--memory=4G] [--share=PATH|none] [--gpu=none|auto|intel|amd|nvidia] | start|stop|logs NAME | open NAME [--web] [--fullscreen] | remove NAME [--keep-data] [--yes] [--dry-run] [--json]" );
+          println( "Usage: bxrig vm list | status [NAME] | size [NAME] | info NAME [--show-password] | doctor | versions linux|windows | create windows [NAME] [--version=V] [--ram=8G] [--cpus=N] [--disk=64G] [--share=PATH|none] | create linux NAME [--tag=ubuntu-xfce] [--cpus=N] [--memory=4G] [--share=PATH|none] [--gpu=none|auto|intel|amd|nvidia] | start|stop|logs NAME | open NAME [--web] [--fullscreen] | remove NAME [--keep-data] [--yes] [--dry-run] [--json]" );
           CLIExit( 2 );
           break;
          case "theme":
           // Themes (Omarchy format): Noctalia palette, terminals, btop, Hyprland accent, Neovim. See COMMAND-CONTRACT.md 13.32.
           thSub = p.len() >= 2 ? p[2] : "";
-          th = new bxcachy.Theme( cli );
+          th = new bxrig.Theme( cli );
           thDry = structKeyExists( args.options, "dry-run" );
           if ( thSub == "list" && p.len() == 2 ) CLIExit( th.list( asJson ) );
           if ( thSub == "show" && p.len() == 3 ) CLIExit( th.show( p[3], asJson ) );
@@ -610,123 +614,123 @@ class {
           if ( thSub == "install" && p.len() == 3 ) CLIExit( th.install( p[3], args.options.name ?: "", structKeyExists( args.options, "force" ), asJson ) );
           if ( thSub == "import" && p.len() == 3 ) CLIExit( th.importDir( p[3], args.options.name ?: "", structKeyExists( args.options, "force" ), asJson ) );
           if ( thSub == "remove" && p.len() == 3 ) CLIExit( th.remove( p[3], asJson ) );
-          println( "Usage: bxcachy theme list | show NAME | set NAME [--mode=theme|dark|light|auto] [--keep-wallpaper] | random | next | mode theme|dark|light|auto | install GIT_URL [--name=N] [--force] | import PATH [--name=N] [--force] | remove NAME | vscode [--yes] | status [--dry-run] [--json]" );
+          println( "Usage: bxrig theme list | show NAME | set NAME [--mode=theme|dark|light|auto] [--keep-wallpaper] | random | next | mode theme|dark|light|auto | install GIT_URL [--name=N] [--force] | import PATH [--name=N] [--force] | remove NAME | vscode [--yes] | status [--dry-run] [--json]" );
           CLIExit( 2 );
           break;
          case "notify":
           // Noctalia notifications: Do Not Disturb, snooze, clear. See COMMAND-CONTRACT.md 13.26.
           ntSub = p.len() >= 2 ? p[2] : "";
-          nt = new bxcachy.Notify( cli );
+          nt = new bxrig.Notify( cli );
           if ( ntSub == "dnd" && p.len() == 3 && arrayFind( [ "on", "off", "toggle", "status" ], p[3] ) ) CLIExit( nt.dnd( p[3], asJson ) );
           if ( ntSub == "snooze" && p.len() <= 3 ) CLIExit( nt.snooze( p.len() == 3 ? p[3] : "", asJson ) );
           if ( ntSub == "clear" && p.len() == 2 ) CLIExit( nt.clear( structKeyExists( args.options, "history" ), asJson ) );
-          println( "Usage: bxcachy notify dnd on|off|toggle|status | snooze [30m|2h|90s|off] | clear [--history] [--json]" );
+          println( "Usage: bxrig notify dnd on|off|toggle|status | snooze [30m|2h|90s|off] | clear [--history] [--json]" );
           CLIExit( 2 );
           break;
          case "quicklook":
           // Quick Look style preview with Kiview. See COMMAND-CONTRACT.md 13.25.
-          if ( p.len() <= 2 ) CLIExit( new bxcachy.Quicklook( cli ).run( p.len() == 2 ? p[2] : "", structKeyExists( args.options, "dry-run" ), asJson ) );
-          println( "Usage: bxcachy quicklook [PATH] [--dry-run] [--json]" );
+          if ( p.len() <= 2 ) CLIExit( new bxrig.Quicklook( cli ).run( p.len() == 2 ? p[2] : "", structKeyExists( args.options, "dry-run" ), asJson ) );
+          println( "Usage: bxrig quicklook [PATH] [--dry-run] [--json]" );
           CLIExit( 2 );
           break;
          case "dolphin":
           // Dolphin outside Plasma. See COMMAND-CONTRACT.md 13.25.
-          if ( p.len() == 2 && p[2] == "doctor" ) CLIExit( new bxcachy.Dolphin( cli ).run( structKeyExists( args.options, "fix" ), asJson ) );
-          println( "Usage: bxcachy dolphin doctor [--fix] [--json]" );
+          if ( p.len() == 2 && p[2] == "doctor" ) CLIExit( new bxrig.Dolphin( cli ).run( structKeyExists( args.options, "fix" ), asJson ) );
+          println( "Usage: bxrig dolphin doctor [--fix] [--json]" );
           CLIExit( 2 );
           break;
          case "dictation":
           // Voice dictation: Superwhisper (default) or Voxtype. See COMMAND-CONTRACT.md 13.25.
           dctSub = p.len() >= 2 ? p[2] : "";
-          dct = new bxcachy.Dictation( cli );
+          dct = new bxrig.Dictation( cli );
           if ( dctSub == "setup" && p.len() <= 3 ) CLIExit( dct.setup( p.len() == 3 ? p[3] : "", structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
           if ( dctSub == "status" && p.len() == 2 ) CLIExit( dct.status( asJson ) );
           if ( dctSub == "key" && p.len() <= 3 ) CLIExit( dct.key( p.len() == 3 ? p[3] : "", asJson ) );
-          println( "Usage: bxcachy dictation setup [superwhisper|voxtype] [--yes] [--dry-run] | status | key [ENGINE] [--json]" );
+          println( "Usage: bxrig dictation setup [superwhisper|voxtype] [--yes] [--dry-run] | status | key [ENGINE] [--json]" );
           CLIExit( 2 );
           break;
          case "strata":
           // Strata's Send to providers (LocalSend, KDE Connect). See COMMAND-CONTRACT.md 13.25.
-          if ( p.len() == 2 && p[2] == "integrations" ) CLIExit( new bxcachy.Strata( cli ).integrations( structKeyExists( args.options, "dry-run" ), asJson ) );
-          println( "Usage: bxcachy strata integrations [--dry-run] [--json]" );
+          if ( p.len() == 2 && p[2] == "integrations" ) CLIExit( new bxrig.Strata( cli ).integrations( structKeyExists( args.options, "dry-run" ), asJson ) );
+          println( "Usage: bxrig strata integrations [--dry-run] [--json]" );
           CLIExit( 2 );
           break;
          case "status":
           // What this machine already has, in the wizard's terms. See COMMAND-CONTRACT.md 13.24.
-          if ( p.len() == 1 ) CLIExit( new bxcachy.Status( cli ).run( asJson ) );
-          println( "Usage: bxcachy status [--json]" );
+          if ( p.len() == 1 ) CLIExit( new bxrig.Status( cli ).run( asJson ) );
+          println( "Usage: bxrig status [--json]" );
           CLIExit( 2 );
           break;
          case "apps":
           // Every installed application in one window (Omarchy 4.5's app grid). See COMMAND-CONTRACT.md 13.22.
-          if ( p.len() == 1 ) CLIExit( new bxcachy.Apps( cli ).grid() );
-          if ( p.len() == 2 && p[2] == "list" ) CLIExit( new bxcachy.Apps( cli ).list( asJson ) );
-          println( "Usage: bxcachy apps | apps list [--json]" );
+          if ( p.len() == 1 ) CLIExit( new bxrig.Apps( cli ).grid() );
+          if ( p.len() == 2 && p[2] == "list" ) CLIExit( new bxrig.Apps( cli ).list( asJson ) );
+          println( "Usage: bxrig apps | apps list [--json]" );
           CLIExit( 2 );
           break;
          case "menu":
-          // The BxCachy control center on the runner's menu provider. See COMMAND-CONTRACT.md 13.16.
-          if ( p.len() == 1 ) CLIExit( new bxcachy.Menu( cli ).run() );
-          if ( p.len() == 2 && p[2] == "items" ) CLIExit( new bxcachy.Menu( cli ).show( asJson ) );
-          if ( p.len() >= 3 && p[2] == "search" ) { mnWords = []; for ( mni = 3; mni <= p.len(); mni++ ) mnWords.append( p[ mni ] ); CLIExit( new bxcachy.Menu( cli ).search( mnWords.toList( " " ), asJson ) ); }
-          println( "Usage: bxcachy menu | menu items [--json] | menu search TEXT [--json]" );
+          // The BxRig control center on the runner's menu provider. See COMMAND-CONTRACT.md 13.16.
+          if ( p.len() == 1 ) CLIExit( new bxrig.Menu( cli ).run() );
+          if ( p.len() == 2 && p[2] == "items" ) CLIExit( new bxrig.Menu( cli ).show( asJson ) );
+          if ( p.len() >= 3 && p[2] == "search" ) { mnWords = []; for ( mni = 3; mni <= p.len(); mni++ ) mnWords.append( p[ mni ] ); CLIExit( new bxrig.Menu( cli ).search( mnWords.toList( " " ), asJson ) ); }
+          println( "Usage: bxrig menu | menu items [--json] | menu search TEXT [--json]" );
           CLIExit( 2 );
           break;
          case "ssh":
           // Create an ed25519 SSH key (never replaces one). See COMMAND-CONTRACT.md 13.15.
-          if ( p.len() == 2 && p[2] == "key" ) CLIExit( new bxcachy.SshKey( cli ).run( args.options.email ?: "", structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
-          println( "Usage: bxcachy ssh key [--email=ADDRESS] [--yes] [--dry-run] [--json]" );
+          if ( p.len() == 2 && p[2] == "key" ) CLIExit( new bxrig.SshKey( cli ).run( args.options.email ?: "", structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
+          println( "Usage: bxrig ssh key [--email=ADDRESS] [--yes] [--dry-run] [--json]" );
           CLIExit( 2 );
           break;
          case "default":
           // Make an installed app your default browser or terminal. See COMMAND-CONTRACT.md 13.12.
           dfltSub = p.len() >= 2 ? p[2] : "";
-          dflt = new bxcachy.Defaults( cli );
+          dflt = new bxrig.Defaults( cli );
           dfltYes = structKeyExists( args.options, "yes" );
           dfltDry = structKeyExists( args.options, "dry-run" );
           if ( dfltSub == "show" && p.len() == 2 ) CLIExit( dflt.show( asJson ) );
           if ( dfltSub == "browser" && p.len() == 3 ) CLIExit( dflt.browser( p[3], dfltYes, dfltDry, asJson ) );
           if ( dfltSub == "terminal" && p.len() == 3 ) CLIExit( dflt.terminal( p[3], dfltYes, dfltDry, asJson ) );
           if ( dfltSub == "filemanager" && p.len() == 3 ) CLIExit( dflt.filemanager( p[3], dfltYes, dfltDry, asJson ) );
-          println( "Usage: bxcachy default show | browser ID | terminal ID | filemanager ID [--yes] [--dry-run] [--json]" );
+          println( "Usage: bxrig default show | browser ID | terminal ID | filemanager ID [--yes] [--dry-run] [--json]" );
           CLIExit( 2 );
           break;
          case "ai":
           // Your coding agents: list, the default one, and launching it. See COMMAND-CONTRACT.md 13.14.
           aiSub = p.len() >= 2 ? p[2] : "";
-          ai = new bxcachy.Ai( cli );
+          ai = new bxrig.Ai( cli );
           if ( aiSub == "list" && p.len() == 2 ) CLIExit( ai.list( asJson ) );
           if ( aiSub == "default" && p.len() <= 3 ) CLIExit( ai.setDefault( p.len() == 3 ? p[3] : "", structKeyExists( args.options, "yes" ), asJson ) );
           if ( aiSub == "launch" && p.len() <= 3 ) CLIExit( ai.launch( p.len() == 3 ? p[3] : "", structKeyExists( args.options, "dry-run" ), asJson ) );
-          if ( aiSub == "shell" && p.len() <= 3 ) CLIExit( new bxcachy.AiShell( cli ).run( p.len() == 3 ? p[3] : "toggle", args.options.backend ?: "", structKeyExists( args.options, "dry-run" ), asJson ) );
+          if ( aiSub == "shell" && p.len() <= 3 ) CLIExit( new bxrig.AiShell( cli ).run( p.len() == 3 ? p[3] : "toggle", args.options.backend ?: "", structKeyExists( args.options, "dry-run" ), asJson ) );
           if ( aiSub == "session" ) {
-            aiSes = new bxcachy.AiSession( cli );
+            aiSes = new bxrig.AiSession( cli );
             aiAct = p.len() >= 3 ? p[3] : "";
             if ( aiAct == "start" && p.len() <= 4 ) CLIExit( aiSes.start( p.len() == 4 ? p[4] : "", args.options.name ?: "", args.options.dir ?: "", structKeyExists( args.options, "dry-run" ), asJson ) );
             if ( aiAct == "list" && p.len() == 3 ) CLIExit( aiSes.list( asJson ) );
             if ( aiAct == "attach" && p.len() == 4 ) CLIExit( aiSes.attach( p[4], asJson ) );
             if ( aiAct == "stop" && p.len() == 4 ) CLIExit( aiSes.stop( p[4], structKeyExists( args.options, "yes" ), asJson ) );
-            println( "Usage: bxcachy ai session start [ID] [--name=N] [--dir=PATH] [--dry-run] | list | attach NAME | stop NAME --yes [--json]" );
+            println( "Usage: bxrig ai session start [ID] [--name=N] [--dir=PATH] [--dry-run] | list | attach NAME | stop NAME --yes [--json]" );
             CLIExit( 2 );
           }
           if ( aiSub == "models" ) {
-            aiMod = new bxcachy.AiModels( cli );
+            aiMod = new bxrig.AiModels( cli );
             aiAct2 = p.len() >= 3 ? p[3] : "";
             if ( ( aiAct2 == "list" || aiAct2 == "ps" ) && p.len() == 3 ) CLIExit( aiMod.show( aiAct2, asJson ) );
             if ( aiAct2 == "pull" && p.len() == 4 ) CLIExit( aiMod.pull( p[4], asJson ) );
             if ( aiAct2 == "rm" && p.len() == 4 ) CLIExit( aiMod.remove( p[4], structKeyExists( args.options, "yes" ), asJson ) );
             if ( aiAct2 == "status" && p.len() == 3 ) CLIExit( aiMod.status( asJson ) );
             if ( aiAct2 == "enable" && p.len() == 3 ) CLIExit( aiMod.enable( structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
-            println( "Usage: bxcachy ai models list | ps | pull NAME | rm NAME --yes | status | enable [--yes] [--json]" );
+            println( "Usage: bxrig ai models list | ps | pull NAME | rm NAME --yes | status | enable [--yes] [--json]" );
             CLIExit( 2 );
           }
-          println( "Usage: bxcachy ai list | default [ID] [--yes] | launch [ID] [--dry-run] | session ... | models ... | shell [toggle|status] [--backend=hyprland|yakuake] [--dry-run] [--json]" );
+          println( "Usage: bxrig ai list | default [ID] [--yes] | launch [ID] [--dry-run] | session ... | models ... | shell [toggle|status] [--backend=hyprland|yakuake] [--dry-run] [--json]" );
           CLIExit( 2 );
           break;
          case "secrets":
           // One way to store and load API keys: keyring first, private files otherwise. See COMMAND-CONTRACT.md 13.13.
           secSub = p.len() >= 2 ? p[2] : "";
-          sec = new bxcachy.Secrets( cli );
+          sec = new bxrig.Secrets( cli );
           if ( secSub == "status" && p.len() == 2 ) CLIExit( sec.status( asJson ) );
           if ( secSub == "list" && p.len() == 2 ) CLIExit( sec.list( asJson, args.options.type ?: "" ) );
           if ( secSub == "set" && p.len() == 3 ) CLIExit( sec.setValue( p[3], args.options["from-file"] ?: "", asJson, args.options.type ?: "", args.options.provider ?: "" ) );
@@ -752,16 +756,16 @@ class {
               CLIExit( sec.run( secNames.filter( function( x ) { return left( x, 2 ) != "--"; } ), secCmd, secStrict, secType ) );
             }
           }
-          println( "Usage: bxcachy secrets status | setup [--keyring=kwallet|gnome-keyring|none] [--yes] | list [--type=ai|other] | set NAME [--from-file=F] [--type=ai|other] [--provider=ID] | get NAME [--show] | unset NAME --yes | apply [--yes] | global on NAME --yes|off NAME|show | unlock | lock | export FILE [--plain] [--force] --yes | import FILE [--overwrite] --yes | env [NAMES...] | run [NAMES...] [--strict] -- COMMAND [ARGS...] [--json]" );
+          println( "Usage: bxrig secrets status | setup [--keyring=kwallet|gnome-keyring|none] [--yes] | list [--type=ai|other] | set NAME [--from-file=F] [--type=ai|other] [--provider=ID] | get NAME [--show] | unset NAME --yes | apply [--yes] | global on NAME --yes|off NAME|show | unlock | lock | export FILE [--plain] [--force] --yes | import FILE [--overwrite] --yes | env [NAMES...] | run [NAMES...] [--strict] -- COMMAND [ARGS...] [--json]" );
           CLIExit( 2 );
           break;
          case "dotfiles":
           // Apply your own dotfiles repository (method detected: chezmoi, yadm, stow or links). See COMMAND-CONTRACT.md 13.11.
           dfSub = p.len() >= 2 ? p[2] : "";
-          df = new bxcachy.Dotfiles( cli );
+          df = new bxrig.Dotfiles( cli );
           dfYes = structKeyExists( args.options, "yes" );
           dfDry = structKeyExists( args.options, "dry-run" );
-          dfUsage = "Usage: bxcachy dotfiles plan REPO [--method=chezmoi|yadm|stow|links] | apply REPO [--method=M] [--overwrite] [--yes] [--dry-run] | status | undo [--yes] [--dry-run] [--json]";
+          dfUsage = "Usage: bxrig dotfiles plan REPO [--method=chezmoi|yadm|stow|links] | apply REPO [--method=M] [--overwrite] [--yes] [--dry-run] | status | undo [--yes] [--dry-run] [--json]";
           if ( dfSub == "plan" && p.len() == 3 ) CLIExit( df.showPlan( p[3], args.options.method ?: "", asJson ) );
           if ( dfSub == "apply" && p.len() == 3 ) CLIExit( df.apply( p[3], args.options.method ?: "", structKeyExists( args.options, "overwrite" ), dfYes, dfDry, asJson ) );
           if ( dfSub == "status" && p.len() == 2 ) CLIExit( df.status( asJson ) );
@@ -773,11 +777,11 @@ class {
           // Local database and search services as containers (Podman by default, Docker by choice). See COMMAND-CONTRACT.md 13.10.
           dbSub = p.len() >= 2 ? p[2] : "";
           dbArg = p.len() >= 3 ? p[3] : "";
-          db = new bxcachy.Db( cli );
+          db = new bxrig.Db( cli );
           dbYes = structKeyExists( args.options, "yes" );
           dbDry = structKeyExists( args.options, "dry-run" );
           dbName = args.options.name ?: "default";
-          dbUsage = "Usage: bxcachy db engines | list | start ENGINE [--name N] [--port P] [--password-file FILE | --ask-password] [--yes] [--dry-run] | stop|status|logs ENGINE [--name N] | remove ENGINE [--name N] [--keep-data] --yes | info ENGINE [--name N] [--show-password] | engine [podman|docker] | menu [--json]";
+          dbUsage = "Usage: bxrig db engines | list | start ENGINE [--name N] [--port P] [--password-file FILE | --ask-password] [--yes] [--dry-run] | stop|status|logs ENGINE [--name N] | remove ENGINE [--name N] [--keep-data] --yes | info ENGINE [--name N] [--show-password] | engine [podman|docker] | menu [--json]";
           if ( arrayFind( [ "engines", "list" ], dbSub ) && p.len() == 2 ) CLIExit( dbSub == "engines" ? db.listEngines( asJson ) : db.list( asJson ) );
           if ( dbSub == "menu" && p.len() == 2 ) CLIExit( db.menu() );
           if ( dbSub == "engine" && p.len() <= 3 ) CLIExit( db.engine( dbArg, asJson ) );
@@ -789,11 +793,11 @@ class {
           CLIExit( 2 );
           break;
          case "runner":
-          // Launcher and menu providers. Records the choice (~/.config/bxcachy/runner.json); never changes a keybinding.
+          // Launcher and menu providers. Records the choice (~/.config/bxrig/runner.json); never changes a keybinding.
           // set and menu-set are user settings that act at once (no --yes), like `tiling`.
           rnSub = p.len() >= 2 ? p[2] : "";
-          rn = new bxcachy.Runner( cli );
-          rnUsage = "Usage: bxcachy runner list | show | doctor | launch | select JSON_ENTRIES [--prompt=TEXT] | set PROVIDER | menu-set PROVIDER | launcher-command PROVIDER JSON_ARGV | menu-command PROVIDER JSON_ARGV [--json]";
+          rn = new bxrig.Runner( cli );
+          rnUsage = "Usage: bxrig runner list | show | doctor | launch | select JSON_ENTRIES [--prompt=TEXT] | set PROVIDER | menu-set PROVIDER | launcher-command PROVIDER JSON_ARGV | menu-command PROVIDER JSON_ARGV [--json]";
           rnArity = { list: 2, show: 2, doctor: 2, launch: 2, select: 3, set: 3, "menu-set": 3, "launcher-command": 4, "menu-command": 4 };
           if ( !structKeyExists( rnArity, rnSub ) || p.len() != rnArity[ rnSub ] ) {
            println( rnUsage );
@@ -843,7 +847,7 @@ class {
              println( "error: entries must be a JSON array of labels or { label, icon } objects, for example [""Apps"",""Settings""]" );
              CLIExit( 4 );
             }
-            rnPick = rn.select( args.options.prompt ?: "BxCachy", rnEntries );
+            rnPick = rn.select( args.options.prompt ?: "BxRig", rnEntries );
             if ( rnPick == 0 ) CLIExit( 1 );
             if ( asJson ) println( cli.envelope( "runner select", 0, { index: rnPick - 1 } ) ); else println( rnPick - 1 );
             CLIExit( 0 );
@@ -869,30 +873,30 @@ class {
           break;
          case "toolchain":
           // Optional language toolchains. `toolchain node` installs nvm (pinned official installer) and Node.js LTS. Bun and Deno are
-          // catalog apps: bxcachy install bun deno.
+          // catalog apps: bxrig install bun deno.
           if ( p.len() != 2 || p[2] != "node" ) {
-           println( "Usage: bxcachy toolchain node [--yes] [--dry-run] [--json]   (Bun and Deno: bxcachy install bun deno)" );
+           println( "Usage: bxrig toolchain node [--yes] [--dry-run] [--json]   (Bun and Deno: bxrig install bun deno)" );
            CLIExit( 2 );
           }
-          CLIExit( new bxcachy.Setup( cli ).node( structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
+          CLIExit( new bxrig.Setup( cli ).node( structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
           break;
          case "reinstall":
          case "init":
           // The setup wizard and what it runs. init (needs a terminal) | init --answers=FILE [--yes] [--dry-run] [--json] | init --print-answers.
           if ( cmd == "reinstall" ) args.options.rerun = true;
           if ( p.len() != 1 ) {
-           println( "Usage: bxcachy init [--from=FILE] [--fresh | --rerun] | init --answers=FILE [--yes] [--dry-run] [--json] | init --print-answers [--from-system] [--json] | init --export=FILE [--force]" );
+           println( "Usage: bxrig init [--from=FILE] [--fresh | --rerun] | init --answers=FILE [--yes] [--dry-run] [--json] | init --print-answers [--from-system] [--json] | init --export=FILE [--force]" );
            CLIExit( 2 );
           }
-          initRun = new bxcachy.Init( cli );
+          initRun = new bxrig.Init( cli );
           if ( structKeyExists( args.options, "export" ) ) CLIExit( initRun.exportAnswers( args.options.export, structKeyExists( args.options, "force" ), asJson ) );
           if ( structKeyExists( args.options, "print-answers" ) ) CLIExit( initRun.printAnswers( asJson, structKeyExists( args.options, "from-system" ) ) );
-          if ( structKeyExists( args.options, "defaults" ) ) CLIExit( initRun.run( new bxcachy.WizardApp( initRun.wizardSpec(), {} ).finalAnswers(), structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
+          if ( structKeyExists( args.options, "defaults" ) ) CLIExit( initRun.run( new bxrig.WizardApp( initRun.wizardSpec(), {} ).finalAnswers(), structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
           if ( structKeyExists( args.options, "answers" ) ) {
            try {
             initAnswers = jsonDeserialize( fileRead( args.options.answers ) );
            } catch ( any e ) {
-            println( "bxcachy init: cannot read the answers file: " & e.message );
+            println( "bxrig init: cannot read the answers file: " & e.message );
             CLIExit( 4 );
            }
            CLIExit( initRun.run( initAnswers, structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
@@ -904,17 +908,17 @@ class {
           // built-in ones (--demo), optionally starting from earlier answers (--answers FILE), and writes the answers as
           // JSON to --out FILE. It changes nothing on the machine. Exit: 0 answers written, 130 cancelled, 2 usage, 4 bad file.
           if ( p.len() != 1 || ( !structKeyExists( args.options, "demo" ) && !structKeyExists( args.options, "pages" ) ) ) {
-           println( "Usage: bxcachy wizard --demo [--out=FILE] | --pages=FILE [--out=FILE] [--answers=FILE]" );
+           println( "Usage: bxrig wizard --demo [--out=FILE] | --pages=FILE [--out=FILE] [--answers=FILE]" );
            CLIExit( 2 );
           }
           try {
-           wzSpec = jsonDeserialize( structKeyExists( args.options, "demo" ) ? new bxcachy.WizardData().demoPages() : fileRead( args.options.pages ) );
+           wzSpec = jsonDeserialize( structKeyExists( args.options, "demo" ) ? new bxrig.WizardData().demoPages() : fileRead( args.options.pages ) );
            wzPreset = structKeyExists( args.options, "answers" ) ? jsonDeserialize( fileRead( args.options.answers ) ) : {};
           } catch ( any e ) {
-           println( "bxcachy wizard: cannot read the pages or answers: " & e.message );
+           println( "bxrig wizard: cannot read the pages or answers: " & e.message );
            CLIExit( 4 );
           }
-          wzResult = new bxcachy.Wizard( wzSpec, wzPreset ).run();
+          wzResult = new bxrig.Wizard( wzSpec, wzPreset ).run();
           if ( wzResult.outcome != "done" ) CLIExit( 130 );
           if ( structKeyExists( args.options, "out" ) ) fileWrite( args.options.out, jsonSerialize( wzResult.answers ) & chr( 10 ) );
           CLIExit( 0 );
@@ -922,7 +926,7 @@ class {
          case "keys":
           // The shared shortcut table: keys show | keys render xremap|hyprland|plasma (pure, writes nothing).
           keysSub = p.len() >= 2 ? p[2] : "";
-          sc = new bxcachy.Shortcuts();
+          sc = new bxrig.Shortcuts();
           if ( keysSub == "show" && p.len() == 2 ) {
            rows = sc.show();
            if ( asJson ) println( cli.envelope( "keys show", 0, { shortcuts: rows } ) );
@@ -934,63 +938,63 @@ class {
            else print( sc.render( p[3] ) );
            CLIExit( 0 );
           }
-          if ( keysSub == "sheet" && p.len() == 2 ) CLIExit( new bxcachy.KeySheet( cli ).run( asJson ) );
+          if ( keysSub == "sheet" && p.len() == 2 ) CLIExit( new bxrig.KeySheet( cli ).run( asJson ) );
           if ( keysSub == "check" && p.len() == 2 ) {
-           CLIExit( new bxcachy.KeysService( cli ).check( asJson ) );
+           CLIExit( new bxrig.KeysService( cli ).check( asJson ) );
           }
           if ( keysSub == "apply" && p.len() == 2 ) {
-           CLIExit( new bxcachy.KeysService( cli ).apply( structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), structKeyExists( args.options, "force" ), asJson ) );
+           CLIExit( new bxrig.KeysService( cli ).apply( structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), structKeyExists( args.options, "force" ), asJson ) );
           }
-          if ( keysSub == "set" && p.len() == 4 ) CLIExit( new bxcachy.KeysEditor( cli ).setKeys( p[3], p[4], structKeyExists( args.options, "yes" ), structKeyExists( args.options, "force" ), asJson ) );
-          if ( keysSub == "reset" && p.len() == 3 ) CLIExit( new bxcachy.KeysEditor( cli ).reset( p[3], structKeyExists( args.options, "yes" ), asJson ) );
-          if ( keysSub == "conflicts" && p.len() == 2 ) CLIExit( new bxcachy.KeysEditor( cli ).conflicts( asJson ) );
+          if ( keysSub == "set" && p.len() == 4 ) CLIExit( new bxrig.KeysEditor( cli ).setKeys( p[3], p[4], structKeyExists( args.options, "yes" ), structKeyExists( args.options, "force" ), asJson ) );
+          if ( keysSub == "reset" && p.len() == 3 ) CLIExit( new bxrig.KeysEditor( cli ).reset( p[3], structKeyExists( args.options, "yes" ), asJson ) );
+          if ( keysSub == "conflicts" && p.len() == 2 ) CLIExit( new bxrig.KeysEditor( cli ).conflicts( asJson ) );
           if ( keysSub == "mac" && p.len() <= 3 ) {
            macAct = p.len() == 3 ? p[3] : "status";
-           macSvc = new bxcachy.MacKeys( cli );
+           macSvc = new bxrig.MacKeys( cli );
            if ( macAct == "status" ) CLIExit( macSvc.status( asJson ) );
            if ( macAct == "on" || macAct == "off" ) CLIExit( macSvc.set( macAct == "on", structKeyExists( args.options, "yes" ), asJson ) );
           }
-          println( "Usage: bxcachy keys show | mac [on|off|status] [--yes] | set ID KEYS [--yes] [--force] | reset ID [--yes] | conflicts | render xremap|hyprland|plasma | check | apply [--yes] [--dry-run] [--force] [--json]" );
+          println( "Usage: bxrig keys show | mac [on|off|status] [--yes] | set ID KEYS [--yes] [--force] | reset ID [--yes] | conflicts | render xremap|hyprland|plasma | check | apply [--yes] [--dry-run] [--force] [--json]" );
           CLIExit( 2 );
           break;
          case "assets":
           // The embedded brand images: assets list | assets install [--yes] [--dry-run].
           assetsSub = p.len() == 2 ? p[2] : "";
-          assetsSvc = new bxcachy.Assets( cli );
+          assetsSvc = new bxrig.Assets( cli );
           if ( assetsSub == "list" ) CLIExit( assetsSvc.list( asJson ) );
           if ( assetsSub == "install" ) CLIExit( assetsSvc.install( structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
-          println( "Usage: bxcachy assets list | install [--yes] [--dry-run] [--json]" );
+          println( "Usage: bxrig assets list | install [--yes] [--dry-run] [--json]" );
           CLIExit( 2 );
           break;
          case "session":
           // Which session the SDDM login screen preselects: session show | session set hyprland|plasma [--yes] [--dry-run].
           sessionSub = p.len() >= 2 ? p[2] : "";
-          sessionSvc = new bxcachy.Session( cli );
+          sessionSvc = new bxrig.Session( cli );
           if ( sessionSub == "show" && p.len() == 2 ) CLIExit( sessionSvc.show( asJson ) );
           if ( sessionSub == "set" && p.len() == 3 ) CLIExit( sessionSvc.set( p[3], structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
-          println( "Usage: bxcachy session show | set hyprland|plasma [--yes] [--dry-run] [--json]" );
+          println( "Usage: bxrig session show | set hyprland|plasma [--yes] [--dry-run] [--json]" );
           CLIExit( 2 );
           break;
          case "tiling":
           // HyprKwin on/off inside Plasma; on and off act at once (reversible user setting, see Tiling.bx).
           tilingSub = p.len() >= 2 ? p[2] : "";
-          if ( tilingSub == "layout" && p.len() <= 3 ) CLIExit( new bxcachy.Tiling( cli ).layout( p.len() == 3 ? p[3] : "", asJson ) );
+          if ( tilingSub == "layout" && p.len() <= 3 ) CLIExit( new bxrig.Tiling( cli ).layout( p.len() == 3 ? p[3] : "", asJson ) );
           if ( !arrayFind( [ "on", "off", "status" ], tilingSub ) || p.len() != 2 ) {
-           println( "Usage: bxcachy tiling on|off|status | layout [dwindle|master|monocle|scrolling|stage] [--json]" );
+           println( "Usage: bxrig tiling on|off|status | layout [dwindle|master|monocle|scrolling|stage] [--json]" );
            CLIExit( 2 );
           }
-          tl = new bxcachy.Tiling( cli );
+          tl = new bxrig.Tiling( cli );
           CLIExit( tilingSub == "status" ? tl.status( asJson ) : tl.set( tilingSub == "on", asJson ) );
           break;
          case "help":
           // The command list and per-command usage, from docs/reference/cli.json (bootstrap/gen-docs.sh). Unknown commands exit 2.
           hpWords = [];
           for ( hpi = 2; hpi <= p.len(); hpi++ ) hpWords.append( p[ hpi ] );
-          CLIExit( new bxcachy.Help( cli ).run( hpWords, asJson ) );
+          CLIExit( new bxrig.Help( cli ).run( hpWords, asJson ) );
           break;
          default:
           println( "Unsupported command: " & cmd );
-          println( "Run bxcachy help" );
+          println( "Run bxrig help" );
         }
     }
 

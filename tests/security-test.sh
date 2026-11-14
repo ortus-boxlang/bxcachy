@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# `bxcachy security ...` with a fake /etc/pam.d, /etc/sudoers.d, sudo, pacman, visudo, systemctl. Usage: security-test.sh BINARY
+# `bxrig security ...` with a fake /etc/pam.d, /etc/sudoers.d, sudo, pacman, visudo, systemctl. Usage: security-test.sh BINARY
 set -euo pipefail
 binary="$(realpath "${1:?native executable required}")"
 tmp="$(mktemp -d)"; trap 'rm -rf "${tmp:?}"' EXIT
@@ -21,7 +21,7 @@ printf '#!/usr/bin/env bash\necho "fprintd-enroll $*" >> "$LOG"\n' > "$tmp/fprin
 printf '#!/usr/bin/env bash\necho "pamu2fcfg $*" >> "$LOG"\necho "mykey" \n' > "$tmp/pamu2fcfg.real"
 printf '#!/usr/bin/env bash\nif [[ "$1" == -u ]]; then echo 1000; else /usr/bin/id "$@"; fi\n' > "$tmp/bin/id"
 chmod +x "$tmp/bin"/* "$tmp"/*.real
-run() { env HOME="$tmp/home" USER="${SUSER:-dev}" BXCACHY_PAM_DIR="$tmp/pam" BXCACHY_SUDOERS_DIR="$tmp/sudoers" PATH="$tmp/bin:$PATH" LOG="$LOG" ACTIVE="${ACTIVE:-3}" "$@"; }
+run() { env HOME="$tmp/home" USER="${SUSER:-dev}" BXRIG_PAM_DIR="$tmp/pam" BXRIG_SUDOERS_DIR="$tmp/sudoers" PATH="$tmp/bin:$PATH" LOG="$LOG" ACTIVE="${ACTIVE:-3}" "$@"; }
 code() { set +e; run "$@" >/dev/null 2>&1; local c=$?; set -e; echo "$c"; }
 has() { grep -qF -- "$1" "$LOG"; }
 
@@ -34,9 +34,9 @@ cmp -s "$tmp/pam/sudo" "$tmp/sudo.original" || fail 'the plan changed PAM'
 run "$binary" security fingerprint on --dry-run | grep -q 'auth sufficient pam_fprintd.so' || fail 'the plan prints the exact PAM line'
 cmp -s "$tmp/pam/sudo" "$tmp/sudo.original" || fail 'dry run changed PAM'
 run "$binary" security fingerprint on --yes >/dev/null
-[[ "$(sed -n 2p "$tmp/pam/sudo")" == 'auth sufficient pam_fprintd.so # bxcachy fingerprint' ]] || fail "line position: $(cat "$tmp/pam/sudo")"
+[[ "$(sed -n 2p "$tmp/pam/sudo")" == 'auth sufficient pam_fprintd.so # bxrig fingerprint' ]] || fail "line position: $(cat "$tmp/pam/sudo")"
 [[ "$(sed -n 3p "$tmp/pam/sudo")" == *'include'*'system-auth' ]] && grep -q 'session' "$tmp/pam/sudo" || fail 'the original lines are intact'
-cmp -s "$tmp/pam/sudo.bxcachy-backup" "$tmp/sudo.original" || fail 'the original is kept as a backup'
+cmp -s "$tmp/pam/sudo.bxrig-backup" "$tmp/sudo.original" || fail 'the original is kept as a backup'
 has 'pacman -S --needed --noconfirm fprintd' || fail 'fprintd is installed'
 [[ "$(grep -c 'pam_fprintd' "$tmp/pam/sudo")" == 1 ]] || fail 'one line'
 run "$binary" security fingerprint on --yes >/dev/null; [[ "$(grep -c 'pam_fprintd' "$tmp/pam/sudo")" == 1 ]] || fail 'running it twice added a second line'
@@ -53,7 +53,7 @@ cp "$tmp/pam/sudo.keep" "$tmp/pam/sudo"
 # ---- fido2: refuses until a key is registered ----
 [[ "$(code "$binary" security fido2 on --yes)" == 4 ]] || fail 'fido2 on without a registered key exits 4'
 cp "$tmp/pamu2fcfg.real" "$tmp/bin/pamu2fcfg"; run "$binary" security fido2 register --yes >/dev/null; [[ -s "$tmp/home/.config/Yubico/u2f_keys" ]] || fail 'register wrote the key file'
-run "$binary" security fido2 on --yes >/dev/null; grep -q '^auth sufficient pam_u2f.so cue # bxcachy fido2$' "$tmp/pam/sudo" || fail 'fido2 line'
+run "$binary" security fido2 on --yes >/dev/null; grep -q '^auth sufficient pam_u2f.so cue # bxrig fido2$' "$tmp/pam/sudo" || fail 'fido2 line'
 run "$binary" security fido2 off --yes >/dev/null; ! grep -q pam_u2f "$tmp/pam/sudo" || fail 'fido2 off'
 
 # ---- ssh server ----
@@ -63,13 +63,13 @@ run "$binary" security ssh-server off --yes >/dev/null; has 'systemctl disable -
 
 # ---- passwordless sudo: validated with visudo first ----
 [[ "$(code "$binary" security passwordless-sudo on)" == 2 ]] || fail 'passwordless sudo without --yes is a plan'
-[[ ! -e "$tmp/sudoers/50-bxcachy-nopasswd" ]] || fail 'the plan wrote the file'
+[[ ! -e "$tmp/sudoers/50-bxrig-nopasswd" ]] || fail 'the plan wrote the file'
 run "$binary" security passwordless-sudo on --dry-run | grep -q 'dev ALL=(ALL:ALL) NOPASSWD: ALL' || fail 'the plan shows the line'
 : > "$LOG"; run "$binary" security passwordless-sudo on --yes >/dev/null
-grep -q '^dev ALL=(ALL:ALL) NOPASSWD: ALL$' "$tmp/sudoers/50-bxcachy-nopasswd" && has 'visudo -cf' || fail 'sudoers file written after visudo'
+grep -q '^dev ALL=(ALL:ALL) NOPASSWD: ALL$' "$tmp/sudoers/50-bxrig-nopasswd" && has 'visudo -cf' || fail 'sudoers file written after visudo'
 has 'install -Dm440 -o root -g root' || fail 'sudoers permissions'
 run "$binary" security status --json | jq -e '.data.passwordless_sudo' >/dev/null || fail 'status sees passwordless sudo'
-run "$binary" security passwordless-sudo off --yes >/dev/null; [[ ! -e "$tmp/sudoers/50-bxcachy-nopasswd" ]] || fail 'off removes it'
+run "$binary" security passwordless-sudo off --yes >/dev/null; [[ ! -e "$tmp/sudoers/50-bxrig-nopasswd" ]] || fail 'off removes it'
 [[ "$(SUSER='bad user;x' code "$binary" security passwordless-sudo on --yes)" == 4 ]] || fail 'an unsafe user name is refused'
-[[ ! -e "$tmp/sudoers/50-bxcachy-nopasswd" ]] || fail 'an unsafe name wrote a file'
+[[ ! -e "$tmp/sudoers/50-bxrig-nopasswd" ]] || fail 'an unsafe name wrote a file'
 echo "security-test: ok"

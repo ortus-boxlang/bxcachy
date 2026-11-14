@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# `bxcachy mail` end to end with a fake, stateful podman/docker and a tiny fake of the Mailpit API on 127.0.0.1. Usage: mail-test.sh BINARY
+# `bxrig mail` end to end with a fake, stateful podman/docker and a tiny fake of the Mailpit API on 127.0.0.1. Usage: mail-test.sh BINARY
 set -euo pipefail
 binary="$(realpath "${1:?native executable required}")"
 tmp="$(mktemp -d)"; srv=""; trap '[[ -n "$srv" ]] && kill "$srv" 2>/dev/null; rm -rf "${tmp:?}"' EXIT
@@ -55,20 +55,20 @@ class H(BaseHTTPRequestHandler):
         if self.path == "/api/v1/send":
             open(sys.argv[1], "w").write(json.dumps(body))
             state["msgs"].insert(0, {"ID": "CCCC3333", "From": {"Name": body["From"].get("Name", ""), "Address": body["From"]["Email"]}, "To": [{"Name": "", "Address": body["To"][0]["Email"]}], "Subject": body["Subject"], "Created": "2026-11-14T10:00:00Z", "Size": 500, "Attachments": 0, "Read": False, "Snippet": ""})
-            full["CCCC3333"] = {"ID": "CCCC3333", "From": {"Name": "BxCachy", "Address": "bxcachy@localhost"}, "To": [{"Name": "", "Address": body["To"][0]["Email"]}], "Cc": [], "Bcc": [], "Subject": body["Subject"], "Date": "2026-11-14T10:00:00Z", "Text": body.get("Text", ""), "HTML": "", "Attachments": []}
+            full["CCCC3333"] = {"ID": "CCCC3333", "From": {"Name": "BxRig", "Address": "bxrig@localhost"}, "To": [{"Name": "", "Address": body["To"][0]["Email"]}], "Cc": [], "Bcc": [], "Subject": body["Subject"], "Date": "2026-11-14T10:00:00Z", "Text": body.get("Text", ""), "HTML": "", "Attachments": []}
             return self.send(200, {"ID": "CCCC3333"})
         self.send(404, {})
 s = HTTPServer(("127.0.0.1", 0), H); print(s.server_address[1], flush=True); s.serve_forever()
 PY
 export FAKE="$tmp/fake"
-run() { env BXCACHY_CONFIG_HOME="$tmp/cfg" BXCACHY_DATA_HOME="$tmp/data" HOME="$tmp/home" PATH="$tmp/bin:$PATH" FAKE="$FAKE" "$@"; }
+run() { env BXRIG_CONFIG_HOME="$tmp/cfg" BXRIG_DATA_HOME="$tmp/data" HOME="$tmp/home" PATH="$tmp/bin:$PATH" FAKE="$FAKE" "$@"; }
 code() { set +e; run "$@" >/dev/null 2>&1; local c=$?; set -e; echo "$c"; }
-c=bxcachy-mail
+c=bxrig-mail
 
 # usage
 [[ "$(code "$binary" mail frobnicate)" == 2 ]] || fail 'bad usage exits 2'
 # no engine: exit 4 (an empty PATH cannot reach a real podman or docker)
-[[ "$(set +e; env BXCACHY_CONFIG_HOME="$tmp/cfg" BXCACHY_DATA_HOME="$tmp/data" HOME="$tmp/home" PATH="$tmp/nobin" "$binary" mail start --yes >/dev/null 2>&1; echo $?)" == 4 ]] || fail 'no container engine exits 4'
+[[ "$(set +e; env BXRIG_CONFIG_HOME="$tmp/cfg" BXRIG_DATA_HOME="$tmp/data" HOME="$tmp/home" PATH="$tmp/nobin" "$binary" mail start --yes >/dev/null 2>&1; echo $?)" == 4 ]] || fail 'no container engine exits 4'
 # ports are checked
 [[ "$(code "$binary" mail start --smtp-port=80 --yes)" == 4 ]] || fail 'a privileged port exits 4'
 [[ "$(code "$binary" mail start --smtp-port=2525 --ui-port=2525 --yes)" == 4 ]] || fail 'equal ports exit 4'
@@ -106,12 +106,12 @@ rc=0; FAKE_FAIL=1 run "$binary" mail start --yes --json >/dev/null 2>&1 || rc=$?
 [[ "$rc" == 6 ]] || fail "a failing container run exits 6, got $rc"
 
 # the API: before the fake answers, everything that needs it exits 4
-export BXCACHY_MAIL_API="http://127.0.0.1:1"
+export BXRIG_MAIL_API="http://127.0.0.1:1"
 [[ "$(code "$binary" mail list)" == 4 ]] || fail 'list without a catcher exits 4'
 run "$binary" mail status --json | jq -e '.data.answering == false' >/dev/null || fail 'status says it is not answering'
 python3 "$tmp/api.py" "$tmp/sent.json" > "$tmp/port" & srv=$!
 for _ in $(seq 1 50); do [[ -s "$tmp/port" ]] && break; sleep 0.1; done
-export BXCACHY_MAIL_API="http://127.0.0.1:$(cat "$tmp/port")"
+export BXRIG_MAIL_API="http://127.0.0.1:$(cat "$tmp/port")"
 run "$binary" mail list --json | jq -e '(.data.total == 2) and (.data.unread == 1) and (.data.messages[0].mid == "AAAA1111") and (.data.messages[0].sender == "Shop") and (.data.messages[1].sender == "billing@example.test") and (.data.messages[1].attachment_count == 1) and (.data.messages[0].received == "2026-11-14 09:42:10") and (.data.messages[1].seen == true)' >/dev/null || fail 'list json'
 run "$binary" mail list | grep -q 'Order shipped' || fail 'list text'
 run "$binary" mail status --json | jq -e '.data.answering and .data.total == 2 and .data.unread == 1' >/dev/null || fail 'status counts'
@@ -122,7 +122,7 @@ run "$binary" mail show BBBB2222 | grep -q 'HTML only' || fail 'an HTML-only mes
 [[ "$(code "$binary" mail show 'a;b')" == 2 ]] || fail 'a bad id exits 2'
 # test sends a message through the API
 run "$binary" mail test --to=dev@example.test --subject="Hello there" --json | jq -e '.ok and .data.recipient == "dev@example.test"' >/dev/null || fail 'test'
-jq -e '.To[0].Email == "dev@example.test" and .Subject == "Hello there" and .From.Email == "bxcachy@localhost"' "$tmp/sent.json" >/dev/null || fail 'the send request body'
+jq -e '.To[0].Email == "dev@example.test" and .Subject == "Hello there" and .From.Email == "bxrig@localhost"' "$tmp/sent.json" >/dev/null || fail 'the send request body'
 run "$binary" mail list --json | jq -e '.data.total == 3 and .data.messages[0].mid == "CCCC3333"' >/dev/null || fail 'the test message arrived'
 # delete one: plan, then it is gone
 [[ "$(code "$binary" mail delete CCCC3333)" == 2 ]] || fail 'delete plan exits 2'
@@ -136,7 +136,7 @@ run "$binary" mail list | grep -q 'inbox is empty' || fail 'empty inbox text'
 # open: a fake xdg-open records the address
 printf '#!/bin/sh\necho "$@" >> "%s/opened"\n' "$tmp" > "$tmp/bin/xdg-open"; chmod +x "$tmp/bin/xdg-open"
 run "$binary" mail open AAAA1111 >/dev/null; grep -q "/view/AAAA1111.html" "$tmp/opened" || fail 'open a message'
-run "$binary" mail open --json | jq -e '.data.url == env.BXCACHY_MAIL_API' >/dev/null || fail 'open the inbox'
+run "$binary" mail open --json | jq -e '.data.url == env.BXRIG_MAIL_API' >/dev/null || fail 'open the inbox'
 # env
 run "$binary" mail env | grep -q 'MAIL_PORT=' || fail 'env lists Laravel'
 run "$binary" mail env --json | jq -e '(.data.settings | map(.stack) | index("Laravel (.env)")) != null' >/dev/null || fail 'env json'

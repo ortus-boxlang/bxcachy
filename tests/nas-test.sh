@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# `bxcachy nas ...` with fake avahi-browse, smbclient, showmount, findmnt, sudo, rsync and a fake /etc. Usage: nas-test.sh BINARY
+# `bxrig nas ...` with fake avahi-browse, smbclient, showmount, findmnt, sudo, rsync and a fake /etc. Usage: nas-test.sh BINARY
 set -euo pipefail
 binary="$(realpath "${1:?native executable required}")"
 tmp="$(mktemp -d)"; trap 'rm -rf "${tmp:?}"' EXIT
@@ -40,7 +40,7 @@ esac
 exit 0
 F
 chmod +x "$tmp/bin"/*
-run() { env HOME="$tmp/home" USER=dev BXCACHY_CONFIG_HOME="$tmp/cfg" BXCACHY_DATA_HOME="$tmp/data" BXCACHY_NAS_CRED_DIR="$tmp/etc/cred" BXCACHY_SYSTEMD_DIR="$tmp/etc/systemd" BXCACHY_NAS_HOME="$tmp/NAS" PATH="$tmp/bin:$PATH" LOG="$LOG" FAKE="$tmp/fake" BXCACHY_NAS_REACH="${REACH:-yes}" "$@"; }
+run() { env HOME="$tmp/home" USER=dev BXRIG_CONFIG_HOME="$tmp/cfg" BXRIG_DATA_HOME="$tmp/data" BXRIG_NAS_CRED_DIR="$tmp/etc/cred" BXRIG_SYSTEMD_DIR="$tmp/etc/systemd" BXRIG_NAS_HOME="$tmp/NAS" PATH="$tmp/bin:$PATH" LOG="$LOG" FAKE="$tmp/fake" BXRIG_NAS_REACH="${REACH:-yes}" "$@"; }
 code() { set +e; run "$@" >/dev/null 2>&1; local c=$?; set -e; echo "$c"; }
 has() { grep -qF -- "$1" "$LOG"; }
 printf 'secret123\n' > "$tmp/pw"; printf 'wrongpass\n' > "$tmp/pw.bad"
@@ -58,7 +58,7 @@ run "$binary" nas setup --dry-run | grep -q 'pacman -S --needed --noconfirm cifs
 # ---- add ----
 [[ "$(code "$binary" nas add Bad_Name --host=x)" == 2 && "$(code "$binary" nas add syn)" == 2 && "$(code "$binary" nas add syn --host=ds920.local)" == 2 ]] || fail 'bad add exits 2 (name, host, smb needs user)'
 [[ "$(code "$binary" nas add syn --host=ds920.local --user=me)" == 2 ]] || fail 'smb without a password exits 2'
-run "$binary" nas add syn --host=ds920.local --user=me --password-file="$tmp/pw" --json | jq -e '.data.password_key == "BXCACHY_NAS_SYN_PASSWORD" and .data.protocol == "smb"' >/dev/null || fail 'add smb'
+run "$binary" nas add syn --host=ds920.local --user=me --password-file="$tmp/pw" --json | jq -e '.data.password_key == "BXRIG_NAS_SYN_PASSWORD" and .data.protocol == "smb"' >/dev/null || fail 'add smb'
 ! grep -rq 'secret123' "$tmp/cfg" || fail 'the password leaked into the config'
 run "$binary" nas add vault --host=192.168.1.30 --protocol=nfs >/dev/null || fail 'add nfs needs no user or password'
 run "$binary" nas list --json | jq -e '(.data.nas | map(.name)) == ["syn","vault"]' >/dev/null || fail 'list'
@@ -117,7 +117,7 @@ run "$binary" nas sync syn "$tmp/src" --to=backups/files --delete --dry-run | gr
 
 # ---- use as a backup target ----
 run "$binary" nas use syn backups --path=restic --json | jq -e ".data.repository == \"$tmp/NAS/syn/backups/restic\"" >/dev/null || fail 'use'
-jq -e '.targets["nas-syn"] == {"type":"nas","nas":"syn","share":"backups","path":"restic"}' "$tmp/cfg/bxcachy/backup.json" >/dev/null || fail 'backup.json target'
+jq -e '.targets["nas-syn"] == {"type":"nas","nas":"syn","share":"backups","path":"restic"}' "$tmp/cfg/bxrig/backup.json" >/dev/null || fail 'backup.json target'
 [[ "$(code "$binary" nas use syn backups --path='../x')" == 2 ]] || fail 'a bad path exits 2'
 
 # ---- remove ----

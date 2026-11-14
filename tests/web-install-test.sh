@@ -17,21 +17,21 @@ cat > "$tmp/bundle/bootstrap/install.sh" <<'INS'
 #!/usr/bin/env bash
 echo "stage $*" >> "$LOG"
 if [[ "$1" == binary ]]; then
-  while [[ $# -gt 0 ]]; do [[ "$1" == --binary ]] && { mkdir -p "$BXCACHY_BIN_DIR"; cp "$2" "$BXCACHY_BIN_DIR/bxcachy"; chmod +x "$BXCACHY_BIN_DIR/bxcachy"; }; shift; done
+  while [[ $# -gt 0 ]]; do [[ "$1" == --binary ]] && { mkdir -p "$BXRIG_BIN_DIR"; cp "$2" "$BXRIG_BIN_DIR/bxrig"; chmod +x "$BXRIG_BIN_DIR/bxrig"; }; shift; done
 fi
 INS
 chmod +x "$tmp/bundle/bootstrap/install.sh"
 tar -czf "$tmp/srv/stable/bootstrap.tar.gz" -C "$tmp/bundle" bootstrap
-printf '#!/usr/bin/env bash\necho "bxcachy $*" >> "$LOG"\n' > "$tmp/srv/stable/bxcachy-linux-x86_64"
-for f in bxcachy-linux-x86_64 bootstrap.tar.gz; do echo "$(sha256sum "$tmp/srv/stable/$f" | cut -d' ' -f1)  $f" > "$tmp/srv/stable/$f.sha256"; done
+printf '#!/usr/bin/env bash\necho "bxrig $*" >> "$LOG"\n' > "$tmp/srv/stable/bxrig-linux-x86_64"
+for f in bxrig-linux-x86_64 bootstrap.tar.gz; do echo "$(sha256sum "$tmp/srv/stable/$f" | cut -d' ' -f1)  $f" > "$tmp/srv/stable/$f.sha256"; done
 printf 'version=0.12.0\ncommit=abc\nsha256=x\nbuiltAt=now\n' > "$tmp/srv/stable/version-latest.properties"
 cp -r "$tmp/srv/stable/." "$tmp/srv/beta/"
-run() { env HOME="$tmp/home" BXCACHY_BIN_DIR="$tmp/binhome" BXCACHY_BASE_URL=http://fake BXCACHY_INSTALL_ALLOW_ROOT=1 PATH="$tmp/bin:$PATH" LOG="$LOG" NO_COLOR=1 bash "$script" "$@"; }
+run() { env HOME="$tmp/home" BXRIG_BIN_DIR="$tmp/binhome" BXRIG_BASE_URL=http://fake BXRIG_INSTALL_ALLOW_ROOT=1 PATH="$tmp/bin:$PATH" LOG="$LOG" NO_COLOR=1 bash "$script" "$@"; }
 code() { set +e; run "$@" >/dev/null 2>&1; local c=$?; set -e; echo "$c"; }
 
 # the banner, the wordmark and the tagline; a dry run downloads nothing
 out="$(run --dry-run --yes 2>&1)"
-[[ "$out" == *'███████▄'* && "$out" == *'Your developer machine, set up in minutes.'* && "$out" == *'Powered by BoxLang'* ]] || fail 'banner'
+[[ "$out" == *'██╔══██╗ ██╗  ██╗'* && "$out" == *'Your dev rig. Beautiful by default.'* && "$out" == *'Powered by BoxLang'* ]] || fail 'banner'
 [[ ! -s "$LOG" ]] || fail 'a dry run did something'
 # bad arguments
 [[ "$(code --channel nightly)" == 1 ]] || fail 'a bad channel is refused'
@@ -41,30 +41,30 @@ out="$(run --dry-run --yes 2>&1)"
 out="$(run --yes 2>&1)" || fail "install: $out"
 [[ "$(grep -c '^stage' "$LOG")" == 4 ]] || fail "four stages: $(cat "$LOG")"
 [[ "$(grep '^stage' "$LOG" | cut -d' ' -f2 | tr '\n' ' ')" == "packages toolchains binary core " ]] || fail "stage order: $(cat "$LOG")"
-grep -q '^bxcachy init --defaults --yes' "$LOG" || fail "the wizard runs with defaults: $(cat "$LOG")"
-[[ -x "$tmp/binhome/bxcachy" ]] || fail 'the binary was installed'
+grep -q '^bxrig init --defaults --yes' "$LOG" || fail "the wizard runs with defaults: $(cat "$LOG")"
+[[ -x "$tmp/binhome/bxrig" ]] || fail 'the binary was installed'
 # answers file
 : > "$LOG"; echo '{"desktops":"hyprland"}' > "$tmp/answers.json"; run --yes --answers "$tmp/answers.json" >/dev/null 2>&1
-grep -q "^bxcachy init --answers $tmp/answers.json --yes" "$LOG" || fail 'the wizard runs with your answers'
+grep -q "^bxrig init --answers $tmp/answers.json --yes" "$LOG" || fail 'the wizard runs with your answers'
 # no wizard
-: > "$LOG"; run --yes --no-wizard >/dev/null 2>&1; ! grep -q '^bxcachy init' "$LOG" || fail '--no-wizard'
+: > "$LOG"; run --yes --no-wizard >/dev/null 2>&1; ! grep -q '^bxrig init' "$LOG" || fail '--no-wizard'
 # the beta channel downloads from beta/
-echo "beta-build" >> "$tmp/srv/beta/bxcachy-linux-x86_64"; echo "$(sha256sum "$tmp/srv/beta/bxcachy-linux-x86_64" | cut -d' ' -f1)  bxcachy-linux-x86_64" > "$tmp/srv/beta/bxcachy-linux-x86_64.sha256"
-: > "$LOG"; run --yes --channel beta --no-wizard >/dev/null 2>&1; grep -q beta-build "$tmp/binhome/bxcachy" || fail 'the beta binary'
+echo "beta-build" >> "$tmp/srv/beta/bxrig-linux-x86_64"; echo "$(sha256sum "$tmp/srv/beta/bxrig-linux-x86_64" | cut -d' ' -f1)  bxrig-linux-x86_64" > "$tmp/srv/beta/bxrig-linux-x86_64.sha256"
+: > "$LOG"; run --yes --channel beta --no-wizard >/dev/null 2>&1; grep -q beta-build "$tmp/binhome/bxrig" || fail 'the beta binary'
 # a tampered download stops before any stage
-echo "deadbeef  bxcachy-linux-x86_64" > "$tmp/srv/stable/bxcachy-linux-x86_64.sha256"
+echo "deadbeef  bxrig-linux-x86_64" > "$tmp/srv/stable/bxrig-linux-x86_64.sha256"
 : > "$LOG"; [[ "$(code --yes)" == 1 ]] || fail 'a checksum mismatch fails'
 ! grep -q '^stage' "$LOG" || fail 'a stage ran after a checksum mismatch'
 # signed releases: with a public key the release information must verify, and both files must match it
 if command -v openssl >/dev/null; then
   openssl genpkey -algorithm ed25519 -out "$tmp/k.pem" 2>/dev/null; openssl pkey -in "$tmp/k.pem" -pubout -out "$tmp/pub.pem"
   openssl genpkey -algorithm ed25519 -out "$tmp/o.pem" 2>/dev/null; openssl pkey -in "$tmp/o.pem" -pubout -out "$tmp/o.pub"
-  echo "$(sha256sum "$tmp/srv/stable/bxcachy-linux-x86_64" | cut -d' ' -f1)" > /dev/null
-  echo "good build" > "$tmp/srv/stable/bxcachy-linux-x86_64"; echo "$(sha256sum "$tmp/srv/stable/bxcachy-linux-x86_64" | cut -d' ' -f1)  bxcachy-linux-x86_64" > "$tmp/srv/stable/bxcachy-linux-x86_64.sha256"
-  bsha="$(cut -d' ' -f1 "$tmp/srv/stable/bootstrap.tar.gz.sha256")"; asha="$(cut -d' ' -f1 "$tmp/srv/stable/bxcachy-linux-x86_64.sha256")"
+  echo "$(sha256sum "$tmp/srv/stable/bxrig-linux-x86_64" | cut -d' ' -f1)" > /dev/null
+  echo "good build" > "$tmp/srv/stable/bxrig-linux-x86_64"; echo "$(sha256sum "$tmp/srv/stable/bxrig-linux-x86_64" | cut -d' ' -f1)  bxrig-linux-x86_64" > "$tmp/srv/stable/bxrig-linux-x86_64.sha256"
+  bsha="$(cut -d' ' -f1 "$tmp/srv/stable/bootstrap.tar.gz.sha256")"; asha="$(cut -d' ' -f1 "$tmp/srv/stable/bxrig-linux-x86_64.sha256")"
   printf 'version=0.12.0\ncommit=abc\nsha256=%s\nbootstrap_sha256=%s\n' "$asha" "$bsha" > "$tmp/srv/stable/version-latest.properties"
   sign() { openssl pkeyutl -sign -rawin -inkey "$tmp/k.pem" -in "$tmp/srv/stable/version-latest.properties" -out "$tmp/srv/stable/version-latest.properties.sig"; }
-  prun() { env HOME="$tmp/home" BXCACHY_BIN_DIR="$tmp/binhome" BXCACHY_BASE_URL=http://fake BXCACHY_INSTALL_ALLOW_ROOT=1 BXCACHY_PUBKEY_B64="${PUB:-$(base64 -w0 "$tmp/pub.pem")}" PATH="$tmp/bin:$PATH" LOG="$LOG" NO_COLOR=1 bash "$script" "$@"; }
+  prun() { env HOME="$tmp/home" BXRIG_BIN_DIR="$tmp/binhome" BXRIG_BASE_URL=http://fake BXRIG_INSTALL_ALLOW_ROOT=1 BXRIG_PUBKEY_B64="${PUB:-$(base64 -w0 "$tmp/pub.pem")}" PATH="$tmp/bin:$PATH" LOG="$LOG" NO_COLOR=1 bash "$script" "$@"; }
   pcode() { set +e; prun "$@" >/dev/null 2>&1; local c=$?; set -e; echo "$c"; }
   : > "$LOG"; rm -f "$tmp/srv/stable/version-latest.properties.sig"; [[ "$(pcode --yes --no-wizard)" == 1 ]] || fail 'a missing signature fails'
   ! grep -q '^stage' "$LOG" || fail 'a stage ran without a signature'
@@ -78,6 +78,6 @@ if command -v openssl >/dev/null; then
   [[ "$(pcode --yes --no-wizard)" == 1 ]] || fail 'a binary that does not match the signed hash fails'
 fi
 # root is refused
-rc=0; env HOME="$tmp/home" BXCACHY_BASE_URL=http://fake PATH="$tmp/bin:$PATH" NO_COLOR=1 bash "$script" --yes >/dev/null 2>&1 || rc=$?
+rc=0; env HOME="$tmp/home" BXRIG_BASE_URL=http://fake PATH="$tmp/bin:$PATH" NO_COLOR=1 bash "$script" --yes >/dev/null 2>&1 || rc=$?
 [[ "$(id -u)" != 0 || "$rc" == 1 ]] || fail 'root is refused'
 echo "web-install-test ok"

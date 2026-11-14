@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# `bxcachy setup plasma|undo plasma|status` end to end with fake pacman, git, sudo and id. Usage: setup-test.sh [binary]
+# `bxrig setup plasma|undo plasma|status` end to end with fake pacman, git, sudo and id. Usage: setup-test.sh [binary]
 set -euo pipefail
 binary="$(realpath "${1:?native executable required}")"
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
@@ -34,10 +34,10 @@ printf '#!/usr/bin/env bash\nif [[ "$1" == -u ]]; then echo "${MOCK_UID:-1000}";
 chmod +x "$tmp/bin/"*
 export SETUP_LOG="$tmp/setup.log"
 printf 'NAME="CachyOS Linux"\nID=cachyos\nID_LIKE=arch\n' > "$tmp/os-cachyos"; printf 'ID=ubuntu\n' > "$tmp/os-ubuntu"
-run() { env BXCACHY_OS_RELEASE="${OS_FILE:-$tmp/os-cachyos}" BXCACHY_STATE_HOME="$tmp/state-home" HOME="$tmp/home" PATH="$tmp/bin:$PATH" XDG_CURRENT_DESKTOP=KDE XDG_SESSION_TYPE=wayland SETUP_LOG="$SETUP_LOG" MOCK_INSTALL_FAIL="${MOCK_INSTALL_FAIL:-}" "$@"; }
+run() { env BXRIG_OS_RELEASE="${OS_FILE:-$tmp/os-cachyos}" BXRIG_STATE_HOME="$tmp/state-home" HOME="$tmp/home" PATH="$tmp/bin:$PATH" XDG_CURRENT_DESKTOP=KDE XDG_SESSION_TYPE=wayland SETUP_LOG="$SETUP_LOG" MOCK_INSTALL_FAIL="${MOCK_INSTALL_FAIL:-}" "$@"; }
 code() { set +e; run "$@" >/dev/null 2>&1; local c=$?; set -e; echo "$c"; }
 reset() { : > "$SETUP_LOG"; rm -rf "$tmp/home/.local" "$tmp/state-home"; }
-leftovers() { { ls -d /tmp/bxcachy-hyprkwin-* 2>/dev/null || true; } | wc -l; }
+leftovers() { { ls -d /tmp/bxrig-hyprkwin-* 2>/dev/null || true; } | wc -l; }
 before="$(leftovers)"; reset
 
 # gating
@@ -53,9 +53,9 @@ run "$binary" setup plasma --dry-run | grep -F 'tools/install.sh' >/dev/null || 
 
 # install
 run "$binary" setup plasma --yes >/dev/null 2>&1 || fail 'setup plasma --yes'
-grep -Eq '^git clone --quiet https://github.com/DGBooth/HyprKwin.git /tmp/bxcachy-hyprkwin-' "$SETUP_LOG" || fail "clone from the HyprKwin repo (log: $(cat "$SETUP_LOG"))"
-grep -Eq '^git -C /tmp/bxcachy-hyprkwin-.* checkout --quiet [0-9a-f]{40}$' "$SETUP_LOG" || fail 'checkout at a full commit'
-grep -Eq '^INSTALL in /tmp/bxcachy-hyprkwin-' "$SETUP_LOG" || fail 'install.sh ran inside the checkout'
+grep -Eq '^git clone --quiet https://github.com/DGBooth/HyprKwin.git /tmp/bxrig-hyprkwin-' "$SETUP_LOG" || fail "clone from the HyprKwin repo (log: $(cat "$SETUP_LOG"))"
+grep -Eq '^git -C /tmp/bxrig-hyprkwin-.* checkout --quiet [0-9a-f]{40}$' "$SETUP_LOG" || fail 'checkout at a full commit'
+grep -Eq '^INSTALL in /tmp/bxrig-hyprkwin-' "$SETUP_LOG" || fail 'install.sh ran inside the checkout'
 grep -q SHORTCUTS "$SETUP_LOG" && fail 'keys must stay off by default'
 [[ "$(leftovers)" == "$before" ]] || fail 'the temporary checkout was removed'
 out="$(run "$binary" setup plasma --dry-run --json)"
@@ -88,7 +88,7 @@ reset; [[ "$(MOCK_INSTALLED=git MOCK_PACMAN_FAIL=1 code "$binary" setup plasma -
 
 # undo, status, usage
 reset; mkdir -p "$tmp/home/.local/share/hyprkwin"; [[ "$(code "$binary" setup undo plasma --yes)" == 0 ]] || fail 'undo plasma'
-grep -Eq '^UNINSTALL in /tmp/bxcachy-hyprkwin-' "$SETUP_LOG" || fail 'undo runs tools/uninstall.sh'
+grep -Eq '^UNINSTALL in /tmp/bxrig-hyprkwin-' "$SETUP_LOG" || fail 'undo runs tools/uninstall.sh'
 rm -rf "$tmp/home/.local"; [[ "$(code "$binary" setup undo plasma --yes)" == 4 ]] || fail 'undo without HyprKwin exits 4'
 [[ "$(run "$binary" setup status --json | jq -r '.data.plasma.kwin')" == 6.6.2 ]] || fail 'status shows the kwin version'
 [[ "$(code "$binary" setup)" == 2 ]] || fail 'setup alone is a usage error'
@@ -108,8 +108,8 @@ run "$binary" setup hyprland --yes >/dev/null 2>&1 || fail 'setup hyprland --yes
 call="$(grep '^pacman -S' "$SETUP_LOG")"
 for p in $ALL; do grep -Fq " $p" <<<"$call" || fail "pacman call misses $p"; done
 for bad in cachyos-hypr-noctalia noctalia-shell noctalia-qs; do grep -Fq "$bad" <<<"$call" && fail "$bad must not be installed"; done
-[[ "$(jq -r '.packages|length' "$tmp/state-home/bxcachy/setup-hyprland.json")" == "$(wc -w <<<"$ALL")" ]] || fail 'the added packages are remembered'
-[[ "$(stat -c %a "$tmp/state-home/bxcachy/setup-hyprland.json")" == 600 ]] || fail 'the state file is private'
+[[ "$(jq -r '.packages|length' "$tmp/state-home/bxrig/setup-hyprland.json")" == "$(wc -w <<<"$ALL")" ]] || fail 'the added packages are remembered'
+[[ "$(stat -c %a "$tmp/state-home/bxrig/setup-hyprland.json")" == 600 ]] || fail 'the state file is private'
 # everything already there: nothing to do
 reset; MOCK_INSTALLED="git $ALL" run "$binary" setup hyprland --yes | grep -F 'already installed' >/dev/null || fail 'already installed is reported'
 [[ ! -s "$SETUP_LOG" && ! -e "$tmp/state-home" ]] || fail 'nothing to do must change nothing'
@@ -117,7 +117,7 @@ reset; MOCK_INSTALLED="git $ALL" run "$binary" setup hyprland --yes | grep -F 'a
 reset; MOCK_INSTALLED="git hyprland ghostty" run "$binary" setup hyprland --yes >/dev/null 2>&1 || fail 'partial install'
 call="$(grep '^pacman -S' "$SETUP_LOG")"
 grep -Fq ' hyprland' <<<"$call" && fail 'an installed package is not reinstalled'
-jq -e '.packages|index("noctalia") and (index("ghostty")|not)' "$tmp/state-home/bxcachy/setup-hyprland.json" >/dev/null || fail 'only added packages are remembered'
+jq -e '.packages|index("noctalia") and (index("ghostty")|not)' "$tmp/state-home/bxrig/setup-hyprland.json" >/dev/null || fail 'only added packages are remembered'
 # pacman failing: exit 5 and nothing remembered
 reset; [[ "$(MOCK_PACMAN_FAIL=1 code "$binary" setup hyprland --yes)" == 5 ]] || fail 'pacman failing exits 5'
 [[ ! -e "$tmp/state-home" ]] || fail 'a failed install is not remembered'
@@ -126,6 +126,6 @@ reset; [[ "$(code "$binary" setup undo hyprland --yes)" == 4 ]] || fail 'undo wi
 run "$binary" setup hyprland --yes >/dev/null 2>&1; : > "$SETUP_LOG"
 MOCK_INSTALLED="git $ALL" run "$binary" setup undo hyprland --yes >/dev/null 2>&1 || fail 'undo hyprland'
 grep -Fq 'pacman -Rs --noconfirm hyprland noctalia' "$SETUP_LOG" || fail 'undo removes the remembered packages'
-[[ ! -e "$tmp/state-home/bxcachy/setup-hyprland.json" ]] || fail 'undo forgets them'
+[[ ! -e "$tmp/state-home/bxrig/setup-hyprland.json" ]] || fail 'undo forgets them'
 [[ "$(MOCK_INSTALLED=git run "$binary" setup status --json | jq -r '.data.hyprland.installed')" == 0 ]] || fail 'status counts the hyprland packages'
 echo 'setup tests passed'

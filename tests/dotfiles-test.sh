@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# `bxcachy dotfiles` end to end: real git repos on disk, a throwaway home directory, fake stow/chezmoi/yadm/pacman. Usage: dotfiles-test.sh BINARY
+# `bxrig dotfiles` end to end: real git repos on disk, a throwaway home directory, fake stow/chezmoi/yadm/pacman. Usage: dotfiles-test.sh BINARY
 set -euo pipefail
 binary="$(realpath "${1:?native executable required}")"
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
@@ -17,7 +17,7 @@ export FAKE_TOOLS="$tmp" FAKE_BIN="$tmp/bin"
 mkrepo() { local r="$tmp/repos/$1"; shift; mkdir -p "$r"; git -C "$r" init -q; for f in "$@"; do mkdir -p "$r/$(dirname "$f")"; echo "repo:$f" > "$r/$f"; done; git -C "$r" add -A; git -C "$r" commit -qm init; }
 # a fresh home and data folder for each scenario
 fresh() { rm -rf "$tmp/home" "$tmp/data" "$tmp/state" "$tmp/cfg"; mkdir -p "$tmp/home"; }
-run() { env HOME="$tmp/home" BXCACHY_DATA_HOME="$tmp/data" BXCACHY_STATE_HOME="$tmp/state" BXCACHY_CONFIG_HOME="$tmp/cfg" PATH="$tmp/bin:$PATH" LOG="$LOG" "$@"; }
+run() { env HOME="$tmp/home" BXRIG_DATA_HOME="$tmp/data" BXRIG_STATE_HOME="$tmp/state" BXRIG_CONFIG_HOME="$tmp/cfg" PATH="$tmp/bin:$PATH" LOG="$LOG" "$@"; }
 code() { set +e; run "$@" >/dev/null 2>&1; local c=$?; set -e; echo "$c"; }
 df() { run "$binary" dotfiles "$@"; }
 home="$tmp/home"
@@ -48,17 +48,17 @@ df plan "$tmp/repos/links" | grep -q 'Your dotfiles win' || fail 'the plan says 
 [[ "$(code "$binary" dotfiles apply "$tmp/repos/links")" == 2 ]] || fail 'apply without --yes exits 2'
 df apply "$tmp/repos/links" --dry-run | grep -q 'Nothing was changed' || fail 'dry-run'
 # conflicts need approval: no terminal means no
-rc=0; BXCACHY_TTY_IN="$tmp/none" df apply "$tmp/repos/links" --yes >/dev/null 2>&1 || rc=$?
+rc=0; BXRIG_TTY_IN="$tmp/none" df apply "$tmp/repos/links" --yes >/dev/null 2>&1 || rc=$?
 [[ "$rc" == 2 && "$(cat "$home/.zshrc")" == mine && ! -e "$home/.config/hypr" ]] || fail "unapproved conflicts must change nothing (rc=$rc)"
-printf 'n\n' > "$tmp/tty"; rc=0; BXCACHY_TTY_IN="$tmp/tty" df apply "$tmp/repos/links" --yes >/dev/null 2>&1 || rc=$?
+printf 'n\n' > "$tmp/tty"; rc=0; BXRIG_TTY_IN="$tmp/tty" df apply "$tmp/repos/links" --yes >/dev/null 2>&1 || rc=$?
 [[ "$rc" == 2 && "$(cat "$home/.zshrc")" == mine ]] || fail 'answering n changes nothing'
 # approved at the prompt
 printf 'y\n' > "$tmp/tty"
-BXCACHY_TTY_IN="$tmp/tty" df apply "$tmp/repos/links" --yes --json | jq -e '.ok and .data.applied and (.data.backups | length) == 1' >/dev/null || fail 'apply approved at the prompt'
+BXRIG_TTY_IN="$tmp/tty" df apply "$tmp/repos/links" --yes --json | jq -e '.ok and .data.applied and (.data.backups | length) == 1' >/dev/null || fail 'apply approved at the prompt'
 [[ -L "$home/.zshrc" && "$(cat "$home/.zshrc")" == 'repo:.zshrc' ]] || fail '.zshrc is now a link to the repo file'
 [[ -L "$home/.config/hypr/hyprland.lua" && -L "$home/.config/app/x.conf" ]] || fail 'the other files are linked'
 [[ ! -e "$home/README.md" && ! -e "$home/.gitignore" ]] || fail 'repo-only files must not be linked'
-bk="$(find "$tmp/state/bxcachy/backups/dotfiles" -name .zshrc 2>/dev/null | head -1)"; [[ -n "$bk" && "$(cat "$bk")" == mine ]] || fail 'the original .zshrc is backed up'
+bk="$(find "$tmp/state/bxrig/backups/dotfiles" -name .zshrc 2>/dev/null | head -1)"; [[ -n "$bk" && "$(cat "$bk")" == mine ]] || fail 'the original .zshrc is backed up'
 df status | grep -q '3 links, 1 original files backed up' || fail 'status'
 # again: everything is in place, nothing to ask
 df apply "$tmp/repos/links" --yes --json | jq -e '.ok and (.data.same | length) == 3 and (.data.conflicts | length) == 0' >/dev/null || fail 're-apply finds everything in place'
@@ -71,7 +71,7 @@ df status | grep -q 'No dotfiles have been applied' || fail 'status after undo'
 
 # --overwrite approves without a prompt
 fresh; echo mine > "$home/.zshrc"
-BXCACHY_TTY_IN="$tmp/none" df apply "$tmp/repos/links" --yes --overwrite >/dev/null || fail '--overwrite'
+BXRIG_TTY_IN="$tmp/none" df apply "$tmp/repos/links" --yes --overwrite >/dev/null || fail '--overwrite'
 [[ -L "$home/.zshrc" ]] || fail '--overwrite applies'
 # a different repo cannot take the slot
 [[ "$(code "$binary" dotfiles plan "$tmp/repos/stow")" == 4 ]] || fail 'a second repo is refused until the first is undone'
@@ -83,7 +83,7 @@ echo "$out" | jq -e '.data.method == "chezmoi" and ([.data.fresh[], .data.confli
 : > "$LOG"; df apply "$tmp/repos/chezmoi" --yes --overwrite >/dev/null || fail 'chezmoi apply'
 grep -q 'pacman -S --needed --noconfirm chezmoi' "$LOG" || fail 'chezmoi is installed first'
 grep -q "chezmoi apply --source $tmp/data/dotfiles/repo --force" "$LOG" || fail "chezmoi runs against the clone: $(cat "$LOG")"
-[[ "$(cat "$(find "$tmp/state/bxcachy/backups/dotfiles" -name .zshrc | head -1)")" == old ]] || fail 'chezmoi: the original is backed up before the tool runs'
+[[ "$(cat "$(find "$tmp/state/bxrig/backups/dotfiles" -name .zshrc | head -1)")" == old ]] || fail 'chezmoi: the original is backed up before the tool runs'
 
 # ---- yadm ----
 fresh; echo "repo:.bashrc" > "$home/.bashrc"; echo different > "$home/.gitconfig"; cp "$tmp/fake-yadm" "$tmp/bin/yadm"

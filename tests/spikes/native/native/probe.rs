@@ -69,7 +69,7 @@ pub fn bx_write_atomic(vm: &mut dyn BxVM, args: &[BxValue]) -> Result<BxValue, S
         }
     }
     let dir = dest.parent().filter(|d| !d.as_os_str().is_empty()).unwrap_or_else(|| Path::new("."));
-    let tmp = dir.join(format!(".bxcachy.{}.tmp", std::process::id()));
+    let tmp = dir.join(format!(".bxrig.{}.tmp", std::process::id()));
     let result = (|| -> std::io::Result<()> {
         let mut f = fs::File::create(&tmp)?;
         f.write_all(content.as_bytes())?;

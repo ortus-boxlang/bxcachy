@@ -1,0 +1,60 @@
+// `bxrig help` (every command by group) and `bxrig help NAME` (usage, examples, notes). The data is docs/reference/cli.json,
+// embedded in HelpData.bx by bootstrap/gen-docs.sh, so the terminal and the docs site say the same thing.
+// Exit: 0 shown, 2 unknown command.
+class Help {
+    function init( cli ) {
+        variables.cli = arguments.cli;
+        variables.data = jsonDeserialize( new bxrig.HelpData().json() );
+        return this;
+    }
+
+    function find( name ) {
+        for ( var g in variables.data.groups ) for ( var c in g.commands ) if ( c.name == arguments.name ) return { group: g, command: c };
+        return {};
+    }
+
+    function pad( text, width ) {
+        var t = arguments.text;
+        while ( len( t ) < arguments.width ) t &= " ";
+        return t;
+    }
+
+    function run( words, asJson = false ) {
+        if ( !arguments.words.len() ) {
+            if ( arguments.asJson ) { println( variables.cli.envelope( "help", 0, variables.data ) ); return 0; }
+            var width = 0;
+            for ( var g in variables.data.groups ) for ( var c in g.commands ) if ( len( c.name ) > width ) width = len( c.name );
+            if ( CLIIsTerminal() ) { for ( var bl in new bxrig.Brand().ansi( new bxrig.Brand().small() ) ) println( bl ); }
+            println( new bxrig.Brand().oneLiner() );
+            println( new bxrig.Brand().description() );
+            println( "" );
+            println( "Usage: bxrig COMMAND [OPTIONS]" );
+            println( "Every command takes --json. Changes to the system need --yes; --dry-run shows the plan." );
+            for ( var gr in variables.data.groups ) {
+                println( "" );
+                println( gr.title & ": " & gr.blurb );
+                for ( var cm in gr.commands ) println( "  " & pad( cm.name, width + 2 ) & listFirst( cm.summary, "." ) & "." );
+            }
+            println( "" );
+            println( "More: bxrig help COMMAND    https://bxcachy.boxlang.io/reference/commands/" );
+            println( "Supported today: CachyOS and Arch Linux. Other distributions (Debian, Ubuntu, Fedora) are the direction, not yet supported." );
+            return 0;
+        }
+        var hit = find( arguments.words[ 1 ] );
+        if ( structIsEmpty( hit ) ) {
+            if ( arguments.asJson ) println( variables.cli.envelope( "help", 2, { error: "unknown command " & arguments.words[ 1 ] } ) );
+            else { println( "error: unknown command " & arguments.words[ 1 ] ); println( "Run bxrig help to list the commands." ); }
+            return 2;
+        }
+        var cmd = hit.command;
+        if ( arguments.asJson ) { println( variables.cli.envelope( "help", 0, { group: hit.group.title, command: cmd } ) ); return 0; }
+        println( "bxrig " & cmd.name & ": " & cmd.summary );
+        println( "" );
+        println( "Usage:" );
+        for ( var u in cmd.usage ) println( "  bxrig " & u );
+        if ( cmd.mutates ) { println( "" ); println( "Changes the system: needs --yes (without it you get the plan, exit 2; --dry-run shows it and exits 0)." ); }
+        if ( cmd.examples.len() ) { println( "" ); println( "Examples:" ); for ( var e in cmd.examples ) println( "  " & e ); }
+        if ( structKeyExists( cmd, "note" ) ) { println( "" ); println( cmd.note ); }
+        return 0;
+    }
+}

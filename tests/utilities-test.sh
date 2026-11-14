@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# `bxcachy clipboard` and `bxcachy record` with fake cliphist, wl-copy, wf-recorder, slurp, pgrep, pkill and Rofi. Usage: utilities-test.sh BINARY
+# `bxrig clipboard` and `bxrig record` with fake cliphist, wl-copy, wf-recorder, slurp, pgrep, pkill and Rofi. Usage: utilities-test.sh BINARY
 set -euo pipefail
 binary="$(realpath "${1:?native executable required}")"
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
@@ -20,7 +20,7 @@ printf '#!/usr/bin/env bash\necho "0,0 100x100"\n' > "$tmp/bin/slurp"
 printf '#!/usr/bin/env bash\n[[ -e "$FAKE/recording" ]]\n' > "$tmp/bin/pgrep"
 printf '#!/usr/bin/env bash\necho "pkill $*" >> "$LOG"; rm -f "$FAKE/recording"\n' > "$tmp/bin/pkill"
 chmod +x "$tmp/bin"/*
-run() { env HOME="$tmp/home" BXCACHY_CONFIG_HOME="$tmp/cfg" BXCACHY_VIDEOS="$tmp/videos" FAKE="$FAKE" LOG="$LOG" PATH="$tmp/bin:$PATH" "$@"; }
+run() { env HOME="$tmp/home" BXRIG_CONFIG_HOME="$tmp/cfg" BXRIG_VIDEOS="$tmp/videos" FAKE="$FAKE" LOG="$LOG" PATH="$tmp/bin:$PATH" "$@"; }
 code() { set +e; run "$@" >/dev/null 2>&1; local c=$?; set -e; echo "$c"; }
 
 # ---- clipboard ----
@@ -42,11 +42,11 @@ set +e; env HOME="$tmp/home" PATH="$tmp/nobin" "$binary" clipboard pick >/dev/nu
 # ---- record ----
 : > "$LOG"; rm -f "$FAKE/recording"
 run "$binary" record status --json | jq -e '.data.recording == false' >/dev/null || fail 'status: not recording'
-run "$binary" record --dry-run --json | jq -e '.data.region == false and (.data.file | test("/videos/bxcachy-[0-9]{8}-[0-9]{6}[.]mp4$"))' >/dev/null || fail 'dry-run toggle starts when idle'
+run "$binary" record --dry-run --json | jq -e '.data.region == false and (.data.file | test("/videos/bxrig-[0-9]{8}-[0-9]{6}[.]mp4$"))' >/dev/null || fail 'dry-run toggle starts when idle'
 [[ ! -e "$FAKE/recording" ]] || fail 'dry-run recorded'
 run "$binary" record | grep -q 'Recording to' || fail 'toggle starts'
 for _ in $(seq 1 20); do [[ -e "$FAKE/recording" ]] && break; sleep 0.2; done
-grep -q '^wf-recorder -f .*/videos/bxcachy-.*[.]mp4$' "$LOG" || fail "wf-recorder args: $(cat "$LOG")"
+grep -q '^wf-recorder -f .*/videos/bxrig-.*[.]mp4$' "$LOG" || fail "wf-recorder args: $(cat "$LOG")"
 run "$binary" record status --json | jq -e '.data.recording == true' >/dev/null || fail 'status: recording'
 run "$binary" record start | grep -q 'already running' || fail 'a second start is refused politely'
 run "$binary" record | grep -q 'stopped and saved' || fail 'toggle stops'

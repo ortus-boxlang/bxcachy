@@ -1,9 +1,9 @@
 // SystemState: what the machine has, in wizard terms, with an injected installed set. Run from src/: (cd src && matchbox ../tests/system_state_test.bxs)
 failures = 0;
 function check( label, ok ) { if ( ok ) println( "ok   " & label ); else { println( "FAIL " & label ); failures++; } }
-spec = jsonDeserialize( new bxcachy.WizardData().demoPages() );
+spec = jsonDeserialize( new bxrig.WizardData().demoPages() );
 names = {}; for ( n in [ "git", "curl", "hyprland", "plasma-desktop", "ollama", "claude-code" ] ) names[ n ] = true;
-sys = new bxcachy.SystemState( names );
+sys = new bxrig.SystemState( names );
 found = sys.scan( spec );
 check( "desktops: both when Hyprland and Plasma are installed", found.answers.desktops == "both" );
 check( "multi: installed AI agent is selected", isArray( found.answers.ai_agents ) && arrayFind( found.answers.ai_agents, "claude-code" ) > 0 );

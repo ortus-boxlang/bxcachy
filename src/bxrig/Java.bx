@@ -1,0 +1,230 @@
+// `bxrig java`: your Java homes in one place. List what is installed (BxRig installs, SDKMAN and the system), install a Temurin JDK, choose the default, remove one.
+//   bxrig java list [--json]                  every home: id, version, vendor, where it came from, which is the default and which this shell uses
+//   bxrig java available [--json]             the Temurin releases you can install (long-term support ones are marked)
+//   bxrig java install MAJOR|IDENTIFIER [--yes] [--dry-run]   with SDKMAN installed (bxrig sdk setup): installs the newest Temurin of that major (or the identifier you give, like 21.0.13.0+9-tem) through SDKMAN;
+//                                               without it: downloads the latest Temurin JDK of that major into ~/.local/share/bxrig/java. Plan first.
+//   bxrig java default ID|MAJOR [--yes] [--dry-run]   new shells use this home: writes ~/.config/bxrig/java.sh and java.fish (the shell starters source them)
+//   bxrig java default --unset [--yes]        stop setting JAVA_HOME
+//   bxrig java remove ID [--yes] [--dry-run]  deletes a home that BxRig or SDKMAN installed here (never the system's)
+//   bxrig java env [ID|MAJOR]                 prints export lines, for: eval "$(bxrig java env 21)"
+// An id is the folder name: "temurin-21.0.13_9". A major number (21) picks the newest home of that major.
+// Overrides for tests: BXRIG_JAVA_DIR, BXRIG_JAVA_SYSTEM_DIR (default /usr/lib/jvm), BXRIG_SDKMAN_DIR (default ~/.sdkman), BXRIG_ADOPTIUM_API,
+// BXRIG_JAVA_DOWNLOAD_URL (replaces the download link, may be file://).
+// Exit: 0 ok, 2 a plan was shown without --yes (or bad usage), 4 unknown home or release or a home that cannot be removed, 6 download or unpack failed.
+class Java {
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.config = new bxrig.ConfigService().quiet( true );
+        return this;
+    }
+
+    function env( name, fallback ) { var v = getSystemSetting( arguments.name, "" ); return len( v ) ? v : arguments.fallback; }
+    function home() { return getSystemSetting( "HOME", "" ); }
+    function dataDir() { return env( "BXRIG_JAVA_DIR", ( len( getSystemSetting( "XDG_DATA_HOME", "" ) ) ? getSystemSetting( "XDG_DATA_HOME", "" ) : home() & "/.local/share" ) & "/bxrig/java" ); }
+    function sysDir() { return env( "BXRIG_JAVA_SYSTEM_DIR", "/usr/lib/jvm" ); }
+    function sdkDir() { return env( "BXRIG_SDKMAN_DIR", home() & "/.sdkman" ) & "/candidates/java"; }
+    function api() { return env( "BXRIG_ADOPTIUM_API", "https://api.adoptium.net" ); }
+    function cfgDir() { return variables.config.cfgHome() & "/bxrig"; }
+    function shFile() { return cfgDir() & "/java.sh"; }
+    function fishFile() { return cfgDir() & "/java.fish"; }
+
+    function say( code, data, asJson, lines = [], dry = false ) {
+        if ( arguments.asJson ) println( variables.cli.envelope( "java", arguments.code, arguments.data, arguments.dry ) );
+        else for ( var l in arguments.lines ) println( l );
+        return arguments.code;
+    }
+    function fail( code, msg, asJson ) { return say( arguments.code, { error: arguments.msg }, arguments.asJson, [ "error: " & arguments.msg ] ); }
+
+    // ---- reading homes ----
+    // The value of KEY="..." in a JDK's `release` file.
+    function releaseValue( dir, key ) {
+        var f = arguments.dir & "/release";
+        if ( !fileExists( f ) ) return "";
+        for ( var l in listToArray( fileRead( f ), chr( 10 ) ) ) if ( left( l, len( arguments.key ) + 1 ) == arguments.key & "=" ) return replace( trim( mid( l, len( arguments.key ) + 2, 200 ) ), chr( 34 ), "", "all" );
+        return "";
+    }
+
+    function homeFrom( dir, source, id ) {
+        var v = releaseValue( arguments.dir, "JAVA_VERSION" );
+        if ( !len( v ) || !fileExists( arguments.dir & "/bin/java" ) ) return {};
+        var major = listFirst( v, "." );
+        if ( major == "1" ) major = listGetAt( v, 2, "." );
+        var vendor = releaseValue( arguments.dir, "IMPLEMENTOR" );
+        return { id: arguments.id, major: int( val( major ) ), version: v, vendor: vendor, source: arguments.source, path: arguments.dir, default: false, active: false, removable: arguments.source == "bxrig" || arguments.source == "sdkman" };
+    }
+
+    function scan( root, source, prefix ) {
+        var out = [];
+        if ( !directoryExists( arguments.root ) ) return out;
+        for ( var n in directoryList( arguments.root, false, "name" ) ) {
+            if ( n == "current" ) continue;
+            var h = homeFrom( arguments.root & "/" & n, arguments.source, arguments.prefix & n );
+            if ( structCount( h ) ) out.append( h );
+        }
+        return out;
+    }
+
+    // The JAVA_HOME written by `java default`, or "".
+    function defaultHome() {
+        if ( !fileExists( shFile() ) ) return "";
+        for ( var l in listToArray( fileRead( shFile() ), chr( 10 ) ) ) if ( left( l, 17 ) == "export JAVA_HOME=" ) return replace( mid( l, 18, 400 ), chr( 34 ), "", "all" );
+        return "";
+    }
+
+    function homes() {
+        var all = scan( dataDir(), "bxrig", "" );
+        for ( var h in scan( sdkDir(), "sdkman", "sdkman-" ) ) all.append( h );
+        for ( var s in scan( sysDir(), "system", "system-" ) ) all.append( s );
+        var def = defaultHome();
+        var cur = getSystemSetting( "JAVA_HOME", "" );
+        for ( var x in all ) { x.default = len( def ) && x.path == def; x.active = len( cur ) && x.path == cur; }
+        arraySort( all, function( a, b ) { return b.major - a.major != 0 ? b.major - a.major : compare( b.id, a.id ); } );
+        return all;
+    }
+
+    function find( ref ) {
+        var r = arguments.ref;
+        var best = {};
+        for ( var h in homes() ) {
+            if ( h.id == r ) return h;
+            if ( isNumeric( r ) && h.major == int( val( r ) ) && !structCount( best ) ) best = h;
+        }
+        return best;
+    }
+
+    // ---- releases ----
+    function curl( args ) {
+        try { return systemExecute( "curl", arguments.args, 600, true ); } catch ( any e ) { return { exitCode: 127, output: e.message }; }
+    }
+
+    function releases() {
+        var r = curl( [ "-fsSL", "--max-time", "20", api() & "/v3/info/available_releases" ] );
+        if ( r.exitCode != 0 ) return { ok: false, error: "could not reach " & api() };
+        try {
+            var j = jsonDeserialize( r.output );
+            return { ok: true, releases: j.available_releases, lts: j.available_lts_releases, latest: j.most_recent_feature_release };
+        } catch ( any e ) { return { ok: false, error: "unexpected answer from " & api() }; }
+    }
+
+    function downloadUrl( major ) {
+        var forced = getSystemSetting( "BXRIG_JAVA_DOWNLOAD_URL", "" );
+        if ( len( forced ) ) return forced;
+        return api() & "/v3/binary/latest/" & arguments.major & "/ga/linux/x64/jdk/hotspot/normal/eclipse";
+    }
+
+    // ---- commands ----
+    function list( asJson ) {
+        var hs = homes();
+        var lines = [];
+        for ( var h in hs ) lines.append( ( h.default ? "*" : " " ) & ( h.active ? ">" : " " ) & " " & left( h.id & repeatString( " ", 28 ), 28 ) & left( h.version & repeatString( " ", 12 ), 12 ) & left( h.source & repeatString( " ", 8 ), 8 ) & h.vendor );
+        if ( !hs.len() ) lines.append( "No Java found. Install one: bxrig java install 21 --yes" );
+        else lines.append( "* default for new shells   > this shell" );
+        return say( 0, { homes: hs, default: defaultHome() }, arguments.asJson, lines );
+    }
+
+    function available( asJson ) {
+        var r = releases();
+        if ( !r.ok ) return fail( 6, r.error, arguments.asJson );
+        var lines = [];
+        var rows = [];
+        for ( var m in r.releases ) { var lts = arrayFind( r.lts, m ) > 0; rows.append( { major: m, lts: lts } ); lines.append( "Java " & m & ( lts ? "  (long-term support)" : "" ) ); }
+        return say( 0, { releases: rows, latest: r.latest }, arguments.asJson, lines );
+    }
+
+    function install( major, yes, dry, asJson ) {
+        var sdk = new bxrig.Sdk( variables.cli );
+        if ( sdk.installed() && len( arguments.major ) ) {
+            var id = isNumeric( arguments.major ) ? sdk.temurinFor( arguments.major ) : arguments.major;
+            if ( !len( id ) ) return fail( 4, "SDKMAN has no Temurin " & arguments.major & ". See: bxrig sdk available java", arguments.asJson );
+            return sdk.act( "install", "java", id, arguments.yes, arguments.dry, arguments.asJson );
+        }
+        if ( len( arguments.major ) && !isNumeric( arguments.major ) ) return fail( 4, "An identifier like " & arguments.major & " needs SDKMAN. Install it with: bxrig sdk setup --yes", arguments.asJson );
+        if ( !isNumeric( arguments.major ) ) return say( 2, { error: "usage" }, arguments.asJson, [ "Usage: bxrig java install MAJOR [--yes] [--dry-run]" ] );
+        var m = int( val( arguments.major ) );
+        var rel = releases();
+        if ( rel.ok && !arrayFind( rel.releases, m ) ) return fail( 4, "Temurin has no Java " & m & " release. See: bxrig java available", arguments.asJson );
+        var plan = [ "Plan: download the latest Temurin JDK " & m & " from " & api() & " and unpack it into " & dataDir() & "/ (a folder named after its version).", "Nothing else changes. Make it the default with: bxrig java default " & m ];
+        var data = { major: m, dir: dataDir() };
+        if ( arguments.dry ) { plan.append( "Dry run: nothing was changed." ); return say( 0, data, arguments.asJson, plan, true ); }
+        if ( !arguments.yes ) { plan.append( "Nothing was changed. Add --yes to install." ); return say( 2, data, arguments.asJson, plan ); }
+        var tmp = dataDir() & "/.download-" & m;
+        directoryCreate( tmp, true, true );
+        var tar = tmp & "/jdk.tar.gz";
+        var d = curl( [ "-fsSL", "--max-time", "900", "-o", tar, downloadUrl( m ) ] );
+        if ( d.exitCode != 0 || !fileExists( tar ) ) { try { directoryDelete( tmp, true ); } catch ( any e ) {} return fail( 6, "download failed: " & trim( d.output ), arguments.asJson ); }
+        var stage = tmp & "/x";
+        directoryCreate( stage, true, true );
+        var x = systemExecute( "tar", [ "-xzf", tar, "-C", stage, "--strip-components=1" ], 600, true );
+        var probe = homeFrom( stage, "bxrig", "" );
+        if ( x.exitCode != 0 || !structCount( probe ) ) { try { directoryDelete( tmp, true ); } catch ( any e ) {} return fail( 6, "the download is not a JDK", arguments.asJson ); }
+        var sem = releaseValue( stage, "SEMANTIC_VERSION" );
+        var id = "temurin-" & replace( len( sem ) ? sem : probe.version, "+", "_", "all" );
+        var dest = dataDir() & "/" & id;
+        if ( directoryExists( dest ) ) { try { directoryDelete( tmp, true ); } catch ( any e ) {} return say( 0, { id: id, path: dest, already: true }, arguments.asJson, [ id & " is already installed." ] ); }
+        directoryRename( stage, dest );
+        try { directoryDelete( tmp, true ); } catch ( any e ) {}
+        data.id = id; data.path = dest; data.version = probe.version;
+        return say( 0, data, arguments.asJson, [ "Installed " & id & " in " & dest, "Make it the default: bxrig java default " & id & " --yes" ] );
+    }
+
+    function writeEnv( h ) {
+        directoryCreate( cfgDir(), true, true );
+        variables.config.writeAtomic( shFile(), "# Written by `bxrig java default`. Remove it with: bxrig java default --unset" & chr( 10 ) & "export JAVA_HOME=" & chr( 34 ) & arguments.h.path & chr( 34 ) & chr( 10 ) & "export PATH=" & chr( 34 ) & "$JAVA_HOME/bin:$PATH" & chr( 34 ) & chr( 10 ), "644" );
+        variables.config.writeAtomic( fishFile(), "# Written by `bxrig java default`. Remove it with: bxrig java default --unset" & chr( 10 ) & "set -gx JAVA_HOME " & arguments.h.path & chr( 10 ) & "fish_add_path -gP $JAVA_HOME/bin" & chr( 10 ), "644" );
+    }
+
+    function setDefault( ref, unset, yes, dry, asJson ) {
+        if ( arguments.unset ) {
+            var plan0 = [ "Plan: stop setting JAVA_HOME in new shells (removes " & shFile() & " and " & fishFile() & ")." ];
+            if ( arguments.dry ) { plan0.append( "Dry run: nothing was changed." ); return say( 0, {}, arguments.asJson, plan0, true ); }
+            if ( !arguments.yes ) { plan0.append( "Nothing was changed. Add --yes to apply." ); return say( 2, {}, arguments.asJson, plan0 ); }
+            for ( var f in [ shFile(), fishFile() ] ) if ( fileExists( f ) ) fileDelete( f );
+            return say( 0, { default: "" }, arguments.asJson, [ "New shells no longer set JAVA_HOME." ] );
+        }
+        var h = find( arguments.ref );
+        if ( !structCount( h ) ) return fail( 4, "no Java home matches " & arguments.ref & ". See: bxrig java list", arguments.asJson );
+        var plan = [ "Plan: new shells use " & h.id & " (Java " & h.version & ", " & h.path & ").", "Writes " & shFile() & " and " & fishFile() & "; the shell starters source them. Open a new terminal, or run: eval " & chr( 34 ) & "$(bxrig java env " & h.id & ")" & chr( 34 ) ];
+        var data = { id: h.id, path: h.path, version: h.version };
+        if ( arguments.dry ) { plan.append( "Dry run: nothing was changed." ); return say( 0, data, arguments.asJson, plan, true ); }
+        if ( !arguments.yes ) { plan.append( "Nothing was changed. Add --yes to apply." ); return say( 2, data, arguments.asJson, plan ); }
+        writeEnv( h );
+        return say( 0, data, arguments.asJson, [ "Default Java is now " & h.id & " (" & h.version & ").", "Open a new terminal, or run: eval " & chr( 34 ) & "$(bxrig java env " & h.id & ")" & chr( 34 ) ] );
+    }
+
+    function remove( ref, yes, dry, asJson ) {
+        var h = find( arguments.ref );
+        if ( !structCount( h ) ) return fail( 4, "no Java home matches " & arguments.ref, arguments.asJson );
+        if ( !h.removable ) return fail( 4, h.id & " came from " & h.source & ", so BxRig will not delete it. Remove it with that tool.", arguments.asJson );
+        if ( h.source == "sdkman" ) return new bxrig.Sdk( variables.cli ).act( "remove", "java", listLast( h.path, "/" ), arguments.yes, arguments.dry, arguments.asJson );
+        var plan = [ "Plan: delete " & h.path & " (" & h.id & ")." ];
+        if ( h.default ) plan.append( "It is the default for new shells; the default is cleared too." );
+        if ( arguments.dry ) { plan.append( "Dry run: nothing was changed." ); return say( 0, { id: h.id }, arguments.asJson, plan, true ); }
+        if ( !arguments.yes ) { plan.append( "Nothing was changed. Add --yes to delete." ); return say( 2, { id: h.id }, arguments.asJson, plan ); }
+        directoryDelete( h.path, true );
+        if ( h.default ) for ( var f in [ shFile(), fishFile() ] ) if ( fileExists( f ) ) fileDelete( f );
+        return say( 0, { id: h.id, removed: true }, arguments.asJson, [ "Removed " & h.id ] );
+    }
+
+    function envLines( ref, asJson ) {
+        var h = len( arguments.ref ) ? find( arguments.ref ) : find( "" );
+        if ( !len( arguments.ref ) ) { var d = defaultHome(); h = {}; for ( var x in homes() ) if ( x.path == d ) h = x; }
+        if ( !structCount( h ) ) return fail( 4, "no Java home to export. Pick one: bxrig java env 21", arguments.asJson );
+        return say( 0, { id: h.id, path: h.path }, arguments.asJson, [ "export JAVA_HOME=" & chr( 34 ) & h.path & chr( 34 ), "export PATH=" & chr( 34 ) & "$JAVA_HOME/bin:$PATH" & chr( 34 ) ] );
+    }
+
+    function run( words, opts, yes, dry, asJson ) {
+        var sub = arguments.words.len() ? arguments.words[ 1 ] : "list";
+        var ref = arguments.words.len() >= 2 ? arguments.words[ 2 ] : "";
+        if ( sub == "list" ) return list( arguments.asJson );
+        if ( sub == "available" ) return available( arguments.asJson );
+        if ( sub == "install" ) return install( ref, arguments.yes, arguments.dry, arguments.asJson );
+        if ( sub == "default" ) {
+            if ( structKeyExists( arguments.opts, "unset" ) ) return setDefault( "", true, arguments.yes, arguments.dry, arguments.asJson );
+            if ( !len( ref ) ) return say( 2, { error: "usage" }, arguments.asJson, [ "Usage: bxrig java default ID|MAJOR [--yes]   or   --unset" ] );
+            return setDefault( ref, false, arguments.yes, arguments.dry, arguments.asJson );
+        }
+        if ( sub == "remove" ) { if ( !len( ref ) ) return say( 2, { error: "usage" }, arguments.asJson, [ "Usage: bxrig java remove ID [--yes]" ] ); return remove( ref, arguments.yes, arguments.dry, arguments.asJson ); }
+        if ( sub == "env" ) return envLines( ref, arguments.asJson );
+        return say( 2, { error: "usage" }, arguments.asJson, [ "Usage: bxrig java list|available|install MAJOR|default ID|remove ID|env [ID] [--yes] [--dry-run] [--json]" ] );
+    }
+}

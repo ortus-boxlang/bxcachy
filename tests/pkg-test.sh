@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# `bxcachy pkg ...` and `bxcachy remove ...` with a stateful fake pacman, yay, sudo, curl (the AUR) and id. Usage: pkg-test.sh BINARY
+# `bxrig pkg ...` and `bxrig remove ...` with a stateful fake pacman, yay, sudo, curl (the AUR) and id. Usage: pkg-test.sh BINARY
 set -euo pipefail
 binary="$(realpath "${1:?native executable required}")"
 tmp="$(mktemp -d)"; trap 'rm -rf "${tmp:?}"' EXIT
@@ -42,7 +42,7 @@ esac
 FAKE
 printf '#!/usr/bin/env bash\ncase "$1" in -u) echo "${FAKE_UID:-1000}";; *) echo "${FAKE_UID:-1000}";; esac\n' > "$tmp/bin/id"
 chmod +x "$tmp/bin"/*
-run() { env HOME="$tmp/home" PATH="$tmp/bin:$PATH" LOG="$LOG" FAKE="$tmp/fake" BXCACHY_AUR_URL="https://aur.test/rpc/v5" "$@"; }
+run() { env HOME="$tmp/home" PATH="$tmp/bin:$PATH" LOG="$LOG" FAKE="$tmp/fake" BXRIG_AUR_URL="https://aur.test/rpc/v5" "$@"; }
 code() { set +e; run "$@" >/dev/null 2>&1; local c=$?; set -e; echo "$c"; }
 inst() { [[ -e "$tmp/fake/installed/$1" ]]; }
 
@@ -96,10 +96,10 @@ grep -q '^pacman -Rns --noconfirm ripgrep' "$LOG" || fail 'pacman -Rns'
 run "$binary" remove jq --dry-run --json | jq -e '.data.apps == ["jq"] and .data.remove == ["jq"]' >/dev/null || fail 'a catalog id maps to its package'
 run "$binary" remove jq --yes >/dev/null; ! inst jq || fail 'catalog app removed'
 webid="$(cd "$(dirname "$binary")/.." && jq -r '[.apps[] | select(.source == "web")][0].id' catalog/apps.json)"
-mkdir -p "$tmp/home/.local/share/applications"; echo x > "$tmp/home/.local/share/applications/bxcachy-$webid.desktop"
+mkdir -p "$tmp/home/.local/share/applications"; echo x > "$tmp/home/.local/share/applications/bxrig-$webid.desktop"
 run "$binary" remove "$webid" --dry-run --json | jq -e --arg id "$webid" '.data.launchers | length == 1' >/dev/null || fail 'web launcher found'
 run "$binary" remove "$webid" --yes | grep -q "Removed web app: $webid" || fail 'web launcher removed'
-[[ ! -e "$tmp/home/.local/share/applications/bxcachy-$webid.desktop" ]] || fail 'launcher still there'
+[[ ! -e "$tmp/home/.local/share/applications/bxrig-$webid.desktop" ]] || fail 'launcher still there'
 run "$binary" remove "$webid" --yes | grep -q 'Nothing to do' || fail 'a removed web app is a no-op'
 scriptid="$(cd "$(dirname "$binary")/.." && jq -r '[.apps[] | select(.source == "script")][0].id' catalog/apps.json)"
 run "$binary" remove "$scriptid" --json | jq -e '.exit == 4 and (.data.manual | length == 1)' >/dev/null || { [[ "$(code "$binary" remove "$scriptid")" == 4 ]] || fail 'vendor-script apps are reported, not guessed'; }

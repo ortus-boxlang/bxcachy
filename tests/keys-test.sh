@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# `bxcachy keys show|render`: pure output, no files written. Usage: keys-test.sh [binary]
+# `bxrig keys show|render`: pure output, no files written. Usage: keys-test.sh [binary]
 set -euo pipefail
 binary="$(realpath "${1:?native executable required}")"
 fail() { echo "FAIL: $*" >&2; exit 1; }

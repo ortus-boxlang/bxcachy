@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Read-only package commands on the catalog, with a fake pacman. Usage: packages-test.sh [binary]
 set -euo pipefail
-bin="$(cd "$(dirname "${1:-./bxcachy}")" && pwd)/$(basename "${1:-./bxcachy}")"
+bin="$(cd "$(dirname "${1:-./bxrig}")" && pwd)/$(basename "${1:-./bxrig}")"
 fail() { echo "FAIL: $*" >&2; exit 1; }
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 mkdir -p "$tmp/bin" "$tmp/home/.local/share/applications"
@@ -25,7 +25,7 @@ j() { run "$bin" "$@" --json; }
 [[ "$(j package-status git | jq -r '.data.installed')" == true ]] || fail 'status json'
 # a web app is installed when its launcher exists
 [[ "$(rc run "$bin" package-status boxlang-docs)" == 1 ]] || fail 'web app missing'
-touch "$tmp/home/.local/share/applications/bxcachy-boxlang-docs.desktop"
+touch "$tmp/home/.local/share/applications/bxrig-boxlang-docs.desktop"
 [[ "$(rc run "$bin" package-status boxlang-docs)" == 0 ]] || fail 'web app launcher counts as installed'
 
 # package-source reads the catalog

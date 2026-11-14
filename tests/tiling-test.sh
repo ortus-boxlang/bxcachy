@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# `bxcachy tiling on|off|status` with fake kreadconfig6, kwriteconfig6 and qdbus6. Usage: tiling-test.sh [binary]
+# `bxrig tiling on|off|status` with fake kreadconfig6, kwriteconfig6 and qdbus6. Usage: tiling-test.sh [binary]
 set -euo pipefail
 binary="$(realpath "${1:?native executable required}")"
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT

@@ -1,0 +1,164 @@
+// `bxrig toggle|dns|kernel ...`: small system switches from Omarchy's Trigger and Setup menus.
+//   toggle stay-awake [on|off]      keep the screen from idling or locking (Noctalia caffeine: `noctalia msg caffeine-enable|disable|toggle`)
+//   dns                             the DNS servers of the active connection(s)
+//   dns cloudflare|google|quad9|dhcp|custom IP[,IP...] [--yes]
+//                                   set them with NetworkManager (`nmcli connection modify`, then `connection up`); dhcp goes back to the router's
+//   kernel list                     the running kernel, the installed ones and the linux-cachyos* kernels you could add
+//   kernel install NAME [--yes]     install a kernel and its headers (pacman; the bootloader entries come from the kernel package hooks)
+//   kernel remove NAME [--yes]      remove a kernel (never the running one, never the last one)
+// kernel never edits the bootloader and never picks the default: the boot menu is where you switch. All of it is a plan without --yes.
+// Exit: 0 ok, 2 bad usage or a plan without --yes, 4 precondition, 6 a command failed.
+class Tweaks {
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.inst = new bxrig.Installer( arguments.runner );
+        return this;
+    }
+
+    function tryExec( argv, timeout = 30 ) {
+        try { return variables.inst.exec( arguments.argv, arguments.timeout ); } catch ( any e ) { return { exitCode: 127, output: e.message }; }
+    }
+
+    function has( name ) { return tryExec( [ "sh", "-c", 'command -v "$1"', "_", arguments.name ], 10 ).exitCode == 0; }
+    function say( cmd, code, data, asJson, lines = [], dry = false ) {
+        if ( arguments.asJson ) println( variables.cli.envelope( arguments.cmd, arguments.code, arguments.data, arguments.dry ) );
+        else for ( var l in arguments.lines ) println( l );
+        return arguments.code;
+    }
+    function fail( cmd, code, msg, asJson ) { return say( arguments.cmd, arguments.code, { error: arguments.msg }, arguments.asJson, [ "error: " & arguments.msg ] ); }
+
+    // A plan without --yes, else the commands in order.
+    function runPlan( cmd, title, cmds, yes, dry, asJson, data = {} ) {
+        var d = arguments.data;
+        d.commands = arguments.cmds.map( function( c ) { return c.toList( " " ); } );
+        if ( !arguments.yes || arguments.dry ) {
+            var lines = [ ( arguments.dry ? "Dry run: " : "Plan: " ) & arguments.title ];
+            for ( var c in arguments.cmds ) lines.append( "  " & c.toList( " " ) );
+            lines.append( arguments.dry ? "Nothing was changed." : "Nothing was changed. Add --yes to apply." );
+            return say( arguments.cmd, arguments.dry ? 0 : 2, d, arguments.asJson, lines, arguments.dry );
+        }
+        for ( var x in arguments.cmds ) {
+            var r = tryExec( x, 900 );
+            if ( r.exitCode != 0 ) return say( arguments.cmd, 6, { error: trim( r.output ), step: x.toList( " " ) }, arguments.asJson, [ "error: " & x.toList( " " ) & ": " & trim( r.output ) ] );
+        }
+        return say( arguments.cmd, 0, d, arguments.asJson, [ arguments.title & ": done" ] );
+    }
+
+    // ---- toggle ----
+    function toggle( words, dry, asJson ) {
+        var what = arguments.words.len() ? arguments.words[ 1 ] : "";
+        if ( what != "stay-awake" ) return fail( "toggle", 2, "Usage: bxrig toggle stay-awake [on|off]", arguments.asJson );
+        var state = arguments.words.len() > 1 ? arguments.words[ 2 ] : "toggle";
+        if ( !arrayFind( [ "on", "off", "toggle" ], state ) || arguments.words.len() > 2 ) return fail( "toggle", 2, "Usage: bxrig toggle stay-awake [on|off]", arguments.asJson );
+        var verb = state == "on" ? "caffeine-enable" : state == "off" ? "caffeine-disable" : "caffeine-toggle";
+        if ( arguments.dry ) return say( "toggle", 0, { toggle: what, command: "noctalia msg " & verb }, arguments.asJson, [ "would run: noctalia msg " & verb ], true );
+        if ( !has( "noctalia" ) ) return fail( "toggle", 4, "stay awake needs Noctalia (Hyprland); on Plasma use System Settings > Power Management", arguments.asJson );
+        var r = tryExec( [ "noctalia", "msg", verb ], 15 );
+        if ( r.exitCode != 0 ) return say( "toggle", 6, { error: trim( r.output ) }, arguments.asJson, [ "error: " & trim( r.output ) ] );
+        return say( "toggle", 0, { toggle: what, state: state }, arguments.asJson, [ "stay-awake: " & state ] );
+    }
+
+    // ---- dns ----
+    function presets() {
+        return {
+            cloudflare: { v4: "1.1.1.1 1.0.0.1", v6: "2606:4700:4700::1111 2606:4700:4700::1001" },
+            google: { v4: "8.8.8.8 8.8.4.4", v6: "2001:4860:4860::8888 2001:4860:4860::8844" },
+            quad9: { v4: "9.9.9.9 149.112.112.112", v6: "2620:fe::fe 2620:fe::9" }
+        };
+    }
+
+    function activeConnections() {
+        var r = tryExec( [ "nmcli", "-t", "-f", "NAME,TYPE,DEVICE", "connection", "show", "--active" ], 15 );
+        var out = [];
+        if ( r.exitCode != 0 ) return out;
+        for ( var line in listToArray( trim( r.output ), chr( 10 ) ) ) {
+            var parts = listToArray( line, ":" );
+            if ( parts.len() >= 3 && !arrayFind( [ "loopback", "bridge", "tun", "wireguard" ], parts[ 2 ] ) && !reFind( "^(lo|docker|podman|veth|virbr)", parts[ 3 ] ) ) out.append( parts[ 1 ] );
+        }
+        return out;
+    }
+
+    function currentDns( conn ) {
+        var r = tryExec( [ "nmcli", "-g", "ipv4.dns,ipv6.dns", "connection", "show", arguments.conn ], 15 );
+        return r.exitCode == 0 ? trim( replace( r.output, chr( 10 ), " " ) ) : "";
+    }
+
+    function validIp( ip ) { return reFind( "^[0-9]{1,3}(\.[0-9]{1,3}){3}$", arguments.ip ) > 0 || reFind( "^[0-9a-fA-F:]+$", arguments.ip ) > 0 && find( ":", arguments.ip ) > 0; }
+
+    function dns( words, yes, dry, asJson ) {
+        if ( !has( "nmcli" ) ) return fail( "dns", 4, "NetworkManager (nmcli) was not found", arguments.asJson );
+        var conns = activeConnections();
+        if ( !arguments.words.len() ) {
+            var rows = conns.map( function( c ) { return { connection: c, dns: currentDns( c ) }; } );
+            return say( "dns", 0, { connections: rows }, arguments.asJson, rows.len() ? rows.map( function( r ) { return r.connection & ": " & ( len( r.dns ) ? r.dns : "from DHCP" ); } ) : [ "No active connection." ] );
+        }
+        var what = arguments.words[ 1 ];
+        var p = presets();
+        var v4 = "";
+        var v6 = "";
+        if ( structKeyExists( p, what ) && arguments.words.len() == 1 ) { v4 = p[ what ].v4; v6 = p[ what ].v6; }
+        else if ( what == "dhcp" && arguments.words.len() == 1 ) { v4 = ""; v6 = ""; }
+        else if ( what == "custom" && arguments.words.len() == 2 ) {
+            var ips = listToArray( replace( arguments.words[ 2 ], ",", " ", "all" ), " " );
+            for ( var ip in ips ) if ( !validIp( ip ) ) return fail( "dns", 2, ip & " is not an IP address", arguments.asJson );
+            for ( var i2 in ips ) { if ( find( ":", i2 ) ) v6 = trim( v6 & " " & i2 ); else v4 = trim( v4 & " " & i2 ); }
+            if ( !ips.len() ) return fail( "dns", 2, "give at least one IP address", arguments.asJson );
+        } else return fail( "dns", 2, "Usage: bxrig dns [cloudflare|google|quad9|dhcp|custom IP[,IP...]]", arguments.asJson );
+        if ( !conns.len() ) return fail( "dns", 4, "no active network connection", arguments.asJson );
+        var auto = what == "dhcp" ? "no" : "yes";
+        var cmds = [];
+        for ( var c in conns ) {
+            cmds.append( [ "nmcli", "connection", "modify", c, "ipv4.dns", v4, "ipv4.ignore-auto-dns", auto, "ipv6.dns", v6, "ipv6.ignore-auto-dns", auto ] );
+            cmds.append( [ "nmcli", "connection", "up", c ] );
+        }
+        return runPlan( "dns", "use " & ( what == "custom" ? "these DNS servers" : what ) & " on " & conns.toList( ", " ), cmds, arguments.yes, arguments.dry, arguments.asJson, { dns: what, connections: conns, ipv4: v4, ipv6: v6 } );
+    }
+
+    // ---- kernel ----
+    function kernelName( n ) { return reFind( "^linux(-[a-z0-9]+)*$", arguments.n ) > 0 && !reFind( "-headers$", arguments.n ); }
+
+    function installedKernels() {
+        var r = tryExec( [ "pacman", "-Qq" ], 30 );
+        var out = [];
+        if ( r.exitCode != 0 ) return out;
+        for ( var n in listToArray( trim( r.output ), chr( 10 ) ) ) if ( kernelName( n ) && !arrayFind( [ "linux-api-headers", "linux-firmware", "linux-firmware-whence", "linux-tools" ], n ) && !reFind( "^linux-(firmware|api|tools|atm|docs|lts-docs)", n ) ) out.append( n );
+        return out;
+    }
+
+    // Does `uname -r` belong to this kernel package? linux-cachyos-lts ends in -cachyos-lts, linux-zen in -zen, linux in -archN-N.
+    function runningKernelIs( name, run ) {
+        if ( !len( arguments.run ) ) return false;
+        if ( arguments.name == "linux" ) return reFind( "-arch[0-9]", arguments.run ) > 0;
+        var sfx = "-" & replace( arguments.name, "linux-", "" );
+        return len( arguments.run ) >= len( sfx ) && right( arguments.run, len( sfx ) ) == sfx;
+    }
+
+    function kernel( words, yes, dry, asJson ) {
+        var verb = arguments.words.len() ? arguments.words[ 1 ] : "list";
+        if ( verb == "list" ) {
+            var running = trim( tryExec( [ "uname", "-r" ], 5 ).output );
+            var inst = installedKernels();
+            var avail = [];
+            var r = tryExec( [ "pacman", "-Ssq", "^linux-cachyos" ], 30 );
+            if ( r.exitCode == 0 ) for ( var n in listToArray( trim( r.output ), chr( 10 ) ) ) if ( kernelName( n ) && !arrayFind( inst, n ) && !reFind( "-(nvidia|zfs|headers|rc)", n ) ) avail.append( n );
+            var lines = [ "running: " & running, "installed: " & inst.toList( ", " ) ];
+            lines.append( "available: " & ( avail.len() ? avail.toList( ", " ) : "none found" ) );
+            return say( "kernel", 0, { running: running, installed: inst, available: avail }, arguments.asJson, lines );
+        }
+        if ( ( verb != "install" && verb != "remove" ) || arguments.words.len() != 2 ) return fail( "kernel", 2, "Usage: bxrig kernel list | install NAME | remove NAME", arguments.asJson );
+        var name = arguments.words[ 2 ];
+        if ( !kernelName( name ) ) return fail( "kernel", 2, name & " is not a kernel package name (for example linux-cachyos-lts)", arguments.asJson );
+        var pkgs = [ name, name & "-headers" ];
+        if ( verb == "install" ) {
+            if ( tryExec( [ "pacman", "-Si", name ], 20 ).exitCode != 0 ) return fail( "kernel", 4, name & " is not in the repositories (bxrig kernel list)", arguments.asJson );
+            if ( arrayFind( installedKernels(), name ) ) return say( "kernel", 0, { installed: name }, arguments.asJson, [ name & " is already installed." ] );
+            return runPlan( "kernel", "install the " & name & " kernel and its headers (choose it in the boot menu afterwards)", [ [ "sudo", "pacman", "-S", "--needed", "--noconfirm", pkgs[ 1 ], pkgs[ 2 ] ] ], arguments.yes, arguments.dry, arguments.asJson, { kernel: name } );
+        }
+        var inst2 = installedKernels();
+        if ( !arrayFind( inst2, name ) ) return fail( "kernel", 4, name & " is not installed", arguments.asJson );
+        if ( inst2.len() < 2 ) return fail( "kernel", 4, "it is the only kernel installed: add another one first", arguments.asJson );
+        var run = trim( tryExec( [ "uname", "-r" ], 5 ).output );
+        if ( runningKernelIs( name, run ) ) return fail( "kernel", 4, name & " is the running kernel (" & run & "): boot another one first", arguments.asJson );
+        return runPlan( "kernel", "remove the " & name & " kernel", [ [ "sudo", "pacman", "-Rns", "--noconfirm", pkgs[ 1 ], pkgs[ 2 ] ] ], arguments.yes, arguments.dry, arguments.asJson, { kernel: name } );
+    }
+}

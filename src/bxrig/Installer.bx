@@ -1,0 +1,160 @@
+// Turns the apps a request selected into install steps and runs them. Rules (COMMAND-CONTRACT sections 2 and 11):
+// one pacman call for all pacman apps (sudo unless already root), AUR and PKGBUILD builds as the normal user, one
+// app at a time, commands are argument arrays (never a shell string). Apps that cannot be installed yet
+// (unpinned PKGBUILD ref, no source) come back in `blocked`, not as steps.
+//
+//   steps( selected, asRoot )  -> { steps: [ { kind, ids, commands: [ argv... ] } ], blocked: [ { id, source, error } ] }
+//   run( steps )               -> { done: [ { id, source } ], failed: [ { id, source, error } ] }
+//   exitCode( result )         -> 0 | 5 | 6 | 7
+//
+// The runner, `function( argv, timeout )` returning { exitCode, timeout, output }, is injectable for tests.
+class Installer {
+    function init( runner ) {
+        variables.custom = arguments.runner ?: "";
+        return this;
+    }
+
+    // The injected runner, or "" when commands run for real (lets a collaborator share the same runner).
+    function runner() {
+        return variables.custom;
+    }
+
+    // Runs one command through the injected runner, or for real (argument array, timeout in seconds).
+    function exec( argv, timeout ) {
+        if ( !isSimpleValue( variables.custom ) ) return variables.custom( argv, timeout );
+        var rest = [];
+        for ( var i = 2; i <= argv.len(); i++ ) rest.append( argv[i] );
+        return systemExecute( argv[1], rest, timeout, true );
+    }
+
+    // True when the effective user is root (uid 0).
+    function isRoot() {
+        var r = exec( [ "id", "-u" ], 10 );
+        return r.exitCode == 0 && trim( r.output ) == "0";
+    }
+
+    // True when a command can be started (runs `name --version`; no shell involved).
+    function hasCommand( name ) {
+        try {
+            return exec( [ name, "--version" ], 10 ).exitCode == 0;
+        } catch ( any e ) {
+            return false;
+        }
+    }
+
+    // The https clone URL for a catalog pkgbuild repo ("owner/name" on GitHub).
+    function cloneUrl( repo ) {
+        return "https://github.com/" & repo & ".git";
+    }
+
+    // The launcher file for a web app: a .desktop entry that opens the URL in a frameless brave window.
+    function launcherFile( app, home ) {
+        var url = replace( app.url, "%", "%%", "all" );
+        var content = "[Desktop Entry]" & chr( 10 ) & "Type=Application" & chr( 10 ) & "Name=" & app.name & chr( 10 )
+            & "Comment=" & ( app.description ?: app.name ) & chr( 10 ) & "Exec=brave --app=" & url & chr( 10 )
+            & "Icon=brave-browser" & chr( 10 ) & "Categories=Network;" & chr( 10 );
+        return { path: home & "/.local/share/applications/bxrig-" & app.id & ".desktop", content: content };
+    }
+
+    // Writes one launcher: creates the folder, writes a temporary file beside it and moves it into place.
+    function writeFile( file ) {
+        var dir = getDirectoryFromPath( file.path );
+        if ( !directoryExists( dir ) ) directoryCreate( dir, true );
+        var tmp = file.path & ".tmp" & left( createUUID(), 8 );
+        fileWrite( tmp, file.content );
+        fileMove( tmp, file.path );
+    }
+
+    // The build step for a pinned PKGBUILD entry, or a { blocked } struct when it cannot be built yet.
+    function pkgbuildStep( app ) {
+        var ref = app.pkgbuild.ref;
+        if ( !reFind( "^[0-9a-f]{40}$", ref ) ) {
+            return { blocked: { id: app.id, source: "pkgbuild", error: "the PKGBUILD ref is not a full commit" } };
+        }
+        var dir = reReplace( getTempDirectory(), "/+$", "" ) & "/bxrig-pkg-" & app.id & "-" & left( createUUID(), 8 );
+        return { step: { kind: "pkgbuild", ids: [ app.id ], dir: dir, commands: [
+            [ "git", "clone", "--quiet", cloneUrl( app.pkgbuild.repo ), dir ],
+            [ "git", "-C", dir, "checkout", "--quiet", ref ],
+            [ "env", "-C", dir & "/" & app.pkgbuild.path, "makepkg", "-si", "--noconfirm", "--needed" ]
+        ] } };
+    }
+
+    // Builds the steps for the selected apps, in catalog order within each kind: pacman, aur, pkgbuild.
+    function steps( selected, asRoot, home = "" ) {
+        var homeDir = len( home ) ? home : getSystemSetting( "HOME", "" );
+        var pacmanIds = []; var pacmanTargets = [];
+        var aur = []; var builds = []; var webs = []; var scripts = []; var blocked = [];
+        for ( var app in selected ) {
+            var targets = structKeyExists( app, "targets" ) ? app.targets : [];
+            if ( app.source == "pacman" ) {
+                pacmanIds.append( app.id );
+                for ( var t in targets ) if ( !arrayFind( pacmanTargets, t ) ) pacmanTargets.append( t );
+            } else if ( app.source == "aur" ) {
+                var argv = [ "yay", "-S", "--needed", "--noconfirm" ];
+                for ( var t in targets ) argv.append( t );
+                aur.append( { kind: "aur", ids: [ app.id ], commands: [ argv ] } );
+            } else if ( app.source == "pkgbuild" ) {
+                var built = pkgbuildStep( app );
+                if ( structKeyExists( built, "blocked" ) ) blocked.append( built.blocked );
+                else builds.append( built.step );
+            } else if ( app.source == "script" ) {
+                // the vendor installer: downloaded and piped to its shell; URL and arguments travel as arguments, never interpolated
+                var shellName = structKeyExists( app.script, "shell" ) ? app.script.shell : "bash";
+                var argv2 = [ "bash", "-c", 'set -o pipefail; curl -fsSL "$1" | ' & shellName & ' -s -- "${@:2}"', "bxrig-script", app.script.url ];
+                if ( structKeyExists( app.script, "args" ) ) for ( var sa in app.script.args ) argv2.append( sa );
+                scripts.append( { kind: "script", ids: [ app.id ], commands: [ argv2 ] } );
+            } else if ( app.source == "web" ) {
+                webs.append( { kind: "web", ids: [ app.id ], commands: [], files: [ launcherFile( app, homeDir ) ] } );
+            } else {
+                blocked.append( { id: app.id, source: app.source, error: "no installable source in the catalog yet" } );
+            }
+        }
+        var out = [];
+        if ( pacmanIds.len() ) {
+            var pac = asRoot ? [ "pacman" ] : [ "sudo", "pacman" ];
+            for ( var a in [ "-S", "--needed", "--noconfirm" ] ) pac.append( a );
+            for ( var t in pacmanTargets ) pac.append( t );
+            out.append( { kind: "pacman", ids: pacmanIds, commands: [ pac ] } );
+        }
+        for ( var s in aur ) out.append( s );
+        for ( var s in builds ) out.append( s );
+        for ( var s in scripts ) out.append( s );
+        for ( var s in webs ) out.append( s );
+        return { steps: out, blocked: blocked };
+    }
+
+    // Runs the steps in order. A failing step fails only its own apps; later steps still run.
+    function run( steps ) {
+        var done = []; var failed = [];
+        for ( var step in steps ) {
+            var problem = "";
+            if ( structKeyExists( step, "files" ) ) {
+                for ( var f in step.files ) {
+                    try { writeFile( f ); } catch ( any e ) { problem = "web launcher failed: " & e.message; }
+                }
+            }
+            for ( var cmd in step.commands ) {
+                if ( len( problem ) ) break;
+                var r = exec( cmd, 1800 );
+                if ( r.timeout ) problem = step.kind & " timed out";
+                else if ( r.exitCode != 0 ) problem = step.kind & " failed (exit " & r.exitCode & ")";
+            }
+            if ( structKeyExists( step, "dir" ) ) {
+                try { if ( directoryExists( step.dir ) ) directoryDelete( step.dir, true ); } catch ( any e ) {}
+            }
+            for ( var id in step.ids ) {
+                if ( len( problem ) ) failed.append( { id: id, source: step.kind, error: problem } );
+                else done.append( { id: id, source: step.kind } );
+            }
+        }
+        return { done: done, failed: failed };
+    }
+
+    // 0 nothing failed, 7 some done and some failed, else 5 when pacman failed, 6 for AUR or PKGBUILD only.
+    function exitCode( result ) {
+        if ( !result.failed.len() ) return 0;
+        if ( result.done.len() ) return 7;
+        for ( var f in result.failed ) if ( f.source == "pacman" ) return 5;
+        return 6;
+    }
+}

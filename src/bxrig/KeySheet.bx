@@ -1,0 +1,23 @@
+// `bxrig keys sheet`: the shortcut cheat sheet (Omarchy's Super+K). Every shortcut, its action and how it is bound, in your menu
+// program (`runner menu-set`), searchable by typing; picking an entry just closes it. Without a menu program it prints the same list.
+// Reads the shared shortcut table, so your changes (`keys set`) show up. Exit: 0.
+class KeySheet {
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.runnerArg = arguments.runner;
+        return this;
+    }
+
+    function lines() {
+        var rows = new bxrig.Shortcuts().show();
+        return rows.map( function( r ) { return r.keys & "   " & r.action & "   (" & r.how & ( r.custom ? ", yours" : "" ) & ")"; } );
+    }
+
+    function run( asJson ) {
+        var list = lines();
+        if ( arguments.asJson ) { println( variables.cli.envelope( "keys sheet", 0, { lines: list } ) ); return 0; }
+        try { new bxrig.Runner( variables.cli, variables.runnerArg ).select( "Shortcuts", list ); return 0; } catch ( any e ) {}
+        for ( var l in list ) println( l );
+        return 0;
+    }
+}

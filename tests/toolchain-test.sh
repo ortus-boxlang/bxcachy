@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# `bxcachy toolchain node`: the pinned nvm installer (a fake curl serves a fake one) and Node.js through nvm. Usage: toolchain-test.sh BINARY
+# `bxrig toolchain node`: the pinned nvm installer (a fake curl serves a fake one) and Node.js through nvm. Usage: toolchain-test.sh BINARY
 set -euo pipefail
 binary="$(realpath "${1:?native executable required}")"
 root="$(cd "$(dirname "$0")/.." && pwd)"

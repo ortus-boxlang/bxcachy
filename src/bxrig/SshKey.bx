@@ -1,0 +1,41 @@
+// `bxrig ssh key [--email=ADDRESS] [--yes] [--dry-run]`: creates an ed25519 key for GitHub and servers at ~/.ssh/id_ed25519.
+// An existing key is never replaced (it is reported and left alone). ssh-keygen asks for the passphrase itself on the terminal
+// (empty means none), so this needs a terminal. The public key is printed so it can be pasted into GitHub.
+// Exit: 0 done (or the key already existed), 2 plan without --yes, 4 precondition (no ssh-keygen), 6 ssh-keygen failed.
+class SshKey {
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.inst = new bxrig.Installer( arguments.runner );
+        return this;
+    }
+
+    function dir() { return getSystemSetting( "HOME", "" ) & "/.ssh"; }
+    function keyFile() { return dir() & "/id_ed25519"; }
+
+    function say( command, code, data, asJson, lines = [], dryRun = false ) {
+        if ( arguments.asJson ) println( variables.cli.envelope( arguments.command, arguments.code, arguments.data, arguments.dryRun ) );
+        else for ( var l in arguments.lines ) println( l );
+        return arguments.code;
+    }
+
+    function run( email, yes, dryRun, asJson ) {
+        var cmd = "ssh key";
+        var pub = keyFile() & ".pub";
+        if ( fileExists( keyFile() ) ) {
+            var shown = fileExists( pub ) ? trim( fileRead( pub ) ) : "";
+            return say( cmd, 0, { created: false, key: keyFile(), public: shown }, arguments.asJson, [ "An SSH key already exists (" & keyFile() & "); it was kept.", len( shown ) ? shown : "Its public half (" & pub & ") was not found." ] );
+        }
+        var found = false;
+        try { found = variables.inst.exec( [ "sh", "-c", 'command -v ssh-keygen' ], 10 ).exitCode == 0; } catch ( any e ) {}
+        if ( !found ) return say( cmd, 4, { error: "ssh-keygen was not found" }, arguments.asJson, [ "error: ssh-keygen was not found (install openssh)" ] );
+        var argv = [ "ssh-keygen", "-t", "ed25519", "-f", keyFile() ];
+        if ( len( arguments.email ) ) { argv.append( "-C" ); argv.append( arguments.email ); }
+        var data = { created: false, key: keyFile(), command: argv };
+        if ( !arguments.yes || arguments.dryRun ) return say( cmd, arguments.dryRun ? 0 : 2, data, arguments.asJson, [ ( arguments.dryRun ? "Dry run" : "Plan" ) & ": " & argv.toList( " " ), "ssh-keygen will ask for a passphrase (empty for none).", "Nothing was changed." & ( arguments.dryRun ? "" : " Add --yes to apply." ) ], arguments.dryRun );
+        variables.inst.exec( [ "sh", "-c", 'mkdir -p "$1" && chmod 700 "$1"', "_", dir() ], 10 );
+        var r = systemExecute( argv[ 1 ], argv.slice( 2 ), 0, false, ".", "", "", true, {}, true );
+        if ( r.exitCode != 0 ) return say( cmd, 6, { error: "ssh-keygen failed" }, arguments.asJson, [ "error: ssh-keygen failed (exit " & r.exitCode & ")" ] );
+        var out = fileExists( pub ) ? trim( fileRead( pub ) ) : "";
+        return say( cmd, 0, { created: true, key: keyFile(), public: out }, arguments.asJson, [ "Created " & keyFile() & ". Add this public key to GitHub (Settings, SSH keys):", out ] );
+    }
+}

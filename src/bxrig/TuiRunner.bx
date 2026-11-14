@@ -1,0 +1,34 @@
+// The event loop shared by every BxRig terminal screen. It owns the canvas for the length of the run and always puts the terminal back.
+//   new bxrig.TuiRunner().run( app, makeView, onIntent )
+//   app        pure model: outcome() ("running" until it is done), onKey( key ) -> intent, act( hit ) -> intent, onScroll( dir ) -> intent
+//   makeView   function( tui ) -> a view with paint( app, tick, width, height ) and hitAt( x, y )
+//   onIntent   optional function( intent ) that does the real work for an intent the model returned (run a command, reload data)
+// Keys, clicks and scrolls go to the model; whatever it returns goes to onIntent. The model never touches the terminal.
+class TuiRunner {
+    function init( frameMs = 50 ) { variables.frameMs = arguments.frameMs; return this; }
+
+    function run( app, makeView, onIntent = "" ) {
+        var tui = createObject( "rust", "tui.TUI" );
+        var view = arguments.makeView( tui );
+        var handle = function( intent ) { if ( !isSimpleValue( onIntent ) && !isNull( intent ) ) onIntent( intent ); };
+        tui.init();
+        try {
+            var tick = 0;
+            while ( arguments.app.outcome() == "running" ) {
+                var size = tui.size();
+                view.paint( arguments.app, tick, size.width, size.height );
+                tui.end_frame();
+                var ev = tui.poll_event( variables.frameMs );
+                if ( !isNull( ev ) ) {
+                    if ( ev.type == "key" ) handle( arguments.app.onKey( ev.key ) );
+                    else if ( ev.type == "click" ) handle( arguments.app.act( view.hitAt( ev.x, ev.y ) ) );
+                    else if ( ev.type == "scroll" ) handle( arguments.app.onScroll( ev.direction ) );
+                }
+                tick++;
+            }
+        } finally {
+            tui.shutdown();
+        }
+        return 0;
+    }
+}

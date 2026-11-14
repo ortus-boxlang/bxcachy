@@ -1,6 +1,6 @@
 // Negative cases for Catalog.check: each broken copy of the real catalog must produce the named error.
-// Run from src/ so that bxcachy.Catalog resolves: (cd src && matchbox ../tests/catalog_check.bxs)
-catalogClass = new bxcachy.Catalog();
+// Run from src/ so that bxrig.Catalog resolves: (cd src && matchbox ../tests/catalog_check.bxs)
+catalogClass = new bxrig.Catalog();
 good = catalogClass.load();
 failures = 0;
 function copyOf( c ) { return jsonDeserialize( jsonSerialize( c ) ); }

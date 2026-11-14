@@ -2,18 +2,18 @@
 set -euo pipefail
 
 # Tool versions, installer URLs and the Java package live in box.json at the repository root (loaded below).
-# BoxLang follows the latest stable release (owner decision 2026-11-09); BXCACHY_BOXLANG_VERSION=x.y.z pins it.
-# MatchBox stays pinned in box.json: it compiles bxcachy itself, so the tested version matters.
-# BXCACHY_MVM_VERSION=x.y.z asks the MVM installer for a specific release.
+# BoxLang follows the latest stable release (owner decision 2026-11-09); BXRIG_BOXLANG_VERSION=x.y.z pins it.
+# MatchBox stays pinned in box.json: it compiles bxrig itself, so the tested version matters.
+# BXRIG_MVM_VERSION=x.y.z asks the MVM installer for a specific release.
 MIN_FREE_GB=5
 BOXLANG_LATEST_URL="https://downloads.ortussolutions.com/ortussolutions/boxlang/version-latest.properties"
 
 usage() {
   cat >&2 <<'USAGE'
-Usage: install.sh [--yes] [--dry-run]     install everything: packages, toolchains, the bxcachy binary, the core apps
+Usage: install.sh [--yes] [--dry-run]     install everything: packages, toolchains, the bxrig binary, the core apps
        install.sh check                   read-only report of what is installed
        install.sh packages|toolchains|binary|core --yes [--binary PATH --force]   re-run one stage
-       install.sh wizard                  the setup wizard (bxcachy init); the full install ends with it at a terminal
+       install.sh wizard                  the setup wizard (bxrig init); the full install ends with it at a terminal
 USAGE
   exit 2
 }
@@ -48,19 +48,19 @@ case "$mode" in
 esac
 
 command -v pacman >/dev/null 2>&1 || {
-  echo "BxCachy requires Arch Linux/CachyOS (pacman)" >&2
+  echo "BxRig requires Arch Linux/CachyOS (pacman)" >&2
   exit 1
 }
 packages=(git curl unzip rustup base-devel jq)   # the Java package is added from box.json
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." 2>/dev/null && pwd || true)"
 
 # ---- box.json: the single place that names tool versions (needs jq, so --install installs jq first) ----
-MANIFEST="${BXCACHY_MANIFEST:-$root/box.json}"
+MANIFEST="${BXRIG_MANIFEST:-$root/box.json}"
 manifest_error=""
 load_manifest() {
   manifest_error=""
   command -v jq >/dev/null 2>&1 || { manifest_error="jq is required to read box.json"; return 1; }
-  [[ -f "$MANIFEST" ]] || { manifest_error="box.json not found at $MANIFEST (run this script from a BxCachy checkout)"; return 1; }
+  [[ -f "$MANIFEST" ]] || { manifest_error="box.json not found at $MANIFEST (run this script from a BxRig checkout)"; return 1; }
   jq -e . "$MANIFEST" >/dev/null 2>&1 || { manifest_error="box.json is not valid JSON: $MANIFEST"; return 1; }
   local key
   for key in .toolchain.java.version .toolchain.java.package .toolchain.boxlang.version .toolchain.bvm.installer \
@@ -74,11 +74,11 @@ load_manifest() {
   # that CI publishes to S3 (see .github/workflows/matchbox.yml), checked against its sha256 and kept in
   # $MATCHBOX_HOME so it never replaces the `matchbox` that mvm manages.
   MATCHBOX_DOWNLOADS="$(jq -r '.toolchain.matchbox.downloads // empty' "$MANIFEST")"
-  MATCHBOX_HOME="${BXCACHY_HOME:-$HOME/.local/share/bxcachy}/matchbox"
+  MATCHBOX_HOME="${BXRIG_HOME:-$HOME/.local/share/bxrig}/matchbox"
   BVM_URL="$(jq -r .toolchain.bvm.installer "$MANIFEST")"
   MVM_URL="$(jq -r .toolchain.mvm.installer "$MANIFEST")"
   RUST_CHANNEL="$(jq -r .toolchain.rust.channel "$MANIFEST")"
-  BOXLANG_VERSION="${BXCACHY_BOXLANG_VERSION:-$(jq -r .toolchain.boxlang.version "$MANIFEST")}"
+  BOXLANG_VERSION="${BXRIG_BOXLANG_VERSION:-$(jq -r .toolchain.boxlang.version "$MANIFEST")}"
   packages=("$JAVA_PKG" git curl unzip rustup base-devel jq)
 }
 if load_manifest; then manifest_ok=1; else manifest_ok=0; fi
@@ -90,7 +90,7 @@ need_manifest() {  # for modes that cannot work without it
 }
 
 # ---- Read-only inspection (used by --check and --plan; never changes the system) ----
-BIN_DIR="${BXCACHY_BIN_DIR:-$HOME/.local/bin}"
+BIN_DIR="${BXRIG_BIN_DIR:-$HOME/.local/bin}"
 BVM_HOME="${BVM_HOME:-$HOME/.bvm}"
 MVM_HOME="${MVM_HOME:-$HOME/.mvm}"
 probe_path="$BVM_HOME/bin:$BVM_HOME/current/bin:$MVM_HOME/bin:$HOME/.cargo/bin:$BIN_DIR:$PATH"
@@ -102,10 +102,10 @@ tool_version() {  # NAME [ARG]: first x.y[.z] printed by the tool, empty if unkn
   local bin; bin="$(tool_path "$1")" || return 0
   PATH="$probe_path" "$bin" "${2:---version}" 2>&1 | first_version || true
 }
-is_interactive() { [[ "${BXCACHY_INTERACTIVE:-0}" == 1 || ( -t 0 && -t 1 ) ]]; }
+is_interactive() { [[ "${BXRIG_INTERACTIVE:-0}" == 1 || ( -t 0 && -t 1 ) ]]; }
 # Refuse early, with a reason, when the machine cannot be provisioned. Needs inspect() to have run.
 preflight_common() {
-  [[ "$os_ok" == 1 ]] || { echo "Unsupported OS: $os_name (BxCachy supports CachyOS and Arch Linux)" >&2; exit 1; }
+  [[ "$os_ok" == 1 ]] || { echo "Unsupported OS: $os_name (BxRig supports CachyOS and Arch Linux)" >&2; exit 1; }
   [[ "$cpu" == x86_64 ]] || { echo "Unsupported CPU: $cpu (x86_64 only)" >&2; exit 1; }
   (( free_gb >= MIN_FREE_GB )) || { echo "Not enough free disk space: ${free_gb} GB free in $HOME, need at least $MIN_FREE_GB GB" >&2; exit 1; }
 }
@@ -114,14 +114,14 @@ step_run() { local what="$1"; shift; "$@" || { echo "Failed: $what" >&2; exit 1;
 # when a shared address is rate limited, and that is usually brief.
 step_retry() {
   local what="$1" wait; shift
-  for wait in ${BXCACHY_RETRY_WAITS:-0 10 30}; do
+  for wait in ${BXRIG_RETRY_WAITS:-0 10 30}; do
     (( wait )) && { echo "Retrying in ${wait}s: $what" >&2; sleep "$wait"; }
     "$@" && return 0
   done
   echo "Failed after 3 attempts: $what (if GitHub reports HTTP 403, wait a while and rerun; this is a rate limit)" >&2; exit 1
 }
 # MatchBox from the published bxcachy-branch build: download, verify the sha256, replace atomically.
-# BXCACHY_MATCHBOX_FILE=PATH installs a local build instead (CI builds it from source before it is published).
+# BXRIG_MATCHBOX_FILE=PATH installs a local build instead (CI builds it from source before it is published).
 # The evergreen file can be served stale by the CDN, so the build is taken from its immutable folder
 # (<version>-<commit>/) named in version-latest.properties; without that file the evergreen folder is used.
 matchbox_download_base() {
@@ -133,9 +133,9 @@ matchbox_download_base() {
 install_matchbox_download() {
   local arch=linux-x86_64 tmp expected actual dl
   tmp="$(mktemp -d)"
-  if [[ -n "${BXCACHY_MATCHBOX_FILE:-}" ]]; then
-    [[ -f "$BXCACHY_MATCHBOX_FILE" && -x "$BXCACHY_MATCHBOX_FILE" && ! -L "$BXCACHY_MATCHBOX_FILE" ]] || { echo "BXCACHY_MATCHBOX_FILE must be an executable regular file: $BXCACHY_MATCHBOX_FILE" >&2; rm -rf "$tmp"; exit 1; }
-    cp "$BXCACHY_MATCHBOX_FILE" "$tmp/matchbox"
+  if [[ -n "${BXRIG_MATCHBOX_FILE:-}" ]]; then
+    [[ -f "$BXRIG_MATCHBOX_FILE" && -x "$BXRIG_MATCHBOX_FILE" && ! -L "$BXRIG_MATCHBOX_FILE" ]] || { echo "BXRIG_MATCHBOX_FILE must be an executable regular file: $BXRIG_MATCHBOX_FILE" >&2; rm -rf "$tmp"; exit 1; }
+    cp "$BXRIG_MATCHBOX_FILE" "$tmp/matchbox"
   else
     dl="$(matchbox_download_base)"
     step_retry "download MatchBox" curl -fsSL -m 300 -o "$tmp/matchbox" "$dl/matchbox-$arch"
@@ -168,7 +168,7 @@ boxlang_want() {
   command -v curl >/dev/null 2>&1 || return 0
   curl -fsS -m 8 "$BOXLANG_LATEST_URL" 2>/dev/null | sed -n 's/^version=\([0-9][0-9.]*\).*/\1/p' | head -n 1 || true
 }
-os_id() { ( . "${BXCACHY_OS_RELEASE:-/etc/os-release}" 2>/dev/null; echo "${ID:-unknown}|${ID_LIKE:-}" ) || echo "unknown|"; }
+os_id() { ( . "${BXRIG_OS_RELEASE:-/etc/os-release}" 2>/dev/null; echo "${ID:-unknown}|${ID_LIKE:-}" ) || echo "unknown|"; }
 
 inspect() {
   missing_pkgs=()
@@ -179,7 +179,7 @@ inspect() {
   if [[ "$(id -u)" == 0 ]]; then is_root=1; else is_root=0; fi
   have_sudo=0; command -v sudo >/dev/null 2>&1 && have_sudo=1
   free_gb="$(df -Pk "$HOME" 2>/dev/null | awk 'NR==2{printf "%d", $4/1048576}')"; free_gb="${free_gb:-0}"
-  if [[ "${BXCACHY_SKIP_NETWORK:-0}" == 1 ]]; then net="skipped"
+  if [[ "${BXRIG_SKIP_NETWORK:-0}" == 1 ]]; then net="skipped"
   elif curl -fsSI -m 6 -o /dev/null https://downloads.ortussolutions.com/ >/dev/null 2>&1; then net="ok"; else net="unreachable"; fi
   java_ver=""; if jb="$(tool_path java)"; then java_ver="$(PATH="$probe_path" "$jb" -version 2>&1 | grep -m1 -oE 'version "[0-9][0-9.]*' | grep -oE '[0-9][0-9.]*' || true)"; fi
   java_major="${java_ver%%.*}"
@@ -189,7 +189,7 @@ inspect() {
   have_bvm=0; tool_path bvm >/dev/null && have_bvm=1; bvm_ver="$(tool_version bvm)"
   bl_ver="$(bl_version)"; bl_want="$(boxlang_want)"
   rust_ver="$(tool_version rustc)"; have_rustup=0; tool_path rustup >/dev/null && have_rustup=1
-  have_bxcachy=0; tool_path bxcachy >/dev/null && have_bxcachy=1; bx_ver="$(tool_version bxcachy version)"
+  have_bxrig=0; tool_path bxrig >/dev/null && have_bxrig=1; bx_ver="$(tool_version bxrig version)"
   case ":$PATH:" in *":$BIN_DIR:"*) bin_on_path=1 ;; *) bin_on_path=0 ;; esac
 }
 
@@ -223,11 +223,11 @@ build_steps() {
   if (( ! have_rustup )) || [[ -z "$rust_ver" ]]; then
     steps+=("rust|rustup default $RUST_CHANNEL|activates Rust and Cargo for your user (part of the packages stage)")
   fi
-  if (( ! have_bxcachy )); then
-    steps+=("binary|install.sh binary --yes|builds src/Main.bx with MatchBox (or use --binary PATH), verifies it, installs to $BIN_DIR/bxcachy, no sudo")
+  if (( ! have_bxrig )); then
+    steps+=("binary|install.sh binary --yes|builds src/Main.bx with MatchBox (or use --binary PATH), verifies it, installs to $BIN_DIR/bxrig, no sudo")
   fi
-  if (( have_bxcachy && ! bin_on_path )); then
-    steps+=("path|add $BIN_DIR to PATH yourself|BxCachy does not edit shell startup files; the commands are printed by the packages stage")
+  if (( have_bxrig && ! bin_on_path )); then
+    steps+=("path|add $BIN_DIR to PATH yourself|BxRig does not edit shell startup files; the commands are printed by the packages stage")
   fi
 }
 
@@ -254,7 +254,7 @@ report_check() {
   else bl_desc="latest, version lookup unavailable"; fi
   printf 'boxlang: %s (want %s)\n' "${bl_ver:-missing}" "$bl_desc"
   printf 'rust: %s\n' "${rust_ver:-no default toolchain}"
-  printf 'bxcachy: %s\n' "$([[ $have_bxcachy == 1 ]] && echo "${bx_ver:-installed}" || echo missing)"
+  printf 'bxrig: %s\n' "$([[ $have_bxrig == 1 ]] && echo "${bx_ver:-installed}" || echo missing)"
   echo "== path =="
   printf 'bin-dir: %s (%s)\n' "$BIN_DIR" "$([[ $bin_on_path == 1 ]] && echo on-PATH || echo not-on-PATH)"
   if (( ${#steps[@]} )); then printf 'summary: %d step(s) needed, run install.sh --dry-run\n' "${#steps[@]}"; else echo "summary: ready"; fi
@@ -287,11 +287,11 @@ if [[ "$mode" == --check ]]; then
 fi
 if [[ "$mode" == full ]]; then
   # The whole install: show the plan, ask once (a terminal) or need --yes, then run every stage in order.
-  # BXCACHY_ALL_SCRIPT replaces the script the stages are delegated to (tests only).
+  # BXRIG_ALL_SCRIPT replaces the script the stages are delegated to (tests only).
   [[ "$(id -u)" != 0 ]] || { echo "Run as a regular user; sudo is used only for pacman steps" >&2; exit 1; }
   inspect; build_steps
   report_plan
-  echo "Last: bxcachy profile-install core --yes installs the core apps with pacman (a re-run installs nothing that is already there)."
+  echo "Last: bxrig profile-install core --yes installs the core apps with pacman (a re-run installs nothing that is already there)."
   if (( dry )); then echo "Dry run: nothing was changed."; exit 0; fi
   if (( ! yes )); then
     if is_interactive; then
@@ -301,30 +301,30 @@ if [[ "$mode" == full ]]; then
       echo "Not running unattended without --yes. Nothing was changed." >&2; exit 2
     fi
   fi
-  all_self="${BXCACHY_ALL_SCRIPT:-${BASH_SOURCE[0]}}"
+  all_self="${BXRIG_ALL_SCRIPT:-${BASH_SOURCE[0]}}"
   echo "== 1/4 packages, yay and Rust =="; bash "$all_self" packages --yes || exit $?
   echo "== 2/4 Java 21 check, mvm, MatchBox, bvm and BoxLang =="; bash "$all_self" toolchains --yes || exit $?
-  echo "== 3/4 the bxcachy binary =="; bash "$all_self" binary --yes || exit $?
+  echo "== 3/4 the bxrig binary =="; bash "$all_self" binary --yes || exit $?
   echo "== 4/4 the core apps =="; bash "$all_self" core --yes || exit $?
-  echo "Everything is installed. Run: bxcachy doctor"
+  echo "Everything is installed. Run: bxrig doctor"
   if is_interactive; then
     echo "== the setup wizard =="; bash "$all_self" wizard || exit $?
   else
-    echo "Next: run bxcachy init at a terminal to choose your desktop, shell, terminal and apps."
+    echo "Next: run bxrig init at a terminal to choose your desktop, shell, terminal and apps."
   fi
   exit 0
 fi
 
 if [[ "$mode" == --wizard ]]; then
-  wiz_bin="$BIN_DIR/bxcachy"
-  [[ -x "$wiz_bin" ]] || { echo "bxcachy is not installed at $wiz_bin (run install.sh binary --yes first)" >&2; exit 1; }
+  wiz_bin="$BIN_DIR/bxrig"
+  [[ -x "$wiz_bin" ]] || { echo "bxrig is not installed at $wiz_bin (run install.sh binary --yes first)" >&2; exit 1; }
   exec "$wiz_bin" init
 fi
 if [[ "$mode" == --core ]]; then
   # The core profile through the installed binary (it names the apps, installs them with pacman, and re-runs safely).
   [[ "$(id -u)" != 0 ]] || { echo "Run as a regular user; sudo is used only for pacman steps" >&2; exit 1; }
-  core_bin="$BIN_DIR/bxcachy"
-  [[ -x "$core_bin" ]] || { echo "bxcachy is not installed at $core_bin (run install.sh binary --yes first)" >&2; exit 1; }
+  core_bin="$BIN_DIR/bxrig"
+  [[ -x "$core_bin" ]] || { echo "bxrig is not installed at $core_bin (run install.sh binary --yes first)" >&2; exit 1; }
   exec "$core_bin" profile-install core --yes
 fi
 
@@ -337,7 +337,7 @@ if [[ "$mode" == --install-toolchains ]]; then
   preflight_common
   [[ "$java_major" == "$JAVA_MAJOR" ]] || { echo "Java $JAVA_MAJOR is required (found: ${java_ver:-none})" >&2; exit 1; }
   export PATH="$probe_path"
-  cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/bxcachy/external"
+  cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/bxrig/external"
 
   # Download an external installer, show what it is (url, saved copy, sha256), and run it as the normal user.
   # There is no confirmation gate: installing the toolchain is what the command is for (owner decision 2026-11-10).
@@ -355,7 +355,7 @@ if [[ "$mode" == --install-toolchains ]]; then
 
   done_any=0
   if (( ! have_mvm )); then
-    run_external mvm "$MVM_URL" ${BXCACHY_MVM_VERSION:+MVM_VERSION="$BXCACHY_MVM_VERSION"}; done_any=1
+    run_external mvm "$MVM_URL" ${BXRIG_MVM_VERSION:+MVM_VERSION="$BXRIG_MVM_VERSION"}; done_any=1
     tool_path mvm >/dev/null || { echo "MVM installation failed: mvm not found afterwards" >&2; exit 1; }
   fi
   if [[ "$(tool_version matchbox)" != "$MATCHBOX_VERSION" ]]; then
@@ -383,19 +383,19 @@ if [[ "$mode" == --install-toolchains ]]; then
     echo "BoxLang $bl_now is installed; could not look up the latest version, so it was left as is."
   fi
   if (( ! done_any )); then echo "Nothing to do: MVM, MatchBox $MATCHBOX_VERSION, BVM, BoxLang ${bl_now:-?} are already installed."; fi
-  echo "Rust and the bxcachy binary are handled by later steps."
+  echo "Rust and the bxrig binary are handled by later steps."
   exit 0
 fi
 
 if [[ "$mode" == --install-binary ]]; then
-  # Build (or accept) the bxcachy binary, verify it BEFORE touching the installed copy, then replace atomically.
+  # Build (or accept) the bxrig binary, verify it BEFORE touching the installed copy, then replace atomically.
   [[ "$(id -u)" != 0 ]] || { echo "Run as a regular user; no sudo is needed" >&2; exit 1; }
   need_manifest
   work="$(mktemp -d)"; trap 'rm -rf "$work"' EXIT
-  installed="$BIN_DIR/bxcachy"
-  check_binary() {  # PATH -> prints its version line; fails unless it identifies itself as BxCachy
+  installed="$BIN_DIR/bxrig"
+  check_binary() {  # PATH -> prints its version line; fails unless it identifies itself as BxRig
     local out; out="$("$1" version 2>&1 | head -n 1)" || true
-    [[ "$out" == BxCachy\ * ]] || { echo "Not a working bxcachy binary: $1 (version printed: ${out:-nothing})" >&2; return 1; }
+    [[ "$out" == BxRig\ * ]] || { echo "Not a working bxrig binary: $1 (version printed: ${out:-nothing})" >&2; return 1; }
     printf '%s\n' "$out"
   }
   if [[ -n "$binary_arg" ]]; then
@@ -405,23 +405,23 @@ if [[ "$mode" == --install-binary ]]; then
     if [[ -f "$installed" ]] && cmp -s "$candidate" "$installed" && (( ! force )); then echo "Nothing to do: $installed is identical ($new_version)."; exit 0; fi
   else
     src="$root/src/Main.bx"
-    [[ -n "$root" && -f "$src" ]] || { echo "Source not found ($src). Run this script from a BxCachy checkout, or pass --binary PATH." >&2; exit 1; }
-    want="$(grep -m1 -oE 'BxCachy [0-9][0-9A-Za-z.+-]*' "$src" || true)"
+    [[ -n "$root" && -f "$src" ]] || { echo "Source not found ($src). Run this script from a BxRig checkout, or pass --binary PATH." >&2; exit 1; }
+    want="$(grep -m1 -oE 'BxRig [0-9][0-9A-Za-z.+-]*' "$src" || true)"
     if (( ! force )) && [[ -x "$installed" && -n "$want" ]] && [[ "$(check_binary "$installed" 2>/dev/null || true)" == "$want" ]]; then
       echo "Nothing to do: $installed is already $want (use --force to rebuild)."; exit 0
     fi
     [[ "$(tool_version matchbox)" == "$MATCHBOX_VERSION" ]] || { echo "MatchBox $MATCHBOX_VERSION is required (found: $(tool_version matchbox || true)). Run install.sh toolchains --yes first." >&2; exit 1; }
     cp -r "$root/src" "$work/src"; chmod -R u+rwX,go+rX "$work/src"
-    echo "Building bxcachy with MatchBox $MATCHBOX_VERSION"
-    if ! ( cd "$work" && PATH="$probe_path" matchbox --target native --output "$work/bxcachy" src/Main.bx ) > "$work/build.log" 2>&1; then
+    echo "Building bxrig with MatchBox $MATCHBOX_VERSION"
+    if ! ( cd "$work" && PATH="$probe_path" matchbox --target native --output "$work/bxrig" src/Main.bx ) > "$work/build.log" 2>&1; then
       echo "Build failed; the installed copy was not touched. Last lines of the build log:" >&2; tail -n 20 "$work/build.log" >&2; exit 1
     fi
-    candidate="$work/bxcachy"
+    candidate="$work/bxrig"
     [[ -f "$candidate" && -x "$candidate" ]] || { echo "Build produced no executable; the installed copy was not touched" >&2; tail -n 20 "$work/build.log" >&2; exit 1; }
     new_version="$(check_binary "$candidate")" || { echo "The built binary failed its self-check; the installed copy was not touched" >&2; exit 1; }
   fi
   mkdir -p "$BIN_DIR"
-  tmpdest="$(mktemp "$BIN_DIR/.bxcachy.XXXXXX")"
+  tmpdest="$(mktemp "$BIN_DIR/.bxrig.XXXXXX")"
   cp "$candidate" "$tmpdest"; chmod 755 "$tmpdest"; mv -f "$tmpdest" "$installed"
   final="$(check_binary "$installed")" || exit 1
   echo "Installed $installed ($final)"
@@ -476,7 +476,7 @@ fi
 if (( ! changed )); then echo "Nothing to do for packages, yay and Rust."; fi
 case ":$PATH:" in
   *":$BIN_DIR:"*) ;;
-  *) echo "Note: $BIN_DIR is not on your PATH. BxCachy does not edit shell startup files. Add it yourself:"
+  *) echo "Note: $BIN_DIR is not on your PATH. BxRig does not edit shell startup files. Add it yourself:"
      echo "  bash/zsh: export PATH=\"$BIN_DIR:\$PATH\""
      echo "  fish:     fish_add_path $BIN_DIR" ;;
 esac

@@ -1,0 +1,76 @@
+// The choices that shape the starter configs (the wizard's answers), with their defaults and checks. Pure.
+//   terminal   ghostty | kitty | alacritty | foot | konsole   Super+Enter
+//   layout     dwindle | master | scrolling | floating        default window layout
+//   workspaces 1 to 10                                        always-visible workspaces in the bar (default 4)
+//   naturalScroll true | false                                touchpad scrolling direction (default false, traditional)
+//   layouts    keyboard layouts, e.g. [ "us-intl", "es" ]     (default [ "us" ]); two or more switch with Alt+Shift
+//   theme      dark | light | auto                            Noctalia colour mode
+//   wallpaper  box | grid | aurora | minimal                  the starting wallpaper
+class StarterOptions {
+    function keyboards() {
+        return {
+            "us-intl": { layout: "us", variant: "intl", label: "English (US, international)" },
+            "us": { layout: "us", variant: "", label: "English (US)" },
+            "us-mac": { layout: "us", variant: "mac", label: "English (US, Macintosh: Option-key characters)" },
+            "es": { layout: "es", variant: "", label: "Spanish" },
+            "latam": { layout: "latam", variant: "", label: "Spanish (Latin America)" },
+            "de": { layout: "de", variant: "", label: "German" },
+            "fr": { layout: "fr", variant: "", label: "French" }
+        };
+    }
+    function themes() { return [ "dark", "light", "auto" ]; }
+    function wallpapers() { return { box: "box.jpg", grid: "grid.jpg", aurora: "aurora.jpg", minimal: "minimal.png" }; }
+
+    function defaults() {
+        return { terminal: "ghostty", layout: "dwindle", workspaces: 4, naturalScroll: false, layouts: [ "us" ], theme: "dark", wallpaper: "box" };
+    }
+
+    // Defaults overlaid with the given values (empty or missing keep the default). Returns { value, errors }.
+    function parse( given ) {
+        var v = defaults();
+        var errors = [];
+        var g = arguments.given;
+        var tc = new bxrig.TerminalConfig();
+        if ( structKeyExists( g, "terminal" ) && len( g.terminal ) ) { v.terminal = g.terminal; if ( !arrayFind( tc.ids(), v.terminal ) ) errors.append( "Unknown terminal: " & v.terminal & " (use " & tc.ids().toList( ", " ) & ")" ); }
+        if ( structKeyExists( g, "layout" ) && len( g.layout ) ) { v.layout = g.layout; if ( !arrayFind( [ "dwindle", "master", "scrolling", "floating" ], v.layout ) ) errors.append( "Unknown layout: " & v.layout & " (use dwindle, master, scrolling, floating)" ); }
+        if ( structKeyExists( g, "workspaces" ) && len( toString( g.workspaces ) ) ) {
+            if ( !isNumeric( g.workspaces ) ) errors.append( "workspaces must be a whole number from 1 to 10" );
+            else {
+                var n = g.workspaces + 0;
+                if ( n < 1 || n > 10 || int( n ) != n ) errors.append( "workspaces must be a whole number from 1 to 10" );
+                else v.workspaces = int( n );
+            }
+        }
+        if ( structKeyExists( g, "naturalScroll" ) ) v.naturalScroll = g.naturalScroll == true || toString( g.naturalScroll ) == "true";
+        if ( structKeyExists( g, "layouts" ) ) {
+            var list = isArray( g.layouts ) ? g.layouts : listToArray( toString( g.layouts ), "," );
+            if ( list.len() ) {
+                v.layouts = list;
+                for ( var k in list ) if ( !structKeyExists( keyboards(), k ) ) errors.append( "Unknown keyboard layout: " & k & " (use " & structKeyArray( keyboards() ).toList( ", " ) & ")" );
+            }
+        }
+        if ( structKeyExists( g, "theme" ) && len( g.theme ) ) { v.theme = g.theme; if ( !arrayFind( themes(), v.theme ) ) errors.append( "Unknown theme: " & v.theme & " (use dark, light, auto)" ); }
+        if ( structKeyExists( g, "wallpaper" ) && len( g.wallpaper ) ) { v.wallpaper = g.wallpaper; if ( !structKeyExists( wallpapers(), v.wallpaper ) ) errors.append( "Unknown wallpaper: " & v.wallpaper & " (use box, grid, aurora, minimal)" ); }
+        return { value: v, errors: errors };
+    }
+
+    // Hyprland's input values for a layout list: kb_layout "us,es", kb_variant "intl,", and Alt+Shift to switch when there are several.
+    function keyboardLua( layouts ) {
+        var codes = [];
+        var variants = [];
+        for ( var k in arguments.layouts ) { codes.append( keyboards()[ k ].layout ); variants.append( keyboards()[ k ].variant ); }
+        var hasVariant = false;
+        for ( var vv in variants ) if ( len( vv ) ) hasVariant = true;
+        var lines = [ 'kb_layout    = "' & codes.toList( "," ) & '",' ];
+        if ( hasVariant ) lines.append( 'kb_variant   = "' & variants.toList( "," ) & '",' );
+        if ( codes.len() > 1 ) lines.append( 'kb_options   = "grp:alt_shift_toggle",' );
+        return lines.toList( chr( 10 ) & "        " );
+    }
+
+    // N persistent workspace rules, so Noctalia's workspace indicator shows them even when empty.
+    function workspacesLua( n ) {
+        var lines = [ "-- " & arguments.n & " workspace" & ( arguments.n == 1 ? "" : "s" ) & " always exist, so Noctalia's workspace indicator shows them even when empty" ];
+        for ( var i = 1; i <= arguments.n; i++ ) lines.append( 'hl.workspace_rule({ workspace = "' & i & '", persistent = true })' );
+        return lines.toList( chr( 10 ) );
+    }
+}

@@ -1,0 +1,80 @@
+// `bxrig clipboard`: clipboard history on Wayland, with cliphist and wl-clipboard.
+//   pick            shows the history with your menu provider (`runner menu-set`), copies the chosen entry back to the clipboard
+//   clear [--yes]   wipes the history (`cliphist wipe`; plan without --yes)
+//   status          whether cliphist and wl-clipboard are installed and how many entries there are
+// The history is filled by the Hyprland module: `wl-paste --type text --watch cliphist store` runs at login (written by `keys apply`).
+// Text entries only: image entries are listed by cliphist but are not offered here. Exit: 0 done or cancelled, 2 plan without --yes,
+// 4 precondition (a tool is missing, no menu program), 6 a command failed.
+class Clipboard {
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.inst = new bxrig.Installer( arguments.runner );
+        return this;
+    }
+
+    function say( command, code, data, asJson, lines = [] ) {
+        if ( arguments.asJson ) println( variables.cli.envelope( arguments.command, arguments.code, arguments.data, false ) );
+        else for ( var l in arguments.lines ) println( l );
+        return arguments.code;
+    }
+
+    function tryExec( argv, timeout = 30 ) {
+        try { return variables.inst.exec( arguments.argv, arguments.timeout ); } catch ( any e ) { return { exitCode: 127, output: e.message }; }
+    }
+
+    function has( name ) { return tryExec( [ "sh", "-c", 'command -v "$1"', "_", arguments.name ], 10 ).exitCode == 0; }
+
+    function entries() {
+        var r = tryExec( [ "cliphist", "list" ], 30 );
+        if ( r.exitCode != 0 ) return [];
+        return listToArray( r.output, chr( 10 ) ).filter( function( l ) { return len( trim( l ) ) > 0 && find( "binary data", l ) == 0; } );
+    }
+
+    function missing( cmd, asJson ) {
+        var lacking = [];
+        for ( var t in [ "cliphist", "wl-copy" ] ) if ( !has( t ) ) lacking.append( t == "wl-copy" ? "wl-clipboard" : t );
+        if ( !lacking.len() ) return 0;
+        return say( arguments.cmd, 4, { error: "missing " & lacking.toList( ", " ) }, arguments.asJson, [ "error: missing " & lacking.toList( ", " ) & ". Install: bxrig install " & lacking.toList( " " ) ] );
+    }
+
+    // `clipboard pick`
+    function pick( asJson ) {
+        var cmd = "clipboard pick";
+        var m = missing( cmd, arguments.asJson );
+        if ( m != 0 ) return m;
+        var all = entries();
+        if ( !all.len() ) return say( cmd, 0, { copied: false }, arguments.asJson, [ "The clipboard history is empty." ] );
+        try {
+            var runner = new bxrig.Runner( variables.cli, variables.inst.runner() );
+            // each line is "ID<TAB>text"; the menu shows the text only
+            var labels = all.map( function( l ) { var t = find( chr( 9 ), l ); return t > 0 ? left( mid( l, t + 1, len( l ) ), 100 ) : l; } );
+            var chosen = runner.select( "Clipboard", labels );
+        } catch ( any err ) {
+            return say( cmd, 4, { error: err.message }, arguments.asJson, [ "error: " & err.message ] );
+        }
+        if ( chosen == 0 ) return say( cmd, 0, { copied: false }, arguments.asJson, [ "Cancelled." ] );
+        var dec = systemExecute( "cliphist", [ "decode" ], 30, true, ".", "", "", true, {}, false, all[ chosen ] );
+        if ( dec.exitCode != 0 ) return say( cmd, 6, { error: "cliphist decode failed" }, arguments.asJson, [ "error: cliphist decode failed" ] );
+        var cp = systemExecute( "wl-copy", [], 30, true, ".", "", "", true, {}, false, dec.output );
+        if ( cp.exitCode != 0 ) return say( cmd, 6, { error: "wl-copy failed" }, arguments.asJson, [ "error: wl-copy failed" ] );
+        return say( cmd, 0, { copied: true }, arguments.asJson, [ "Copied." ] );
+    }
+
+    // `clipboard clear [--yes]`
+    function clear( yes, asJson ) {
+        var cmd = "clipboard clear";
+        if ( !has( "cliphist" ) ) return say( cmd, 4, { error: "cliphist is not installed" }, arguments.asJson, [ "error: cliphist is not installed. Install: bxrig install cliphist" ] );
+        if ( !arguments.yes ) return say( cmd, 2, {}, arguments.asJson, [ "Plan: wipe the whole clipboard history (cliphist wipe).", "Nothing was changed. Add --yes to apply." ] );
+        var r = tryExec( [ "cliphist", "wipe" ], 30 );
+        if ( r.exitCode != 0 ) return say( cmd, 6, { error: trim( r.output ) }, arguments.asJson, [ "error: " & trim( r.output ) ] );
+        return say( cmd, 0, {}, arguments.asJson, [ "The clipboard history was wiped." ] );
+    }
+
+    // `clipboard status`
+    function status( asJson ) {
+        var ch = has( "cliphist" );
+        var wl = has( "wl-copy" );
+        var n = ch ? entries().len() : 0;
+        return say( "clipboard status", 0, { cliphist: ch, wl_clipboard: wl, entries: n }, arguments.asJson, [ "cliphist: " & ( ch ? "installed" : "not installed" ), "wl-clipboard: " & ( wl ? "installed" : "not installed" ), "Entries: " & n ] );
+    }
+}

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# `bxcachy web add|list|rm` and `bxcachy vpn nordvpn setup` with fake browsers, xdg-settings, sudo and systemctl. Usage: web-vpn-test.sh BINARY
+# `bxrig web add|list|rm` and `bxrig vpn nordvpn setup` with fake browsers, xdg-settings, sudo and systemctl. Usage: web-vpn-test.sh BINARY
 set -euo pipefail
 binary="$(realpath "${1:?native executable required}")"
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
@@ -10,9 +10,9 @@ printf '#!/usr/bin/env bash\necho "${DEFAULT_BROWSER:-firefox.desktop}"\n' > "$t
 printf '#!/usr/bin/env bash\necho "sudo $*" >> "$LOG"\n' > "$tmp/bin/sudo"
 printf '#!/usr/bin/env bash\n' > "$tmp/bin/nordvpn"
 chmod +x "$tmp/bin"/*
-run() { env HOME="$tmp/home" USER=ada XDG_DATA_HOME="$tmp/data" BXCACHY_CONFIG_HOME="$tmp/cfg" BXCACHY_STATE_HOME="$tmp/state" DEFAULT_BROWSER="${DEFAULT_BROWSER:-firefox.desktop}" LOG="$LOG" PATH="$tmp/bin:$PATH" "$@"; }
+run() { env HOME="$tmp/home" USER=ada XDG_DATA_HOME="$tmp/data" BXRIG_CONFIG_HOME="$tmp/cfg" BXRIG_STATE_HOME="$tmp/state" DEFAULT_BROWSER="${DEFAULT_BROWSER:-firefox.desktop}" LOG="$LOG" PATH="$tmp/bin:$PATH" "$@"; }
 code() { set +e; run "$@" >/dev/null 2>&1; local c=$?; set -e; echo "$c"; }
-f="$tmp/data/applications/bxcachy-web-notion.desktop"
+f="$tmp/data/applications/bxrig-web-notion.desktop"
 
 # validation and plan
 [[ "$(code "$binary" web add 'no way' https://notion.so --yes)" == 4 ]] || fail 'a bad name exits 4'
@@ -39,10 +39,10 @@ grep -q '# mine' "$f" || fail 'the changed entry was overwritten'
 
 # web add with no arguments asks on the terminal (a file plays the three answers: name, URL, browser)
 printf 'Docs\nhttps://docs.example.com\nbrave\n' > "$tmp/answers"
-BXCACHY_TTY_IN="$tmp/answers" run "$binary" web add --json | jq -e '.data.name == "Docs" and .data.url == "https://docs.example.com" and .data.browser == "brave"' >/dev/null || fail "interactive web add: $(BXCACHY_TTY_IN="$tmp/answers" run "$binary" web add --json 2>&1)"
-grep -q '^Exec=brave --app=https://docs.example.com$' "$tmp/data/applications/bxcachy-web-Docs.desktop" || fail 'interactive entry'
+BXRIG_TTY_IN="$tmp/answers" run "$binary" web add --json | jq -e '.data.name == "Docs" and .data.url == "https://docs.example.com" and .data.browser == "brave"' >/dev/null || fail "interactive web add: $(BXRIG_TTY_IN="$tmp/answers" run "$binary" web add --json 2>&1)"
+grep -q '^Exec=brave --app=https://docs.example.com$' "$tmp/data/applications/bxrig-web-Docs.desktop" || fail 'interactive entry'
 run "$binary" web rm Docs --yes >/dev/null
-printf '\n\n\n' > "$tmp/answers"; set +e; BXCACHY_TTY_IN="$tmp/answers" run "$binary" web add >/dev/null 2>&1; rc=$?; set -e; [[ "$rc" == 4 ]] || fail 'empty answers exit 4'
+printf '\n\n\n' > "$tmp/answers"; set +e; BXRIG_TTY_IN="$tmp/answers" run "$binary" web add >/dev/null 2>&1; rc=$?; set -e; [[ "$rc" == 4 ]] || fail 'empty answers exit 4'
 
 # rm
 [[ "$(code "$binary" web rm notion)" == 2 ]] || fail 'rm without --yes exits 2'
@@ -63,6 +63,6 @@ rm "$tmp/bin/nordvpn"; [[ "$(code "$binary" vpn nordvpn setup --yes)" == 4 ]] ||
 [[ "$(code "$binary" web install apple)" == 2 ]] || fail 'bundle without --yes exits 2'
 run "$binary" web install microsoft --dry-run --json | jq -e '(.data.apps | index("word") != null) and (.data.apps | index("outlook") != null)' >/dev/null || fail 'microsoft bundle dry run'
 run "$binary" web install google --yes | grep -q 'Added' || fail 'google bundle'
-n="$(ls "$tmp/home/.local/share/applications" 2>/dev/null | grep -c 'bxcachy-google-\|bxcachy-gmail\|bxcachy-maps')"; [[ "$n" -ge 7 ]] || fail "google bundle wrote $n launcher entries"
+n="$(ls "$tmp/home/.local/share/applications" 2>/dev/null | grep -c 'bxrig-google-\|bxrig-gmail\|bxrig-maps')"; [[ "$n" -ge 7 ]] || fail "google bundle wrote $n launcher entries"
 [[ "$(code "$binary" web install nope --yes)" == 4 ]] || fail 'unknown bundle exits 4'
 echo "web-vpn-test: ok"

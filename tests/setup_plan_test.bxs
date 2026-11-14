@@ -1,7 +1,7 @@
 // SetupPlan: facts and request to steps. Run from src/: (cd src && matchbox ../tests/setup_plan_test.bxs)
 failures = 0;
 function check( label, ok ) { if ( ok ) println( "ok   " & label ); else { println( "FAIL " & label ); failures++; } }
-plan = new bxcachy.SetupPlan();
+plan = new bxrig.SetupPlan();
 function facts( over = {} ) {
  f = { isRoot: false, hasSudo: true, kwinVersion: "6.6.2", desktop: "KDE", sessionType: "wayland", installed: { git: true, "python-dbus": true, "python-gobject": true, "qt6-tools": true }, hyprkwinInstalled: false, workDir: "/tmp/hk", os: "cachyos", arch: "x86_64", hasPacman: true, hyprlandAdded: [] };
  for ( k in over ) f[k] = over[k];
@@ -82,7 +82,7 @@ function xfacts( over = {} ) {
 }
 x = plan.xremap( xfacts(), {} );
 check( "xremap on Hyprland: package, udev, group, config, service", ids( x ) == "package,udev,group,config,service" && x.steps[1].commands[1][5] == "xremap-hypr-bin" );
-check( "xremap udev step writes one rule line and reloads udev", x.steps[2].commands.len() == 3 && find( 'KERNEL=="uinput"', x.steps[2].commands[1][4] ) > 0 && x.steps[2].commands[1][4] contains "99-bxcachy-input.rules" );
+check( "xremap udev step writes one rule line and reloads udev", x.steps[2].commands.len() == 3 && find( 'KERNEL=="uinput"', x.steps[2].commands[1][4] ) > 0 && x.steps[2].commands[1][4] contains "99-bxrig-input.rules" );
 check( "xremap remembers what it added", x.added.package == "xremap-hypr-bin" && x.added.group && x.added.udev );
 x = plan.xremap( xfacts( { desktop: "KDE" } ), {} );
 check( "xremap on KDE uses the kde build", x.steps[1].commands[1][5] == "xremap-kde-bin" );

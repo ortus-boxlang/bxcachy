@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# `bxcachy skills` with a fake skills hub (curl) and fake agents. Usage: skills-test.sh BINARY
+# `bxrig skills` with a fake skills hub (curl) and fake agents. Usage: skills-test.sh BINARY
 set -euo pipefail
 binary="$(realpath "${1:?native executable required}")"
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
@@ -34,7 +34,7 @@ esac
 CURL
 for t in claude codex; do printf '#!/bin/sh\n' > "$tmp/bin/$t"; done
 chmod +x "$tmp/bin"/*
-run() { env HOME="$tmp/home" BXCACHY_CONFIG_HOME="$tmp/cfg" BXCACHY_SKILLS_URL=http://hub PATH="$tmp/bin:$PATH" LOG="$LOG" "$@"; }
+run() { env HOME="$tmp/home" BXRIG_CONFIG_HOME="$tmp/cfg" BXRIG_SKILLS_URL=http://hub PATH="$tmp/bin:$PATH" LOG="$LOG" "$@"; }
 code() { set +e; run "$@" >/dev/null 2>&1; local c=$?; set -e; echo "$c"; }
 
 # the hub: search and show
@@ -45,19 +45,19 @@ run "$binary" skills show ortus-boxlang/skills/boxlang-developer~language-fundam
 run "$binary" skills show ortus-boxlang/skills/boxlang-developer/language-fundamentals >/dev/null || fail 'the CATEGORY/NAME form is accepted'
 [[ "$(code "$binary" skills show nonsense)" == 4 ]] || fail 'a bad reference exits 4'
 
-# install: a plan first, then the five BxCachy skills, BoxLang and MatchBox
-[[ "$(code "$binary" skills install bxcachy)" == 2 ]] || fail 'install without --yes exits 2'
+# install: a plan first, then the five BxRig skills, BoxLang and MatchBox
+[[ "$(code "$binary" skills install bxrig)" == 2 ]] || fail 'install without --yes exits 2'
 [[ ! -d "$tmp/home/.agents" ]] || fail 'a plan wrote something'
-run "$binary" skills install bxcachy boxlang matchbox --yes | grep -q 'Installed skills' || fail 'install'
-for n in bxcachy bxcachy-ai bxcachy-apps bxcachy-desktop bxcachy-system bxcachy-install-update boxlang-language-fundamentals boxlang-runtime-matchbox; do [[ -f "$tmp/home/.agents/skills/$n/SKILL.md" ]] || fail "$n was not stored"; done
-head -2 "$tmp/home/.agents/skills/bxcachy/SKILL.md" | grep -q '^name: bxcachy$' || fail 'the embedded skill has its frontmatter'
-grep -q 'audit' "$tmp/cfg/bxcachy/skills.json" && jq -e '.skills.bxcachy.source == "embedded" and .skills["boxlang-runtime-matchbox"].source == "hub"' "$tmp/cfg/bxcachy/skills.json" >/dev/null || fail 'manifest'
+run "$binary" skills install bxrig boxlang matchbox --yes | grep -q 'Installed skills' || fail 'install'
+for n in bxrig bxrig-ai bxrig-apps bxrig-desktop bxrig-system bxrig-install-update boxlang-language-fundamentals boxlang-runtime-matchbox; do [[ -f "$tmp/home/.agents/skills/$n/SKILL.md" ]] || fail "$n was not stored"; done
+head -2 "$tmp/home/.agents/skills/bxrig/SKILL.md" | grep -q '^name: bxrig$' || fail 'the embedded skill has its frontmatter'
+grep -q 'audit' "$tmp/cfg/bxrig/skills.json" && jq -e '.skills.bxrig.source == "embedded" and .skills["boxlang-runtime-matchbox"].source == "hub"' "$tmp/cfg/bxrig/skills.json" >/dev/null || fail 'manifest'
 # linked into the agents that exist (claude and codex here), as symlinks to the store
-[[ -L "$tmp/home/.claude/skills/bxcachy" && -L "$tmp/home/.codex/skills/boxlang-runtime-matchbox" ]] || fail 'links into claude and codex'
+[[ -L "$tmp/home/.claude/skills/bxrig" && -L "$tmp/home/.codex/skills/boxlang-runtime-matchbox" ]] || fail 'links into claude and codex'
 [[ ! -e "$tmp/home/.gemini" && ! -e "$tmp/home/.config/opencode" ]] || fail 'agents that are not installed got nothing'
 # a folder of yours is never replaced
-rm "$tmp/home/.claude/skills/bxcachy-ai"; mkdir "$tmp/home/.claude/skills/bxcachy-ai"; echo mine > "$tmp/home/.claude/skills/bxcachy-ai/SKILL.md"
-run "$binary" skills link >/dev/null; grep -q '^mine$' "$tmp/home/.claude/skills/bxcachy-ai/SKILL.md" && [[ ! -L "$tmp/home/.claude/skills/bxcachy-ai" ]] || fail 'your own skill folder was replaced'
+rm "$tmp/home/.claude/skills/bxrig-ai"; mkdir "$tmp/home/.claude/skills/bxrig-ai"; echo mine > "$tmp/home/.claude/skills/bxrig-ai/SKILL.md"
+run "$binary" skills link >/dev/null; grep -q '^mine$' "$tmp/home/.claude/skills/bxrig-ai/SKILL.md" && [[ ! -L "$tmp/home/.claude/skills/bxrig-ai" ]] || fail 'your own skill folder was replaced'
 # a blocked or missing skill is refused and nothing of it is written
 [[ "$(code "$binary" skills install ortus-boxlang/skills/cat~blocked --yes)" == 5 ]] || fail 'a skill that failed its audit exits 5'
 { run "$binary" skills install ortus-boxlang/skills/cat~blocked --yes 2>&1 || true; } | grep -q 'security audit' || fail 'the audit message'
@@ -66,7 +66,7 @@ run "$binary" skills link >/dev/null; grep -q '^mine$' "$tmp/home/.claude/skills
 run "$binary" skills installed | grep -q 'boxlang-runtime-matchbox  (hub: ortus-boxlang/skills/boxlang-developer~runtime-matchbox)' || fail 'installed'
 run "$binary" skills status --json | jq -e '.data.skills == 8 and (.data.agents | map(select(.present)) | length) == 2' >/dev/null || fail 'status'
 : > "$LOG"; run "$binary" skills update --yes >/dev/null; grep -q 'api/install' "$LOG" || fail 'update fetches the hub skills again'
-[[ "$(code "$binary" skills remove bxcachy)" == 2 ]] || fail 'remove without --yes exits 2'
+[[ "$(code "$binary" skills remove bxrig)" == 2 ]] || fail 'remove without --yes exits 2'
 run "$binary" skills remove boxlang-runtime-matchbox --yes >/dev/null
 [[ ! -e "$tmp/home/.agents/skills/boxlang-runtime-matchbox" && ! -e "$tmp/home/.claude/skills/boxlang-runtime-matchbox" ]] || fail 'remove deletes the skill and its links'
 [[ "$(code "$binary" skills remove nope --yes)" == 4 ]] || fail 'removing an unknown skill exits 4'

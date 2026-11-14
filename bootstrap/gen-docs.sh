@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Builds the command reference from docs/reference/cli.json (the curated data: group, summary, usage, examples, notes):
 #   docs/reference/commands.md   the page on the docs site
-#   src/bxcachy/HelpData.bx      the same data inside the program, for `bxcachy help` and `bxcachy help COMMAND`
+#   src/bxrig/HelpData.bx      the same data inside the program, for `bxrig help` and `bxrig help COMMAND`
 # It also fails when a command in src/Main.bx has no entry (or an entry has no command), or an example names a command that does not exist.
 #   gen-docs.sh           rewrite both files
 #   gen-docs.sh --check   fail if they are out of date or the data and Main.bx disagree (CI)
@@ -29,22 +29,22 @@ for g in d['groups']:
             if u.split()[0]!=c['name']: problems.append('usage of %s starts with %s'%(c['name'],u.split()[0]))
         for e in c['examples']:
             w=e.split()
-            if w[0]!='bxcachy' or len(w)<2 or w[1] not in routes: problems.append('example of %s names no command: %s'%(c['name'],e))
+            if w[0]!='bxrig' or len(w)<2 or w[1] not in routes: problems.append('example of %s names no command: %s'%(c['name'],e))
         if not c['summary'].endswith('.'): problems.append('the summary of %s should end with a full stop'%c['name'])
         if '—' in json.dumps(c,ensure_ascii=False): problems.append('em dash in '+c['name'])
 if problems:
     sys.stderr.write('\n'.join(problems)+'\n'); sys.exit(1)
 
-def anchor(n): return 'bxcachy-'+n
-L=['---','title: Command reference','order: 1','summary: Every bxcachy command with its usage, examples and exit codes.','---','',
+def anchor(n): return 'bxrig-'+n
+L=['---','title: Command reference','order: 1','summary: Every bxrig command with its usage, examples and exit codes.','---','',
 '# Command reference','',
-'Every command is `bxcachy NAME ...`. This page is generated from `docs/reference/cli.json`; the same data answers `bxcachy help` and `bxcachy help NAME` in the terminal. The [command contract](../architecture/COMMAND-CONTRACT.md) has the details behind each one.','',
+'Every command is `bxrig NAME ...`. This page is generated from `docs/reference/cli.json`; the same data answers `bxrig help` and `bxrig help NAME` in the terminal. The [command contract](../architecture/COMMAND-CONTRACT.md) has the details behind each one.','',
 '## How commands behave','',
 '| Flag | What it does |','|---|---|',
 '| `--json` | Print one JSON object instead of text (see below). Every command takes it. |',
 '| `--yes` | Apply a change that installs packages or edits system files. Without it you get the plan and exit code 2. |',
 '| `--dry-run` | Print the plan or the exact commands and exit 0. Nothing is changed. |',
-'| `--force` | Where it exists: replace a file BxCachy would otherwise keep because you edited it. |','',
+'| `--force` | Where it exists: replace a file BxRig would otherwise keep because you edited it. |','',
 'Settings that only touch your own config (a theme, the bar, the font) act at once and need no `--yes`.','',
 '### Exit codes','',
 '| Code | Meaning |','|---|---|',
@@ -68,8 +68,8 @@ for g in d['groups']:
 for g in d['groups']:
     L+=['## '+g['title'],'',g['blurb'],'']
     for c in g['commands']:
-        L+=['### `bxcachy %s` {#%s}'%(c['name'],anchor(c['name'])),'',c['summary'],'']
-        L+=['```text']+['bxcachy '+u for u in c['usage']]+['```','']
+        L+=['### `bxrig %s` {#%s}'%(c['name'],anchor(c['name'])),'',c['summary'],'']
+        L+=['```text']+['bxrig '+u for u in c['usage']]+['```','']
         if c['mutates']: L+=['Changes the system: needs `--yes`. Without it you get the plan (exit 2); `--dry-run` shows it and exits 0.','']
         if c['examples']: L+=['```bash']+c['examples']+['```','']
         if c.get('note'): L+=['> '+c['note'],'']
@@ -82,9 +82,9 @@ PY
 if [[ "${1:-}" == --check ]]; then
   ok=1
   cmp -s "$tmpdir/commands.md" "$root/docs/reference/commands.md" || { echo "docs/reference/commands.md is out of date: run bootstrap/gen-docs.sh" >&2; ok=0; }
-  cmp -s "$tmpdir/HelpData.bx" "$root/src/bxcachy/HelpData.bx" || { echo "src/bxcachy/HelpData.bx is out of date: run bootstrap/gen-docs.sh" >&2; ok=0; }
+  cmp -s "$tmpdir/HelpData.bx" "$root/src/bxrig/HelpData.bx" || { echo "src/bxrig/HelpData.bx is out of date: run bootstrap/gen-docs.sh" >&2; ok=0; }
   [[ $ok == 1 ]] && echo "command reference is current" || exit 1
 else
-  cp "$tmpdir/commands.md" "$root/docs/reference/commands.md"; cp "$tmpdir/HelpData.bx" "$root/src/bxcachy/HelpData.bx"
-  echo "wrote docs/reference/commands.md and src/bxcachy/HelpData.bx"
+  cp "$tmpdir/commands.md" "$root/docs/reference/commands.md"; cp "$tmpdir/HelpData.bx" "$root/src/bxrig/HelpData.bx"
+  echo "wrote docs/reference/commands.md and src/bxrig/HelpData.bx"
 fi

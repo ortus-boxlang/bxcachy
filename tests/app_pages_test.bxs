@@ -1,8 +1,8 @@
 // AppPages: the customize pages generated from the catalog. Run from src/: (cd src && matchbox ../tests/app_pages_test.bxs)
 failures = 0;
 function check( label, ok ) { if ( ok ) println( "ok   " & label ); else { println( "FAIL " & label ); failures++; } }
-cat = new bxcachy.Catalog().load();
-ap = new bxcachy.AppPages();
+cat = new bxrig.Catalog().load();
+ap = new bxrig.AppPages();
 pg = ap.pages( cat );
 check( "one page per catalog group that has something to choose", pg.len() == 11 && pg[ 1 ].id == "apps-development" && pg[ pg.len() ].id == "apps-gaming" );
 check( "every page appears only for Customize", pg.filter( function( p ) { return p.when.id == "app_mode" && p.when.equals == "custom"; } ).len() == pg.len() );
@@ -16,7 +16,7 @@ check( "categories the wizard asks about itself are left out (shell, terminal, l
 check( "browsers are there", allIds.keyExists( "brave" ) && allIds.keyExists( "firefox" ) );
 check( "option descriptions carry the macOS equivalent", dev.questions.filter( function( q ) { return q.options.filter( function( o ) { return find( "macOS:", o.description ); } ).len(); } ).len() > 0 );
 check( "ids are stable", ap.questionId( "everyday", "Notes and writing" ) == "apps_everyday_notes_and_writing" );
-spec = ap.inject( jsonDeserialize( new bxcachy.WizardData().demoPages() ), cat );
+spec = ap.inject( jsonDeserialize( new bxrig.WizardData().demoPages() ), cat );
 idx = 0; for ( i = 1; i <= spec.pages.len(); i++ ) if ( spec.pages[ i ].id == "apps" ) idx = i;
 check( "the pages are inserted right after the Apps page", idx > 0 && spec.pages[ idx + 1 ].id == "apps-development" && spec.pages.len() == 13 + 11 );
 brow = spec.pages[ idx ].questions.filter( function( q ) { return q.id == "default_browser"; } )[ 1 ];

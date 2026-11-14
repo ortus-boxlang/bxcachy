@@ -1,0 +1,91 @@
+// `bxrig apps`: every installed application in one window, like Omarchy 4.5's app grid (Super+Alt+Space there; the same here).
+//   apps              shows the list with your menu provider (`runner menu-set`: type to filter, arrows to move, Esc closes) and starts the choice
+//   apps list [--json] the applications as data
+// The list is the desktop entries (*.desktop) of /usr/share/applications, ~/.local/share/applications and the Flatpak exports
+// (BXRIG_APPS_DIRS overrides, colon separated; a later folder wins for the same file name). Entries that are not applications, or are
+// hidden (NoDisplay, Hidden), are left out. An entry starts with its Exec line, field codes (%U and friends) removed, detached from this
+// program. Exit: 0 done or cancelled, 4 precondition (no menu program, nothing to show).
+class Apps {
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.inst = new bxrig.Installer( arguments.runner );
+        return this;
+    }
+
+    function say( command, code, data, asJson, lines = [] ) {
+        if ( arguments.asJson ) println( variables.cli.envelope( arguments.command, arguments.code, arguments.data, false ) );
+        else for ( var l in arguments.lines ) println( l );
+        return arguments.code;
+    }
+
+    function dirs() {
+        var home = getSystemSetting( "HOME", "" );
+        return listToArray( getSystemSetting( "BXRIG_APPS_DIRS", "/usr/share/applications:" & home & "/.local/share/applications:/var/lib/flatpak/exports/share/applications" ), ":" );
+    }
+
+    // Reads the [Desktop Entry] group of one file: { name, exec, icon, type, hidden }.
+    function parse( file ) {
+        var e = { name: "", exec: "", icon: "", type: "", hidden: false };
+        var inEntry = false;
+        for ( var raw in listToArray( fileRead( arguments.file ), chr( 10 ), true ) ) {
+            var line = trim( raw );
+            if ( left( line, 1 ) == "[" ) { inEntry = line == "[Desktop Entry]"; continue; }
+            if ( !inEntry || !find( "=", line ) ) continue;
+            var at = find( "=", line );
+            var key = left( line, at - 1 );
+            var val = mid( line, at + 1, len( line ) );
+            if ( key == "Name" && !len( e.name ) ) e.name = val;
+            else if ( key == "Exec" && !len( e.exec ) ) e.exec = val;
+            else if ( key == "Icon" && !len( e.icon ) ) e.icon = val;
+            else if ( key == "Type" ) e.type = val;
+            else if ( ( key == "NoDisplay" || key == "Hidden" ) && lcase( val ) == "true" ) e.hidden = true;
+        }
+        return e;
+    }
+
+    // The Exec line without field codes (%f %F %u %U %i %c %k ...); %% is a literal percent sign.
+    function cleanExec( exec ) {
+        var t = replace( arguments.exec, "%%", chr( 1 ), "all" );
+        t = reReplace( t, "%[a-zA-Z]", "", "all" );
+        return trim( replace( reReplace( t, " +", " ", "all" ), chr( 1 ), "%", "all" ) );
+    }
+
+    // [ { id, name, exec, icon } ] sorted by name.
+    function all() {
+        var byId = {};
+        for ( var d in dirs() ) {
+            if ( !directoryExists( d ) ) continue;
+            for ( var f in directoryList( d, false, "name" ) ) {
+                if ( right( f, 8 ) != ".desktop" ) continue;
+                var e = parse( d & "/" & f );
+                if ( e.hidden || e.type != "Application" || !len( e.name ) || !len( e.exec ) ) { structDelete( byId, f ); continue; }
+                byId[ f ] = { id: f, name: e.name, exec: cleanExec( e.exec ), icon: e.icon };
+            }
+        }
+        var rows = [];
+        for ( var k in structKeyArray( byId ) ) rows.append( byId[ k ] );
+        return rows.sort( function( a, b ) { return compareNoCase( a.name, b.name ); } );
+    }
+
+    function list( asJson ) {
+        var rows = all();
+        return say( "apps list", 0, { apps: rows }, arguments.asJson, rows.map( function( r ) { return r.name & "  (" & r.id & ")"; } ) );
+    }
+
+    // `apps`
+    function grid() {
+        var rows = all();
+        if ( !rows.len() ) { println( "error: no applications were found" ); return 4; }
+        var pick = 0;
+        try {
+            var runner = new bxrig.Runner( variables.cli, variables.inst.runner() );
+            pick = runner.select( "Apps", rows.map( function( r ) { return len( r.icon ) ? { label: r.name, icon: r.icon } : r.name; } ) );
+        } catch ( any err ) {
+            println( "error: " & err.message );
+            return 4;
+        }
+        if ( pick == 0 ) return 0;
+        variables.inst.exec( [ "sh", "-c", 'setsid sh -c "$1" >/dev/null 2>&1 &', "_", rows[ pick ].exec ], 10 );
+        return 0;
+    }
+}

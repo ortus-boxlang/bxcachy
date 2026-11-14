@@ -3,13 +3,13 @@
 failures = 0;
 function check( label, ok ) { if ( ok ) println( "ok   " & label ); else { println( "FAIL " & label ); failures++; } }
 tui = createObject( "rust", "tui.TUI" );
-view = new bxcachy.WizardView( tui );
-app = new bxcachy.WizardApp( jsonDeserialize( new bxcachy.WizardData().demoPages() ) );
+view = new bxrig.WizardView( tui );
+app = new bxrig.WizardApp( jsonDeserialize( new bxrig.WizardData().demoPages() ) );
 function shot( w = 120, h = 36, tick = 100 ) { view.paint( app, tick, w, h ); return tui.render_to_string( w, h ); }
 
 s = shot();
 check( "welcome: powered by BoxLang and the address", find( "Powered by BoxLang", s ) > 0 && find( "www.boxlang.io", s ) > 0 );
-check( "welcome: wordmark art, tagline and prompt", find( "███", s ) > 0 && find( "set up in minutes", s ) > 0 && find( "press  enter  to begin", s ) > 0 );
+check( "welcome: wordmark art, tagline and prompt", find( "███", s ) > 0 && find( "Beautiful by default", s ) > 0 && find( "press  enter  to begin", s ) > 0 );
 
 app.onKey( "Enter" );
 s = shot();
@@ -26,7 +26,7 @@ check( "selecting moves the marker", find( "●  Both: Hyprland + Noctalia", s )
 check( "a click on a sidebar row is a page action only once reached", view.hitAt( 6, 5 ).kind == "page" && view.hitAt( 6, 5 ).n == 1 );
 shot( 120, 36 );
 lines = listToArray( tui.render_to_string( 120, 36 ), chr( 10 ), true );
-optY = 0; for ( i = 1; i <= lines.len(); i++ ) if ( find( "KDE Plasma with BxCachy tiling only", lines[ i ] ) ) { optY = i - 1; break; }
+optY = 0; for ( i = 1; i <= lines.len(); i++ ) if ( find( "KDE Plasma with BxRig tiling only", lines[ i ] ) ) { optY = i - 1; break; }
 check( "a click on an option is a focus action", optY > 0 && view.hitAt( 40, optY ).kind == "focus" );
 check( "a click on nothing does nothing", view.hitAt( 0, 0 ).kind == "" );
 
@@ -49,16 +49,16 @@ check( "review: Powered by BoxLang in the sidebar", find( "Powered by BoxLang", 
 small = shot( 60, 20 );
 check( "a window that is too small asks for a bigger one", find( "Make the window a little bigger", small ) > 0 );
 
-app = new bxcachy.WizardApp( jsonDeserialize( new bxcachy.WizardData().demoPages() ) );
+app = new bxrig.WizardApp( jsonDeserialize( new bxrig.WizardData().demoPages() ) );
 a1 = shot( 120, 36, 100 ); app.onKey( "Enter" ); b1 = shot( 120, 36, 100 );
 check( "a new screen fades in (first frame is dimmer, same text)", find( "Desktop", b1 ) > 0 );
 
 // ---- the Customize pages: hidden in Basic mode, shown (and counted) in Customize mode ----
-spec2 = new bxcachy.AppPages().inject( jsonDeserialize( new bxcachy.WizardData().demoPages() ), new bxcachy.Catalog().load() );
-app = new bxcachy.WizardApp( spec2 ); app.onKey( "Enter" );
+spec2 = new bxrig.AppPages().inject( jsonDeserialize( new bxrig.WizardData().demoPages() ), new bxrig.Catalog().load() );
+app = new bxrig.WizardApp( spec2 ); app.onKey( "Enter" );
 t = ""; view.paint( app, 100, 120, 36 ); t = tui.render_to_string( 120, 36 );
 check( "Basic mode: 13 pages and the review, no app group pages in the sidebar", find( "step 1 of 14", t ) > 0 && find( "Everyday", t ) == 0 );
-app = new bxcachy.WizardApp( spec2, { app_mode: "custom" } ); app.onKey( "Enter" );
+app = new bxrig.WizardApp( spec2, { app_mode: "custom" } ); app.onKey( "Enter" );
 view.paint( app, 100, 120, 36 ); t = tui.render_to_string( 120, 36 );
 check( "Customize mode: 24 pages and the review, with the group pages in the sidebar", find( "step 1 of 25", t ) > 0 && find( "Everyday", t ) > 0 && find( "Development", t ) > 0 );
 app.gotoPage( 11 );
@@ -66,7 +66,7 @@ view.paint( app, 100, 120, 36 ); t = tui.render_to_string( 120, 36 );
 check( "a generated page lists a category with ticked defaults and descriptions", find( "Development", t ) > 0 && find( "◆", t ) > 0 && find( "◇", t ) > 0 && find( "▸", t ) > 0 );
 
 // ---- a long help text wraps under its question (it used to run past the panel edge) ----
-app = new bxcachy.WizardApp( spec2 ); app.onKey( "Enter" ); for ( i = 1; i <= 10; i++ ) app.onKey( "Tab" );
+app = new bxrig.WizardApp( spec2 ); app.onKey( "Enter" ); for ( i = 1; i <= 10; i++ ) app.onKey( "Tab" );
 view.paint( app, 100, 100, 44 ); t = tui.render_to_string( 100, 44 );
 check( "the API keys help wraps: its last words are on screen at 100 columns", find( "Stored in your desktop keyring", t ) > 0 && find( "shell history", t ) > 0 );
 

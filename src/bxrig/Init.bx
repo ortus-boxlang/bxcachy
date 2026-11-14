@@ -1,0 +1,172 @@
+// `bxrig init`: the wizard (or an answers file) in, ordinary commands out. The saved answers live in
+// ~/.config/bxrig/answers.json (mode 600, written atomically); a re-run starts from them.
+//
+// Exit codes: 0 done, 2 plan printed without --yes, 4 precondition (bad answers file, no terminal), 130 wizard cancelled,
+// 7 some steps done and some failed, otherwise the exit code of the first failed step when nothing was done.
+class Init {
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.inst = new bxrig.Installer( arguments.runner );
+        variables.config = new bxrig.ConfigService();
+        return this;
+    }
+
+    function answersFile() { return variables.config.cfgHome() & "/bxrig/answers.json"; }
+
+    // The saved answers ({} when there are none or the file is unreadable).
+    function loadSaved() {
+        if ( !fileExists( answersFile() ) ) return {};
+        try { return jsonDeserialize( fileRead( answersFile() ) ); } catch ( any e ) { return {}; }
+    }
+
+    function save( answers ) {
+        variables.config.writeAtomic( answersFile(), jsonSerialize( arguments.answers ) & chr( 10 ), "600" );
+    }
+
+    // `init --export=FILE`: a copy of your saved answers (mode 600), to take to another machine: there, `init --from=FILE` fills the wizard with
+    // them, or `init --answers=FILE --yes` runs them without asking. The answers hold no secrets (API keys are never in them).
+    function exportAnswers( file, force, asJson ) {
+        var saved = loadSaved();
+        if ( structIsEmpty( saved ) ) {
+            if ( arguments.asJson ) println( variables.cli.envelope( "init --export", 4, { error: "No saved answers" } ) );
+            else println( "error: there are no saved answers yet. Run the wizard first: bxrig init" );
+            return 4;
+        }
+        if ( fileExists( arguments.file ) && !arguments.force ) {
+            if ( arguments.asJson ) println( variables.cli.envelope( "init --export", 4, { error: arguments.file & " exists" } ) );
+            else println( "error: " & arguments.file & " already exists (use --force to replace it)" );
+            return 4;
+        }
+        variables.config.writeAtomic( arguments.file, jsonSerialize( saved ) & chr( 10 ), "600" );
+        if ( arguments.asJson ) println( variables.cli.envelope( "init --export", 0, { file: arguments.file } ) );
+        else println( "Your answers were copied to " & arguments.file & ". On the other machine: bxrig init --from=" & arguments.file );
+        return 0;
+    }
+
+    // `init --print-answers`
+    function printAnswers( asJson, fromSystem = false ) {
+        var saved = loadSaved();
+        if ( arguments.fromSystem ) {
+            // what this machine has, in the wizard's answers (merged over your saved ones): a starting point for a script or another machine
+            var sys = new bxrig.SystemState();
+            saved = sys.merge( saved, sys.scan( wizardSpec() ).answers, "tune" );
+        }
+        if ( arguments.asJson ) println( variables.cli.envelope( "init --print-answers", 0, { answers: saved, file: answersFile() } ) );
+        else println( jsonSerialize( saved ) );
+        return 0;
+    }
+
+    // Catalog app id -> its shells (only for apps that name some), so Customize never installs a Hyprland-only app on Plasma.
+    function shellMap() {
+        var out = {};
+        for ( var a in new bxrig.Catalog().load().apps ) if ( structKeyExists( a, "shells" ) && a.shells.len() ) out[ a.id ] = a.shells;
+        return out;
+    }
+
+    // The wizard's pages: the built-in ones plus the Customize pages generated from the catalog.
+    function wizardSpec() {
+        return new bxrig.AppPages().inject( jsonDeserialize( new bxrig.WizardData().demoPages() ), new bxrig.Catalog().load() );
+    }
+
+    // The apps named by the plan's `apps` install step, split into { new, installed } by what pacman already has.
+    function appsSplit( plan ) {
+        var out = { new: [], installed: [] };
+        var state = "";
+        for ( var st in arguments.plan.steps ) {
+            if ( st.id != "apps" ) continue;
+            if ( !isStruct( state ) ) state = new bxrig.SystemState();
+            for ( var i = 3; i <= st.argv.len(); i++ ) {
+                var id = st.argv[ i ];
+                if ( left( id, 2 ) == "--" ) continue;
+                if ( state.appInstalled( id ) ) out.installed.append( id ); else out.new.append( id );
+            }
+        }
+        return out;
+    }
+
+    // This program, to run the plan's own commands: BXRIG_SELF (tests, odd installs), else `bxrig` on PATH.
+    function selfPath() { return getSystemSetting( "BXRIG_SELF", "bxrig" ); }
+
+    // The command line for a step: our own path, --yes on our own commands.
+    function commandFor( step ) {
+        var argv = [];
+        for ( var part in arguments.step.argv ) argv.append( part );
+        if ( argv[ 1 ] == "bxrig" ) { argv[ 1 ] = selfPath(); argv.append( "--yes" ); }
+        return argv;
+    }
+
+    // Runs the plan for these answers. yes/dryRun as every mutating command: no --yes prints it (exit 2), --dry-run exits 0.
+    function run( answers, yes, dryRun, asJson ) {
+        var plan = new bxrig.InitPlan().plan( arguments.answers, shellMap() );
+        var data = { steps: plan.steps, pending: plan.pending, errors: plan.errors, done: [], failed: [], skipped: [] };
+        // what the install step would add and what is already there (left alone)
+        data.apps = appsSplit( plan );
+        if ( plan.errors.len() ) {
+            if ( arguments.asJson ) println( variables.cli.envelope( "init", 4, data ) );
+            else for ( var e in plan.errors ) println( "error: " & e );
+            return 4;
+        }
+        if ( !arguments.yes || arguments.dryRun ) {
+            var code = arguments.dryRun ? 0 : 2;
+            if ( arguments.asJson ) { println( variables.cli.envelope( "init", code, data, arguments.dryRun ) ); return code; }
+            println( ( arguments.dryRun ? "Dry run" : "Plan" ) & ": init, " & plan.steps.len() & " steps" );
+            for ( var s in plan.steps ) println( "  " & s.id & ": " & s.title & "   (" & commandFor( s ).toList( " " ) & ")" );
+            if ( data.apps.new.len() || data.apps.installed.len() ) println( "  apps: " & data.apps.new.len() & " to install" & ( data.apps.new.len() ? " (" & data.apps.new.toList( ", " ) & ")" : "" ) & ", " & data.apps.installed.len() & " already installed and left alone" & ( data.apps.installed.len() ? " (" & data.apps.installed.toList( ", " ) & ")" : "" ) );
+            if ( plan.pending.len() ) println( "  not applied yet (saved, no command for them): " & plan.pending.toList( ", " ) );
+            println( arguments.dryRun ? "Nothing was changed." : "Nothing was changed. Add --yes to apply." );
+            return code;
+        }
+        var stopped = false;
+        var firstCode = 0;
+        for ( var step in plan.steps ) {
+            if ( stopped ) { data.skipped.append( { id: step.id, reason: "an earlier step failed" } ); continue; }
+            var argv = commandFor( step );
+            if ( !arguments.asJson ) println( "==> " & step.title );
+            var r = variables.inst.exec( argv, 3600 );
+            if ( !arguments.asJson && len( r.output ) ) print( r.output );
+            if ( ( r.timeout || r.exitCode != 0 ) && ( step.optional ?: false ) ) {
+                // an optional step (typing a key) that could not run is reported, and the plan goes on
+                data.skipped.append( { id: step.id, reason: "could not run (exit " & ( r.timeout ? 124 : r.exitCode ) & "); do it later: " & commandFor( step ).toList( " " ) } );
+            } else if ( r.timeout || r.exitCode != 0 ) {
+                data.failed.append( { id: step.id, exit: r.timeout ? 124 : r.exitCode } );
+                firstCode = r.timeout ? 124 : r.exitCode;
+                stopped = true;
+            } else data.done.append( { id: step.id } );
+        }
+        var exit = !data.failed.len() ? 0 : ( data.done.len() ? 7 : firstCode );
+        if ( arguments.asJson ) { println( variables.cli.envelope( "init", exit, data ) ); return exit; }
+        for ( var d in data.done ) println( "Done: " & d.id );
+        for ( var f in data.failed ) println( "Failed: " & f.id & " (exit " & f.exit & ")" );
+        for ( var k in data.skipped ) println( "Skipped: " & k.id & " (" & k.reason & ")" );
+        if ( plan.pending.len() ) println( "Saved but not applied yet: " & plan.pending.toList( ", " ) );
+        return exit;
+    }
+
+    // The wizard, then the plan. The review screen is the confirmation, so the steps run without a second prompt
+    // (unless --dry-run). Needs a terminal.
+    function wizard( dryRun, asJson, from = "", mode = "tune" ) {
+        var spec = wizardSpec();
+        var result = "";
+        try {
+            // where the answers start: your saved ones, or a file you name (answers exported from another machine)
+            var base = loadSaved();
+            if ( len( arguments.from ) ) {
+                try { base = jsonDeserialize( fileRead( arguments.from ) ); } catch ( any e2 ) { println( "bxrig init: cannot read " & arguments.from & ": " & e2.message ); return 4; }
+            }
+            // tune (default): those answers plus what this machine already has, installed options marked; rerun: those answers only;
+            // fresh: the defaults. Nothing the machine has is ever removed.
+            var sys = new bxrig.SystemState();
+            var found = sys.scan( spec );
+            if ( arguments.mode == "tune" ) sys.annotate( spec, found.installed );
+            var start = sys.merge( base, found.answers, arguments.mode );
+            result = new bxrig.Wizard( spec, start ).run();
+        } catch ( any e ) {
+            println( "bxrig init needs a terminal (" & e.message & "). Use --answers FILE to run without one." );
+            return 4;
+        }
+        if ( result.outcome != "done" ) return 130;
+        save( result.answers );
+        println( "Saved your answers to " & answersFile() );
+        return run( result.answers, true, arguments.dryRun, arguments.asJson );
+    }
+}

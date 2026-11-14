@@ -1,0 +1,84 @@
+// `bxrig backup send` and `backup export`: move a backup somewhere else.
+//   backup send ID --to=TARGET [--from=TARGET] [--yes]     copy a data snapshot to a second repository (restic copy): a NAS and a cloud bucket, say (3-2-1)
+//   backup send all --to=TARGET [--from=TARGET] [--yes]     copy every snapshot
+//   backup export data ID --to=FILE.tar|FILE.zip [--path=/ABSOLUTE/PATH] [--target=NAME] [--yes]   one snapshot, or one folder of it, as an archive
+//   backup export config ID --to=FILE.tar.gz [--yes]        a config snapshot as one file (to carry to another machine)
+// Config snapshots also travel inside the data backups: ~/.local/share/bxrig/backups/config is in the default include list.
+// Two repositories that need different values for the same cloud variable (two S3 accounts) cannot be copied between with one command,
+// because restic reads one set of AWS_* variables; the plan says so (exit 4) and `rclone sync` between the two remotes does it instead.
+// Exit: 0 ok, 2 bad usage or a plan without --yes, 4 precondition, 6 a command failed.
+class BackupMove {
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.data = new bxrig.BackupData( arguments.cli, arguments.runner );
+        variables.config = new bxrig.BackupConfig( arguments.cli, arguments.runner );
+        return this;
+    }
+
+    function say( code, d, asJson, lines = [], dry = false ) { return variables.data.say( arguments.code, arguments.d, arguments.asJson, arguments.lines, arguments.dry ); }
+    function fail( code, msg, asJson ) { return variables.data.fail( arguments.code, arguments.msg, arguments.asJson ); }
+    function validSnap( x ) { return reFind( "^[a-f0-9]{4,64}$|^latest$|^all$", arguments.x ) > 0; }
+
+    function sendCmd( args, opts, yes, dry, asJson ) {
+        if ( arguments.args.len() != 1 || !validSnap( arguments.args[ 1 ] ) || !structKeyExists( arguments.opts, "to" ) ) return fail( 2, "Usage: bxrig backup send ID|all --to=TARGET [--from=TARGET] [--yes]", arguments.asJson );
+        if ( !variables.data.has( "restic" ) ) return fail( 4, "restic was not found (bxrig install restic)", arguments.asJson );
+        var s = variables.data.readAll();
+        var src = variables.data.pickTarget( s, { target: arguments.opts.from ?: "" } );
+        if ( structKeyExists( src, "error" ) ) return fail( 4, "the source: " & src.error, arguments.asJson );
+        if ( !structKeyExists( s.targets, arguments.opts.to ) ) return fail( 4, "no target called " & arguments.opts.to & " (bxrig backup data targets)", arguments.asJson );
+        var dst = { name: arguments.opts.to, target: s.targets[ arguments.opts.to ] };
+        if ( dst.name == src.name ) return fail( 2, "the source and the destination are the same target", arguments.asJson );
+        var envSrc = variables.data.envFor( src.name, src.target );
+        var envDst = variables.data.envFor( dst.name, dst.target );
+        if ( structKeyExists( envSrc, "__unmounted" ) || structKeyExists( envDst, "__unmounted" ) ) return fail( 4, "a NAS share is not mounted (bxrig nas mount NAME SHARE --yes)", arguments.asJson );
+        if ( !len( envSrc.RESTIC_PASSWORD ) || !len( envDst.RESTIC_PASSWORD ) ) return fail( 4, "both targets must be initialized (bxrig backup data init NAME --yes)", arguments.asJson );
+        var env = duplicate( envDst );
+        for ( var k in envSrc ) {
+            if ( k == "RESTIC_REPOSITORY" || k == "RESTIC_PASSWORD" ) continue;
+            if ( structKeyExists( env, k ) && env[ k ] != envSrc[ k ] ) return fail( 4, "both repositories need a different " & k & ", and restic reads only one. Use `rclone sync` between the two remotes instead.", arguments.asJson );
+            env[ k ] = envSrc[ k ];
+        }
+        env.RESTIC_FROM_REPOSITORY = envSrc.RESTIC_REPOSITORY;
+        env.BXRIG_FROM_PW = envSrc.RESTIC_PASSWORD;
+        env.RESTIC_FROM_PASSWORD_COMMAND = "printenv BXRIG_FROM_PW";
+        var argv = [ "copy" ];
+        if ( arguments.args[ 1 ] != "all" ) argv.append( arguments.args[ 1 ] );
+        var p = variables.data.plan( "copy " & ( arguments.args[ 1 ] == "all" ? "every snapshot" : "snapshot " & arguments.args[ 1 ] ) & " from " & src.name & " to " & dst.name, [ "restic copy (the data is decrypted and encrypted again with the destination's password)", "from " & envSrc.RESTIC_REPOSITORY, "to   " & envDst.RESTIC_REPOSITORY ], arguments.yes, arguments.dry, arguments.asJson, { from: src.name, to: dst.name, snapshot: arguments.args[ 1 ] } );
+        if ( !p.done ) return p.code;
+        var r = variables.data.restic( env, argv, 14400 );
+        if ( r.exitCode != 0 ) return say( 6, { error: trim( r.output ) }, arguments.asJson, [ "error: " & trim( r.output ) ] );
+        return say( 0, { from: src.name, to: dst.name }, arguments.asJson, [ "Copied to " & dst.name & "." ] );
+    }
+
+    function exportCmd( args, opts, yes, dry, asJson ) {
+        var kind = arguments.args.len() ? arguments.args[ 1 ] : "";
+        if ( arguments.args.len() != 2 || !arrayFind( [ "data", "config" ], kind ) || !structKeyExists( arguments.opts, "to" ) ) return fail( 2, "Usage: bxrig backup export data|config ID --to=FILE [--path=/ABSOLUTE/PATH] [--target=NAME] [--yes]", arguments.asJson );
+        var to = arguments.opts.to;
+        if ( left( to, 1 ) != "/" ) to = variables.data.home() & "/" & to;
+        if ( find( "..", to ) > 0 || !reFind( "^[A-Za-z0-9._/ +@-]+$", to ) ) return fail( 2, "--to is a file name without ..", arguments.asJson );
+        if ( fileExists( to ) ) return fail( 4, to & " already exists", arguments.asJson );
+        var id = arguments.args[ 2 ];
+        if ( kind == "config" ) {
+            if ( !variables.config.validId( id ) || !fileExists( variables.config.archive( id ) ) ) return fail( 4, "no config snapshot " & id & " (bxrig backup config list)", arguments.asJson );
+            var p0 = variables.data.plan( "write the config snapshot " & id & " to " & to, [ "the file holds your config files and package lists" & ( "; it holds the encrypted secrets bundle only if the snapshot was taken with --with-secrets" ) ], arguments.yes, arguments.dry, arguments.asJson, { id: id, to: to } );
+            if ( !p0.done ) return p0.code;
+            directoryCreate( getDirectoryFromPath( to ), true, true );
+            var cp = variables.data.tryExec( [ "cp", "-p", variables.config.archive( id ), to ], 60 );
+            return say( cp.exitCode == 0 ? 0 : 6, { id: id, file: to }, arguments.asJson, [ cp.exitCode == 0 ? "Wrote " & to : "error: " & trim( cp.output ) ] );
+        }
+        if ( !variables.data.has( "restic" ) ) return fail( 4, "restic was not found (bxrig install restic)", arguments.asJson );
+        if ( !reFind( "^[a-f0-9]{4,64}$|^latest$", id ) ) return fail( 2, "ID is a snapshot id (bxrig backup data list)", arguments.asJson );
+        var path = arguments.opts.path ?: "/";
+        if ( left( path, 1 ) != "/" || find( "..", path ) > 0 || !reFind( "^[A-Za-z0-9._/ +@-]+$", path ) ) return fail( 2, "--path is an absolute path as it was backed up", arguments.asJson );
+        var fmt = right( to, 4 ) == ".zip" ? "zip" : "tar";
+        var s = variables.data.readAll();
+        var pt = variables.data.pickTarget( s, arguments.opts );
+        if ( structKeyExists( pt, "error" ) ) return fail( 4, pt.error, arguments.asJson );
+        var p = variables.data.plan( "export snapshot " & id & " (" & path & ") from " & pt.name & " as a " & fmt & " file: " & to, [ "restic dump " & id & " " & path & " --archive " & fmt ], arguments.yes, arguments.dry, arguments.asJson, { id: id, path: path, to: to, format: fmt } );
+        if ( !p.done ) return p.code;
+        directoryCreate( getDirectoryFromPath( to ), true, true );
+        var r = variables.data.restic( variables.data.envFor( pt.name, pt.target ), [ "dump", "--archive", fmt, "--target", to, id, path ], 14400 );
+        if ( r.exitCode != 0 ) return say( 6, { error: trim( r.output ) }, arguments.asJson, [ "error: " & trim( r.output ) ] );
+        return say( 0, { file: to, format: fmt }, arguments.asJson, [ "Wrote " & to ] );
+    }
+}

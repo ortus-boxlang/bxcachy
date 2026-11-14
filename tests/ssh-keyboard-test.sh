@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# `bxcachy ssh key` and `bxcachy setup keyboard` with fake ssh-keygen and kwriteconfig6. Usage: ssh-keyboard-test.sh BINARY
+# `bxrig ssh key` and `bxrig setup keyboard` with fake ssh-keygen and kwriteconfig6. Usage: ssh-keyboard-test.sh BINARY
 set -euo pipefail
 binary="$(realpath "${1:?native executable required}")"
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT

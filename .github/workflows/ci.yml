@@ -1,4 +1,4 @@
-name: BxCachy CI
+name: BxRig CI
 on:
   push:
     branches: [development]
@@ -9,7 +9,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: bxcachy-ci-global
+  group: bxrig-ci-global
   cancel-in-progress: true
 jobs:
   validate:
@@ -24,7 +24,7 @@ jobs:
           bash -n bootstrap/install.sh scripts/package-manager.sh tests/package-manager-test.sh tests/bootstrap-test.sh tests/native-smoke.sh tests/native-package-integration.sh scripts/config.sh tests/config-test.sh tests/config-native-test.sh tests/cli-contract-test.sh tests/catalog-test.sh tests/packages-test.sh tests/setup-test.sh tests/tiling-test.sh tests/keys-test.sh tests/keys-apply-test.sh tests/xremap-test.sh tests/assets-test.sh tests/noctalia-config-test.sh tests/hyprland-setup-test.sh tests/session-test.sh tests/shell-setup-test.sh tests/terminal-setup-test.sh tests/wizard-test.sh tests/init-test.sh tests/toolchain-test.sh tests/runner-test.sh tests/db-test.sh tests/dotfiles-test.sh tests/default-test.sh tests/secrets-test.sh tests/ai-test.sh tests/ai-shell-test.sh tests/ai-session-test.sh tests/ssh-keyboard-test.sh tests/menu-test.sh tests/containers-test.sh tests/utilities-test.sh tests/keys-editor-test.sh tests/web-vpn-test.sh tests/runtime-cloud-test.sh tests/apps-test.sh tests/status-test.sh tests/strata-test.sh tests/extras-test.sh tests/capture-notify-test.sh tests/plasma-panels-test.sh tests/boxlang-test.sh tests/macextras-test.sh tests/update-test.sh tests/skills-test.sh tests/theme-test.sh tests/editor-test.sh tests/vm-test.sh tests/pkg-test.sh tests/system-actions-test.sh tests/appearance-test.sh tests/display-test.sh tests/power-test.sh tests/time-test.sh tests/tweaks-test.sh tests/security-test.sh tests/help-test.sh tests/nas-test.sh tests/refresh-test.sh tests/backup-config-test.sh tests/backup-snapshots-test.sh tests/backup-data-test.sh tests/backup-move-test.sh tests/timeline-test.sh tests/tui-test.sh tests/java-test.sh tests/sdk-test.sh tests/mail-test.sh bootstrap/gen-themes.sh bootstrap/gen-skills.sh bootstrap/gen-docs.sh bootstrap/web-install.sh tests/web-install-test.sh bootstrap/gen-catalog.sh bootstrap/gen-releasekey.sh scripts/gen-signing-key.sh bootstrap/gen-templates.sh bootstrap/gen-assets.sh bootstrap/gen-wizard.sh scripts/get-matchbox.sh scripts/dev-build.sh
           test -s src/Main.bx -a -s src/Application.bx
           jq -e . catalog/apps.json >/dev/null
-          bash bootstrap/gen-catalog.sh --check   # src/bxcachy/CatalogData.bx embeds the current catalog
+          bash bootstrap/gen-catalog.sh --check   # src/bxrig/CatalogData.bx embeds the current catalog
           bash bootstrap/gen-assets.sh --check
           bash bootstrap/gen-templates.sh --check
           bash bootstrap/gen-themes.sh --check
@@ -94,7 +94,7 @@ jobs:
           path: matchbox-out/matchbox-linux-x86_64
           if-no-files-found: error
   native:
-    name: 4 - Compile BxCachy and native tests
+    name: 4 - Compile BxRig and native tests
     needs: [arch, toolchain]
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -113,12 +113,12 @@ jobs:
           matchbox --version
           matchbox --version | grep -F "$(jq -r .toolchain.matchbox.version box.json)"
           mkdir -p dist
-          matchbox --target native --output dist/bxcachy src/Main.bx
+          matchbox --target native --output dist/bxrig src/Main.bx
       - name: Run smoke tests on compiled executable
         shell: bash
         run: |
           set -euo pipefail
-          candidate="$(realpath dist/bxcachy)"
+          candidate="$(realpath dist/bxrig)"
           bash tests/native-smoke.sh "$candidate"
           bash -x tests/native-package-integration.sh "$candidate"
           bash tests/config-native-test.sh "$candidate"
@@ -202,12 +202,13 @@ jobs:
           bash tests/tui-test.sh "$candidate"
           bash tests/java-test.sh "$candidate"
           bash tests/sdk-test.sh "$candidate"
+          bash "$candidate"
           bash tests/mail-test.sh "$candidate"
       - name: Publish verified native artifact
         uses: actions/upload-artifact@v4
         with:
-          name: bxcachy-linux-native
-          path: dist/bxcachy
+          name: bxrig-linux-native
+          path: dist/bxrig
           if-no-files-found: error
   arch-real:
     name: 5 - Real Arch system tests (container, non-root, real pacman)
@@ -225,7 +226,7 @@ jobs:
         run: |
           set -o pipefail
           chmod +x matchbox-out/matchbox-linux-x86_64
-          BXCACHY_MATCHBOX_FILE="$PWD/matchbox-out/matchbox-linux-x86_64" bash tests/arch/run.sh "$PWD/arch-test-out" 2>&1 | tee arch-run.txt
+          BXRIG_MATCHBOX_FILE="$PWD/matchbox-out/matchbox-linux-x86_64" bash tests/arch/run.sh "$PWD/arch-test-out" 2>&1 | tee arch-run.txt
       - name: Result table
         if: always()
         shell: bash
@@ -246,7 +247,7 @@ jobs:
             arch-run.txt
           if-no-files-found: warn
   publish:
-    name: 6 - Publish BxCachy to S3 (beta from development, stable from a v* tag)
+    name: 6 - Publish BxRig to S3 (beta from development, stable from a v* tag)
     if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/development' || startsWith(github.ref, 'refs/tags/v'))
     needs: [native, arch-real]
     runs-on: ubuntu-latest
@@ -256,19 +257,19 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          name: bxcachy-linux-native
+          name: bxrig-linux-native
           path: dist
       - name: Lay out the S3 folders (channels stable and beta, snapshots, the one-line installer)
         run: |
           set -euo pipefail
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then CHANNEL=stable; VERSION="${GITHUB_REF_NAME#v}"; else CHANNEL=beta; VERSION="$(jq -r .version box.json)"; fi
-          sum="$(sha256sum dist/bxcachy | awk '{print $1}')"
+          sum="$(sha256sum dist/bxrig | awk '{print $1}')"
           bash -n bootstrap/web-install.sh
           tar -czf bootstrap.tar.gz bootstrap/install.sh box.json
           bsum="$(sha256sum bootstrap.tar.gz | awk '{print $1}')"
           layout() {
             mkdir -p "$1"
-            cp dist/bxcachy "$1/bxcachy-linux-x86_64"; echo "${sum}  bxcachy-linux-x86_64" > "$1/bxcachy-linux-x86_64.sha256"
+            cp dist/bxrig "$1/bxrig-linux-x86_64"; echo "${sum}  bxrig-linux-x86_64" > "$1/bxrig-linux-x86_64.sha256"
             cp bootstrap.tar.gz "$1/bootstrap.tar.gz"; echo "${bsum}  bootstrap.tar.gz" > "$1/bootstrap.tar.gz.sha256"
             printf 'version=%s\ncommit=%s\nsha256=%s\nbootstrap_sha256=%s\nchannel=%s\nbuiltAt=%s\n' "$VERSION" "${GITHUB_SHA::7}" "$sum" "$bsum" "$CHANNEL" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$1/version-latest.properties"
           }
@@ -276,13 +277,13 @@ jobs:
           if [[ "$CHANNEL" == beta ]]; then layout "build/s3/snapshots/${VERSION}-${GITHUB_SHA::7}"; else layout "build/s3/releases/${VERSION}"; fi
           cp bootstrap/web-install.sh build/s3/install.sh
           echo "channel=$CHANNEL version=$VERSION"
-      - name: Sign the release (Ed25519; the key is the secret BXCACHY_SIGNING_KEY, the public key is keys/release.pub)
+      - name: Sign the release (Ed25519; the key is the secret BXRIG_SIGNING_KEY, the public key is keys/release.pub)
         env:
-          SIGNING_KEY: ${{ secrets.BXCACHY_SIGNING_KEY }}
+          SIGNING_KEY: ${{ secrets.BXRIG_SIGNING_KEY }}
         run: |
           set -euo pipefail
           if [[ -z "${SIGNING_KEY:-}" || ! -f keys/release.pub ]]; then
-            echo "::warning::BXCACHY_SIGNING_KEY or keys/release.pub is missing: publishing UNSIGNED (clients without a key check SHA-256 only; clients with a key refuse it)"
+            echo "::warning::BXRIG_SIGNING_KEY or keys/release.pub is missing: publishing UNSIGNED (clients without a key check SHA-256 only; clients with a key refuse it)"
             exit 0
           fi
           umask 077
@@ -304,4 +305,4 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_ACCESS_SECRET }}
           SOURCE_DIR: "build/s3"
-          DEST_DIR: "ortussolutions/bxcachy"
+          DEST_DIR: "ortussolutions/bxrig"

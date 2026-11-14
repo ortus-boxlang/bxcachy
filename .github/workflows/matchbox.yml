@@ -1,5 +1,5 @@
 name: MatchBox toolchain
-# Builds the MatchBox `bxcachy` branch (develop plus the open BxCachy pull requests, see box.json
+# Builds the MatchBox `bxcachy` branch (develop plus the open BxRig pull requests, see box.json
 # toolchain.matchbox) and publishes it to S3, laid out like BoxLang's downloads:
 #
 #   https://downloads.ortussolutions.com/ortussolutions/bxcachy/matchbox/matchbox-linux-x86_64            evergreen
@@ -21,7 +21,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: bxcachy-matchbox-publish
+  group: bxrig-matchbox-publish
   cancel-in-progress: false
 jobs:
   publish:

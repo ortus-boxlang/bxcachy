@@ -1,0 +1,438 @@
+// `bxrig theme list | show NAME | set NAME [--mode=M] [--keep-wallpaper] | mode theme|dark|light|auto | status | random | next`.
+// A theme is an Omarchy-format folder (colors.toml, optional neovim.lua, optional backgrounds/). Where they come from, first match wins:
+//   ~/.config/bxrig/themes/NAME   installed or imported by the user
+//   ~/.config/omarchy/themes/NAME   Omarchy user themes found on disk
+//   ~/.local/share/omarchy/themes/NAME   Omarchy's own themes found on disk
+//   bundled in the binary           10 from Omarchy and 5 BxRig themes (themes/NOTICE.md)
+// `set` rewrites these generated files (through the config service: atomic, backed up, journalled) and then tells the running desktop:
+//   Noctalia palette  ~/.config/noctalia/palettes/BxRigTheme.json, then `noctalia msg color-scheme-set custom BxRigTheme` and `theme-mode-set` (+ `wallpaper-set`)
+//   terminals         ~/.config/bxrig/theme/{ghostty,kitty.conf,alacritty.toml,foot.ini}, included from the terminal starter configs
+//   btop              ~/.config/btop/themes/bxrig.theme
+//   Hyprland accent   ~/.config/bxrig/theme/hypr.lua (read by the managed bxrig.lua), then `hyprctl reload`
+//   Neovim            ~/.local/state/bxrig/current/theme/neovim.lua (nvim's lua/plugins/theme.lua links to it)
+//   Plasma            `plasma-apply-colorscheme BreezeDark|BreezeLight`
+// Like `runner set` these are settings: they act at once (no --yes) and take --dry-run. User config files are never edited.
+// Exit: 0 done, 2 bad usage, 4 precondition (unknown or invalid theme), 6 a file could not be written.
+class Theme {
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.inst = new bxrig.Installer( arguments.runner );
+        variables.cfgSvc = new bxrig.ConfigService().quiet( true );
+        variables.tc = new bxrig.ThemeColors();
+        variables.td = new bxrig.ThemeData();
+        return this;
+    }
+
+    function say( code, data, asJson, lines = [], dry = false ) {
+        if ( arguments.asJson ) println( variables.cli.envelope( "theme", arguments.code, arguments.data, arguments.dry ) );
+        else for ( var l in arguments.lines ) println( l );
+        return arguments.code;
+    }
+
+    function tryExec( argv, timeout = 30 ) {
+        try { return variables.inst.exec( arguments.argv, arguments.timeout ); } catch ( any e ) { return { exitCode: 127, output: e.message }; }
+    }
+
+    function has( name ) { return tryExec( [ "sh", "-c", 'command -v "$1"', "_", arguments.name ], 10 ).exitCode == 0; }
+
+    function cfg() { return variables.cfgSvc.cfgHome(); }
+    function home() { return getSystemSetting( "HOME", "" ); }
+    function outDir() { return cfg() & "/bxrig/theme"; }
+    function stateFile() { return cfg() & "/bxrig/theme.json"; }
+    function modes() { return [ "theme", "dark", "light", "auto" ]; }
+
+    // Directories that hold themes, with where they come from.
+    function sources() {
+        return [ { origin: "user", dir: cfg() & "/bxrig/themes" },
+                 { origin: "omarchy", dir: cfg() & "/omarchy/themes" },
+                 { origin: "omarchy", dir: home() & "/.local/share/omarchy/themes" } ];
+    }
+
+    // name -> { name, origin, dir } (dir is "" for a bundled theme); the first source that has a name wins.
+    function discover() {
+        var found = {};
+        for ( var s in sources() ) {
+            if ( !directoryExists( s.dir ) ) continue;
+            for ( var n in directoryList( s.dir, false, "name" ) ) {
+                if ( structKeyExists( found, n ) || !fileExists( s.dir & "/" & n & "/colors.toml" ) ) continue;
+                found[ n ] = { name: n, origin: s.origin, dir: s.dir & "/" & n };
+            }
+        }
+        for ( var b in variables.td.names() ) if ( !structKeyExists( found, b ) ) found[ b ] = { name: b, origin: variables.td.origin( b ) == "bxrig" ? "bundled" : "bundled", dir: "" };
+        return found;
+    }
+
+    function names() {
+        var out = [];
+        for ( var k in discover() ) out.append( k );
+        arraySort( out, "textnocase" );
+        return out;
+    }
+
+    // The wallpaper each bundled BxRig theme goes with (files in ~/Pictures/BxRig); other bundled themes keep your wallpaper.
+    function bundledWallpaper( name ) {
+        var m = { bxrig: "box.jpg", "bxrig-light": "minimal.png", "bxrig-midnight": "grid.jpg", "bxrig-cyan": "aurora.jpg", "bxrig-forest": "box.jpg" };
+        return structKeyExists( m, arguments.name ) ? home() & "/Pictures/BxRig/" & m[ arguments.name ] : "";
+    }
+
+    // { found, name, origin, colorsText, neovimText, wallpaper }
+    function find( name ) {
+        var all = discover();
+        if ( !structKeyExists( all, arguments.name ) ) return { found: false };
+        var t = all[ arguments.name ];
+        var out = { found: true, name: t.name, origin: t.origin, colorsText: "", neovimText: "", wallpaper: "" };
+        if ( len( t.dir ) ) {
+            out.colorsText = fileRead( t.dir & "/colors.toml" );
+            if ( fileExists( t.dir & "/neovim.lua" ) ) out.neovimText = fileRead( t.dir & "/neovim.lua" );
+            if ( directoryExists( t.dir & "/backgrounds" ) ) {
+                var pics = directoryList( t.dir & "/backgrounds", false, "name" );
+                arraySort( pics, "textnocase" );
+                if ( pics.len() ) out.wallpaper = t.dir & "/backgrounds/" & pics[ 1 ];
+            }
+        } else {
+            out.colorsText = variables.td.colors( t.name );
+            out.neovimText = variables.td.neovim( t.name );
+            out.wallpaper = bundledWallpaper( t.name );
+        }
+        return out;
+    }
+
+    function readState() {
+        var st = { name: "", mode: "theme" };
+        if ( fileExists( stateFile() ) ) {
+            try {
+                var j = jsonDeserialize( fileRead( stateFile() ) );
+                if ( structKeyExists( j, "name" ) ) st.name = j.name;
+                if ( structKeyExists( j, "mode" ) && arrayFind( modes(), j.mode ) ) st.mode = j.mode;
+            } catch ( any e ) {}
+        }
+        return st;
+    }
+
+    function writeState( name, mode ) {
+        directoryCreate( getDirectoryFromPath( stateFile() ), true, true );
+        fileWrite( stateFile(), jsonSerialize( { name: arguments.name, mode: arguments.mode } ) & chr( 10 ) );
+    }
+
+    // The mode Noctalia and Plasma are set to: the theme's own unless pinned (or auto).
+    function resolveMode( stateMode, c ) {
+        if ( arguments.stateMode == "theme" ) return variables.tc.isLight( arguments.c ) ? "light" : "dark";
+        return arguments.stateMode;
+    }
+
+    // The generated files for a parsed theme, in the config service entry shape.
+    function files( c, neovimText ) {
+        var d = outDir();
+        var out = [
+            { name: "theme-palette", target: cfg() & "/noctalia/palettes/BxRigTheme.json", mode: "644", content: variables.tc.palette( arguments.c ) },
+            { name: "theme-ghostty", target: d & "/ghostty", mode: "644", content: variables.tc.ghostty( arguments.c ) },
+            { name: "theme-kitty", target: d & "/kitty.conf", mode: "644", content: variables.tc.kitty( arguments.c ) },
+            { name: "theme-alacritty", target: d & "/alacritty.toml", mode: "644", content: variables.tc.alacritty( arguments.c ) },
+            { name: "theme-foot", target: d & "/foot.ini", mode: "644", content: variables.tc.foot( arguments.c ) },
+            { name: "theme-btop", target: cfg() & "/btop/themes/bxrig.theme", mode: "644", content: variables.tc.btop( arguments.c ) },
+            { name: "theme-hypr", target: d & "/hypr.lua", mode: "644", content: hyprAccent( arguments.c ) },
+            { name: "theme-tmux", target: d & "/tmux.conf", mode: "644", content: variables.tc.tmux( arguments.c ) },
+            { name: "theme-fzf", target: d & "/fzf.sh", mode: "644", content: variables.tc.fzf( arguments.c ) },
+            { name: "theme-rofi", target: d & "/rofi.rasi", mode: "644", content: variables.tc.rofi( arguments.c ) },
+            { name: "theme-gtk4", target: cfg() & "/gtk-4.0/gtk.css", mode: "644", content: variables.tc.gtk( arguments.c ) },
+            { name: "theme-gtk3", target: cfg() & "/gtk-3.0/gtk.css", mode: "644", content: variables.tc.gtk( arguments.c ) },
+            { name: "theme-qt6ct", target: cfg() & "/qt6ct/colors/bxrig.conf", mode: "644", content: variables.tc.qtct( arguments.c ) },
+            { name: "theme-qt5ct", target: cfg() & "/qt5ct/colors/bxrig.conf", mode: "644", content: variables.tc.qtct( arguments.c ) },
+            { name: "theme-fuzzel", target: cfg() & "/fuzzel/fuzzel.ini", mode: "644", content: variables.tc.fuzzel( arguments.c ) },
+            { name: "theme-wofi", target: cfg() & "/wofi/style.css", mode: "644", content: variables.tc.wofi( arguments.c ) }
+        ];
+        // Rofi reads config.rasi: a stub that imports the generated theme, written only when you have none.
+        out.append( { name: "theme-rofi-config", target: cfg() & "/rofi/config.rasi", mode: "644", content: '@theme "' & d & '/rofi.rasi"' & chr( 10 ) } );
+        if ( len( arguments.neovimText ) ) out.append( { name: "theme-neovim", target: variables.cfgSvc.stateDir() & "/current/theme/neovim.lua", mode: "644", content: arguments.neovimText } );
+        return out;
+    }
+
+    // What the managed hypr/bxrig.lua reads: the focused border runs from the accent to the bright cyan, unfocused is muted.
+    function hyprAccent( c ) {
+        return "-- Generated by `bxrig theme set`. Rewritten on every theme change; do not edit." & chr( 10 ) &
+               'return { active = { colors = { "' & variables.tc.rgba( arguments.c.accent ) & '", "' & variables.tc.rgba( arguments.c.color14 ) & '" }, angle = 45 }, inactive = "' & variables.tc.rgba( arguments.c.color8, "aa" ) & '" }' & chr( 10 );
+    }
+
+    // Every theme's neovim.lua goes to ~/.config/bxrig/nvim-themes/NAME.lua, where the Neovim layer's bxrig-themes.lua reads them, so a
+    // switch never has to clone a colourscheme plugin. Returns how many files were written.
+    function syncNvim() {
+        var n = 0;
+        for ( var name in names() ) {
+            var t = find( name );
+            if ( !len( t.neovimText ) ) continue;
+            var e = { name: "nvim-theme-" & name, target: cfg() & "/bxrig/nvim-themes/" & name & ".lua", mode: "644", content: t.neovimText };
+            if ( variables.cfgSvc.configState( e ) != "clean" && variables.cfgSvc.configWrite( e, e.content, "theme", true, false ) == 0 ) n++;
+        }
+        return n;
+    }
+
+    // Writes the generated files of the current theme (the default `bxrig` when none was set) that are missing, without telling the
+    // desktop or touching the state, so terminal starters that include them never point at nothing. Returns how many were written.
+    function ensure() {
+        var st = readState();
+        var t = find( len( st.name ) ? st.name : "bxrig" );
+        if ( !t.found ) t = find( "bxrig" );
+        var p = variables.tc.parse( t.colorsText );
+        var n = 0;
+        if ( !p.ok ) return 0;
+        for ( var e in files( p.colors, t.neovimText ) ) if ( variables.cfgSvc.configState( e ) == "missing" && variables.cfgSvc.configWrite( e, e.content, "theme", true, false ) == 0 ) n++;
+        syncNvim();
+        return n;
+    }
+
+    // ---- commands ----
+    function list( asJson ) {
+        var cur = readState().name;
+        var rows = [];
+        var lines = [];
+        for ( var n in names() ) {
+            var t = find( n );
+            var p = variables.tc.parse( t.colorsText );
+            var row = { name: n, origin: t.origin, valid: p.ok, light: p.ok ? variables.tc.isLight( p.colors ) : false, current: n == cur };
+            rows.append( row );
+            lines.append( ( row.current ? "* " : "  " ) & n & "  (" & t.origin & ", " & ( !p.ok ? "invalid" : ( row.light ? "light" : "dark" ) ) & ")" );
+        }
+        return say( 0, { themes: rows, current: cur }, arguments.asJson, lines );
+    }
+
+    function show( name, asJson ) {
+        var t = find( arguments.name );
+        if ( !t.found ) return say( 4, { error: "unknown theme " & arguments.name }, arguments.asJson, [ "error: unknown theme " & arguments.name & " (bxrig theme list)" ] );
+        var p = variables.tc.parse( t.colorsText );
+        if ( !p.ok ) return say( 4, { error: "invalid theme", errors: p.errors }, arguments.asJson, [ "error: " & arguments.name & " is not a valid theme: " & p.errors.toList( ", " ) ] );
+        var c = p.colors;
+        var data = { name: t.name, origin: t.origin, light: variables.tc.isLight( c ), accent: c.accent, background: c.background, foreground: c.foreground, neovim: len( t.neovimText ) > 0, wallpaper: t.wallpaper };
+        return say( 0, data, arguments.asJson, [ t.name & " (" & t.origin & ", " & ( data.light ? "light" : "dark" ) & ")", "accent " & c.accent & "  background " & c.background & "  foreground " & c.foreground, "neovim colourscheme: " & ( data.neovim ? "yes" : "no" ) ] );
+    }
+
+    // One line per terminal or btop config of yours that does not use the generated theme yet (we never edit your files).
+    function hints() {
+        var d = outDir();
+        var out = [];
+        var cases = [ { id: "ghostty", file: cfg() & "/ghostty/config", line: "config-file = ?" & d & "/ghostty" },
+                      { id: "kitty", file: cfg() & "/kitty/kitty.conf", line: "include " & d & "/kitty.conf" },
+                      { id: "alacritty", file: cfg() & "/alacritty/alacritty.toml", line: 'import = ["' & d & '/alacritty.toml"] (under [general])' },
+                      { id: "foot", file: cfg() & "/foot/foot.ini", line: "include=" & d & "/foot.ini" } ];
+        for ( var c in cases ) if ( fileExists( c.file ) && !findNoCase( "bxrig/theme", fileRead( c.file ) ) ) out.append( c.id & ": add `" & c.line & "` to " & c.file & " to follow the theme" );
+        var tm = home() & "/.tmux.conf";
+        if ( fileExists( tm ) && !findNoCase( "bxrig/theme/tmux.conf", fileRead( tm ) ) ) out.append( "tmux: add `source-file " & d & "/tmux.conf` to " & tm & " to follow the theme" );
+        var rc = cfg() & "/rofi/config.rasi";
+        if ( fileExists( rc ) && !findNoCase( "bxrig/theme/rofi.rasi", fileRead( rc ) ) ) out.append( 'rofi: add `@theme "' & d & '/rofi.rasi"` to ' & rc & " to follow the theme" );
+        var bt = cfg() & "/btop/btop.conf";
+        if ( fileExists( bt ) && !reFind( 'color_theme *= *"?bxrig', fileRead( bt ) ) ) out.append( 'btop: set color_theme = "bxrig" in ' & bt );
+        return out;
+    }
+
+    // Tells the running desktop. Returns { noctalia, plasma, hyprland, notes }.
+    function notify( mode, wallpaper ) {
+        var out = { noctalia: "skipped", plasma: "skipped", hyprland: "skipped", gtk: "skipped", notes: [] };
+        if ( has( "noctalia" ) ) {
+            var a = tryExec( [ "noctalia", "msg", "color-scheme-set", "custom", "BxRigTheme" ], 30 );
+            var b = tryExec( [ "noctalia", "msg", "theme-mode-set", arguments.mode ], 30 );
+            if ( a.exitCode == 0 && b.exitCode == 0 ) {
+                out.noctalia = "applied";
+                if ( len( arguments.wallpaper ) && fileExists( arguments.wallpaper ) ) {
+                    var w = tryExec( [ "noctalia", "msg", "wallpaper-set", arguments.wallpaper ], 30 );
+                    if ( w.exitCode != 0 ) out.notes.append( "wallpaper not changed: " & trim( w.output ) );
+                }
+            } else {
+                out.noctalia = "not running";
+                out.notes.append( "Noctalia did not answer (" & trim( a.output & " " & b.output ) & "). The palette file is written; run `bxrig theme set` again from the session." );
+            }
+        }
+        if ( findNoCase( "KDE", getSystemSetting( "XDG_CURRENT_DESKTOP", "" ) ) && has( "plasma-apply-colorscheme" ) ) {
+            var kp = tryExec( [ "plasma-apply-colorscheme", arguments.mode == "light" ? "BreezeLight" : "BreezeDark" ], 30 );
+            out.plasma = kp.exitCode == 0 ? "applied" : "failed";
+        }
+        out.gtk = "skipped";
+        if ( has( "gsettings" ) ) {
+            var gs = tryExec( [ "gsettings", "set", "org.gnome.desktop.interface", "color-scheme", arguments.mode == "light" ? "prefer-light" : "prefer-dark" ], 15 );
+            out.gtk = gs.exitCode == 0 ? "applied" : "failed";
+            if ( gs.exitCode == 0 && ( directoryExists( "/usr/share/themes/adw-gtk3" ) || directoryExists( home() & "/.local/share/themes/adw-gtk3" ) ) ) tryExec( [ "gsettings", "set", "org.gnome.desktop.interface", "gtk-theme", arguments.mode == "light" ? "adw-gtk3" : "adw-gtk3-dark" ], 15 );
+        }
+        if ( len( getSystemSetting( "HYPRLAND_INSTANCE_SIGNATURE", "" ) ) && has( "hyprctl" ) ) {
+            out.hyprland = tryExec( [ "hyprctl", "reload" ], 20 ).exitCode == 0 ? "reloaded" : "failed";
+        }
+        return out;
+    }
+
+    function set( name, mode = "", keepWallpaper = false, dry = false, asJson = false ) {
+        var t = find( arguments.name );
+        if ( !t.found ) return say( 4, { error: "unknown theme " & arguments.name }, arguments.asJson, [ "error: unknown theme " & arguments.name & " (bxrig theme list)" ] );
+        var p = variables.tc.parse( t.colorsText );
+        if ( !p.ok ) return say( 4, { error: "invalid theme", errors: p.errors }, arguments.asJson, [ "error: " & arguments.name & " is not a valid theme: " & p.errors.toList( ", " ) ] );
+        if ( len( arguments.mode ) && !arrayFind( modes(), arguments.mode ) ) return say( 2, { error: "bad mode " & arguments.mode }, arguments.asJson, [ "error: mode must be theme, dark, light or auto" ] );
+        var st = readState();
+        var stateMode = len( arguments.mode ) ? arguments.mode : st.mode;
+        var m = resolveMode( stateMode, p.colors );
+        var wall = arguments.keepWallpaper ? "" : t.wallpaper;
+        var entries = files( p.colors, t.neovimText );
+        var data = { theme: t.name, origin: t.origin, light: variables.tc.isLight( p.colors ), mode: stateMode, applied_mode: m, wallpaper: wall, files: entries.map( function( e ) { return e.target; } ) };
+        if ( arguments.dry ) return say( 0, data, arguments.asJson, [ "Plan: theme " & t.name & " (" & ( data.light ? "light" : "dark" ) & ", mode " & m & ")", "Files: " & entries.map( function( e ) { return e.target; } ).toList( ", " ), "Nothing was changed." ], true );
+        data.written = []; data.unchanged = []; data.failed = [];
+        for ( var e in entries ) {
+            if ( variables.cfgSvc.configState( e ) == "clean" ) { data.unchanged.append( e.name ); continue; }
+            if ( variables.cfgSvc.configWrite( e, e.content, "theme", true, false ) == 0 ) data.written.append( e.name ); else data.failed.append( e.name );
+        }
+        if ( data.failed.len() ) return say( 6, data, arguments.asJson, [ "error: could not write " & data.failed.toList( ", " ) ] );
+        writeState( t.name, stateMode );
+        syncNvim();
+        var n = notify( m, wall );
+        data.noctalia = n.noctalia; data.plasma = n.plasma; data.hyprland = n.hyprland; data.notes = n.notes;
+        var lines = [ "Theme: " & t.name & " (" & t.origin & ", " & ( data.light ? "light" : "dark" ) & ", mode " & m & ")", "Files: " & data.written.len() & " written, " & data.unchanged.len() & " unchanged" ];
+        lines.append( "Noctalia: " & n.noctalia & "  Plasma: " & n.plasma & "  Hyprland: " & n.hyprland & "  GTK: " & n.gtk );
+        for ( var note in n.notes ) lines.append( "note: " & note );
+        data.hints = hints();
+        for ( var h in data.hints ) lines.append( "hint: " & h );
+        if ( !len( t.neovimText ) ) lines.append( "note: this theme has no neovim.lua, so Neovim keeps its colourscheme" );
+        return say( 0, data, arguments.asJson, lines );
+    }
+
+    // `vscode [--yes]`: puts the theme's colours into VS Code's settings.json (workbench.colorCustomizations). It edits your file, so it
+    // is a plan until --yes, takes a backup, and leaves a file it cannot read as plain JSON (comments, trailing commas) alone.
+    function vscode( yes = false, dry = false, asJson = false ) {
+        var st = readState();
+        var t = find( len( st.name ) ? st.name : "bxrig" );
+        var p = variables.tc.parse( t.colorsText );
+        if ( !p.ok ) return say( 4, { error: "invalid theme" }, arguments.asJson, [ "error: the theme is not valid" ] );
+        var colors = variables.tc.vscode( p.colors );
+        var found = [];
+        for ( var app in [ "Code", "Code - OSS", "VSCodium", "Cursor" ] ) { var f = cfg() & "/" & app & "/User/settings.json"; if ( fileExists( f ) ) found.append( { app: app, file: f } ); }
+        if ( !found.len() ) return say( 4, { error: "no VS Code settings.json found" }, arguments.asJson, [ "error: no settings.json found for Code, Code - OSS, VSCodium or Cursor (start the editor once)" ] );
+        var plan = [];
+        var skipped = [];
+        for ( var x in found ) {
+            var cur = {};
+            try { cur = jsonDeserialize( fileRead( x.file ) ); } catch ( any e ) { skipped.append( x.app & ": settings.json has comments or trailing commas, so it is left alone (colours are in " & outDir() & "/vscode.json)" ); continue; }
+            plan.append( x );
+        }
+        var d = { theme: t.name, files: plan.map( function( y ) { return y.file; } ), skipped: skipped };
+        directoryCreate( outDir(), true, true );
+        fileWrite( outDir() & "/vscode.json", jsonSerialize( colors ) & chr( 10 ) );
+        if ( !arguments.yes || arguments.dry ) {
+            var lines = [ ( arguments.dry ? "Dry run: " : "Plan: " ) & "put the " & t.name & " colours into " & plan.len() & " VS Code settings file(s)" ];
+            for ( var pf in plan ) lines.append( "  " & pf.file );
+            for ( var sk in skipped ) lines.append( "  note: " & sk );
+            lines.append( "Your file is rewritten as plain JSON (a backup is kept; only workbench.colorCustomizations is changed)." );
+            lines.append( arguments.dry ? "Nothing was changed." : "Nothing was changed. Add --yes to apply." );
+            return say( arguments.dry ? 0 : 2, d, arguments.asJson, lines, arguments.dry );
+        }
+        for ( var u in plan ) {
+            var cfgJson = jsonDeserialize( fileRead( u.file ) );
+            var merged = structKeyExists( cfgJson, "workbench.colorCustomizations" ) && isStruct( cfgJson[ "workbench.colorCustomizations" ] ) ? cfgJson[ "workbench.colorCustomizations" ] : {};
+            for ( var k in colors ) merged[ k ] = colors[ k ];
+            cfgJson[ "workbench.colorCustomizations" ] = merged;
+            var e2 = { name: "vscode-" & replace( u.app, " ", "-", "all" ), target: u.file, mode: "644", content: jsonSerialize( cfgJson ) & chr( 10 ) };
+            if ( variables.cfgSvc.configWrite( e2, e2.content, "theme", true, false ) != 0 ) return say( 6, d, arguments.asJson, [ "error: could not write " & u.file ] );
+        }
+        return say( 0, d, arguments.asJson, [ "VS Code now uses the " & t.name & " colours (" & plan.len() & " file(s); a backup of each is in the config history)." ] & skipped );
+    }
+
+    // `mode`: how light or dark follows. theme = the theme's own; dark or light = pinned; auto = Noctalia switches by itself.
+    function mode( value, dry = false, asJson = false ) {
+        if ( !arrayFind( modes(), arguments.value ) ) return say( 2, { error: "bad mode " & arguments.value }, arguments.asJson, [ "Usage: bxrig theme mode theme|dark|light|auto" ] );
+        var st = readState();
+        var t = len( st.name ) ? find( st.name ) : { found: false };
+        var c = t.found ? variables.tc.parse( t.colorsText ) : { ok: false };
+        var m = c.ok ? resolveMode( arguments.value, c.colors ) : ( arguments.value == "theme" ? "dark" : arguments.value );
+        if ( arguments.dry ) return say( 0, { mode: arguments.value, applied_mode: m }, arguments.asJson, [ "Plan: theme mode " & arguments.value & " (applies " & m & ")", "Nothing was changed." ], true );
+        writeState( st.name, arguments.value );
+        var n = notify( m, "" );
+        return say( 0, { mode: arguments.value, applied_mode: m, noctalia: n.noctalia, plasma: n.plasma }, arguments.asJson, [ "Theme mode: " & arguments.value & " (applies " & m & "). Noctalia: " & n.noctalia & "  Plasma: " & n.plasma ] );
+    }
+
+    function status( asJson ) {
+        var st = readState();
+        var data = { name: st.name, mode: st.mode, files: [] };
+        var lines = [ "Theme: " & ( len( st.name ) ? st.name : "(none set)" ) & "  mode: " & st.mode ];
+        if ( len( st.name ) ) {
+            var t = find( st.name );
+            var p = t.found ? variables.tc.parse( t.colorsText ) : { ok: false };
+            if ( p.ok ) for ( var e in files( p.colors, t.neovimText ) ) {
+                var s = variables.cfgSvc.configState( e );
+                data.files.append( { name: e.name, target: e.target, state: s } );
+                lines.append( "  " & e.name & ": " & s );
+            }
+        }
+        return say( 0, data, arguments.asJson, lines );
+    }
+
+    function userDir() { return cfg() & "/bxrig/themes"; }
+
+    // A theme name: lower case letters, digits and dashes (it becomes a folder name).
+    function validName( name ) { return reFind( "^[a-z0-9][a-z0-9-]{0,40}$", arguments.name ) > 0; }
+
+    // omarchy-NAME-theme (the repository naming Omarchy asks for) becomes NAME.
+    function nameFromSource( src ) {
+        var base = listLast( arguments.src, "/" );
+        if ( right( base, 4 ) == ".git" ) base = left( base, len( base ) - 4 );
+        base = lCase( base );
+        if ( left( base, 8 ) == "omarchy-" ) base = mid( base, 9, len( base ) );
+        if ( right( base, 6 ) == "-theme" ) base = left( base, len( base ) - 6 );
+        return base;
+    }
+
+    // Copies a theme folder (colors.toml and friends, no .git, no symlinks) into the user themes. Returns the exit code.
+    function adopt( dir, name, force, asJson, via ) {
+        if ( !validName( arguments.name ) ) return say( 2, { error: "bad theme name " & arguments.name }, arguments.asJson, [ "error: the theme name must be lower case letters, digits and dashes (use --name=NAME)" ] );
+        if ( !fileExists( arguments.dir & "/colors.toml" ) ) return say( 4, { error: "no colors.toml" }, arguments.asJson, [ "error: " & arguments.dir & " has no colors.toml, so it is not a theme" ] );
+        var p = variables.tc.parse( fileRead( arguments.dir & "/colors.toml" ) );
+        if ( !p.ok ) return say( 4, { error: "invalid theme", errors: p.errors }, arguments.asJson, [ "error: not a valid theme: " & p.errors.toList( ", " ) ] );
+        var links = tryExec( [ "find", arguments.dir, "-name", ".git", "-prune", "-o", "-type", "l", "-print" ], 30 );
+        if ( len( trim( links.output ) ) ) return say( 4, { error: "symlinks in theme" }, arguments.asJson, [ "error: the theme contains symlinks, which are not copied: " & trim( links.output ) ] );
+        var dest = userDir() & "/" & arguments.name;
+        if ( directoryExists( dest ) && !arguments.force ) return say( 4, { error: dest & " exists" }, arguments.asJson, [ "error: " & dest & " already exists (--force replaces it)" ] );
+        directoryCreate( userDir(), true, true );
+        if ( directoryExists( dest ) ) tryExec( [ "rm", "-rf", dest ], 30 );
+        var cp = tryExec( [ "cp", "-r", arguments.dir, dest ], 60 );
+        if ( cp.exitCode != 0 ) return say( 6, { error: trim( cp.output ) }, arguments.asJson, [ "error: could not copy the theme: " & trim( cp.output ) ] );
+        tryExec( [ "rm", "-rf", dest & "/.git" ], 30 );
+        syncNvim();
+        return say( 0, { theme: arguments.name, path: dest, via: arguments.via }, arguments.asJson, [ "Installed theme " & arguments.name & " in " & dest, "Apply it with: bxrig theme set " & arguments.name ] );
+    }
+
+    // `install URL`: a git repository (https only) with an Omarchy-format theme at its top.
+    function install( url, name = "", force = false, asJson = false ) {
+        if ( !reFind( "^https://[A-Za-z0-9._~/-]+$", arguments.url ) ) return say( 2, { error: "bad url" }, arguments.asJson, [ "error: the source must be an https git URL, for example https://github.com/someone/omarchy-name-theme" ] );
+        var nm = len( arguments.name ) ? arguments.name : nameFromSource( arguments.url );
+        if ( !has( "git" ) ) return say( 4, { error: "git was not found" }, arguments.asJson, [ "error: git was not found" ] );
+        var tmp = cfgTmp();
+        var cl = tryExec( [ "git", "clone", "--depth", "1", arguments.url, tmp ], 300 );
+        if ( cl.exitCode != 0 ) { tryExec( [ "rm", "-rf", tmp ], 30 ); return say( 6, { error: trim( cl.output ) }, arguments.asJson, [ "error: git clone failed: " & trim( cl.output ) ] ); }
+        var code = adopt( tmp, nm, arguments.force, arguments.asJson, arguments.url );
+        tryExec( [ "rm", "-rf", tmp ], 30 );
+        return code;
+    }
+
+    function cfgTmp() { return variables.cfgSvc.stateDir() & "/theme-clone-" & createUUID(); }
+
+    // `import PATH`: a local folder in the same format.
+    function importDir( path, name = "", force = false, asJson = false ) {
+        if ( !directoryExists( arguments.path ) ) return say( 4, { error: "not a folder" }, arguments.asJson, [ "error: " & arguments.path & " is not a folder" ] );
+        var nm = len( arguments.name ) ? arguments.name : lCase( listLast( replace( arguments.path, chr( 92 ), "/", "all" ), "/" ) );
+        return adopt( arguments.path, nm, arguments.force, arguments.asJson, arguments.path );
+    }
+
+    // `remove NAME`: only a theme in your own folder; bundled and Omarchy ones cannot be removed, and neither can the current one.
+    function remove( name, asJson ) {
+        var all = discover();
+        if ( !validName( arguments.name ) || !structKeyExists( all, arguments.name ) ) return say( 4, { error: "unknown theme" }, arguments.asJson, [ "error: unknown theme " & arguments.name ] );
+        if ( all[ arguments.name ].origin != "user" || all[ arguments.name ].dir != userDir() & "/" & arguments.name ) return say( 4, { error: "not one of your themes" }, arguments.asJson, [ "error: " & arguments.name & " is " & all[ arguments.name ].origin & ", not one you installed, so it cannot be removed here" ] );
+        if ( readState().name == arguments.name ) return say( 4, { error: "current theme" }, arguments.asJson, [ "error: " & arguments.name & " is the current theme; set another one first" ] );
+        tryExec( [ "rm", "-rf", userDir() & "/" & arguments.name ], 30 );
+        tryExec( [ "rm", "-f", cfg() & "/bxrig/nvim-themes/" & arguments.name & ".lua" ], 30 );
+        return say( 0, { removed: arguments.name }, arguments.asJson, [ "Removed theme " & arguments.name ] );
+    }
+
+    // The next theme after the current one (wrapping), or a random other one.
+    function pick( how ) {
+        var all = names();
+        var cur = readState().name;
+        var i = arrayFind( all, cur );
+        if ( arguments.how == "next" ) return all[ i >= all.len() || i == 0 ? 1 : i + 1 ];
+        if ( all.len() == 1 ) return all[ 1 ];
+        var n = all[ randRange( 1, all.len() ) ];
+        while ( n == cur ) n = all[ randRange( 1, all.len() ) ];
+        return n;
+    }
+}

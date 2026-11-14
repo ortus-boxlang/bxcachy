@@ -1349,7 +1349,7 @@
     {
       "id": "chezmoi",
       "name": "chezmoi",
-      "description": "Manage your dotfiles across machines (used by bxcachy dotfiles)",
+      "description": "Manage your dotfiles across machines (used by bxrig dotfiles)",
       "description_source": "curated",
       "kind": "tui",
       "group": "development",
@@ -1370,7 +1370,7 @@
     {
       "id": "stow",
       "name": "GNU Stow",
-      "description": "Symlink farm manager for dotfiles (used by bxcachy dotfiles)",
+      "description": "Symlink farm manager for dotfiles (used by bxrig dotfiles)",
       "description_source": "curated",
       "kind": "tui",
       "group": "development",
@@ -1411,7 +1411,7 @@
     {
       "id": "yadm",
       "name": "yadm",
-      "description": "Yet Another Dotfiles Manager, built on git (used by bxcachy dotfiles)",
+      "description": "Yet Another Dotfiles Manager, built on git (used by bxrig dotfiles)",
       "description_source": "curated",
       "kind": "tui",
       "group": "development",
@@ -3658,7 +3658,7 @@
     {
       "id": "fuzzel",
       "name": "Fuzzel",
-      "description": "Lightweight Wayland-native application launcher (also a BxCachy menu backend)",
+      "description": "Lightweight Wayland-native application launcher (also a BxRig menu backend)",
       "description_source": "curated",
       "kind": "desktop",
       "group": "desktop",
@@ -3679,7 +3679,7 @@
     {
       "id": "rofi",
       "name": "Rofi",
-      "description": "Window switcher, application launcher and dmenu replacement (also the BxCachy menu backend)",
+      "description": "Window switcher, application launcher and dmenu replacement (also the BxRig menu backend)",
       "description_source": "curated",
       "kind": "desktop",
       "group": "desktop",
@@ -3744,7 +3744,7 @@
     {
       "id": "wofi",
       "name": "Wofi",
-      "description": "Wayland application launcher, a Rofi alternative (also a BxCachy menu backend)",
+      "description": "Wayland application launcher, a Rofi alternative (also a BxRig menu backend)",
       "description_source": "curated",
       "kind": "desktop",
       "group": "desktop",
@@ -5942,7 +5942,7 @@
       "description_source": "arch",
       "id": "cliphist",
       "name": "Cliphist",
-      "description": "Wayland clipboard manager (history for wl-clipboard); BxCachy: clipboard pick",
+      "description": "Wayland clipboard manager (history for wl-clipboard); BxRig: clipboard pick",
       "kind": "tui",
       "group": "desktop",
       "category": "Desktop polish",
@@ -5966,7 +5966,7 @@
       "description_source": "arch",
       "id": "wf-recorder",
       "name": "wf-recorder",
-      "description": "Screen recorder for Wayland (wlroots compositors); BxCachy: record",
+      "description": "Screen recorder for Wayland (wlroots compositors); BxRig: record",
       "kind": "tui",
       "group": "media",
       "category": "Screenshots and recording",
@@ -6235,7 +6235,7 @@
       "description_source": "arch",
       "id": "grim",
       "name": "grim",
-      "description": "Screenshot utility for Wayland (BxCachy: fallback when Noctalia is not running)",
+      "description": "Screenshot utility for Wayland (BxRig: fallback when Noctalia is not running)",
       "targets": [
         "grim"
       ],
@@ -6279,7 +6279,7 @@
       "description_source": "arch",
       "id": "tesseract",
       "name": "Tesseract OCR",
-      "description": "Text recognition for screenshot OCR (BxCachy: screenshot ocr)",
+      "description": "Text recognition for screenshot OCR (BxRig: screenshot ocr)",
       "targets": [
         "tesseract",
         "tesseract-data-eng"
@@ -6299,7 +6299,7 @@
       "description_source": "arch",
       "id": "zbar",
       "name": "ZBar",
-      "description": "Reads QR codes and bar codes (BxCachy: screenshot qr)",
+      "description": "Reads QR codes and bar codes (BxRig: screenshot qr)",
       "targets": [
         "zbar"
       ],
@@ -6318,7 +6318,7 @@
       "description_source": "arch",
       "id": "qrencode",
       "name": "qrencode",
-      "description": "Makes QR codes (BxCachy: qr)",
+      "description": "Makes QR codes (BxRig: qr)",
       "targets": [
         "qrencode"
       ],
@@ -6718,7 +6718,7 @@
     {
       "id": "rofimoji",
       "name": "Rofimoji",
-      "description": "Emoji picker for Rofi (BxCachy: emoji)",
+      "description": "Emoji picker for Rofi (BxRig: emoji)",
       "description_source": "arch",
       "kind": "desktop",
       "group": "desktop",
@@ -6744,7 +6744,7 @@
     {
       "id": "wlsunset",
       "name": "wlsunset",
-      "description": "Day and night color temperature for Wayland (BxCachy: nightshift)",
+      "description": "Day and night color temperature for Wayland (BxRig: nightshift)",
       "description_source": "arch",
       "kind": "desktop",
       "group": "desktop",
@@ -6767,7 +6767,7 @@
     {
       "id": "libinput-gestures",
       "name": "libinput-gestures",
-      "description": "Touchpad gestures (BxCachy: input gestures)",
+      "description": "Touchpad gestures (BxRig: input gestures)",
       "description_source": "aur",
       "kind": "desktop",
       "group": "desktop",
@@ -6809,7 +6809,7 @@
     {
       "id": "uxplay",
       "name": "UxPlay",
-      "description": "AirPlay mirroring receiver (BxCachy: airplay)",
+      "description": "AirPlay mirroring receiver (BxRig: airplay)",
       "description_source": "aur",
       "kind": "desktop",
       "group": "network",

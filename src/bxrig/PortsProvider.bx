@@ -1,0 +1,95 @@
+// Ports and Processes: what listens on which port, who owns it, and a way to stop it. Reads `ss -ltnpH` and `ps`; kill and stop ask first.
+// Rows: { port, proto, process, pid, user, up, command, conflict, dev, system }. A port with two different owners is a conflict (shown red).
+class PortsProvider {
+    function init( demo = false ) { variables.demo = arguments.demo; variables.sys = new bxrig.TuiSys(); return this; }
+    function id() { return "ports"; }
+    function icon() { return "plug"; }
+    function title() { return "Ports"; }
+    function hint() { return "ports and processes: what listens where"; }
+    function live() { return false; }
+    function refreshSeconds() { return 0; }
+    function detailLines() { return 2; }
+    function emptyText() { return "Nothing is listening."; }
+    function columns() { return [ { key: "port", label: "port", w: 7 }, { key: "proto", label: "proto", w: 7 }, { key: "process", label: "process", w: 18 }, { key: "pid", label: "pid", w: 8 }, { key: "user", label: "user", w: 11 }, { key: "up", label: "up", w: 7 }, { key: "command", label: "command", w: 0 } ]; }
+
+    function style( r ) { return r.conflict ? "error" : ( r.system ? "dim" : ( r.dev ? "ok" : "" ) ); }
+
+    function detail( r ) {
+        var l = [ r.command ];
+        l.append( r.conflict ? "Another process also listens on " & r.port & ". Stop one of them." : ( r.system ? "A system service. Stopping it needs administrator rights." : "Started " & r.up & " ago by " & r.user & "." ) );
+        return l;
+    }
+
+    function actions() {
+        return [
+            { key: "x", label: "stop", run: function( r ) { return { action: "exec", title: "Stop " & r.process, argv: [ "kill", r.pid & "" ], plan: [ "Plan: send SIGTERM to " & r.process & " (pid " & r.pid & ") on port " & r.port & ".", "The process can still save its work and exit." ] }; } },
+            { key: "K", label: "kill -9", run: function( r ) { return { action: "exec", title: "Kill " & r.process, argv: [ "kill", "-9", r.pid & "" ], plan: [ "Plan: kill " & r.process & " (pid " & r.pid & ") at once with SIGKILL.", "Unsaved work in it is lost." ] }; } },
+            { key: "o", label: "open", run: function( r ) { return { action: "exec", title: "Open port " & r.port, argv: [ "xdg-open", "http://localhost:" & r.port ], plan: [ "Plan: open http://localhost:" & r.port & " in your browser." ] }; } }
+        ];
+    }
+
+    // ---- parsing, pure ----
+    // One line of `ss -ltnpH` -> { port, pid, process } or {}.
+    function parseSsLine( line ) {
+        var parts = listToArray( replace( trim( arguments.line ), chr( 9 ), " ", "all" ), " " );
+        if ( parts.len() < 5 ) return {};
+        var local = parts[ 4 ];
+        var port = int( val( listLast( local, ":" ) ) );
+        if ( port <= 0 ) return {};
+        var pid = 0; var proc = "";
+        var m = reFind( 'users:\(\("([^"]+)",pid=([0-9]+)', arguments.line, 1, true );
+        if ( isArray( m.match ) && m.match.len() >= 3 ) { proc = m.match[ 2 ]; pid = int( val( m.match[ 3 ] ) ); }
+        return { port: port, pid: pid, process: proc };
+    }
+
+    // `ps -eo pid=,user:32=,etimes=,args=` -> { "4102": { user, etimes, args } }
+    function parsePs( text ) {
+        var out = {};
+        for ( var line in listToArray( arguments.text, chr( 10 ) ) ) {
+            var t = trim( line );
+            var parts = listToArray( t, " " );
+            if ( parts.len() < 4 || !isNumeric( parts[ 1 ] ) ) continue;
+            var args = "";
+            for ( var i = 4; i <= parts.len(); i++ ) args &= ( i > 4 ? " " : "" ) & parts[ i ];
+            out[ parts[ 1 ] ] = { user: parts[ 2 ], etimes: int( val( parts[ 3 ] ) ), args: args };
+        }
+        return out;
+    }
+
+    function build( ssText, psText ) {
+        var ps = parsePs( arguments.psText );
+        var seen = {};
+        var rows = [];
+        var owners = {};
+        for ( var line in listToArray( arguments.ssText, chr( 10 ) ) ) {
+            var e = parseSsLine( line );
+            if ( !structCount( e ) ) continue;
+            var key = e.port & ":" & e.pid;
+            if ( structKeyExists( seen, key ) ) continue;
+            seen[ key ] = true;
+            var info = structKeyExists( ps, e.pid & "" ) ? ps[ e.pid & "" ] : { user: "?", etimes: 0, args: "" };
+            var pk = e.port & "";
+            if ( !structKeyExists( owners, pk ) ) owners[ pk ] = {};
+            owners[ pk ][ e.pid & "" ] = true;
+            rows.append( { port: e.port, proto: "tcp", process: len( e.process ) ? e.process : "?", pid: e.pid, user: info.user, up: variables.sys.span( info.etimes ), command: len( info.args ) ? info.args : "(not visible)", conflict: false, dev: isDev( e.port ), system: info.user == "root" } );
+        }
+        for ( var r in rows ) r.conflict = structCount( owners[ r.port & "" ] ) > 1;
+        arraySort( rows, function( a, b ) { return a.port - b.port; } );
+        return rows;
+    }
+
+    function isDev( port ) { return arrayFind( [ 3000, 3001, 4200, 5000, 5173, 5432, 6379, 8000, 8080, 8081, 8500, 8888, 9000, 9200, 27017, 3306 ], arguments.port ) > 0; }
+
+    function load( q = "" ) {
+        if ( variables.demo ) return demoRows();
+        var ss = variables.sys.run( "ss", [ "-ltnpH" ], 10 );
+        var ps = variables.sys.run( "ps", [ "-eo", "pid=,user:32=,etimes=,args=" ], 10 );
+        return build( ss.output, ps.output );
+    }
+
+    function demoRows() {
+        var d = function( port, proc, pid, user, up, cmd, conflict = false ) { return { port: port, proto: "tcp", process: proc, pid: pid, user: user, up: up, command: cmd, conflict: conflict, dev: isDev( port ), system: user == "root" }; };
+        return [ d( 22, "sshd", 611, "root", "3d", "/usr/bin/sshd -D" ), d( 3000, "node", 9921, "you", "41m", "node vite --port 3000" ), d( 5432, "postgres", 4102, "you", "3d", "podman: postgres:16", true ), d( 5432, "postgres", 8815, "postgres", "5d", "/usr/bin/postgres -D /var/lib/postgres/data", true ),
+                 d( 6379, "redis-server", 4177, "you", "3d", "podman: redis:7" ), d( 8080, "java", 12044, "you", "12m", "boxlang app.bxs" ), d( 8500, "java", 12310, "you", "12m", "commandbox server start" ) ];
+    }
+}

@@ -1,6 +1,6 @@
 // Resolver rules on a small fixed catalog and on the real one. Run from src/:
 //   (cd src && matchbox ../tests/resolver_test.bxs)
-resolverClass = new bxcachy.Resolver();
+resolverClass = new bxrig.Resolver();
 failures = 0;
 function check( label, ok ) {
  if ( ok ) println( "ok   " & label ); else { println( "FAIL " & label ); failures++; }
@@ -81,7 +81,7 @@ check( "detect Hyprland", resolverClass.detectShell( "Hyprland" ) == "hyprland" 
 check( "detect KDE", resolverClass.detectShell( "KDE" ) == "plasma" );
 check( "detect unknown", resolverClass.detectShell( "GNOME" ) == "" && resolverClass.detectShell( "" ) == "" );
 // real catalog
-real = new bxcachy.Catalog().load();
+real = new bxrig.Catalog().load();
 r = resolverClass.resolve( real, { profile: "core" } );
 check( "real: core profile is git, curl, jq, unzip", listSort( idsOf( r ), "text", "asc" ) == "curl,git,jq,unzip" );
 r = resolverClass.resolve( real, { profile: "jvm" } );

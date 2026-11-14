@@ -1,22 +1,22 @@
 #!/usr/bin/env bash
-# `bxcachy init`: answers file in, ordinary commands out (a fake bxcachy and git record them), plus the wizard in a pty. Usage: init-test.sh BINARY
+# `bxrig init`: answers file in, ordinary commands out (a fake bxrig and git record them), plus the wizard in a pty. Usage: init-test.sh BINARY
 set -euo pipefail
 binary="$(realpath "${1:?native executable required}")"
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 fail() { echo "FAIL: $*" >&2; exit 1; }
 mkdir -p "$tmp/bin" "$tmp/home"
 export LOG="$tmp/log"; : > "$LOG"
-# the fake "bxcachy": records its arguments, fails on `setup shell` when FAIL_SHELL is set
+# the fake "bxrig": records its arguments, fails on `setup shell` when FAIL_SHELL is set
 cat > "$tmp/self" <<'FAKE'
 #!/usr/bin/env bash
-echo "bxcachy $*" >> "$LOG"
+echo "bxrig $*" >> "$LOG"
 [[ -n "${FAIL_SHELL:-}" && "$1 $2" == "setup shell" ]] && { echo "boom"; exit 3; }
 [[ -n "${FAIL_KEY:-}" && "$1 $2" == "secrets set" ]] && exit 4
 echo "ok $1 $2"
 FAKE
 printf '#!/usr/bin/env bash\necho "git $*" >> "$LOG"\n' > "$tmp/bin/git"
 chmod +x "$tmp/self" "$tmp/bin/git"
-run() { env BXCACHY_CONFIG_HOME="$tmp/cfg" BXCACHY_STATE_HOME="$tmp/state" BXCACHY_SELF="$tmp/self" HOME="$tmp/home" PATH="$tmp/bin:$PATH" LOG="$LOG" "$@"; }
+run() { env BXRIG_CONFIG_HOME="$tmp/cfg" BXRIG_STATE_HOME="$tmp/state" BXRIG_SELF="$tmp/self" HOME="$tmp/home" PATH="$tmp/bin:$PATH" LOG="$LOG" "$@"; }
 code() { set +e; run "$@" >/dev/null 2>&1; local c=$?; set -e; echo "$c"; }
 cat > "$tmp/a.json" <<'JSON'
 {"desktops":"both","login_session":"plasma","layout":"scrolling","terminal":"ghostty","terminals_extra":["kitty"],"shell":"zsh","mac_keys":true,
@@ -31,19 +31,19 @@ run "$binary" init --answers="$tmp/a.json" --dry-run --json | jq -e '.ok and (.d
 
 # --yes: every step runs in order; our own commands get --yes, git does not
 run "$binary" init --answers="$tmp/a.json" --yes --json | jq -e '.ok and (.data.done | length == 13) and (.data.failed | length == 0)' >/dev/null || fail 'init --yes --json'
-expected='bxcachy setup hyprland --terminal=ghostty --layout=scrolling --yes
-bxcachy setup plasma --yes
-bxcachy setup terminal --default=ghostty --also=kitty --yes
-bxcachy setup shell --shell=zsh --yes
-bxcachy setup xremap --build=hypr --yes
-bxcachy profile-install python --yes
-bxcachy install pane tailscale --yes
-bxcachy default terminal ghostty --yes
-bxcachy db start postgres --yes
+expected='bxrig setup hyprland --terminal=ghostty --layout=scrolling --yes
+bxrig setup plasma --yes
+bxrig setup terminal --default=ghostty --also=kitty --yes
+bxrig setup shell --shell=zsh --yes
+bxrig setup xremap --build=hypr --yes
+bxrig profile-install python --yes
+bxrig install pane tailscale --yes
+bxrig default terminal ghostty --yes
+bxrig db start postgres --yes
 git config --global user.name Ada Lovelace
 git config --global user.email ada@example.com
-bxcachy ssh key --email=ada@example.com --yes
-bxcachy session set plasma --yes'
+bxrig ssh key --email=ada@example.com --yes
+bxrig session set plasma --yes'
 [[ "$(cat "$LOG")" == "$expected" ]] || fail "commands run were: $(cat "$LOG")"
 
 # a failing step stops the rest: exit 7 (some done), the others skipped
@@ -68,25 +68,25 @@ cat > "$tmp/ai.json" <<'JSON'
 JSON
 FAIL_KEY=1 run "$binary" init --answers="$tmp/ai.json" --yes > "$tmp/ai.out" 2>&1 || fail "a skipped key must not fail the run: $(cat "$tmp/ai.out")"
 grep -q 'Skipped: key-ANTHROPIC_API_KEY (could not run' "$tmp/ai.out" || fail "the skipped key is reported: $(cat "$tmp/ai.out")"
-grep -q 'bxcachy ai default claude-code' "$LOG" && grep -q 'git config --global user.name Ada' "$LOG" || fail "steps after a skipped key still run: $(cat "$LOG")"
-grep -q 'bxcachy secrets setup' "$LOG" || fail 'the keyring check runs'
+grep -q 'bxrig ai default claude-code' "$LOG" && grep -q 'git config --global user.name Ada' "$LOG" || fail "steps after a skipped key still run: $(cat "$LOG")"
+grep -q 'bxrig secrets setup' "$LOG" || fail 'the keyring check runs'
 
 # export the saved answers to take them to another machine
-rm -f "$tmp/cfg/bxcachy/answers.json"
+rm -f "$tmp/cfg/bxrig/answers.json"
 [[ "$(code "$binary" init --export="$tmp/exported-answers.json")" == 4 ]] || fail 'export without saved answers exits 4'
-mkdir -p "$tmp/cfg/bxcachy"; echo '{"desktops":"hyprland","shell":"zsh"}' > "$tmp/cfg/bxcachy/answers.json"
-run "$binary" init --export="$tmp/exported-answers.json" | grep -q 'bxcachy init --from=' || fail 'export tells how to use it'
+mkdir -p "$tmp/cfg/bxrig"; echo '{"desktops":"hyprland","shell":"zsh"}' > "$tmp/cfg/bxrig/answers.json"
+run "$binary" init --export="$tmp/exported-answers.json" | grep -q 'bxrig init --from=' || fail 'export tells how to use it'
 [[ "$(jq -r .shell "$tmp/exported-answers.json")" == zsh && "$(stat -c %a "$tmp/exported-answers.json")" == 600 ]] || fail 'the export is a mode 600 copy'
 [[ "$(code "$binary" init --export="$tmp/exported-answers.json")" == 4 ]] || fail 'export refuses to replace a file without --force'
 run "$binary" init --export="$tmp/exported-answers.json" --force >/dev/null || fail 'export --force'
-rm -f "$tmp/cfg/bxcachy/answers.json"
+rm -f "$tmp/cfg/bxrig/answers.json"
 
 # the wizard in a pty: Enter on the welcome screen, Tab through the pages to the review, Enter. The answers are saved (mode 600).
 : > "$LOG"
 python3 - "$binary" "$tmp" <<'PY'
 import os, pty, select, sys, time, struct, fcntl, termios
 binary, tmp = sys.argv[1:3]
-env = dict(os.environ, BXCACHY_CONFIG_HOME=tmp + '/cfg', BXCACHY_STATE_HOME=tmp + '/state', BXCACHY_SELF=tmp + '/self', HOME=tmp + '/home', PATH=tmp + '/bin:' + os.environ['PATH'], LOG=tmp + '/log')
+env = dict(os.environ, BXRIG_CONFIG_HOME=tmp + '/cfg', BXRIG_STATE_HOME=tmp + '/state', BXRIG_SELF=tmp + '/self', HOME=tmp + '/home', PATH=tmp + '/bin:' + os.environ['PATH'], LOG=tmp + '/log')
 pid, fd = pty.fork()
 if pid == 0:
     os.execve(binary, [binary, 'init', '--fresh', '--dry-run'], env)
@@ -106,12 +106,12 @@ pump(1.5)
 _, status = os.waitpid(pid, 0)
 sys.exit(os.WEXITSTATUS(status) if os.WIFEXITED(status) else 1)
 PY
-[[ -f "$tmp/cfg/bxcachy/answers.json" ]] || fail 'the wizard did not save the answers'
-[[ "$(stat -c %a "$tmp/cfg/bxcachy/answers.json")" == 600 ]] || fail 'answers.json must be mode 600'
+[[ -f "$tmp/cfg/bxrig/answers.json" ]] || fail 'the wizard did not save the answers'
+[[ "$(stat -c %a "$tmp/cfg/bxrig/answers.json")" == 600 ]] || fail 'answers.json must be mode 600'
 run "$binary" init --print-answers | jq -e '.desktops == "hyprland" and .shell == "zsh" and .terminal == "ghostty" and (has("login_session") | not)' >/dev/null || fail "saved answers: $(run "$binary" init --print-answers)"
 [[ ! -s "$LOG" ]] || fail '--dry-run ran commands'
 # the laptop power question: yes on a laptop, no on a desktop
 mkdir -p "$tmp/ps/BAT0" "$tmp/ps/none"
-BXCACHY_POWER_DIR="$tmp/ps" run "$binary" init --print-answers --from-system | jq -e '.power_setup == true' >/dev/null || fail 'power_setup is yes on a laptop'
-BXCACHY_POWER_DIR="$tmp/ps/none" run "$binary" init --print-answers --from-system | jq -e '.power_setup == false' >/dev/null || fail 'power_setup is no on a desktop'
+BXRIG_POWER_DIR="$tmp/ps" run "$binary" init --print-answers --from-system | jq -e '.power_setup == true' >/dev/null || fail 'power_setup is yes on a laptop'
+BXRIG_POWER_DIR="$tmp/ps/none" run "$binary" init --print-answers --from-system | jq -e '.power_setup == false' >/dev/null || fail 'power_setup is no on a desktop'
 echo "init tests passed"

@@ -1,0 +1,120 @@
+// `bxrig default browser|terminal|show`: make an installed app your default web browser or terminal.
+//   browser   `xdg-settings set default-web-browser <app>.desktop` (works for Hyprland sessions and KDE alike)
+//   filemanager  `xdg-mime default <app>.desktop inode/directory` (Strata or Dolphin)
+//   terminal  ~/.config/xdg-terminals.list (the xdg-terminal-exec list, written through the config service, kept if you edited it)
+//             and, when kwriteconfig6 is there, KDE's own default terminal (kdeglobals [General] TerminalApplication/TerminalService)
+// An app must be installed first (its desktop file must exist). Exit: 0 done, 2 plan without --yes, 4 precondition, 6 the command failed.
+class Defaults {
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.inst = new bxrig.Installer( arguments.runner );
+        variables.config = new bxrig.ConfigService();
+        return this;
+    }
+
+    // Desktop entry ids of the browsers the catalog offers. firefox and chromium were read from the Arch packages; the others are the
+    // vendors' standard names (not verified here), and browsers not listed have no known entry: set those in your system settings.
+    function browserDesktop( id ) {
+        var m = { firefox: "firefox.desktop", chromium: "chromium.desktop", brave: "brave-browser.desktop", "google-chrome": "google-chrome.desktop", edge: "microsoft-edge.desktop" };
+        return structKeyExists( m, arguments.id ) ? m[ arguments.id ] : "";
+    }
+
+    function appDirs() {
+        var home = getSystemSetting( "HOME", "" );
+        return listToArray( getSystemSetting( "BXRIG_APPS_DIRS", "/usr/share/applications:" & home & "/.local/share/applications:/var/lib/flatpak/exports/share/applications" ), ":" );
+    }
+
+    function desktopInstalled( file ) {
+        for ( var d in appDirs() ) if ( fileExists( d & "/" & arguments.file ) ) return true;
+        return false;
+    }
+
+    function say( command, code, data, asJson, lines = [], dryRun = false ) {
+        if ( arguments.asJson ) println( variables.cli.envelope( arguments.command, arguments.code, arguments.data, arguments.dryRun ) );
+        else for ( var l in arguments.lines ) println( l );
+        return arguments.code;
+    }
+
+    function hasCommand( name ) {
+        try { return variables.inst.exec( [ "sh", "-c", 'command -v "$1"', "_", arguments.name ], 10 ).exitCode == 0; } catch ( any e ) { return false; }
+    }
+
+    // `default browser ID`
+    function browser( id, yes, dryRun, asJson ) {
+        var cmd = "default browser";
+        var file = browserDesktop( arguments.id );
+        if ( !len( file ) ) return say( cmd, 4, { error: "No known desktop entry for " & arguments.id }, arguments.asJson, [ "error: no known desktop entry for " & arguments.id & ". Known: firefox, chromium, brave, google-chrome, edge. Set others in your system settings." ] );
+        if ( !desktopInstalled( file ) ) return say( cmd, 4, { error: arguments.id & " is not installed" }, arguments.asJson, [ "error: " & arguments.id & " is not installed (" & file & " not found). Install it first: bxrig install " & arguments.id ] );
+        if ( !hasCommand( "xdg-settings" ) ) return say( cmd, 4, { error: "xdg-settings was not found" }, arguments.asJson, [ "error: xdg-settings was not found (install xdg-utils)" ] );
+        var data = { browser: arguments.id, desktop: file };
+        if ( !arguments.yes || arguments.dryRun ) {
+            var code = arguments.dryRun ? 0 : 2;
+            return say( cmd, code, data, arguments.asJson, [ ( arguments.dryRun ? "Dry run" : "Plan" ) & ": make " & arguments.id & " (" & file & ") your default web browser", arguments.dryRun ? "Nothing was changed." : "Nothing was changed. Add --yes to apply." ], arguments.dryRun );
+        }
+        var r = variables.inst.exec( [ "xdg-settings", "set", "default-web-browser", file ], 30 );
+        if ( r.exitCode != 0 ) return say( cmd, 6, { error: trim( r.output ) }, arguments.asJson, [ "error: " & trim( r.output ) ] );
+        return say( cmd, 0, data, arguments.asJson, [ arguments.id & " is now your default web browser." ] );
+    }
+
+    // `default terminal ID`
+    function terminal( id, yes, dryRun, asJson ) {
+        var cmd = "default terminal";
+        var tc = new bxrig.TerminalConfig();
+        var t = tc.find( arguments.id );
+        if ( structIsEmpty( t ) ) return say( cmd, 4, { error: "Unknown terminal: " & arguments.id }, arguments.asJson, [ "error: unknown terminal: " & arguments.id & " (use " & tc.ids().toList( ", " ) & ")" ] );
+        var file = tc.desktopId( arguments.id );
+        if ( !desktopInstalled( file ) ) return say( cmd, 4, { error: arguments.id & " is not installed" }, arguments.asJson, [ "error: " & arguments.id & " is not installed (" & file & " not found). Install it first: bxrig setup terminal --default=" & arguments.id ] );
+        var entry = { name: "xdg-terminals", target: variables.config.cfgHome() & "/xdg-terminals.list", mode: "644", content: file & chr( 10 ) };
+        var state = variables.config.configState( entry );
+        var kde = hasCommand( "kwriteconfig6" );
+        var data = { terminal: arguments.id, desktop: file, list: entry.target, kde: kde, list_kept: state == "drifted" || state == "blocked" };
+        if ( !arguments.yes || arguments.dryRun ) {
+            var code = arguments.dryRun ? 0 : 2;
+            return say( cmd, code, data, arguments.asJson, [ ( arguments.dryRun ? "Dry run" : "Plan" ) & ": make " & arguments.id & " your default terminal (" & entry.target & ( kde ? " and KDE's setting" : "" ) & ")", arguments.dryRun ? "Nothing was changed." : "Nothing was changed. Add --yes to apply." ], arguments.dryRun );
+        }
+        var notes = [];
+        if ( state == "drifted" || state == "blocked" ) notes.append( entry.target & " was changed by you, so it was kept" );
+        else if ( variables.config.configWrite( entry, entry.content, "apply", true, false ) != 0 ) return say( cmd, 6, { error: "Could not write " & entry.target }, arguments.asJson, [ "error: could not write " & entry.target ] );
+        if ( kde ) {
+            variables.inst.exec( [ "kwriteconfig6", "--file", "kdeglobals", "--group", "General", "--key", "TerminalApplication", t.cmd ], 20 );
+            variables.inst.exec( [ "kwriteconfig6", "--file", "kdeglobals", "--group", "General", "--key", "TerminalService", file ], 20 );
+        }
+        var lines = [ arguments.id & " is now your default terminal." ];
+        for ( var n in notes ) lines.append( "note: " & n );
+        return say( cmd, 0, data, arguments.asJson, lines );
+    }
+
+    // Desktop entry ids of the file managers the catalog offers (Strata's is its application id).
+    function fileManagerDesktop( id ) {
+        var m = { strata: "io.github.lgse.Strata.desktop", dolphin: "org.kde.dolphin.desktop" };
+        return structKeyExists( m, arguments.id ) ? m[ arguments.id ] : "";
+    }
+
+    // `default filemanager ID`: the folder handler (`xdg-mime default <app>.desktop inode/directory`).
+    function filemanager( id, yes, dryRun, asJson ) {
+        var cmd = "default filemanager";
+        var file = fileManagerDesktop( arguments.id );
+        if ( !len( file ) ) return say( cmd, 4, { error: "Unknown file manager " & arguments.id }, arguments.asJson, [ "error: unknown file manager " & arguments.id & ". Known: strata, dolphin." ] );
+        if ( !desktopInstalled( file ) ) return say( cmd, 4, { error: arguments.id & " is not installed" }, arguments.asJson, [ "error: " & arguments.id & " is not installed (" & file & " not found). Install it first: bxrig install " & arguments.id ] );
+        if ( !hasCommand( "xdg-mime" ) ) return say( cmd, 4, { error: "xdg-mime was not found" }, arguments.asJson, [ "error: xdg-mime was not found (install xdg-utils)" ] );
+        var data = { filemanager: arguments.id, desktop: file };
+        if ( !arguments.yes || arguments.dryRun ) {
+            var code = arguments.dryRun ? 0 : 2;
+            return say( cmd, code, data, arguments.asJson, [ ( arguments.dryRun ? "Dry run" : "Plan" ) & ": make " & arguments.id & " (" & file & ") your default file manager", arguments.dryRun ? "Nothing was changed." : "Nothing was changed. Add --yes to apply." ], arguments.dryRun );
+        }
+        var r = variables.inst.exec( [ "xdg-mime", "default", file, "inode/directory" ], 30 );
+        if ( r.exitCode != 0 ) return say( cmd, 6, { error: trim( r.output ) }, arguments.asJson, [ "error: " & trim( r.output ) ] );
+        return say( cmd, 0, data, arguments.asJson, [ arguments.id & " is now your default file manager." ] );
+    }
+
+    // `default show`
+    function show( asJson ) {
+        var b = "";
+        if ( hasCommand( "xdg-settings" ) ) b = trim( variables.inst.exec( [ "xdg-settings", "get", "default-web-browser" ], 20 ).output );
+        var listFile = variables.config.cfgHome() & "/xdg-terminals.list";
+        var t = fileExists( listFile ) ? trim( fileRead( listFile ) ) : "";
+        var fm = "";
+        if ( hasCommand( "xdg-mime" ) ) fm = trim( variables.inst.exec( [ "xdg-mime", "query", "default", "inode/directory" ], 20 ).output );
+        return say( "default show", 0, { browser: b, terminal: t, filemanager: fm }, arguments.asJson, [ "Default browser:  " & ( len( b ) ? b : "not set" ), "Default terminal: " & ( len( t ) ? t : "not set (" & listFile & ")" ), "Default file manager: " & ( len( fm ) ? fm : "not set" ) ] );
+    }
+}

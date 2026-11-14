@@ -1,0 +1,91 @@
+// A made-up timeline for `bxrig timemachine --demo`, the docs and the tests: every kind of place, every tier, a place with an error.
+// Deterministic: the same numbers every time. Times are counted back from `now`.
+class TimeMachineDemo {
+    function init( now = 1794000000 ) {
+        variables.now = arguments.now;
+        variables.helper = new bxrig.BackupTimeline( {} );
+        return this;
+    }
+
+    function iso( epoch ) {
+        var e = arguments.epoch;
+        var d = int( e / 86400 );
+        var z = d + 719468;
+        var era = int( ( z >= 0 ? z : z - 146096 ) / 146097 );
+        var doe = z - era * 146097;
+        var yoe = int( ( doe - int( doe / 1460 ) + int( doe / 36524 ) - int( doe / 146096 ) ) / 365 );
+        var y = yoe + era * 400;
+        var doy = doe - ( 365 * yoe + int( yoe / 4 ) - int( yoe / 100 ) );
+        var mp = int( ( 5 * doy + 2 ) / 153 );
+        var dd = doy - int( ( 153 * mp + 2 ) / 5 ) + 1;
+        var m = mp < 10 ? mp + 3 : mp - 9;
+        if ( m <= 2 ) y++;
+        var sec = e - d * 86400;
+        return y & "-" & right( "0" & m, 2 ) & "-" & right( "0" & dd, 2 ) & "T" & right( "0" & int( sec / 3600 ), 2 ) & ":" & right( "0" & int( ( sec mod 3600 ) / 60 ), 2 ) & ":00";
+    }
+
+    // Ages (in hours) that thin out as they get older, like a retention schedule keeps them.
+    function ages( hours, days, weeks, months, years ) {
+        var out = [];
+        for ( var i = 0; i < arguments.hours; i++ ) out.append( ( 1 + i * 5 ) * 3600 + 900 );
+        for ( var j = 2; j < arguments.days + 2; j++ ) out.append( j * 86400 + 3600 * 3 );
+        for ( var k = 2; k < arguments.weeks + 2; k++ ) out.append( ( 7 * k ) * 86400 + 3600 * 2 );
+        for ( var m = 2; m < arguments.months + 2; m++ ) out.append( ( 30 * m + 5 ) * 86400 + 3600 );
+        for ( var y = 1; y <= arguments.years; y++ ) out.append( ( 365 * y + 20 ) * 86400 );
+        return out;
+    }
+
+    function points( ages, labelFn, extraFn = "" ) {
+        var out = [];
+        var n = 0;
+        for ( var a in arguments.ages ) {
+            n++;
+            var e = variables.now - a;
+            var lf = arguments.labelFn( n, e );
+            var p = variables.helper.point( lf.id, iso( e ), lf.label, variables.now, 0, {} );
+            if ( isClosure( arguments.extraFn ) ) { var x = arguments.extraFn( n ); for ( var k in x ) p[ k ] = x[ k ]; }
+            out.append( p );
+        }
+        return out;
+    }
+
+    function build() {
+        var me = this;
+        var sys = points( ages( 4, 6, 3, 2, 0 ), function( n, e ) { return { id: "root:" & ( 200 - n ), label: n mod 5 == 0 ? "pacman -Syu" : n mod 4 == 0 ? "before bxrig system update" : "timeline" }; }, function( n ) { return { number: 200 - n, config: "root" }; } );
+        var cfg = points( ages( 2, 5, 3, 3, 1 ), function( n, e ) { return { id: me.iso( e ).replace( "-", "", "all" ).replace( ":", "", "all" ), label: n mod 3 == 0 ? "before update apply" : n mod 3 == 1 ? "before refresh theme" : "manual" }; }, function( n ) { return { files: 60 + n * 3, packages: 480 + n, secrets: n == 4 }; } );
+        var nas = points( ages( 5, 7, 4, 6, 1 ), function( n, e ) { return { id: me.hexId( n * 7 + 11 ), label: "/home/luis/Projects, /home/luis/Documents" }; }, function( n ) { return { host: "cachy", paths: [ "/home/luis/Projects", "/home/luis/Documents" ] }; } );
+        var cloud = points( ages( 0, 7, 4, 5, 0 ), function( n, e ) { return { id: me.hexId( n * 13 + 3 ), label: "/home/luis/Projects, /home/luis/Documents" }; }, function( n ) { return { host: "cachy", paths: [ "/home/luis/Projects" ] }; } );
+        var usb = points( ages( 0, 2, 2, 2, 0 ), function( n, e ) { return { id: me.hexId( n * 17 + 5 ), label: "/home/luis/Projects" }; }, function( n ) { return { host: "cachy", paths: [ "/home/luis/Projects" ] }; } );
+        var mirror = points( [ 6 * 3600, 3 * 86400, 17 * 86400, 60 * 86400 ], function( n, e ) { return { id: "photos:" & n, label: "/home/luis/Pictures to photos" }; } );
+        var rows = [
+            { id: "system", label: "System", kind: "system", target: "", points: sys, error: "" },
+            { id: "config", label: "Config", kind: "config", target: "", points: cfg, error: "" },
+            { id: "files-nas-synology", label: "Files nas-synology", kind: "files", target: "nas-synology", type: "nas", points: nas, error: "" },
+            { id: "files-spaces", label: "Files spaces", kind: "files", target: "spaces", type: "s3", points: cloud, error: "" },
+            { id: "files-usb", label: "Files usb", kind: "files", target: "usb", type: "local", points: usb, error: "" },
+            { id: "mirror-synology", label: "Mirror synology", kind: "mirror", target: "synology", points: mirror, error: "" }
+        ];
+        var total = 0;
+        for ( var r in rows ) total += r.points.len();
+        return { now: variables.now, rows: rows, total: total };
+    }
+
+    function hexId( n ) {
+        var chars = "0123456789abcdef";
+        var out = "";
+        var seed = arguments.n * 2654435761 mod 4294967296;
+        for ( var i = 1; i <= 8; i++ ) { seed = ( seed * 1664525 + 1013904223 ) mod 4294967296; out &= mid( chars, int( seed / 4096 ) mod 16 + 1, 1 ); }
+        return out;
+    }
+
+    // Files for the browse screen in the demo.
+    function files( kind ) {
+        var base = [ "/home/luis/Projects/bxrig/src/Main.bx", "/home/luis/Projects/bxrig/src/bxrig/Backup.bx", "/home/luis/Projects/bxrig/src/bxrig/Nas.bx", "/home/luis/Projects/bxrig/README.md", "/home/luis/Projects/boxlang-site/index.bxm", "/home/luis/Projects/boxlang-site/css/site.css", "/home/luis/Projects/notes/ideas.md", "/home/luis/Documents/taxes-2025.pdf", "/home/luis/Documents/travel/itinerary.md", "/home/luis/Documents/travel/tickets.pdf", "/home/luis/.ssh/config" ];
+        if ( arguments.kind == "config" ) base = [ ".config/hypr/hyprland.lua", ".config/hypr/bxrig.lua", ".config/ghostty/config", ".config/starship.toml", ".config/nvim/init.lua", ".config/bxrig/answers.json", ".config/bxrig/theme.json", ".zshrc", ".gitconfig" ];
+        if ( arguments.kind == "system" ) base = [ "/etc/pacman.conf", "/etc/hosts", "/etc/fstab", "/usr/bin/bxrig", "/etc/systemd/system/bxrig-backup.timer" ];
+        var out = [];
+        var n = 0;
+        for ( var f in base ) { n++; out.append( { path: f, type: "file", size: 800 + n * 4300 } ); }
+        return out;
+    }
+}

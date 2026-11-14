@@ -1,0 +1,208 @@
+// `bxrig update check|apply|channel|notifications` and `bxrig system update`: keep BxRig and the system current.
+//   channel [stable|beta]        show or set the update channel (~/.config/bxrig/update.json). stable = tagged releases; beta = the
+//                                bleeding-edge builds of every push to `development` (snapshots)
+//   check [--notify]             compares the running binary's SHA-256 with the one published for the channel
+//                                (BASE/CHANNEL/version-latest.properties); also counts pending system updates (`checkupdates`, pacman-contrib)
+//                                --notify shows a desktop notification when something is new (noctalia msg notification-show, else notify-send)
+//   apply [--yes]                downloads BASE/CHANNEL/bxrig-linux-x86_64 and replaces the installed binary (same folder, atomic move)
+//                                after checking its SHA-256 against both its .sha256 file and the signed version-latest.properties
+//   signatures                   version-latest.properties is signed with Ed25519 (version-latest.properties.sig, verified with `openssl pkeyutl`
+//                                and the public key built into this binary from keys/release.pub). A bad or missing signature is exit 5. A build
+//                                without an embedded key (development) does not verify, only checks the SHA-256
+//   notifications on|off|status  a user timer (bxrig-update-check.timer, daily) running `bxrig update check --notify`
+//   system update [--yes]        snapshot first (snapper or timeshift when present), then `sudo pacman -Syu` and, with yay, `yay -Sua`
+// BASE is https://downloads.ortussolutions.com/ortussolutions/bxrig (BXRIG_BASE_URL overrides it). Exit: 0 done, 2 plan without --yes,
+// 4 precondition, 5 download or verify failed, 6 a command failed, 10 an update is available (check only).
+class Update {
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.inst = new bxrig.Installer( arguments.runner );
+        variables.config = new bxrig.ConfigService().quiet( true );
+        return this;
+    }
+
+    function say( code, data, asJson, lines = [] ) {
+        if ( arguments.asJson ) println( variables.cli.envelope( "update", arguments.code, arguments.data ) );
+        else for ( var l in arguments.lines ) println( l );
+        return arguments.code;
+    }
+
+    function tryExec( argv, timeout = 120 ) {
+        try { return variables.inst.exec( arguments.argv, arguments.timeout ); } catch ( any e ) { return { exitCode: 127, output: e.message, timeout: false }; }
+    }
+
+    function has( name ) { return tryExec( [ "sh", "-c", 'command -v "$1"', "_", arguments.name ], 10 ).exitCode == 0; }
+
+    function file() { return variables.config.cfgHome() & "/bxrig/update.json"; }
+
+    function load() {
+        var d = { channel: "stable", notify: false };
+        if ( fileExists( file() ) ) try { var j = jsonDeserialize( fileRead( file() ) ); for ( var k in structKeyArray( j ) ) d[ k ] = j[ k ]; } catch ( any e ) {}
+        return d;
+    }
+
+    function save( d ) {
+        var dir = getDirectoryFromPath( file() );
+        if ( !directoryExists( dir ) ) directoryCreate( dir, true );
+        fileWrite( file(), serializeJSON( arguments.d ) & chr( 10 ) );
+    }
+
+    function base() { return getSystemSetting( "BXRIG_BASE_URL", "https://downloads.ortussolutions.com/ortussolutions/bxrig" ); }
+    function channels() { return [ "stable", "beta" ]; }
+
+    function channel( name, asJson ) {
+        var d = load();
+        if ( !len( arguments.name ) ) return say( 0, { channel: d.channel, channels: channels() }, arguments.asJson, [ "Update channel: " & d.channel & " (stable = tagged releases, beta = bleeding-edge builds of every push)" ] );
+        if ( !arrayFind( channels(), arguments.name ) ) return say( 4, { error: "unknown channel" }, arguments.asJson, [ "error: unknown channel " & arguments.name & " (use stable or beta)" ] );
+        d.channel = arguments.name;
+        save( d );
+        return say( 0, { channel: d.channel }, arguments.asJson, [ "Update channel set to " & d.channel & ". Check: bxrig update check" ] );
+    }
+
+    // The running binary: BXRIG_SELF, else the first bxrig on PATH, resolved.
+    function selfPath() {
+        var p = getSystemSetting( "BXRIG_SELF", "" );
+        if ( !len( p ) ) p = trim( tryExec( [ "sh", "-c", "command -v bxrig" ], 10 ).output );
+        return len( p ) ? trim( tryExec( [ "readlink", "-f", p ], 10 ).output ) : "";
+    }
+
+    function sha( path ) {
+        var r = tryExec( [ "sha256sum", arguments.path ], 120 );
+        return r.exitCode == 0 ? listFirst( trim( r.output ), " " ) : "";
+    }
+
+    // The public key file: BXRIG_PUBKEY_FILE (tests; the value none turns the check off), else the key embedded in this build, else "" (no signature check, a development build).
+    function pubKeyFile() {
+        var f = getSystemSetting( "BXRIG_PUBKEY_FILE", "" );
+        if ( f == "none" ) return "";
+        if ( len( f ) ) return f;
+        var pem = new bxrig.ReleaseKey().pem();
+        if ( !len( pem ) ) return "";
+        var tmp = reReplace( getTempDirectory(), "/+$", "" ) & "/bxrig-pub-" & left( createUUID(), 8 ) & ".pem";
+        fileWrite( tmp, pem );
+        return tmp;
+    }
+
+    // The channel's version-latest.properties, verified with its .sig (Ed25519 via `openssl pkeyutl -verify -rawin`) when a public key is set.
+    // { ok, error, signed, ...properties }. With a key, a missing or bad signature is an error (a downgrade to unsigned is refused).
+    function props( chan ) {
+        var dir = reReplace( getTempDirectory(), "/+$", "" ) & "/bxrig-upd-" & left( createUUID(), 8 );
+        directoryCreate( dir, true );
+        try {
+            var got = tryExec( [ "curl", "-fsSL", "--max-time", "30", "-o", dir & "/p", base() & "/" & arguments.chan & "/version-latest.properties" ], 60 );
+            if ( got.exitCode != 0 ) return { ok: false, error: "unreachable" };
+            var key = pubKeyFile();
+            var signed = false;
+            if ( len( key ) ) {
+                var sg = tryExec( [ "curl", "-fsSL", "--max-time", "30", "-o", dir & "/p.sig", base() & "/" & arguments.chan & "/version-latest.properties.sig" ], 60 );
+                if ( sg.exitCode != 0 ) return { ok: false, error: "unsigned" };
+                var v = tryExec( [ "openssl", "pkeyutl", "-verify", "-pubin", "-inkey", key, "-rawin", "-in", dir & "/p", "-sigfile", dir & "/p.sig" ], 30 );
+                if ( v.exitCode != 0 ) return { ok: false, error: "signature" };
+                signed = true;
+            }
+            var out = { ok: true, signed: signed };
+            for ( var l in listToArray( fileRead( dir & "/p" ), chr( 10 ) ) ) if ( find( "=", l ) ) out[ listFirst( l, "=" ) ] = trim( listRest( l, "=" ) );
+            return out;
+        } finally {
+            try { directoryDelete( dir, true ); } catch ( any e ) {}
+        }
+    }
+
+    function propsFailure( p, chan, asJson ) {
+        if ( arguments.p.error == "signature" ) return say( 5, { error: "signature" }, arguments.asJson, [ "error: the release information for " & arguments.chan & " has an invalid signature. Nothing was changed." ] );
+        if ( arguments.p.error == "unsigned" ) return say( 5, { error: "unsigned" }, arguments.asJson, [ "error: the release information for " & arguments.chan & " is not signed. Nothing was changed." ] );
+        return say( 5, { error: "unreachable" }, arguments.asJson, [ "error: could not reach " & base() & "/" & arguments.chan & "/" ] );
+    }
+
+    function pendingSystem() {
+        if ( !has( "checkupdates" ) ) return -1;
+        var r = tryExec( [ "checkupdates" ], 120 );
+        return r.exitCode == 0 ? listToArray( r.output, chr( 10 ) ).len() : 0;
+    }
+
+    function notify( title, body ) {
+        if ( has( "noctalia" ) && tryExec( [ "noctalia", "msg", "notification-show", arguments.title, arguments.body ], 15 ).exitCode == 0 ) return true;
+        if ( has( "notify-send" ) ) return tryExec( [ "notify-send", "-a", "BxRig", arguments.title, arguments.body ], 15 ).exitCode == 0;
+        return false;
+    }
+
+    function check( doNotify, asJson ) {
+        var d = load();
+        var p = props( d.channel );
+        if ( !p.ok ) return propsFailure( p, d.channel, arguments.asJson );
+        var mine = sha( selfPath() );
+        var newer = len( mine ) && structKeyExists( p, "sha256" ) && mine != p.sha256;
+        var system = pendingSystem();
+        var data = { channel: d.channel, update_available: newer, latest: p.version ?: "", commit: p.commit ?: "", built_at: p.builtAt ?: "", system_updates: system };
+        var lines = [ newer ? "A BxRig update is available on " & d.channel & " (" & ( p.version ?: "" ) & ", " & ( p.commit ?: "" ) & "). Install it: bxrig update apply --yes" : "BxRig is up to date on " & d.channel & "." ];
+        if ( system > 0 ) lines.append( system & " system package updates are waiting: bxrig system update" );
+        if ( arguments.doNotify && ( newer || system > 0 ) ) notify( "BxRig updates", ( newer ? "A new BxRig build is available. " : "" ) & ( system > 0 ? system & " system updates." : "" ) );
+        return say( newer ? 10 : 0, data, arguments.asJson, lines );
+    }
+
+    function apply( yes, asJson ) {
+        var d = load();
+        var p = props( d.channel );
+        if ( !p.ok ) return propsFailure( p, d.channel, arguments.asJson );
+        var target = selfPath();
+        if ( !len( target ) ) return say( 4, { error: "cannot find the installed bxrig" }, arguments.asJson, [ "error: cannot find the installed bxrig binary" ] );
+        var data = { channel: d.channel, target: target, latest: p.version ?: "" };
+        if ( structKeyExists( p, "sha256" ) && sha( target ) == p.sha256 ) return say( 0, merge( data, { updated: false } ), arguments.asJson, [ "Already on the latest " & d.channel & " build." ] );
+        if ( !arguments.yes ) return say( 2, data, arguments.asJson, [ "Plan: replace " & target & " with the " & d.channel & " build " & ( p.version ?: "" ), "Nothing was changed. Add --yes to apply." ] );
+        var tmp = target & ".new-" & left( createUUID(), 8 );
+        var dl = tryExec( [ "curl", "-fsSL", "--max-time", "600", "-o", tmp, base() & "/" & d.channel & "/bxrig-linux-x86_64" ], 700 );
+        var sum = tryExec( [ "curl", "-fsSL", "--max-time", "30", base() & "/" & d.channel & "/bxrig-linux-x86_64.sha256" ], 60 );
+        if ( dl.exitCode != 0 || sum.exitCode != 0 ) { if ( fileExists( tmp ) ) fileDelete( tmp ); return say( 5, { error: "download failed" }, arguments.asJson, [ "error: the download failed" ] ); }
+        var got = sha( tmp );
+        if ( listFirst( trim( sum.output ), " " ) != got || ( structKeyExists( p, "sha256" ) && p.sha256 != got ) ) { fileDelete( tmp ); return say( 5, { error: "checksum mismatch" }, arguments.asJson, [ "error: the SHA-256 does not match; nothing was replaced" ] ); }
+        tryExec( [ "chmod", "755", tmp ], 10 );
+        var mv = tryExec( [ "mv", "-f", tmp, target ], 30 );
+        if ( mv.exitCode != 0 ) { if ( fileExists( tmp ) ) fileDelete( tmp ); return say( 6, { error: trim( mv.output ) }, arguments.asJson, [ "error: could not replace " & target ] ); }
+        return say( 0, merge( data, { updated: true } ), arguments.asJson, [ "Updated " & target & " to the " & d.channel & " build " & ( p.version ?: "" ) & "." ] );
+    }
+
+    function merge( a, b ) { var o = {}; for ( var k in structKeyArray( arguments.a ) ) o[ k ] = arguments.a[ k ]; for ( var k2 in structKeyArray( arguments.b ) ) o[ k2 ] = arguments.b[ k2 ]; return o; }
+
+    function unit( kind ) { return variables.config.cfgHome() & "/systemd/user/bxrig-update-check." & arguments.kind; }
+
+    function notifications( action, asJson ) {
+        var d = load();
+        if ( arguments.action == "status" ) return say( 0, { enabled: d.notify }, arguments.asJson, [ "Update notifications: " & ( d.notify ? "on (daily)" : "off" ) ] );
+        if ( arguments.action == "off" ) {
+            tryExec( [ "systemctl", "--user", "disable", "--now", "bxrig-update-check.timer" ], 30 );
+            d.notify = false; save( d );
+            return say( 0, { enabled: false }, arguments.asJson, [ "Update notifications are off." ] );
+        }
+        if ( arguments.action != "on" ) return say( 2, {}, arguments.asJson, [ "Usage: bxrig update notifications on|off|status" ] );
+        var svc = { name: "update-service", target: unit( "service" ), mode: "644", content: "[Unit]" & chr( 10 ) & "Description=BxRig update check" & chr( 10 ) & chr( 10 ) & "[Service]" & chr( 10 ) & "Type=oneshot" & chr( 10 ) & "ExecStart=sh -c 'PATH=$HOME/.local/bin:$PATH bxrig update check --notify; true'" & chr( 10 ) };
+        var tim = { name: "update-timer", target: unit( "timer" ), mode: "644", content: "[Unit]" & chr( 10 ) & "Description=BxRig daily update check" & chr( 10 ) & chr( 10 ) & "[Timer]" & chr( 10 ) & "OnCalendar=daily" & chr( 10 ) & "RandomizedDelaySec=1h" & chr( 10 ) & "Persistent=true" & chr( 10 ) & chr( 10 ) & "[Install]" & chr( 10 ) & "WantedBy=timers.target" & chr( 10 ) };
+        for ( var e in [ svc, tim ] ) { var st = variables.config.configState( e ); if ( st != "drifted" && st != "blocked" ) variables.config.configWrite( e, e.content, "apply", true, false ); }
+        tryExec( [ "systemctl", "--user", "daemon-reload" ], 30 );
+        var r = tryExec( [ "systemctl", "--user", "enable", "--now", "bxrig-update-check.timer" ], 60 );
+        if ( r.exitCode != 0 ) return say( 6, { error: trim( r.output ) }, arguments.asJson, [ "error: could not start the timer" ] );
+        d.notify = true; save( d );
+        return say( 0, { enabled: true }, arguments.asJson, [ "Update notifications are on: a daily check, shown as a desktop notification." ] );
+    }
+
+    // `system update [--yes]`
+    function systemUpdate( yes, asJson ) {
+        var snap = has( "snapper" ) ? [ "sudo", "snapper", "create", "--description", "before bxrig system update" ] : ( has( "timeshift" ) ? [ "sudo", "timeshift", "--create", "--comments", "before bxrig system update" ] : [] );
+        var steps = [];
+        if ( snap.len() ) steps.append( snap );
+        steps.append( [ "sudo", "pacman", "-Syu", "--noconfirm" ] );
+        if ( has( "yay" ) ) steps.append( [ "yay", "-Sua", "--noconfirm" ] );
+        var data = { steps: steps.map( function( s ) { return s.toList( " " ); } ), snapshot: snap.len() > 0 };
+        if ( !arguments.yes ) {
+            var plan = [ "Plan:" ];
+            for ( var st in data.steps ) plan.append( "  " & st );
+            plan.append( snap.len() ? "A snapshot is taken first." : "No snapshot tool found (snapper or timeshift): the update runs without one." );
+            plan.append( "Nothing was changed. Add --yes to apply." );
+            return say( 2, data, arguments.asJson, plan );
+        }
+        for ( var s in steps ) {
+            var r = tryExec( s, 3600 );
+            if ( r.exitCode != 0 ) return say( 6, { error: s.toList( " " ) & " failed" }, arguments.asJson, [ "error: " & s.toList( " " ) & " failed (exit " & r.exitCode & ")" ] );
+        }
+        return say( 0, data, arguments.asJson, [ "The system is up to date." ] );
+    }
+}

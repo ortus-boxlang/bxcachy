@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# `bxcachy dictation`, `quicklook` and `dolphin doctor` with fake tools. Usage: extras-test.sh BINARY
+# `bxrig dictation`, `quicklook` and `dolphin doctor` with fake tools. Usage: extras-test.sh BINARY
 set -euo pipefail
 binary="$(realpath "${1:?native executable required}")"
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
@@ -10,7 +10,7 @@ printf '#!/usr/bin/env bash\necho "xdg-mime $*" >> "$LOG"\ncase "$1" in query) e
 printf '#!/usr/bin/env bash\necho "kbuildsycoca6 $*" >> "$LOG"\n' > "$tmp/bin/kbuildsycoca6"
 printf '#!/usr/bin/env bash\necho "superwhisper" >> "$LOG"\n' > "$tmp/bin/superwhisper"
 chmod +x "$tmp/bin"/*; export LOG="$tmp/log"; : > "$LOG"
-run() { env HOME="$tmp/home" BXCACHY_CONFIG_HOME="$tmp/cfg" XDG_CONFIG_DIRS="$tmp/xdg" PATH="$tmp/bin:$PATH" LOG="$LOG" "$@"; }
+run() { env HOME="$tmp/home" BXRIG_CONFIG_HOME="$tmp/cfg" XDG_CONFIG_DIRS="$tmp/xdg" PATH="$tmp/bin:$PATH" LOG="$LOG" "$@"; }
 code() { set +e; run "$@" >/dev/null 2>&1; local c=$?; set -e; echo "$c"; }
 
 # dictation: the engines, their shortcuts, status
@@ -31,7 +31,7 @@ rm "$tmp/bin/kiview"; [[ "$(code "$binary" quicklook "$tmp/file.txt")" == 4 ]] |
 
 # dolphin doctor: passes with everything in place, flags the missing menu file, --fix rebuilds the cache
 : > "$LOG"; touch "$tmp/xdg/menus/plasma-applications.menu"
-[[ "$(env XDG_MENU_PREFIX=plasma- HOME="$tmp/home" BXCACHY_CONFIG_HOME="$tmp/cfg" XDG_CONFIG_DIRS="$tmp/xdg" PATH="$tmp/bin:$PATH" LOG="$LOG" "$binary" dolphin doctor >/dev/null 2>&1; echo $?)" == 0 ]] || fail 'a healthy setup exits 0'
+[[ "$(env XDG_MENU_PREFIX=plasma- HOME="$tmp/home" BXRIG_CONFIG_HOME="$tmp/cfg" XDG_CONFIG_DIRS="$tmp/xdg" PATH="$tmp/bin:$PATH" LOG="$LOG" "$binary" dolphin doctor >/dev/null 2>&1; echo $?)" == 0 ]] || fail 'a healthy setup exits 0'
 rm "$tmp/xdg/menus/plasma-applications.menu"
 [[ "$(code "$binary" dolphin doctor)" == 4 ]] || fail 'a missing menu file exits 4'
 { run "$binary" dolphin doctor --json || true; } | jq -e '.data.checks | map(select(.ok | not)) | map(.id) | index("menu") != null' >/dev/null || fail 'doctor json lists menu'

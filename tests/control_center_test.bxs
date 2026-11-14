@@ -2,7 +2,7 @@
 // Run from src/: (cd src && matchbox ../tests/control_center_test.bxs)
 failures = 0;
 function check( label, ok ) { if ( ok ) println( "ok   " & label ); else { println( "FAIL " & label ); failures++; } }
-dd = new bxcachy.DashboardData( {} );
+dd = new bxrig.DashboardData( {} );
 d = dd.demo();
 att = dd.attention( d );
 check( "attention: updates, a stale backup and nothing else in the demo", att.len() == 2 && att[ 1 ].text == "14 updates available" && find( "Files nas backup is 3 days old", att[ 2 ].text ) > 0 );
@@ -13,8 +13,8 @@ d3 = dd.demo(); d3.updates = -1; d3.backups = [ { id: "config", label: "Config",
 check( "attention: unknown updates are not a warning, no backup yet is", dd.attention( d3 ).len() == 1 && find( "no backup yet", dd.attention( d3 )[ 1 ].text ) > 0 );
 check( "data: the real collect never fails and has the parts", structKeyExists( dd.collect(), "mem" ) && structKeyExists( dd.collect(), "backups" ) );
 
-page = new bxcachy.DashboardPage( new bxcachy.DashboardDemo( dd ) );
-app = new bxcachy.ControlCenterApp( [ page ], "dashboard" );
+page = new bxrig.DashboardPage( new bxrig.DashboardDemo( dd ) );
+app = new bxrig.ControlCenterApp( [ page ], "dashboard" );
 check( "app: starts running on the dashboard", app.outcome() == "running" && app.page().id() == "dashboard" && app.focus() == "page" );
 it = app.onKey( "Enter" );
 check( "app: Enter on the first warning asks for the system update plan", it.action == "cli" && it.args[ 1 ] == "system" && it.args[ 2 ] == "update" );
@@ -26,35 +26,35 @@ app.showPlan( it.title, [ "Plan" ], it ); app.onKey( "n" );
 check( "app: n drops the plan", app.mode() == "main" );
 check( "app: b leaves for BxTimeMachine", structCount( app.onKey( "b" ) ) == 0 && app.outcome() == "launch:timemachine" );
 
-app2 = new bxcachy.ControlCenterApp( [ new bxcachy.DashboardPage( new bxcachy.DashboardDemo( dd ) ) ], "dashboard" );
+app2 = new bxrig.ControlCenterApp( [ new bxrig.DashboardPage( new bxrig.DashboardDemo( dd ) ) ], "dashboard" );
 app2.onKey( "Down" ); check( "page: Down moves the attention cursor", app2.page().state().cursor == 2 );
 app2.onKey( "Left" ); check( "app: Left moves focus to the sidebar", app2.focus() == "sidebar" );
 app2.onKey( "Right" ); check( "app: Right goes back to the page", app2.focus() == "page" );
 app2.onKey( "q" ); check( "app: q quits", app2.outcome() == "quit" );
-app3 = new bxcachy.ControlCenterApp( [ new bxcachy.DashboardPage( new bxcachy.DashboardDemo( dd ) ) ], "" );
+app3 = new bxrig.ControlCenterApp( [ new bxrig.DashboardPage( new bxrig.DashboardDemo( dd ) ) ], "" );
 app3.onKey( "Ctrl+c" ); check( "app: Ctrl+c quits", app3.outcome() == "quit" );
-check( "app: a click on a warning returns its intent", new bxcachy.ControlCenterApp( [ new bxcachy.DashboardPage( new bxcachy.DashboardDemo( dd ) ) ], "" ).act( { kind: "att", n: 1, m: 0 } ).action == "cli" );
+check( "app: a click on a warning returns its intent", new bxrig.ControlCenterApp( [ new bxrig.DashboardPage( new bxrig.DashboardDemo( dd ) ) ], "" ).act( { kind: "att", n: 1, m: 0 } ).action == "cli" );
 
 tui = createObject( "rust", "tui.TUI" );
-view = new bxcachy.ControlCenterView( tui );
-app4 = new bxcachy.ControlCenterApp( [ new bxcachy.DashboardPage( new bxcachy.DashboardDemo( dd ) ) ], "" );
+view = new bxrig.ControlCenterView( tui );
+app4 = new bxrig.ControlCenterApp( [ new bxrig.DashboardPage( new bxrig.DashboardDemo( dd ) ) ], "" );
 view.paint( app4, 100, 110, 34 );
 s = tui.render_to_string( 110, 34 );
 check( "screen: sidebar, header and the meters", find( "Control Center", s ) > 0 && find( "Dashboard", s ) > 0 && find( "orion", s ) > 0 && find( "CachyOS", s ) > 0 && find( "CPU", s ) > 0 && find( "RAM", s ) > 0 );
 check( "screen: attention, machines and backups", find( "Needs attention", s ) > 0 && find( "14 updates available", s ) > 0 && find( "postgres", s ) > 0 && find( "win11", s ) > 0 && find( "Files nas", s ) > 0 && find( "3 days ago", s ) > 0 );
 check( "screen: key hints", find( "quit", s ) > 0 && find( "pages", s ) > 0 );
-check( "screen: a click on the first warning and on the sidebar", view.hitAt( 25, 5 ).kind == "att" && view.hitAt( 3, 4 ).kind == "nav" );
+check( "screen: a click on the first warning and on the sidebar", view.hitAt( 25, 5 ).kind == "att" && view.hitAt( 3, 6 ).kind == "nav" );
 app4.showPlan( "System update", [ "Plan: pacman -Syu" ], it );
 view.paint( app4, 101, 110, 34 );
 s2 = tui.render_to_string( 110, 34 );
 check( "screen: the plan box", find( "System update", s2 ) > 0 && find( "Plan: pacman -Syu", s2 ) > 0 && find( "do it", s2 ) > 0 );
 
 // ---- every page, in demo mode
-cc = new bxcachy.ControlCenter( {} );
+cc = new bxrig.ControlCenter( {} );
 pages = cc.buildPages( true );
 check( "pages: sixteen, in order", pages.len() == 16 && pages[ 1 ].id() == "dashboard" && pages[ 4 ].id() == "maven" && pages[ 5 ].id() == "gradle" && pages[ 7 ].id() == "ports" && pages[ 11 ].id() == "databases" && pages[ 12 ].id() == "mail" && pages[ 16 ].id() == "logs" );
 want = { boxlang: "1.9.0-snapshot", java: "temurin-21.0.13_9", maven: "3.10.0", gradle: "9.9.1", versions: "MatchBox", ports: "postgres", shortcuts: "Launcher", machines: "webtop-ubuntu", databases: "postgres", mail: "Your order 4821 has shipped", storage: "syno/backups", secrets: "ANTHROPIC_API_KEY", themes: "tokyo-night", logs: "port 5432 already in use" };
-big = new bxcachy.ControlCenterApp( pages, "" );
+big = new bxrig.ControlCenterApp( pages, "" );
 for ( pg in pages ) {
     if ( pg.id() == "dashboard" ) continue;
     big.goto( pg.id() );
@@ -125,17 +125,17 @@ check( "mail: the cursor moved to the third message", ml.state().cursor == 3 );
 view.paint( big, 400, 130, 40 );
 check( "mail: the page reloads itself after a few seconds and keeps the cursor", ml.state().cursor == 3 && ml.selected().id == "msgG7h8i9" );
 // parsers
-pp = new bxcachy.PortsProvider( false );
+pp = new bxrig.PortsProvider( false );
 ssText = 'LISTEN 0 4096 127.0.0.1:5432 0.0.0.0:* users:(("postgres",pid=4102,fd=5))' & chr( 10 ) & 'LISTEN 0 4096 [::]:5432 [::]:* users:(("postgres",pid=4102,fd=6))' & chr( 10 ) & 'LISTEN 0 128 *:631 *:*' & chr( 10 ) & 'LISTEN 0 511 0.0.0.0:8080 0.0.0.0:* users:(("java",pid=12044,fd=9))';
 psText = '  4102 you          259200 postgres -D /data' & chr( 10 ) & ' 12044 you             720 java -jar app.jar';
 pr = pp.build( ssText, psText );
 check( "ports parser: one row per port and pid, sorted, with owners", pr.len() == 3 && pr[ 1 ].port == 631 && pr[ 2 ].port == 5432 && pr[ 2 ].pid == 4102 && pr[ 2 ].user == "you" && pr[ 2 ].up == "3d" && pr[ 3 ].command == "java -jar app.jar" );
-bp = new bxcachy.BoxlangProvider( false ).parseList( "Installed versions:" & chr( 10 ) & "  1.7.2" & chr( 10 ) & "* 1.8.0" & chr( 10 ) & "  1.9.0-snapshot (snapshot)", "" );
+bp = new bxrig.BoxlangProvider( false ).parseList( "Installed versions:" & chr( 10 ) & "  1.7.2" & chr( 10 ) & "* 1.8.0" & chr( 10 ) & "  1.9.0-snapshot (snapshot)", "" );
 check( "bvm parser: every version, the starred one is active", bp.len() == 3 && bp[ 2 ].active && !bp[ 1 ].active && bp[ 3 ].version == "1.9.0-snapshot" );
-lp = new bxcachy.LogsProvider( false ).parseLine( '{"PRIORITY":"3","SYSLOG_IDENTIFIER":"podman","MESSAGE":"boom","__REALTIME_TIMESTAMP":"1794583800000000"}' );
+lp = new bxrig.LogsProvider( false ).parseLine( '{"PRIORITY":"3","SYSLOG_IDENTIFIER":"podman","MESSAGE":"boom","__REALTIME_TIMESTAMP":"1794583800000000"}' );
 check( "journal parser: level, unit, message", lp.level == "error" && lp.unit == "podman" && lp.message == "boom" && lp.time == "15:30:00" );
 // icons: the sidebar and page headers carry them when switched on, nothing when off
-app5 = new bxcachy.ControlCenterApp( cc.buildPages( true ), "ports" );
+app5 = new bxrig.ControlCenterApp( cc.buildPages( true ), "ports" );
 view.setIcons( false ); view.paint( app5, 5, 120, 38 ); plain = tui.render_to_string( 120, 38 );
 view.setIcons( true ); view.paint( app5, 5, 120, 38 ); withIcons = tui.render_to_string( 120, 38 );
 glyph = function( code ) { return chr( code ); };

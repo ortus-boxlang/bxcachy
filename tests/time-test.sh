@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# `bxcachy time ...` with fake timedatectl, systemctl, sudo, pacman, yay, tzupdate. Usage: time-test.sh BINARY
+# `bxrig time ...` with fake timedatectl, systemctl, sudo, pacman, yay, tzupdate. Usage: time-test.sh BINARY
 set -euo pipefail
 binary="$(realpath "${1:?native executable required}")"
 tmp="$(mktemp -d)"; trap 'rm -rf "${tmp:?}"' EXIT
@@ -29,7 +29,7 @@ printf '#!/usr/bin/env bash\necho "tzupdate $*" >> "$LOG"\necho Europe/Madrid > 
 printf '#!/usr/bin/env bash\nif [[ "$1" == -u ]]; then echo 1000; else /usr/bin/id "$@"; fi\n' > "$tmp/bin/id"
 printf '#!/usr/bin/env bash\necho x86_64\n' > "$tmp/bin/uname"; printf 'ID=cachyos\n' > "$tmp/os"
 chmod +x "$tmp/bin"/* "$tmp/tzupdate.real"
-run() { env HOME="$tmp/home" USER=dev BXCACHY_OS_RELEASE="$tmp/os" BXCACHY_STATE_HOME="$tmp/state" BXCACHY_CONFIG_HOME="$tmp/cfg" BXCACHY_SYSTEMD_DIR="$tmp/sd" BXCACHY_GEOCLUE_DIR="$tmp/gc" PATH="$tmp/bin:$PATH" LOG="$LOG" FAKE="$tmp/fake" ACTIVE="${ACTIVE:-3}" "$@"; }
+run() { env HOME="$tmp/home" USER=dev BXRIG_OS_RELEASE="$tmp/os" BXRIG_STATE_HOME="$tmp/state" BXRIG_CONFIG_HOME="$tmp/cfg" BXRIG_SYSTEMD_DIR="$tmp/sd" BXRIG_GEOCLUE_DIR="$tmp/gc" PATH="$tmp/bin:$PATH" LOG="$LOG" FAKE="$tmp/fake" ACTIVE="${ACTIVE:-3}" "$@"; }
 code() { set +e; run "$@" >/dev/null 2>&1; local c=$?; set -e; echo "$c"; }
 has() { grep -qF -- "$1" "$LOG"; }
 
@@ -63,12 +63,12 @@ has 'sudo tzupdate' || fail 'sync runs tzupdate with sudo'
 run "$binary" time auto on --dry-run | grep -q '^Privacy:' || fail 'the plan states the privacy tradeoff'
 run "$binary" time auto on --yes >/dev/null
 grep -q '^ExecStart=/usr/bin/automatic-timezoned$' "$tmp/sd/automatic-timezoned.service" && grep -q '^Requires=geoclue.service$' "$tmp/sd/automatic-timezoned.service" || fail 'unit file'
-grep -q '^whitelist=$' "$tmp/gc/90-bxcachy-timezone.conf" && grep -q '^\[automatic-timezoned\]$' "$tmp/gc/90-bxcachy-timezone.conf" && grep -q '^allowed=true$' "$tmp/gc/90-bxcachy-timezone.conf" || fail 'geoclue drop-in'
+grep -q '^whitelist=$' "$tmp/gc/90-bxrig-timezone.conf" && grep -q '^\[automatic-timezoned\]$' "$tmp/gc/90-bxrig-timezone.conf" && grep -q '^allowed=true$' "$tmp/gc/90-bxrig-timezone.conf" || fail 'geoclue drop-in'
 has 'pacman -S --needed --noconfirm geoclue' && has 'yay' && has 'automatic-timezoned' || fail "install steps: $(cat "$LOG")"
 has 'sudo systemctl enable --now automatic-timezoned.service' || fail 'the service is enabled'
 ACTIVE=0 run "$binary" time status --json | jq -e '.data.automatic_zone' >/dev/null || fail 'status sees the daemon'
 
 # ---- auto off ----
 : > "$LOG"; run "$binary" time auto off --yes >/dev/null
-has 'systemctl disable --now automatic-timezoned.service' && [[ ! -e "$tmp/sd/automatic-timezoned.service" && ! -e "$tmp/gc/90-bxcachy-timezone.conf" ]] || fail 'auto off removes the files'
+has 'systemctl disable --now automatic-timezoned.service' && [[ ! -e "$tmp/sd/automatic-timezoned.service" && ! -e "$tmp/gc/90-bxrig-timezone.conf" ]] || fail 'auto off removes the files'
 echo "time-test: ok"
