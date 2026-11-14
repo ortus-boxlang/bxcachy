@@ -1,6 +1,6 @@
-# BxCachy
+# BxRig
 
-> Your developer machine, set up in minutes. A CachyOS setup tool written in BoxLang.
+> BxRig brings an opinionated, beautiful and efficient desktop to Linux, built for developers.
 
 ## Pages
 

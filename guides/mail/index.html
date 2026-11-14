@@ -11,9 +11,9 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>Mail catcher - BxCachy</title>
+	<title>Mail catcher - BxRig</title>
 	<meta property="og:type" content="website">
-	<meta property="og:site_name" content="BxCachy">
+	<meta property="og:site_name" content="BxRig">
 	<meta property="og:title" content="Mail catcher">
 
 	
@@ -137,7 +137,7 @@
 			</button>
 
 			
-			<a class="navbar-brand brand-mark" href="/"><img class="brand-logo" src="/assets/bxcachy-logo.svg" alt=""><span class="brand-name">BxCachy</span></a>
+			<a class="navbar-brand brand-mark" href="/"><img class="brand-logo" src="/assets/bxrig-logo.svg" alt=""><span class="brand-name">BxRig</span></a>
 
 			
 			<div class="navbar-controls">
@@ -167,7 +167,7 @@
 				
 					<a
 						class="repo-link"
-						href="https://github.com/ortus-boxlang/bxcachy"
+						href="https://github.com/ortus-boxlang/bxrig"
 						target="_blank"
 						rel="noopener noreferrer"
 						aria-label="Repository"
@@ -240,32 +240,32 @@
 
 		
 		<h1 id="mail-catcher"><a href="#mail-catcher" id="mail-catcher" name="mail-catcher" class="anchor"></a>Mail catcher</h1>
-<p>When you build an app that sends email, you want to see the mail without sending it to anyone. <code>bxcachy mail</code> runs a catcher in a container (<a href="https://mailpit.axllent.org">Mailpit</a>): your app sends to <code>127.0.0.1:1025</code> and the mail shows up in an inbox. Nothing leaves your machine.</p>
-<pre><code class="language-bash">bxcachy mail start --yes        # plan first without --yes
-bxcachy mail env                # the settings to put in your app
-bxcachy mail test               # send one sample message
-bxcachy mail list               # what arrived
-bxcachy mail show ID            # headers, text body and attachments
-bxcachy mail open               # the web inbox in your browser
-bxcachy mail clear --yes        # delete every message
-bxcachy mail stop
+<p>When you build an app that sends email, you want to see the mail without sending it to anyone. <code>bxrig mail</code> runs a catcher in a container (<a href="https://mailpit.axllent.org">Mailpit</a>): your app sends to <code>127.0.0.1:1025</code> and the mail shows up in an inbox. Nothing leaves your machine.</p>
+<pre><code class="language-bash">bxrig mail start --yes        # plan first without --yes
+bxrig mail env                # the settings to put in your app
+bxrig mail test               # send one sample message
+bxrig mail list               # what arrived
+bxrig mail show ID            # headers, text body and attachments
+bxrig mail open               # the web inbox in your browser
+bxrig mail clear --yes        # delete every message
+bxrig mail stop
 </code></pre>
 <p>The catcher listens on <code>127.0.0.1</code> only: SMTP on port 1025 (no TLS, any login is accepted) and the web inbox on port 8025. Change the ports with <code>--smtp-port=2525</code> and <code>--ui-port=9025</code>.</p>
 <h2 id="mail-is-thrown-away-when-it-stops"><a href="#mail-is-thrown-away-when-it-stops" id="mail-is-thrown-away-when-it-stops" name="mail-is-thrown-away-when-it-stops" class="anchor"></a>Mail is thrown away when it stops</h2>
-<p>Without <code>--keep</code>, stopping the catcher deletes it and its mail. That is what you want while developing: every run starts with an empty inbox. If you want the mail to survive, start it with <code>bxcachy mail start --keep --yes</code>; it is then stored in <code>~/.local/share/bxcachy/mail</code>. <code>bxcachy mail remove --yes</code> deletes the container and any stored mail (<code>--keep-data</code> keeps the folder).</p>
+<p>Without <code>--keep</code>, stopping the catcher deletes it and its mail. That is what you want while developing: every run starts with an empty inbox. If you want the mail to survive, start it with <code>bxrig mail start --keep --yes</code>; it is then stored in <code>~/.local/share/bxrig/mail</code>. <code>bxrig mail remove --yes</code> deletes the container and any stored mail (<code>--keep-data</code> keeps the folder).</p>
 <h2 id="settings-for-your-app"><a href="#settings-for-your-app" id="settings-for-your-app" name="settings-for-your-app" class="anchor"></a>Settings for your app</h2>
-<p><code>bxcachy mail env</code> prints them for BoxLang and ColdBox apps, Laravel, Spring Boot, Node and plain environment variables. In short: host <code>127.0.0.1</code>, port <code>1025</code>, no encryption, no username or password.</p>
+<p><code>bxrig mail env</code> prints them for BoxLang and ColdBox apps, Laravel, Spring Boot, Node and plain environment variables. In short: host <code>127.0.0.1</code>, port <code>1025</code>, no encryption, no username or password.</p>
 <h2 id="in-the-control-center"><a href="#in-the-control-center" id="in-the-control-center" name="in-the-control-center" class="anchor"></a>In the Control Center</h2>
-<p><code>bxcachy tui</code> has a Mail page. It lists the messages (newest first), shows the headers and text of the highlighted one, and refreshes itself every few seconds so you can watch mail arrive. <code>d</code> deletes a message, <code>c</code> clears the inbox, <code>o</code> opens it rendered in your browser and <code>t</code> sends a test message. Deleting and clearing show a plan first.</p>
+<p><code>bxrig tui</code> has a Mail page. It lists the messages (newest first), shows the headers and text of the highlighted one, and refreshes itself every few seconds so you can watch mail arrive. <code>d</code> deletes a message, <code>c</code> clears the inbox, <code>o</code> opens it rendered in your browser and <code>t</code> sends a test message. Deleting and clearing show a plan first.</p>
 <h2 id="in-the-wizard-and-the-menu"><a href="#in-the-wizard-and-the-menu" id="in-the-wizard-and-the-menu" name="in-the-wizard-and-the-menu" class="anchor"></a>In the wizard and the menu</h2>
 <p>The setup wizard has a yes or no question for the mail catcher (off by default). The task menu has Develop &gt; Mail catcher.</p>
-<p>It needs a container engine: Podman by default, or Docker (<code>bxcachy db engine docker</code>).</p>
+<p>It needs a container engine: Podman by default, or Docker (<code>bxrig db engine docker</code>).</p>
 
 	
 
 	
 	
-		<div class="page-meta"><a href="https://github.com/ortus-boxlang/bxcachy/edit/development/docs/guides/mail.md" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg> Edit this page</a><a href="/guides/mail.md" download><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M8 15v-3l1.5 2 1.5-2v3"/><path d="M14.5 12v4M13 15.5l1.5 1.5 1.5-1.5"/></svg> Download Markdown</a><span class="page-meta__item"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Last updated Nov 14, 2026, 10&#x3a;26&#x3a;48 AM</span><a href="https://github.com/ortus-boxlang/bxcachy/issues/new?title=Issue%20with%3A%20Mail%20catcher&amp;body=Found%20on%3A%20https%3A%2F%2Fbxcachy.boxlang.io%2Fguides%2Fmail%2Findex.html" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg> Report an issue</a></div>
+		<div class="page-meta"><a href="https://github.com/ortus-boxlang/bxrig/edit/development/docs/guides/mail.md" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg> Edit this page</a><a href="/guides/mail.md" download><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M8 15v-3l1.5 2 1.5-2v3"/><path d="M14.5 12v4M13 15.5l1.5 1.5 1.5-1.5"/></svg> Download Markdown</a><span class="page-meta__item"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Last updated Nov 14, 2026, 11&#x3a;28&#x3a;24 AM</span><a href="https://github.com/ortus-boxlang/bxrig/issues/new?title=Issue%20with%3A%20Mail%20catcher&amp;body=Found%20on%3A%20https%3A%2F%2Fbxcachy.boxlang.io%2Fguides%2Fmail%2Findex.html" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg> Report an issue</a></div>
 	
 </article>
 
@@ -322,7 +322,7 @@ bxcachy mail stop
 		<footer class="bxsites-footer">
 			<div class="container-fluid bxsites-footer__inner">
 				
-				<div class="bxsites-footer__copy">&copy; 2026 BxCachy</div>
+				<div class="bxsites-footer__copy">&copy; 2026 BxRig</div>
 				
 				
 					<div class="bxsites-footer__social"><a class="social-link" href="https://github.com/ortus-boxlang/BoxLang" target="_blank" rel="noopener noreferrer" aria-label="BoxLang on GitHub" title="BoxLang on GitHub"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.385-1.333-1.754-1.333-1.754-1.089-.744.083-.729.083-.729 1.205.084 1.84 1.237 1.84 1.237 1.07 1.834 2.807 1.304 3.492.997.108-.775.418-1.305.762-1.605-2.665-.303-5.467-1.332-5.467-5.93 0-1.31.468-2.38 1.235-3.22-.123-.303-.535-1.523.117-3.176 0 0 1.008-.322 3.301 1.23A11.5 11.5 0 0 1 12 5.803c1.02.005 2.045.138 3.003.404 2.29-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.873.118 3.176.77.84 1.235 1.91 1.235 3.22 0 4.61-2.807 5.625-5.48 5.92.43.372.823 1.102.823 2.222 0 1.606-.014 2.898-.014 3.293 0 .322.216.694.825.576C20.565 21.795 24 17.298 24 12c0-6.63-5.37-12-12-12"/></svg></a><a class="social-link" href="https://www.boxlang.io" target="_blank" rel="noopener noreferrer" aria-label="BoxLang" title="BoxLang"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></div>

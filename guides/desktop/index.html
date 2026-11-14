@@ -11,9 +11,9 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>The desktop - BxCachy</title>
+	<title>The desktop - BxRig</title>
 	<meta property="og:type" content="website">
-	<meta property="og:site_name" content="BxCachy">
+	<meta property="og:site_name" content="BxRig">
 	<meta property="og:title" content="The desktop">
 
 	
@@ -137,7 +137,7 @@
 			</button>
 
 			
-			<a class="navbar-brand brand-mark" href="/"><img class="brand-logo" src="/assets/bxcachy-logo.svg" alt=""><span class="brand-name">BxCachy</span></a>
+			<a class="navbar-brand brand-mark" href="/"><img class="brand-logo" src="/assets/bxrig-logo.svg" alt=""><span class="brand-name">BxRig</span></a>
 
 			
 			<div class="navbar-controls">
@@ -167,7 +167,7 @@
 				
 					<a
 						class="repo-link"
-						href="https://github.com/ortus-boxlang/bxcachy"
+						href="https://github.com/ortus-boxlang/bxrig"
 						target="_blank"
 						rel="noopener noreferrer"
 						aria-label="Repository"
@@ -240,14 +240,14 @@
 
 		
 		<h1 id="the-desktop"><a href="#the-desktop" id="the-desktop" name="the-desktop" class="anchor"></a>The desktop</h1>
-<p>BxCachy sets up <strong>Hyprland with Noctalia</strong> as the main desktop. <strong>KDE Plasma</strong> stays installed and gets tiling and a status panel; pick either (or both) at the login screen (<code>bxcachy session set hyprland|plasma</code>).</p>
+<p>BxRig sets up <strong>Hyprland with Noctalia</strong> as the main desktop. <strong>KDE Plasma</strong> stays installed and gets tiling and a status panel; pick either (or both) at the login screen (<code>bxrig session set hyprland|plasma</code>).</p>
 <h2 id="hyprland-and-noctalia"><a href="#hyprland-and-noctalia" id="hyprland-and-noctalia" name="hyprland-and-noctalia" class="anchor"></a>Hyprland and Noctalia</h2>
-<p><code>bxcachy setup hyprland</code> installs the packages one by one and writes the starter configuration once. <code>~/.config/hypr/hyprland.lua</code> is yours. BxCachy owns <code>~/.config/hypr/bxcachy.lua</code>, which it regenerates from the <a href="/guides/shortcuts/index.html">shortcut table</a>; never edit that file by hand.</p>
+<p><code>bxrig setup hyprland</code> installs the packages one by one and writes the starter configuration once. <code>~/.config/hypr/hyprland.lua</code> is yours. BxRig owns <code>~/.config/hypr/bxrig.lua</code>, which it regenerates from the <a href="/guides/shortcuts/index.html">shortcut table</a>; never edit that file by hand.</p>
 <h2 id="kde-plasma"><a href="#kde-plasma" id="kde-plasma" name="kde-plasma" class="anchor"></a>KDE Plasma</h2>
 <ul>
-<li><strong>Tiling:</strong> <code>bxcachy setup plasma</code> installs HyprKwin. Layouts: dwindle, master, monocle, scrolling, stage. <code>bxcachy tiling on|off|status|layout NAME</code>.</li>
-<li><strong>Panels:</strong> <code>bxcachy plasma panels apply</code> replaces your panels with a top status panel (launcher, workspace pager, active window, clock, weather, media, system vitals, tray, in rounded islands with Panel Colorizer) and a bottom dock. Your old layout is backed up first: <code>bxcachy plasma panels undo --yes</code> restores it. From Hyprland it is applied at your next Plasma login.</li>
-<li><strong>Virtual desktops:</strong> <code>bxcachy plasma desktops 4</code>.</li>
+<li><strong>Tiling:</strong> <code>bxrig setup plasma</code> installs HyprKwin. Layouts: dwindle, master, monocle, scrolling, stage. <code>bxrig tiling on|off|status|layout NAME</code>.</li>
+<li><strong>Panels:</strong> <code>bxrig plasma panels apply</code> replaces your panels with a top status panel (launcher, workspace pager, active window, clock, weather, media, system vitals, tray, in rounded islands with Panel Colorizer) and a bottom dock. Your old layout is backed up first: <code>bxrig plasma panels undo --yes</code> restores it. From Hyprland it is applied at your next Plasma login.</li>
+<li><strong>Virtual desktops:</strong> <code>bxrig plasma desktops 4</code>.</li>
 </ul>
 <p>Look and hardware have their own pages: <a href="/guides/appearance/index.html">Appearance</a> for the bar, dock, windows and fonts, and <a href="/guides/system/index.html">Displays, power and time</a> for monitors, laptop power and the time zone. The <a href="/guides/menu/index.html">control center</a> has all of it as one menu.</p>
 <h2 id="everyday-tools"><a href="#everyday-tools" id="everyday-tools" name="everyday-tools" class="anchor"></a>Everyday tools</h2>
@@ -256,25 +256,25 @@
 <tr><th>Do</th><th>Command</th><th>Shortcut</th></tr>
 </thead>
 <tbody>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Control center</td><td><code>bxcachy menu</code></td><td><code>Super+Alt+M</code></td></tr>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>All apps window</td><td><code>bxcachy apps</code></td><td><code>Super+Alt+Space</code></td></tr>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Screenshot</td><td><code>bxcachy screenshot screen\|region\|window</code></td><td><code>Super+Shift+3</code> / <code>4</code> / <code>5</code> (menu)</td></tr>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Text from the screen</td><td><code>bxcachy screenshot ocr</code></td><td>in the <code>5</code> menu</td></tr>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>QR codes</td><td><code>bxcachy screenshot qr</code>, <code>bxcachy qr TEXT</code></td><td> </td></tr>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Record the screen</td><td><code>bxcachy record toggle [--region]</code></td><td><code>Super+Shift+R</code></td></tr>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Clipboard history</td><td><code>bxcachy clipboard pick</code></td><td><code>Super+Shift+V</code></td></tr>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Do Not Disturb</td><td><code>bxcachy notify dnd toggle</code>, <code>notify snooze 30m</code></td><td><code>Super+Alt+N</code></td></tr>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Night shift</td><td><code>bxcachy nightshift on\|off\|toggle</code></td><td><code>Super+Alt+Shift+N</code></td></tr>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Emoji</td><td><code>bxcachy emoji</code></td><td><code>Super+Ctrl+E</code></td></tr>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Force quit</td><td><code>bxcachy forcequit</code></td><td><code>Super+Alt+Escape</code></td></tr>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Overview</td><td><code>bxcachy overview</code></td><td><code>Super+Ctrl+Up</code></td></tr>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Minimize / restore</td><td><code>bxcachy window minimize\|restore</code></td><td><code>Super+M</code> / <code>Super+Shift+M</code></td></tr>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Pull-down AI shell</td><td><code>bxcachy ai shell</code></td><td><code>Super+`</code></td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Control center</td><td><code>bxrig menu</code></td><td><code>Super+Alt+M</code></td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>All apps window</td><td><code>bxrig apps</code></td><td><code>Super+Alt+Space</code></td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Screenshot</td><td><code>bxrig screenshot screen\|region\|window</code></td><td><code>Super+Shift+3</code> / <code>4</code> / <code>5</code> (menu)</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Text from the screen</td><td><code>bxrig screenshot ocr</code></td><td>in the <code>5</code> menu</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>QR codes</td><td><code>bxrig screenshot qr</code>, <code>bxrig qr TEXT</code></td><td> </td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Record the screen</td><td><code>bxrig record toggle [--region]</code></td><td><code>Super+Shift+R</code></td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Clipboard history</td><td><code>bxrig clipboard pick</code></td><td><code>Super+Shift+V</code></td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Do Not Disturb</td><td><code>bxrig notify dnd toggle</code>, <code>notify snooze 30m</code></td><td><code>Super+Alt+N</code></td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Night shift</td><td><code>bxrig nightshift on\|off\|toggle</code></td><td><code>Super+Alt+Shift+N</code></td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Emoji</td><td><code>bxrig emoji</code></td><td><code>Super+Ctrl+E</code></td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Force quit</td><td><code>bxrig forcequit</code></td><td><code>Super+Alt+Escape</code></td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Overview</td><td><code>bxrig overview</code></td><td><code>Super+Ctrl+Up</code></td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Minimize / restore</td><td><code>bxrig window minimize\|restore</code></td><td><code>Super+M</code> / <code>Super+Shift+M</code></td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Pull-down AI shell</td><td><code>bxrig ai shell</code></td><td><code>Super+`</code></td></tr>
 </tbody>
 </table></div>
 <p>Night shift on Hyprland runs <code>wlsunset</code> with your time zone's sunrise and sunset (no network lookup); on Plasma it turns on Plasma's own Night Light.</p>
 <h2 id="trackpads-and-apple-devices"><a href="#trackpads-and-apple-devices" id="trackpads-and-apple-devices" name="trackpads-and-apple-devices" class="anchor"></a>Trackpads and Apple devices</h2>
-<p><code>bxcachy input gestures --yes</code> sets up three-finger swipes (workspaces, overview) with <code>libinput-gestures</code>. <code>bxcachy input doctor</code> checks Magic Mouse and Magic Trackpad support (the kernel driver, Bluetooth, the <code>input</code> group). For Option-key characters like a Mac, pick the <strong>English (US, Macintosh)</strong> keyboard layout in the wizard. <code>bxcachy airplay on</code> starts an AirPlay receiver.</p>
+<p><code>bxrig input gestures --yes</code> sets up three-finger swipes (workspaces, overview) with <code>libinput-gestures</code>. <code>bxrig input doctor</code> checks Magic Mouse and Magic Trackpad support (the kernel driver, Bluetooth, the <code>input</code> group). For Option-key characters like a Mac, pick the <strong>English (US, Macintosh)</strong> keyboard layout in the wizard. <code>bxrig airplay on</code> starts an AirPlay receiver.</p>
 <h2 id="hot-corners"><a href="#hot-corners" id="hot-corners" name="hot-corners" class="anchor"></a>Hot corners</h2>
 <p>Hot corners are left to you: on Plasma use System Settings → Screen Edges.</p>
 
@@ -282,7 +282,7 @@
 
 	
 	
-		<div class="page-meta"><a href="https://github.com/ortus-boxlang/bxcachy/edit/development/docs/guides/desktop.md" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg> Edit this page</a><a href="/guides/desktop.md" download><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M8 15v-3l1.5 2 1.5-2v3"/><path d="M14.5 12v4M13 15.5l1.5 1.5 1.5-1.5"/></svg> Download Markdown</a><span class="page-meta__item"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Last updated Nov 14, 2026, 10&#x3a;26&#x3a;48 AM</span><a href="https://github.com/ortus-boxlang/bxcachy/issues/new?title=Issue%20with%3A%20The%20desktop&amp;body=Found%20on%3A%20https%3A%2F%2Fbxcachy.boxlang.io%2Fguides%2Fdesktop%2Findex.html" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg> Report an issue</a></div>
+		<div class="page-meta"><a href="https://github.com/ortus-boxlang/bxrig/edit/development/docs/guides/desktop.md" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg> Edit this page</a><a href="/guides/desktop.md" download><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M8 15v-3l1.5 2 1.5-2v3"/><path d="M14.5 12v4M13 15.5l1.5 1.5 1.5-1.5"/></svg> Download Markdown</a><span class="page-meta__item"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Last updated Nov 14, 2026, 11&#x3a;28&#x3a;24 AM</span><a href="https://github.com/ortus-boxlang/bxrig/issues/new?title=Issue%20with%3A%20The%20desktop&amp;body=Found%20on%3A%20https%3A%2F%2Fbxcachy.boxlang.io%2Fguides%2Fdesktop%2Findex.html" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg> Report an issue</a></div>
 	
 </article>
 
@@ -339,7 +339,7 @@
 		<footer class="bxsites-footer">
 			<div class="container-fluid bxsites-footer__inner">
 				
-				<div class="bxsites-footer__copy">&copy; 2026 BxCachy</div>
+				<div class="bxsites-footer__copy">&copy; 2026 BxRig</div>
 				
 				
 					<div class="bxsites-footer__social"><a class="social-link" href="https://github.com/ortus-boxlang/BoxLang" target="_blank" rel="noopener noreferrer" aria-label="BoxLang on GitHub" title="BoxLang on GitHub"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.385-1.333-1.754-1.333-1.754-1.089-.744.083-.729.083-.729 1.205.084 1.84 1.237 1.84 1.237 1.07 1.834 2.807 1.304 3.492.997.108-.775.418-1.305.762-1.605-2.665-.303-5.467-1.332-5.467-5.93 0-1.31.468-2.38 1.235-3.22-.123-.303-.535-1.523.117-3.176 0 0 1.008-.322 3.301 1.23A11.5 11.5 0 0 1 12 5.803c1.02.005 2.045.138 3.003.404 2.29-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.873.118 3.176.77.84 1.235 1.91 1.235 3.22 0 4.61-2.807 5.625-5.48 5.92.43.372.823 1.102.823 2.222 0 1.606-.014 2.898-.014 3.293 0 .322.216.694.825.576C20.565 21.795 24 17.298 24 12c0-6.63-5.37-12-12-12"/></svg></a><a class="social-link" href="https://www.boxlang.io" target="_blank" rel="noopener noreferrer" aria-label="BoxLang" title="BoxLang"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></div>

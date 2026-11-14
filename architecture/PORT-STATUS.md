@@ -4,7 +4,7 @@ order: 90
 hidden: true
 ---
 
-# BxCachy migration status
+# BxRig migration status
 
 ## Milestone 1 — native foundation (not yet accepted)
 

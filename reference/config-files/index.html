@@ -11,9 +11,9 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>Files and folders - BxCachy</title>
+	<title>Files and folders - BxRig</title>
 	<meta property="og:type" content="website">
-	<meta property="og:site_name" content="BxCachy">
+	<meta property="og:site_name" content="BxRig">
 	<meta property="og:title" content="Files and folders">
 
 	
@@ -26,8 +26,8 @@
 
 	
 	
-		<meta name="description" content="Where BxCachy keeps things.">
-		<meta property="og:description" content="Where BxCachy keeps things.">
+		<meta name="description" content="Where BxRig keeps things.">
+		<meta property="og:description" content="Where BxRig keeps things.">
 	
 
 	
@@ -137,7 +137,7 @@
 			</button>
 
 			
-			<a class="navbar-brand brand-mark" href="/"><img class="brand-logo" src="/assets/bxcachy-logo.svg" alt=""><span class="brand-name">BxCachy</span></a>
+			<a class="navbar-brand brand-mark" href="/"><img class="brand-logo" src="/assets/bxrig-logo.svg" alt=""><span class="brand-name">BxRig</span></a>
 
 			
 			<div class="navbar-controls">
@@ -167,7 +167,7 @@
 				
 					<a
 						class="repo-link"
-						href="https://github.com/ortus-boxlang/bxcachy"
+						href="https://github.com/ortus-boxlang/bxrig"
 						target="_blank"
 						rel="noopener noreferrer"
 						aria-label="Repository"
@@ -225,7 +225,7 @@
 		</h1>
 		
 		
-			<p class="page-summary">Where BxCachy keeps things.</p>
+			<p class="page-summary">Where BxRig keeps things.</p>
 		
 		
 		
@@ -243,42 +243,42 @@
 <tr><th>Path</th><th>What</th></tr>
 </thead>
 <tbody>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.local/bin/bxcachy</code></td><td>the program</td></tr>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.config/bxcachy/answers.json</code></td><td>your wizard answers (mode 600, no secrets)</td></tr>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.config/bxcachy/shortcuts.json</code></td><td>your shortcut changes</td></tr>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.config/bxcachy/runner.json</code></td><td>launcher and menu program</td></tr>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.config/bxcachy/update.json</code></td><td>update channel and notification setting</td></tr>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.config/bxcachy/skills.json</code></td><td>the agent skills BxCachy installed</td></tr>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.config/bxcachy/appearance.json</code></td><td>what you chose in <code>bxcachy appearance</code> (bar, dock, windows, font)</td></tr>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.config/bxcachy/display.json</code></td><td>what you chose in <code>bxcachy display</code> (scale, rotation, mirror, laptop panel)</td></tr>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.config/bxcachy/theme.json</code></td><td>the current theme and mode</td></tr>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.config/bxcachy/theme/look.lua</code></td><td>generated Hyprland window looks (gaps, corners, opacity); never edit</td></tr>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.config/bxcachy/theme/monitors.lua</code></td><td>generated Hyprland monitor settings; never edit</td></tr>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.config/bxcachy/nas.json</code></td><td>your NAS boxes (no passwords)</td></tr>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.config/bxcachy/backup.json</code></td><td>backup places, what is backed up, retention, schedule (no keys)</td></tr>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.local/share/bxcachy/backups/config/</code></td><td>your BxCachy config snapshots</td></tr>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>/etc/bxcachy/nas/NAME.cred</code></td><td>the SMB credentials of a NAS, root only (mode 600)</td></tr>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.config/systemd/user/bxcachy-backup.{service,timer}</code></td><td>the automatic file backup</td></tr>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.config/bxcachy/vms/</code></td><td>one record per virtual machine</td></tr>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>/etc/systemd/logind.conf.d/50-bxcachy-lid.conf</code></td><td>what closing the lid does (<code>bxcachy power lid</code>); remove it to go back to the defaults</td></tr>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>/etc/pam.d/sudo</code> and <code>.bxcachy-backup</code></td><td>one marked line per <code>bxcachy security fingerprint\|fido2 on</code>; the backup is the original</td></tr>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>/etc/sudoers.d/50-bxcachy-nopasswd</code></td><td>passwordless sudo (<code>bxcachy security passwordless-sudo on</code>)</td></tr>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>/etc/systemd/system/automatic-timezoned.service</code>, <code>/etc/geoclue/conf.d/90-bxcachy-timezone.conf</code></td><td>the automatic time zone (<code>bxcachy time auto on</code>)</td></tr>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.config/bxcachy/plasma-panels/</code></td><td>the Plasma panel layout and its backup</td></tr>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.config/bxcachy/welcome.html</code></td><td>the getting-started page</td></tr>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.config/hypr/bxcachy.lua</code></td><td>generated Hyprland module (never edit); <code>hyprland.lua</code> is yours</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.local/bin/bxrig</code></td><td>the program</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.config/bxrig/answers.json</code></td><td>your wizard answers (mode 600, no secrets)</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.config/bxrig/shortcuts.json</code></td><td>your shortcut changes</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.config/bxrig/runner.json</code></td><td>launcher and menu program</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.config/bxrig/update.json</code></td><td>update channel and notification setting</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.config/bxrig/skills.json</code></td><td>the agent skills BxRig installed</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.config/bxrig/appearance.json</code></td><td>what you chose in <code>bxrig appearance</code> (bar, dock, windows, font)</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.config/bxrig/display.json</code></td><td>what you chose in <code>bxrig display</code> (scale, rotation, mirror, laptop panel)</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.config/bxrig/theme.json</code></td><td>the current theme and mode</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.config/bxrig/theme/look.lua</code></td><td>generated Hyprland window looks (gaps, corners, opacity); never edit</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.config/bxrig/theme/monitors.lua</code></td><td>generated Hyprland monitor settings; never edit</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.config/bxrig/nas.json</code></td><td>your NAS boxes (no passwords)</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.config/bxrig/backup.json</code></td><td>backup places, what is backed up, retention, schedule (no keys)</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.local/share/bxrig/backups/config/</code></td><td>your BxRig config snapshots</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>/etc/bxrig/nas/NAME.cred</code></td><td>the SMB credentials of a NAS, root only (mode 600)</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.config/systemd/user/bxrig-backup.{service,timer}</code></td><td>the automatic file backup</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.config/bxrig/vms/</code></td><td>one record per virtual machine</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>/etc/systemd/logind.conf.d/50-bxrig-lid.conf</code></td><td>what closing the lid does (<code>bxrig power lid</code>); remove it to go back to the defaults</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>/etc/pam.d/sudo</code> and <code>.bxrig-backup</code></td><td>one marked line per <code>bxrig security fingerprint\|fido2 on</code>; the backup is the original</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>/etc/sudoers.d/50-bxrig-nopasswd</code></td><td>passwordless sudo (<code>bxrig security passwordless-sudo on</code>)</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>/etc/systemd/system/automatic-timezoned.service</code>, <code>/etc/geoclue/conf.d/90-bxrig-timezone.conf</code></td><td>the automatic time zone (<code>bxrig time auto on</code>)</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.config/bxrig/plasma-panels/</code></td><td>the Plasma panel layout and its backup</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.config/bxrig/welcome.html</code></td><td>the getting-started page</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.config/hypr/bxrig.lua</code></td><td>generated Hyprland module (never edit); <code>hyprland.lua</code> is yours</td></tr>
 <tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.agents/skills/</code></td><td>the agent skills store, linked into each agent</td></tr>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.config/systemd/user/bxcachy-*.service</code></td><td>night shift, AirPlay, update check, cloud mounts</td></tr>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.cache/bxcachy/install.log</code></td><td>the installer's log</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.config/systemd/user/bxrig-*.service</code></td><td>night shift, AirPlay, update check, cloud mounts</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td><code>~/.cache/bxrig/install.log</code></td><td>the installer's log</td></tr>
 </tbody>
 </table></div>
-<p>Every file BxCachy writes goes through one safe writer: atomic replace, a backup, a journal, and a <strong>drift</strong> check. A file you changed is kept and reported as drifted. <code>bxcachy config diff NAME</code> shows how it differs from what BxCachy would write.</p>
+<p>Every file BxRig writes goes through one safe writer: atomic replace, a backup, a journal, and a <strong>drift</strong> check. A file you changed is kept and reported as drifted. <code>bxrig config diff NAME</code> shows how it differs from what BxRig would write.</p>
 
 	
 
 	
 	
-		<div class="page-meta"><a href="https://github.com/ortus-boxlang/bxcachy/edit/development/docs/reference/config-files.md" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg> Edit this page</a><a href="/reference/config-files.md" download><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M8 15v-3l1.5 2 1.5-2v3"/><path d="M14.5 12v4M13 15.5l1.5 1.5 1.5-1.5"/></svg> Download Markdown</a><span class="page-meta__item"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Last updated Nov 14, 2026, 10&#x3a;26&#x3a;48 AM</span><a href="https://github.com/ortus-boxlang/bxcachy/issues/new?title=Issue%20with%3A%20Files%20and%20folders&amp;body=Found%20on%3A%20https%3A%2F%2Fbxcachy.boxlang.io%2Freference%2Fconfig-files%2Findex.html" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg> Report an issue</a></div>
+		<div class="page-meta"><a href="https://github.com/ortus-boxlang/bxrig/edit/development/docs/reference/config-files.md" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg> Edit this page</a><a href="/reference/config-files.md" download><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M8 15v-3l1.5 2 1.5-2v3"/><path d="M14.5 12v4M13 15.5l1.5 1.5 1.5-1.5"/></svg> Download Markdown</a><span class="page-meta__item"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Last updated Nov 14, 2026, 11&#x3a;28&#x3a;24 AM</span><a href="https://github.com/ortus-boxlang/bxrig/issues/new?title=Issue%20with%3A%20Files%20and%20folders&amp;body=Found%20on%3A%20https%3A%2F%2Fbxcachy.boxlang.io%2Freference%2Fconfig-files%2Findex.html" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg> Report an issue</a></div>
 	
 </article>
 
@@ -323,7 +323,7 @@
 		<footer class="bxsites-footer">
 			<div class="container-fluid bxsites-footer__inner">
 				
-				<div class="bxsites-footer__copy">&copy; 2026 BxCachy</div>
+				<div class="bxsites-footer__copy">&copy; 2026 BxRig</div>
 				
 				
 					<div class="bxsites-footer__social"><a class="social-link" href="https://github.com/ortus-boxlang/BoxLang" target="_blank" rel="noopener noreferrer" aria-label="BoxLang on GitHub" title="BoxLang on GitHub"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.385-1.333-1.754-1.333-1.754-1.089-.744.083-.729.083-.729 1.205.084 1.84 1.237 1.84 1.237 1.07 1.834 2.807 1.304 3.492.997.108-.775.418-1.305.762-1.605-2.665-.303-5.467-1.332-5.467-5.93 0-1.31.468-2.38 1.235-3.22-.123-.303-.535-1.523.117-3.176 0 0 1.008-.322 3.301 1.23A11.5 11.5 0 0 1 12 5.803c1.02.005 2.045.138 3.003.404 2.29-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.873.118 3.176.77.84 1.235 1.91 1.235 3.22 0 4.61-2.807 5.625-5.48 5.92.43.372.823 1.102.823 2.222 0 1.606-.014 2.898-.014 3.293 0 .322.216.694.825.576C20.565 21.795 24 17.298 24 12c0-6.63-5.37-12-12-12"/></svg></a><a class="social-link" href="https://www.boxlang.io" target="_blank" rel="noopener noreferrer" aria-label="BoxLang" title="BoxLang"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></div>

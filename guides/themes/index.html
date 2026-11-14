@@ -11,9 +11,9 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>Themes - BxCachy</title>
+	<title>Themes - BxRig</title>
 	<meta property="og:type" content="website">
-	<meta property="og:site_name" content="BxCachy">
+	<meta property="og:site_name" content="BxRig">
 	<meta property="og:title" content="Themes">
 
 	
@@ -137,7 +137,7 @@
 			</button>
 
 			
-			<a class="navbar-brand brand-mark" href="/"><img class="brand-logo" src="/assets/bxcachy-logo.svg" alt=""><span class="brand-name">BxCachy</span></a>
+			<a class="navbar-brand brand-mark" href="/"><img class="brand-logo" src="/assets/bxrig-logo.svg" alt=""><span class="brand-name">BxRig</span></a>
 
 			
 			<div class="navbar-controls">
@@ -167,7 +167,7 @@
 				
 					<a
 						class="repo-link"
-						href="https://github.com/ortus-boxlang/bxcachy"
+						href="https://github.com/ortus-boxlang/bxrig"
 						target="_blank"
 						rel="noopener noreferrer"
 						aria-label="Repository"
@@ -240,12 +240,12 @@
 
 		
 		<h1 id="themes"><a href="#themes" id="themes" name="themes" class="anchor"></a>Themes</h1>
-<p>BxCachy ships 15 color themes in the Omarchy theme format: five of ours and ten taken from Omarchy.</p>
-<pre><code class="language-bash">bxcachy theme list                  # all themes, the current one marked
-bxcachy theme set tokyo-night       # apply one now
-bxcachy theme next                  # or random
-bxcachy theme mode auto             # theme, dark, light or auto
-bxcachy theme status
+<p>BxRig ships 15 color themes in the Omarchy theme format: five of ours and ten taken from Omarchy.</p>
+<pre><code class="language-bash">bxrig theme list                  # all themes, the current one marked
+bxrig theme set tokyo-night       # apply one now
+bxrig theme next                  # or random
+bxrig theme mode auto             # theme, dark, light or auto
+bxrig theme status
 </code></pre>
 <p>Setting a theme acts at once. <code>--dry-run</code> shows what would be written without changing anything.</p>
 <h2 id="what-changes"><a href="#what-changes" id="what-changes" name="what-changes" class="anchor"></a>What changes</h2>
@@ -257,36 +257,36 @@ bxcachy theme status
 <tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Noctalia (bar, launcher, panels, notifications)</td><td>a generated palette and the light or dark mode</td></tr>
 <tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Ghostty, kitty, alacritty, foot</td><td>generated files that the starter configs include</td></tr>
 <tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>btop</td><td>a generated theme file</td></tr>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Hyprland window borders</td><td>the accent color, read by the managed <code>bxcachy.lua</code></td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Hyprland window borders</td><td>the accent color, read by the managed <code>bxrig.lua</code></td></tr>
 <tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Neovim (LazyVim setup)</td><td>the matching colorscheme, applied live without a restart</td></tr>
 <tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>KDE Plasma</td><td>switches between Breeze Light and Breeze Dark</td></tr>
 <tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>GTK 3 and 4 apps</td><td><code>~/.config/gtk-4.0/gtk.css</code> and <code>gtk-3.0/gtk.css</code> (libadwaita colors; adw-gtk3 for GTK 3), plus the dark or light preference through gsettings</td></tr>
 <tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Qt apps</td><td>qt6ct and qt5ct color schemes (set the style to qt6ct in your environment)</td></tr>
 <tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>tmux, fzf</td><td><code>theme/tmux.conf</code> and <code>theme/fzf.sh</code>, with a one-line hint to source them</td></tr>
 <tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>rofi, fuzzel, wofi</td><td>a rofi theme (and a <code>config.rasi</code> stub when you have none), <code>fuzzel.ini</code>, wofi <code>style.css</code></td></tr>
-<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Wallpaper</td><td>a BxCachy theme brings one of our wallpapers; use <code>--keep-wallpaper</code> to skip it</td></tr>
+<tr x-show="!q || $el.textContent.toLowerCase().includes( q.toLowerCase() )"><td>Wallpaper</td><td>a BxRig theme brings one of our wallpapers; use <code>--keep-wallpaper</code> to skip it</td></tr>
 </tbody>
 </table></div>
-<p>VS Code is opt-in: <code>bxcachy theme vscode</code> shows a plan, <code>--yes</code> merges the colors into <code>workbench.colorCustomizations</code> of Code, Code - OSS, VSCodium or Cursor (a backup is kept; a settings file with comments is left alone). Not themed: the Starship prompt, browsers and icons. Your own config files are never edited. Terminal configs you wrote yourself need one include line, which <code>bxcachy theme set</code> prints.</p>
+<p>VS Code is opt-in: <code>bxrig theme vscode</code> shows a plan, <code>--yes</code> merges the colors into <code>workbench.colorCustomizations</code> of Code, Code - OSS, VSCodium or Cursor (a backup is kept; a settings file with comments is left alone). Not themed: the Starship prompt, browsers and icons. Your own config files are never edited. Terminal configs you wrote yourself need one include line, which <code>bxrig theme set</code> prints.</p>
 <p>Bar, dock, windows, fonts and backgrounds are in <a href="/guides/appearance/index.html">Appearance</a>.</p>
 <h2 id="the-themes"><a href="#the-themes" id="the-themes" name="the-themes" class="anchor"></a>The themes</h2>
-<p>BxCachy, BxCachy Light, BxCachy Midnight, BxCachy Cyan and BxCachy Forest are ours. From Omarchy: catppuccin, catppuccin-latte, tokyo-night, gruvbox, nord, rose-pine, kanagawa, everforest, matte-black and flexoki-light (MIT, credited in <code>themes/NOTICE.md</code>).</p>
+<p>BxRig, BxRig Light, BxRig Midnight, BxRig Cyan and BxRig Forest are ours. From Omarchy: catppuccin, catppuccin-latte, tokyo-night, gruvbox, nord, rose-pine, kanagawa, everforest, matte-black and flexoki-light (MIT, credited in <code>themes/NOTICE.md</code>).</p>
 <h2 id="more-themes-and-your-own"><a href="#more-themes-and-your-own" id="more-themes-and-your-own" name="more-themes-and-your-own" class="anchor"></a>More themes, and your own</h2>
-<p><code>bxcachy theme install https://github.com/someone/omarchy-name-theme</code> installs an Omarchy-style theme repository (https only). Themes you already have in <code>~/.config/omarchy/themes</code> are found automatically. A theme is a folder with <code>colors.toml</code>, an optional <code>neovim.lua</code> and an optional <code>backgrounds/</code> folder:</p>
-<pre><code class="language-bash">bxcachy theme import ~/my-theme --name=mine
-bxcachy theme remove mine
+<p><code>bxrig theme install https://github.com/someone/omarchy-name-theme</code> installs an Omarchy-style theme repository (https only). Themes you already have in <code>~/.config/omarchy/themes</code> are found automatically. A theme is a folder with <code>colors.toml</code>, an optional <code>neovim.lua</code> and an optional <code>backgrounds/</code> folder:</p>
+<pre><code class="language-bash">bxrig theme import ~/my-theme --name=mine
+bxrig theme remove mine
 </code></pre>
 <p>Both <code>colors.toml</code> formats are understood: the named colors of current Omarchy and the older <code>color0</code> to <code>color15</code> list.</p>
 <h2 id="neovim"><a href="#neovim" id="neovim" name="neovim" class="anchor"></a>Neovim</h2>
-<p><code>bxcachy editor lazyvim --yes</code> installs the LazyVim starter plus the BxCachy layer: transparent background, BoxLang syntax highlighting (<a href="https://github.com/ortus-boxlang/vim-boxlang">vim-boxlang</a>), no news popups, the neo-tree extra, and live theme following. An existing <code>~/.config/nvim</code> is never touched. To add only BoxLang syntax to a LazyVim config you already have: <code>bxcachy editor boxlang --yes</code>.</p>
+<p><code>bxrig editor lazyvim --yes</code> installs the LazyVim starter plus the BxRig layer: transparent background, BoxLang syntax highlighting (<a href="https://github.com/ortus-boxlang/vim-boxlang">vim-boxlang</a>), no news popups, the neo-tree extra, and live theme following. An existing <code>~/.config/nvim</code> is never touched. To add only BoxLang syntax to a LazyVim config you already have: <code>bxrig editor boxlang --yes</code>.</p>
 <h2 id="the-boxlang-prompt-segment"><a href="#the-boxlang-prompt-segment" id="the-boxlang-prompt-segment" name="the-boxlang-prompt-segment" class="anchor"></a>The BoxLang prompt segment</h2>
-<p>The starter Starship prompt shows your BoxLang version, like Java, in folders with <code>.bx</code>, <code>.bxs</code>, <code>.bxm</code>, <code>.cfc</code>, <code>.cfm</code> or <code>.cfs</code> files, <code>box.json</code> or <code>Application.bx</code>. The starter file is written once, so an existing prompt keeps what you have; <code>bxcachy config diff starship</code> shows what is new.</p>
+<p>The starter Starship prompt shows your BoxLang version, like Java, in folders with <code>.bx</code>, <code>.bxs</code>, <code>.bxm</code>, <code>.cfc</code>, <code>.cfm</code> or <code>.cfs</code> files, <code>box.json</code> or <code>Application.bx</code>. The starter file is written once, so an existing prompt keeps what you have; <code>bxrig config diff starship</code> shows what is new.</p>
 
 	
 
 	
 	
-		<div class="page-meta"><a href="https://github.com/ortus-boxlang/bxcachy/edit/development/docs/guides/themes.md" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg> Edit this page</a><a href="/guides/themes.md" download><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M8 15v-3l1.5 2 1.5-2v3"/><path d="M14.5 12v4M13 15.5l1.5 1.5 1.5-1.5"/></svg> Download Markdown</a><span class="page-meta__item"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Last updated Nov 14, 2026, 10&#x3a;26&#x3a;48 AM</span><a href="https://github.com/ortus-boxlang/bxcachy/issues/new?title=Issue%20with%3A%20Themes&amp;body=Found%20on%3A%20https%3A%2F%2Fbxcachy.boxlang.io%2Fguides%2Fthemes%2Findex.html" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg> Report an issue</a></div>
+		<div class="page-meta"><a href="https://github.com/ortus-boxlang/bxrig/edit/development/docs/guides/themes.md" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg> Edit this page</a><a href="/guides/themes.md" download><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M8 15v-3l1.5 2 1.5-2v3"/><path d="M14.5 12v4M13 15.5l1.5 1.5 1.5-1.5"/></svg> Download Markdown</a><span class="page-meta__item"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Last updated Nov 14, 2026, 11&#x3a;28&#x3a;24 AM</span><a href="https://github.com/ortus-boxlang/bxrig/issues/new?title=Issue%20with%3A%20Themes&amp;body=Found%20on%3A%20https%3A%2F%2Fbxcachy.boxlang.io%2Fguides%2Fthemes%2Findex.html" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg> Report an issue</a></div>
 	
 </article>
 
@@ -343,7 +343,7 @@ bxcachy theme remove mine
 		<footer class="bxsites-footer">
 			<div class="container-fluid bxsites-footer__inner">
 				
-				<div class="bxsites-footer__copy">&copy; 2026 BxCachy</div>
+				<div class="bxsites-footer__copy">&copy; 2026 BxRig</div>
 				
 				
 					<div class="bxsites-footer__social"><a class="social-link" href="https://github.com/ortus-boxlang/BoxLang" target="_blank" rel="noopener noreferrer" aria-label="BoxLang on GitHub" title="BoxLang on GitHub"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.385-1.333-1.754-1.333-1.754-1.089-.744.083-.729.083-.729 1.205.084 1.84 1.237 1.84 1.237 1.07 1.834 2.807 1.304 3.492.997.108-.775.418-1.305.762-1.605-2.665-.303-5.467-1.332-5.467-5.93 0-1.31.468-2.38 1.235-3.22-.123-.303-.535-1.523.117-3.176 0 0 1.008-.322 3.301 1.23A11.5 11.5 0 0 1 12 5.803c1.02.005 2.045.138 3.003.404 2.29-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.873.118 3.176.77.84 1.235 1.91 1.235 3.22 0 4.61-2.807 5.625-5.48 5.92.43.372.823 1.102.823 2.222 0 1.606-.014 2.898-.014 3.293 0 .322.216.694.825.576C20.565 21.795 24 17.298 24 12c0-6.63-5.37-12-12-12"/></svg></a><a class="social-link" href="https://www.boxlang.io" target="_blank" rel="noopener noreferrer" aria-label="BoxLang" title="BoxLang"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></div>

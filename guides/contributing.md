@@ -6,7 +6,7 @@ summary: How these docs are built, versioned and released.
 
 # Contributing and docs versions
 
-BxCachy is written in BoxLang and compiled with MatchBox. The code is in `src/`, tests in `tests/`, and every command is described in the [command contract](../architecture/COMMAND-CONTRACT.md).
+BxRig is written in BoxLang and compiled with MatchBox. The code is in `src/`, tests in `tests/`, and every command is described in the [command contract](../architecture/COMMAND-CONTRACT.md).
 
 ## These docs
 

@@ -11,9 +11,9 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>Displays, power and time - BxCachy</title>
+	<title>Displays, power and time - BxRig</title>
 	<meta property="og:type" content="website">
-	<meta property="og:site_name" content="BxCachy">
+	<meta property="og:site_name" content="BxRig">
 	<meta property="og:title" content="Displays, power and time">
 
 	
@@ -137,7 +137,7 @@
 			</button>
 
 			
-			<a class="navbar-brand brand-mark" href="/"><img class="brand-logo" src="/assets/bxcachy-logo.svg" alt=""><span class="brand-name">BxCachy</span></a>
+			<a class="navbar-brand brand-mark" href="/"><img class="brand-logo" src="/assets/bxrig-logo.svg" alt=""><span class="brand-name">BxRig</span></a>
 
 			
 			<div class="navbar-controls">
@@ -167,7 +167,7 @@
 				
 					<a
 						class="repo-link"
-						href="https://github.com/ortus-boxlang/bxcachy"
+						href="https://github.com/ortus-boxlang/bxrig"
 						target="_blank"
 						rel="noopener noreferrer"
 						aria-label="Repository"
@@ -241,40 +241,40 @@
 		
 		<h1 id="displays-power-and-time"><a href="#displays-power-and-time" id="displays-power-and-time" name="displays-power-and-time" class="anchor"></a>Displays, power and time</h1>
 <h2 id="displays"><a href="#displays" id="displays" name="displays" class="anchor"></a>Displays</h2>
-<pre><code class="language-bash">bxcachy display list
-bxcachy display scale DP-2 1.5          # auto or 0.5 to 4
-bxcachy display rotate DP-2 90
-bxcachy display mode DP-2 2560x1440@144
-bxcachy display position DP-2 2880x0
-bxcachy display mirror on               # the laptop panel on every external monitor
-bxcachy display laptop off              # refused when no other monitor would be on
-bxcachy display brightness up           # down, or set 40
-bxcachy display apply                   # push what is saved again
+<pre><code class="language-bash">bxrig display list
+bxrig display scale DP-2 1.5          # auto or 0.5 to 4
+bxrig display rotate DP-2 90
+bxrig display mode DP-2 2560x1440@144
+bxrig display position DP-2 2880x0
+bxrig display mirror on               # the laptop panel on every external monitor
+bxrig display laptop off              # refused when no other monitor would be on
+bxrig display brightness up           # down, or set 40
+bxrig display apply                   # push what is saved again
 </code></pre>
-<p>On Hyprland the settings are one generated file, <code>~/.config/bxcachy/theme/monitors.lua</code>, loaded after your own <code>hyprland.lua</code>, and Hyprland reloads. On Plasma they go through <code>kscreen-doctor</code>.</p>
+<p>On Hyprland the settings are one generated file, <code>~/.config/bxrig/theme/monitors.lua</code>, loaded after your own <code>hyprland.lua</code>, and Hyprland reloads. On Plasma they go through <code>kscreen-doctor</code>.</p>
 <h2 id="laptop-power"><a href="#laptop-power" id="laptop-power" name="laptop-power" class="anchor"></a>Laptop power</h2>
-<p>CachyOS does not ship laptop power tools, so BxCachy adds them.</p>
-<pre><code class="language-bash">bxcachy power status
-bxcachy power setup --yes               # power-profiles-daemon and upower; nothing happens on a desktop
-bxcachy power profile saver             # performance, balanced, saver
-bxcachy power lid lock --yes            # suspend, lock or ignore when the lid closes
-bxcachy power doctor                    # daemons, the lid, zram, swap for hibernation
+<p>CachyOS does not ship laptop power tools, so BxRig adds them.</p>
+<pre><code class="language-bash">bxrig power status
+bxrig power setup --yes               # power-profiles-daemon and upower; nothing happens on a desktop
+bxrig power profile saver             # performance, balanced, saver
+bxrig power lid lock --yes            # suspend, lock or ignore when the lid closes
+bxrig power doctor                    # daemons, the lid, zram, swap for hibernation
 </code></pre>
 <p>The lid setting is a logind drop-in and applies from the next login. Hibernation is not configured for you; <code>doctor</code> tells you whether your swap is big enough.</p>
 <h2 id="time-zone-and-travel"><a href="#time-zone-and-travel" id="time-zone-and-travel" name="time-zone-and-travel" class="anchor"></a>Time zone and travel</h2>
-<pre><code class="language-bash">bxcachy time status
-bxcachy time zone Europe/Madrid --yes   # set it (bxcachy time zone --list shows them all)
-bxcachy time sync --yes                 # after you land: set the zone from your IP address
-bxcachy time auto on --yes              # or follow your location by itself
-bxcachy time ntp on --yes
+<pre><code class="language-bash">bxrig time status
+bxrig time zone Europe/Madrid --yes   # set it (bxrig time zone --list shows them all)
+bxrig time sync --yes                 # after you land: set the zone from your IP address
+bxrig time auto on --yes              # or follow your location by itself
+bxrig time ntp on --yes
 </code></pre>
 <p><code>time auto on</code> installs GeoClue and <code>automatic-timezoned</code>, writes the service and the GeoClue settings it needs, and enables it. <strong>GeoClue looks your location up online (the Wi-Fi networks around you or your IP address)</strong>, so the plan says so before you agree. <code>time auto off</code> removes everything it wrote. If the zone does not follow you, read <code>journalctl -u automatic-timezoned</code>.</p>
 <h2 id="dns-kernels-and-stay-awake"><a href="#dns-kernels-and-stay-awake" id="dns-kernels-and-stay-awake" name="dns-kernels-and-stay-awake" class="anchor"></a>DNS, kernels and stay awake</h2>
-<pre><code class="language-bash">bxcachy dns                              # the servers in use
-bxcachy dns cloudflare --yes             # google, quad9, custom 9.9.9.10, dhcp
-bxcachy kernel list
-bxcachy kernel install linux-cachyos-lts --yes
-bxcachy toggle stay-awake                # keep the screen from idling (Noctalia)
+<pre><code class="language-bash">bxrig dns                              # the servers in use
+bxrig dns cloudflare --yes             # google, quad9, custom 9.9.9.10, dhcp
+bxrig kernel list
+bxrig kernel install linux-cachyos-lts --yes
+bxrig toggle stay-awake                # keep the screen from idling (Noctalia)
 </code></pre>
 <p><code>dns</code> changes the active NetworkManager connections. <code>kernel</code> installs or removes kernel packages with their headers; it never edits the bootloader, never removes the running or the last kernel, and you pick the kernel in the boot menu. Stay awake needs Noctalia (Hyprland); on Plasma use System Settings.</p>
 
@@ -282,7 +282,7 @@ bxcachy toggle stay-awake                # keep the screen from idling (Noctalia
 
 	
 	
-		<div class="page-meta"><a href="https://github.com/ortus-boxlang/bxcachy/edit/development/docs/guides/system.md" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg> Edit this page</a><a href="/guides/system.md" download><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M8 15v-3l1.5 2 1.5-2v3"/><path d="M14.5 12v4M13 15.5l1.5 1.5 1.5-1.5"/></svg> Download Markdown</a><span class="page-meta__item"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Last updated Nov 14, 2026, 10&#x3a;26&#x3a;48 AM</span><a href="https://github.com/ortus-boxlang/bxcachy/issues/new?title=Issue%20with%3A%20Displays%2C%20power%20and%20time&amp;body=Found%20on%3A%20https%3A%2F%2Fbxcachy.boxlang.io%2Fguides%2Fsystem%2Findex.html" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg> Report an issue</a></div>
+		<div class="page-meta"><a href="https://github.com/ortus-boxlang/bxrig/edit/development/docs/guides/system.md" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg> Edit this page</a><a href="/guides/system.md" download><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M8 15v-3l1.5 2 1.5-2v3"/><path d="M14.5 12v4M13 15.5l1.5 1.5 1.5-1.5"/></svg> Download Markdown</a><span class="page-meta__item"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Last updated Nov 14, 2026, 11&#x3a;28&#x3a;24 AM</span><a href="https://github.com/ortus-boxlang/bxrig/issues/new?title=Issue%20with%3A%20Displays%2C%20power%20and%20time&amp;body=Found%20on%3A%20https%3A%2F%2Fbxcachy.boxlang.io%2Fguides%2Fsystem%2Findex.html" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg> Report an issue</a></div>
 	
 </article>
 
@@ -339,7 +339,7 @@ bxcachy toggle stay-awake                # keep the screen from idling (Noctalia
 		<footer class="bxsites-footer">
 			<div class="container-fluid bxsites-footer__inner">
 				
-				<div class="bxsites-footer__copy">&copy; 2026 BxCachy</div>
+				<div class="bxsites-footer__copy">&copy; 2026 BxRig</div>
 				
 				
 					<div class="bxsites-footer__social"><a class="social-link" href="https://github.com/ortus-boxlang/BoxLang" target="_blank" rel="noopener noreferrer" aria-label="BoxLang on GitHub" title="BoxLang on GitHub"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.385-1.333-1.754-1.333-1.754-1.089-.744.083-.729.083-.729 1.205.084 1.84 1.237 1.84 1.237 1.07 1.834 2.807 1.304 3.492.997.108-.775.418-1.305.762-1.605-2.665-.303-5.467-1.332-5.467-5.93 0-1.31.468-2.38 1.235-3.22-.123-.303-.535-1.523.117-3.176 0 0 1.008-.322 3.301 1.23A11.5 11.5 0 0 1 12 5.803c1.02.005 2.045.138 3.003.404 2.29-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.873.118 3.176.77.84 1.235 1.91 1.235 3.22 0 4.61-2.807 5.625-5.48 5.92.43.372.823 1.102.823 2.222 0 1.606-.014 2.898-.014 3.293 0 .322.216.694.825.576C20.565 21.795 24 17.298 24 12c0-6.63-5.37-12-12-12"/></svg></a><a class="social-link" href="https://www.boxlang.io" target="_blank" rel="noopener noreferrer" aria-label="BoxLang" title="BoxLang"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></div>

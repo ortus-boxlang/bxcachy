@@ -49,4 +49,4 @@ Native builds resolve classes at compile time, so mapped directories must exist 
 
 ## MatchBox VM fixes (PRs 156 to 160, in the `bxcachy` branch)
 
-Found while building the installer, fixed upstream, and BxCachy no longer works around them: `break` in nested for-in loops (#156), a broken pipe on stdout (#157), calling a function stored in `variables` (#158), `switch` with `var` slots and the default jump (#159), and the panic message that was hidden (#160). Behaviour change in #159: a `var` declared in one `case` is not visible in another case.
+Found while building the installer, fixed upstream, and BxRig no longer works around them: `break` in nested for-in loops (#156), a broken pipe on stdout (#157), calling a function stored in `variables` (#158), `switch` with `var` slots and the default jump (#159), and the panic message that was hidden (#160). Behaviour change in #159: a `var` declared in one `case` is not visible in another case.
