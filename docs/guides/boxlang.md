@@ -6,20 +6,20 @@ summary: The BoxLang developer ecosystem on your machine.
 
 # BoxLang and MatchBox
 
-The installer puts in Java 21, **bvm** (BoxLang Version Manager), **mvm** (MatchBox Version Manager), BoxLang and MatchBox. `bxcachy boxlang` sits on top of them.
+The installer puts in Java 21, **bvm** (BoxLang Version Manager), **mvm** (MatchBox Version Manager), BoxLang and MatchBox. `bxrig boxlang` sits on top of them.
 
 ```bash
-bxcachy boxlang status
-bxcachy boxlang use latest              # bvm: install if missing, then use
-bxcachy boxlang use snapshot
-bxcachy boxlang matchbox use latest     # mvm
-bxcachy boxlang modules list            # the live ForgeBox list
-bxcachy boxlang modules search ai
-bxcachy boxlang modules install bx-ai bx-sites
-bxcachy boxlang modules update
-bxcachy boxlang vscode                  # the BoxLang extension and developer pack
-bxcachy boxlang links                   # docs and sites
-bxcachy boxlang welcome                 # a getting-started page
+bxrig boxlang status
+bxrig boxlang use latest              # bvm: install if missing, then use
+bxrig boxlang use snapshot
+bxrig boxlang matchbox use latest     # mvm
+bxrig boxlang modules list            # the live ForgeBox list
+bxrig boxlang modules search ai
+bxrig boxlang modules install bx-ai bx-sites
+bxrig boxlang modules update
+bxrig boxlang vscode                  # the BoxLang extension and developer pack
+bxrig boxlang links                   # docs and sites
+bxrig boxlang welcome                 # a getting-started page
 ```
 
 Modules come from [ForgeBox](https://forgebox.io) and install with `bx-module`. VS Code is a default app; the wizard offers to add the BoxLang extension (`ortus-solutions.vscode-boxlang`) and the developer pack.
@@ -30,7 +30,7 @@ Modules come from [ForgeBox](https://forgebox.io) and install with `bx-module`. 
 matchbox script.bxs
 ```
 
-[MatchBox](https://matchbox.boxlang.io) compiles BoxLang to bytecode on a Rust runtime and can build standalone native binaries. BxCachy itself is built this way.
+[MatchBox](https://matchbox.boxlang.io) compiles BoxLang to bytecode on a Rust runtime and can build standalone native binaries. BxRig itself is built this way.
 
 ## Links
 

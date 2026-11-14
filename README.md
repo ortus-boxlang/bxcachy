@@ -1,15 +1,23 @@
-# BxCachy
+# BxRig
 
-A developer-machine kickstarter for [CachyOS](https://cachyos.org). One command installs the toolchains, the desktop and your apps, then a setup wizard configures the rest. Hyprland with Noctalia is the default desktop, with KDE Plasma installed beside it and tiled by the same shortcuts.
+BxRig brings an opinionated, beautiful and efficient desktop to Linux, built for developers.
 
-BxCachy is a [BoxLang](https://boxlang.io) program compiled to a native executable with [MatchBox](https://github.com/ortus-boxlang/matchbox).
+BxRig turns a fresh Linux install into a polished developer rig: a themed desktop, the languages and tools you use, and one terminal screen to manage it all.
+
+**Supported today: CachyOS and Arch Linux. Other distributions (Debian, Ubuntu, Fedora) are the direction, not yet supported.**
+
+> **Your dev rig. Beautiful by default.**
+
+One command installs the toolchains, the desktop and your apps, then a setup wizard configures the rest. Hyprland with Noctalia is the default desktop and KDE Plasma stays installed beside it.
+
+BxRig is a [BoxLang](https://boxlang.io) program compiled to a native executable with [MatchBox](https://github.com/ortus-boxlang/matchbox).
 
 Docs: <https://bxcachy.boxlang.io> (built with bxSites from `docs/`).
 
 ## Install
 
 ```bash
-curl -fsSL https://downloads.ortussolutions.com/ortussolutions/bxcachy/install.sh | bash
+curl -fsSL https://downloads.ortussolutions.com/ortussolutions/bxrig/install.sh | bash
 ```
 
 It shows the plan, asks once, installs, and starts the wizard. The release information is signed (Ed25519) and checked before anything is installed.
@@ -17,10 +25,10 @@ It shows the plan, asks once, installs, and starts the wizard. The release infor
 Unattended, with saved answers:
 
 ```bash
-curl -fsSL https://downloads.ortussolutions.com/ortussolutions/bxcachy/install.sh | bash -s -- --yes --answers answers.json
+curl -fsSL https://downloads.ortussolutions.com/ortussolutions/bxrig/install.sh | bash -s -- --yes --answers answers.json
 ```
 
-Add `--channel beta` for the bleeding-edge snapshots. Update later with `bxcachy update apply --yes`.
+Add `--channel beta` for the bleeding-edge snapshots. Update later with `bxrig update apply --yes`.
 
 ## What you get
 
@@ -28,36 +36,36 @@ Add `--channel beta` for the bleeding-edge snapshots. Update later with `bxcachy
 |---|---|
 | Toolchains | Java 21, bvm, mvm, BoxLang, MatchBox, Rust. Optional: PHP, Python, Go, JavaScript runtimes |
 | Desktop | Hyprland and Noctalia, KDE Plasma with HyprKwin tiling, one shared shortcut table (including Mac-style Cmd remaps), key cheat sheet |
-| Control center | `bxcachy menu`: every command as one searchable menu on your launcher (Rofi, Walker, Wofi, Fuzzel, Vicinae) |
+| Control center | `bxrig menu`: every command as one searchable menu on your launcher (Rofi, Walker, Wofi, Fuzzel, Vicinae) |
 | Appearance and hardware | Bar, dock, windows, fonts, backgrounds, monitors, laptop power, time zone and DNS, each one command (`appearance`, `display`, `power`, `time`, `dns`) |
-| Backups | BxCachy setup snapshots, system snapshots (snapper), encrypted file backups (restic) to a NAS, a disk or the cloud, and **BxTimeMachine**, one screen for all of them (`bxcachy timemachine`) |
-| NAS | Synology or any SMB or NFS share: discover, mount, automatic mounts, mirror (`bxcachy nas`) |
+| Backups | BxRig setup snapshots, system snapshots (snapper), encrypted file backups (restic) to a NAS, a disk or the cloud, and **BxTimeMachine**, one screen for all of them (`bxrig timemachine`) |
+| NAS | Synology or any SMB or NFS share: discover, mount, automatic mounts, mirror (`bxrig nas`) |
 | Themes | 15 color themes in the Omarchy format (10 from Omarchy, 5 of ours); follows into terminals, btop, window borders and Neovim |
 | Shell and editor | zsh, fish or bash with Starship (shows the BoxLang version), Ghostty and other terminals, Neovim with LazyVim and BoxLang syntax |
 | Apps | A curated catalog of about 290 apps by category, chosen in the wizard |
-| Databases | PostgreSQL, MySQL, Redis, MongoDB, vector databases and more as local containers (`bxcachy db`) |
-| Virtual machines | Windows and Linux desktops in containers, any number of each (`bxcachy vm`) |
-| AI | Coding agents, local models, API keys in your keyring (`bxcachy secrets`), and agent skills for Claude Code, Codex, Gemini CLI and OpenCode (`bxcachy skills`) |
+| Databases | PostgreSQL, MySQL, Redis, MongoDB, vector databases and more as local containers (`bxrig db`) |
+| Virtual machines | Windows and Linux desktops in containers, any number of each (`bxrig vm`) |
+| AI | Coding agents, local models, API keys in your keyring (`bxrig secrets`), and agent skills for Claude Code, Codex, Gemini CLI and OpenCode (`bxrig skills`) |
 | Safety | Every change is a plan until `--yes`; config files go through a backup and journal service and your own edits are never overwritten |
 
 ## Everyday commands
 
 ```bash
-bxcachy init                    # the wizard
-bxcachy menu                    # the control center
-bxcachy status                  # what is set up on this machine
-bxcachy theme set tokyo-night   # change the look
-bxcachy appearance bar position bottom
-bxcachy display scale DP-2 1.5
-bxcachy time sync --yes         # after you travel
-bxcachy timemachine             # every backup on one timeline
-bxcachy tui                     # the Control Center: dashboard and pages
-bxcachy mail start --yes        # a local inbox for your app's mail
-bxcachy help                    # every command, or: bxcachy help appearance
-bxcachy vm create linux dev     # a Linux desktop in a container
-bxcachy db start postgres --yes
-bxcachy skills install --yes    # BxCachy, BoxLang and MatchBox skills for your agents
-bxcachy update check
+bxrig init                    # the wizard
+bxrig menu                    # the control center
+bxrig status                  # what is set up on this machine
+bxrig theme set tokyo-night   # change the look
+bxrig appearance bar position bottom
+bxrig display scale DP-2 1.5
+bxrig time sync --yes         # after you travel
+bxrig timemachine             # every backup on one timeline
+bxrig tui                     # the Control Center: dashboard and pages
+bxrig mail start --yes        # a local inbox for your app's mail
+bxrig help                    # every command, or: bxrig help appearance
+bxrig vm create linux dev     # a Linux desktop in a container
+bxrig db start postgres --yes
+bxrig skills install --yes    # BxRig, BoxLang and MatchBox skills for your agents
+bxrig update check
 ```
 
 The full list is in the [command reference](https://bxcachy.boxlang.io/reference/commands/). Every command supports `--json`, and mutating commands support `--dry-run`.
@@ -69,8 +77,8 @@ The full list is in the [command reference](https://bxcachy.boxlang.io/reference
 ## Development
 
 ```bash
-scripts/dev-build.sh                         # builds dist/bxcachy with a local MatchBox (see the script)
-bash tests/theme-test.sh dist/bxcachy        # script tests, one per area (fake tools, no root needed)
+scripts/dev-build.sh                         # builds dist/bxrig with a local MatchBox (see the script)
+bash tests/theme-test.sh dist/bxrig        # script tests, one per area (fake tools, no root needed)
 (cd src && matchbox ../tests/init_plan_test.bxs)   # unit tests
 ```
 
@@ -79,9 +87,9 @@ Layout:
 | Path | Contents |
 |---|---|
 | `src/Main.bx` | The CLI and its routes |
-| `src/bxcachy/` | One class per feature (`Vm`, `Theme`, `Db`, `Skills`, ...) |
+| `src/bxrig/` | One class per feature (`Vm`, `Theme`, `Db`, `Skills`, ...) |
 | `catalog/apps.json` | The app catalog |
-| `templates/`, `themes/`, `assets/`, `skills/` | Starter configs, themes, the wizard definition, images, and the agent skills that ship with BxCachy |
+| `templates/`, `themes/`, `assets/`, `skills/` | Starter configs, themes, the wizard definition, images, and the agent skills that ship with BxRig |
 | `bootstrap/` | The one-line installer and the `gen-*.sh` scripts that embed data into generated classes |
 | `docs/` | The documentation site; `docs/architecture/COMMAND-CONTRACT.md` is the design record |
 | `tests/` | Script and unit tests |

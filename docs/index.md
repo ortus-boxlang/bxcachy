@@ -1,12 +1,14 @@
 ---
 title: Home
 order: 1
-summary: Your developer machine, set up in minutes.
+summary: BxRig brings an opinionated, beautiful and efficient desktop to Linux, built for developers.
 ---
 
-# BxCachy
+# BxRig
 
-**BxCachy** turns a fresh CachyOS install into a finished developer machine: Hyprland with Noctalia (KDE Plasma stays installed beside it), BoxLang and MatchBox, your apps, your shell, your AI agents, all chosen in one guided setup. It is a single native program written in [BoxLang](https://boxlang.io) and compiled with [MatchBox](https://matchbox.boxlang.io).
+**BxRig** brings an opinionated, beautiful and efficient desktop to Linux, built for developers. It turns a fresh CachyOS or Arch install into a finished developer rig: Hyprland with Noctalia (KDE Plasma stays installed beside it), BoxLang and MatchBox, your apps, your shell, your AI agents, all chosen in one guided setup. It is a single native program written in [BoxLang](https://boxlang.io) and compiled with [MatchBox](https://matchbox.boxlang.io).
+
+**Supported today: CachyOS and Arch Linux. Other distributions (Debian, Ubuntu, Fedora) are the direction, not yet supported.**
 
 *This is the documentation for version {{ version }}.*
 
@@ -49,11 +51,11 @@ BoxLang, MatchBox, their version managers, VS Code with the extension, and modul
 :::
 
 ::: card title="AI agents that know the machine" href="guides/ai.md"
-Claude Code, Codex, Gemini and more, with keys in your keyring and skills that teach them BxCachy.
+Claude Code, Codex, Gemini and more, with keys in your keyring and skills that teach them BxRig.
 :::
 
 ## How it behaves
 
 - Nothing changes until you say so: every command prints a plan and needs `--yes`.
-- Files you edit are kept. BxCachy only rewrites files it wrote itself.
+- Files you edit are kept. BxRig only rewrites files it wrote itself.
 - Everything is also a command, with `--json` output, so you can script it.

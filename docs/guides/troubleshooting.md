@@ -6,19 +6,19 @@ summary: Doctors that print a fix for each problem.
 
 # Troubleshooting
 
-Start with `bxcachy status` and the doctors; each prints a fix next to every failed check.
+Start with `bxrig status` and the doctors; each prints a fix next to every failed check.
 
 | Problem | Run |
 |---|---|
-| Something is missing after setup | `bxcachy status`, then `bxcachy init` |
-| Installer failed | read `~/.cache/bxcachy/install.log` |
-| GPU or drivers | `bxcachy gpu doctor` |
-| Magic Mouse, Trackpad, Bluetooth | `bxcachy input doctor` |
-| Dolphin "Open with" is empty | `bxcachy dolphin doctor --fix` |
-| App launcher or menu | `bxcachy runner doctor` |
-| Containers | `bxcachy containers doctor` |
-| Shortcuts clash | `bxcachy keys conflicts` |
-| Plasma panels look wrong | `bxcachy plasma panels undo --yes` |
+| Something is missing after setup | `bxrig status`, then `bxrig init` |
+| Installer failed | read `~/.cache/bxrig/install.log` |
+| GPU or drivers | `bxrig gpu doctor` |
+| Magic Mouse, Trackpad, Bluetooth | `bxrig input doctor` |
+| Dolphin "Open with" is empty | `bxrig dolphin doctor --fix` |
+| App launcher or menu | `bxrig runner doctor` |
+| Containers | `bxrig containers doctor` |
+| Shortcuts clash | `bxrig keys conflicts` |
+| Plasma panels look wrong | `bxrig plasma panels undo --yes` |
 
 ## Exit codes
 
@@ -32,3 +32,4 @@ Start with `bxcachy status` and the doctors; each prints a fix next to every fai
 | 10 | `update check`: an update is available |
 
 Add `--json` to any command for machine-readable output.
+

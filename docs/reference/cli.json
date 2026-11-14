@@ -12,24 +12,24 @@
       "init [--from=FILE] [--fresh | --rerun] | init --answers=FILE [--yes] [--dry-run] [--json] | init --print-answers [--from-system] [--json] | init --export=FILE [--force]"
      ],
      "examples": [
-      "bxcachy init",
-      "bxcachy init --answers=answers.json --yes",
-      "bxcachy init --print-answers --from-system --json"
+      "bxrig init",
+      "bxrig init --answers=answers.json --yes",
+      "bxrig init --print-answers --from-system --json"
      ],
      "mutates": true
     },
     {
      "name": "refresh",
-     "summary": "Put a managed config back to what BxCachy ships, with a backup first and without installing anything.",
+     "summary": "Put a managed config back to what BxRig ships, with a backup first and without installing anything.",
      "usage": [
       "refresh hyprland|noctalia|terminals|shell|nvim|theme|all [--starter] [--force] [--yes] [--dry-run] [--json]",
       "refresh list [--json]"
      ],
      "examples": [
-      "bxcachy refresh list",
-      "bxcachy refresh terminals --dry-run",
-      "bxcachy refresh hyprland --yes",
-      "bxcachy refresh shell --yes --force"
+      "bxrig refresh list",
+      "bxrig refresh terminals --dry-run",
+      "bxrig refresh hyprland --yes",
+      "bxrig refresh shell --yes --force"
      ],
      "mutates": true,
      "note": "A file you edited is kept and reported; --force overwrites it after a backup (see config history and config restore). --starter also rewrites the starter hyprland.lua or Noctalia config.toml, which are yours."
@@ -41,7 +41,7 @@
       "reinstall [--yes] [--dry-run] [--json]"
      ],
      "examples": [
-      "bxcachy reinstall"
+      "bxrig reinstall"
      ],
      "mutates": false,
      "note": "This is the way to install packages again. refresh only puts config files back."
@@ -53,19 +53,19 @@
       "wizard --demo [--out=FILE] | --pages=FILE [--out=FILE] [--answers=FILE]"
      ],
      "examples": [
-      "bxcachy wizard --demo"
+      "bxrig wizard --demo"
      ],
      "mutates": false
     },
     {
      "name": "status",
-     "summary": "What is installed and configured on this machine, compared with what BxCachy would do.",
+     "summary": "What is installed and configured on this machine, compared with what BxRig would do.",
      "usage": [
       "status [--json]"
      ],
      "examples": [
-      "bxcachy status",
-      "bxcachy status --json"
+      "bxrig status",
+      "bxrig status --json"
      ],
      "mutates": false
     },
@@ -76,33 +76,33 @@
       "doctor [--json]"
      ],
      "examples": [
-      "bxcachy doctor"
+      "bxrig doctor"
      ],
      "mutates": false
     },
     {
      "name": "update",
-     "summary": "Check for a BxCachy update, apply it, pick a channel, turn the daily notification on or off.",
+     "summary": "Check for a BxRig update, apply it, pick a channel, turn the daily notification on or off.",
      "usage": [
       "update check [--notify] | apply [--yes] | channel [stable|beta] | notifications on|off|status [--json]"
      ],
      "examples": [
-      "bxcachy update check",
-      "bxcachy update apply --yes",
-      "bxcachy update channel beta",
-      "bxcachy update notifications on"
+      "bxrig update check",
+      "bxrig update apply --yes",
+      "bxrig update channel beta",
+      "bxrig update notifications on"
      ],
      "mutates": true,
      "note": "Exit 10 from `update check` means an update is available."
     },
     {
      "name": "version",
-     "summary": "The BxCachy version and build.",
+     "summary": "The BxRig version and build.",
      "usage": [
       "version [--json]"
      ],
      "examples": [
-      "bxcachy version"
+      "bxrig version"
      ],
      "mutates": false
     },
@@ -113,8 +113,8 @@
       "menu | menu items [--json] | menu search TEXT [--json]"
      ],
      "examples": [
-      "bxcachy menu",
-      "bxcachy menu search 'time zone'"
+      "bxrig menu",
+      "bxrig menu search 'time zone'"
      ],
      "mutates": false,
      "note": "Bind it to a key; the first entry, Search, lists every entry as one flat list."
@@ -126,7 +126,7 @@
       "apps | apps list [--json]"
      ],
      "examples": [
-      "bxcachy apps list"
+      "bxrig apps list"
      ],
      "mutates": false
     },
@@ -137,8 +137,8 @@
       "help [COMMAND]"
      ],
      "examples": [
-      "bxcachy help",
-      "bxcachy help appearance"
+      "bxrig help",
+      "bxrig help appearance"
      ],
      "mutates": false
     }
@@ -156,8 +156,8 @@
       "install [NAME] [--optional] [--shell=hyprland|plasma|all] [--json] [--yes] [--dry-run]"
      ],
      "examples": [
-      "bxcachy install --dry-run",
-      "bxcachy install --yes"
+      "bxrig install --dry-run",
+      "bxrig install --yes"
      ],
      "mutates": true,
      "note": "With no name it installs the default set; without --yes it prints the plan and changes nothing."
@@ -169,10 +169,10 @@
       "remove ID_OR_PACKAGE... [--yes] [--dry-run] [--json]"
      ],
      "examples": [
-      "bxcachy remove lazygit --yes"
+      "bxrig remove lazygit --yes"
      ],
      "mutates": true,
-     "note": "Protected packages (the base system, the kernel, bxcachy itself) are refused."
+     "note": "Protected packages (the base system, the kernel, bxrig itself) are refused."
     },
     {
      "name": "pkg",
@@ -181,9 +181,9 @@
       "pkg search TEXT [--source=all|repo|aur] [--limit=N] | info NAME | installed [--explicit] | install NAME... [--aur] [--yes] [--dry-run] | remove NAME... [--yes] [--dry-run] [--json]"
      ],
      "examples": [
-      "bxcachy pkg search ripgrep",
-      "bxcachy pkg install ripgrep --yes",
-      "bxcachy pkg remove htop --yes"
+      "bxrig pkg search ripgrep",
+      "bxrig pkg install ripgrep --yes",
+      "bxrig pkg remove htop --yes"
      ],
      "mutates": true
     },
@@ -194,9 +194,9 @@
       "catalog list [--group=G] [--category=C] [--tier=default|optional] [--kind=K] [--source=S] [--json] | show ID | groups | check | version"
      ],
      "examples": [
-      "bxcachy catalog groups",
-      "bxcachy catalog list --group=ai --tier=default",
-      "bxcachy catalog show lazygit"
+      "bxrig catalog groups",
+      "bxrig catalog list --group=ai --tier=default",
+      "bxrig catalog show lazygit"
      ],
      "mutates": false
     },
@@ -207,8 +207,8 @@
       "plan [NAME] [--optional] [--shell=hyprland|plasma|all] [--json]"
      ],
      "examples": [
-      "bxcachy plan",
-      "bxcachy plan --shell=hyprland --json"
+      "bxrig plan",
+      "bxrig plan --shell=hyprland --json"
      ],
      "mutates": false
     },
@@ -237,7 +237,7 @@
       "profile-plan NAME [--optional] [--shell=hyprland|plasma|all] [--json]"
      ],
      "examples": [
-      "bxcachy profile-plan jvm"
+      "bxrig profile-plan jvm"
      ],
      "mutates": false
     },
@@ -257,7 +257,7 @@
       "profile-install NAME [--optional] [--shell=hyprland|plasma|all] [--json] [--yes] [--dry-run]"
      ],
      "examples": [
-      "bxcachy profile-install terminal --yes"
+      "bxrig profile-install terminal --yes"
      ],
      "mutates": true
     },
@@ -322,7 +322,7 @@
       "package-status ID"
      ],
      "examples": [
-      "bxcachy package-status lazygit"
+      "bxrig package-status lazygit"
      ],
      "mutates": false
     },
@@ -333,7 +333,7 @@
       "package-source ID"
      ],
      "examples": [
-      "bxcachy package-source lazygit"
+      "bxrig package-source lazygit"
      ],
      "mutates": false
     },
@@ -348,7 +348,7 @@
     },
     {
      "name": "prerequisites",
-     "summary": "What BxCachy needs on the machine before anything else.",
+     "summary": "What BxRig needs on the machine before anything else.",
      "usage": [
       "prerequisites [--json]"
      ],
@@ -371,9 +371,9 @@
       "web add [NAME URL] [--browser=brave|chromium|google-chrome|edge|firefox] [--yes] | list | rm NAME [--yes] | install google|microsoft|apple|boxlang|all [--yes] [--dry-run] [--json]"
      ],
      "examples": [
-      "bxcachy web add Notes https://notes.example.com --yes",
-      "bxcachy web install google --yes",
-      "bxcachy web rm Notes --yes"
+      "bxrig web add Notes https://notes.example.com --yes",
+      "bxrig web install google --yes",
+      "bxrig web rm Notes --yes"
      ],
      "mutates": true
     },
@@ -381,10 +381,10 @@
      "name": "toolchain",
      "summary": "Language toolchains outside the always-installed BoxLang one (Node via nvm, Rust, Python, Go, PHP).",
      "usage": [
-      "toolchain node [--yes] [--dry-run] [--json]   (Bun and Deno: bxcachy install bun deno)"
+      "toolchain node [--yes] [--dry-run] [--json]   (Bun and Deno: bxrig install bun deno)"
      ],
      "examples": [
-      "bxcachy toolchain node --yes"
+      "bxrig toolchain node --yes"
      ],
      "mutates": true
     }
@@ -402,8 +402,8 @@
       "setup plasma [--keys | --undo-keys] | hyprland [--terminal=ghostty|kitty|alacritty|foot|konsole] [--layout=dwindle|master|scrolling|floating] [--workspaces=N] [--natural-scroll] [--layouts=us-intl,es] [--theme=dark|light|auto] [--wallpaper=box|grid|aurora|minimal] | terminal [--default=ghostty] [--also=a,b] | shell [--shell=zsh|fish|bash] | keyboard [--layouts=us-intl,es] | xremap [--build=hypr|kde] | undo plasma|hyprland|xremap | status [--yes] [--dry-run] [--json]"
      ],
      "examples": [
-      "bxcachy setup hyprland --yes",
-      "bxcachy setup terminal --default=ghostty --also=kitty --yes"
+      "bxrig setup hyprland --yes",
+      "bxrig setup terminal --default=ghostty --also=kitty --yes"
      ],
      "mutates": true
     },
@@ -414,7 +414,7 @@
       "session show | set hyprland|plasma [--yes] [--dry-run] [--json]"
      ],
      "examples": [
-      "bxcachy session show"
+      "bxrig session show"
      ],
      "mutates": true
     },
@@ -425,8 +425,8 @@
       "tiling on|off|status | layout [dwindle|master|monocle|scrolling|stage] [--json]"
      ],
      "examples": [
-      "bxcachy tiling on",
-      "bxcachy tiling layout dwindle"
+      "bxrig tiling on",
+      "bxrig tiling layout dwindle"
      ],
      "mutates": false
     },
@@ -437,8 +437,8 @@
       "plasma panels apply [--agenda] [--without-weather] [--desktops=N] [--preset=NAME] | undo | status [--yes] [--dry-run] [--json]  |  plasma desktops N [--yes]"
      ],
      "examples": [
-      "bxcachy plasma panels apply --preset=islands --yes",
-      "bxcachy plasma desktops 4 --yes"
+      "bxrig plasma panels apply --preset=islands --yes",
+      "bxrig plasma desktops 4 --yes"
      ],
      "mutates": true
     },
@@ -449,23 +449,23 @@
       "keys show | mac [on|off|status] [--yes] | set ID KEYS [--yes] [--force] | reset ID [--yes] | conflicts | render xremap|hyprland|plasma | check | apply [--yes] [--dry-run] [--force] [--json]"
      ],
      "examples": [
-      "bxcachy keys show",
-      "bxcachy keys set emoji Super+Ctrl+E --yes",
-      "bxcachy keys mac on --yes",
-      "bxcachy keys conflicts"
+      "bxrig keys show",
+      "bxrig keys set emoji Super+Ctrl+E --yes",
+      "bxrig keys mac on --yes",
+      "bxrig keys conflicts"
      ],
      "mutates": true
     },
     {
      "name": "runner",
-     "summary": "Which launcher and which menu program BxCachy uses (Rofi, Walker, Wofi, Fuzzel, Vicinae).",
+     "summary": "Which launcher and which menu program BxRig uses (Rofi, Walker, Wofi, Fuzzel, Vicinae).",
      "usage": [
       "runner list | show | doctor | launch | select JSON_ENTRIES [--prompt=TEXT] | set PROVIDER | menu-set PROVIDER | launcher-command PROVIDER JSON_ARGV | menu-command PROVIDER JSON_ARGV [--json]"
      ],
      "examples": [
-      "bxcachy runner list",
-      "bxcachy runner set rofi",
-      "bxcachy runner doctor"
+      "bxrig runner list",
+      "bxrig runner set rofi",
+      "bxrig runner doctor"
      ],
      "mutates": false
     },
@@ -476,8 +476,8 @@
       "default show | browser ID | terminal ID | filemanager ID [--yes] [--dry-run] [--json]"
      ],
      "examples": [
-      "bxcachy default show",
-      "bxcachy default browser brave --yes"
+      "bxrig default show",
+      "bxrig default browser brave --yes"
      ],
      "mutates": true
     },
@@ -488,7 +488,7 @@
       "layout [toggle|float|tile|status] [--dry-run] [--json]"
      ],
      "examples": [
-      "bxcachy layout toggle"
+      "bxrig layout toggle"
      ],
      "mutates": false
     },
@@ -499,7 +499,7 @@
       "assets list | install [--yes] [--dry-run] [--json]"
      ],
      "examples": [
-      "bxcachy assets list"
+      "bxrig assets list"
      ],
      "mutates": false
     },
@@ -511,12 +511,12 @@
       "config restore NAME ID --yes"
      ],
      "examples": [
-      "bxcachy config list",
-      "bxcachy config diff hypr/bxcachy.lua",
-      "bxcachy config history"
+      "bxrig config list",
+      "bxrig config diff hypr/bxrig.lua",
+      "bxrig config history"
      ],
      "mutates": false,
-     "note": "BxCachy never overwrites a file you edited; `config status` shows which ones are yours."
+     "note": "BxRig never overwrites a file you edited; `config status` shows which ones are yours."
     }
    ]
   },
@@ -527,16 +527,16 @@
    "commands": [
     {
      "name": "theme",
-     "summary": "Themes: 15 bundled (10 from Omarchy, 5 BxCachy), set one, light or dark, install from git.",
+     "summary": "Themes: 15 bundled (10 from Omarchy, 5 BxRig), set one, light or dark, install from git.",
      "usage": [
       "theme list | show NAME | set NAME [--mode=theme|dark|light|auto] [--keep-wallpaper] | random | next | mode theme|dark|light|auto | install GIT_URL [--name=N] [--force] | import PATH [--name=N] [--force] | remove NAME | vscode [--yes] [--dry-run] | status [--dry-run] [--json]"
      ],
      "examples": [
-      "bxcachy theme list",
-      "bxcachy theme set tokyo-night --mode=dark",
-      "bxcachy theme install https://github.com/user/theme --name=mine",
-      "bxcachy theme mode auto",
-      "bxcachy theme vscode --yes"
+      "bxrig theme list",
+      "bxrig theme set tokyo-night --mode=dark",
+      "bxrig theme install https://github.com/user/theme --name=mine",
+      "bxrig theme mode auto",
+      "bxrig theme vscode --yes"
      ],
      "mutates": false,
      "note": "A theme colours the bar, terminals, btop, Neovim, GTK and Qt apps, tmux, fzf, launchers and (on Plasma) the colour scheme. VS Code is opt-in."
@@ -555,10 +555,10 @@
       "appearance background list | set NAME_OR_PATH | next | random"
      ],
      "examples": [
-      "bxcachy appearance bar position bottom",
-      "bxcachy appearance windows gaps off",
-      "bxcachy appearance font install cascadia --yes",
-      "bxcachy appearance background random"
+      "bxrig appearance bar position bottom",
+      "bxrig appearance windows gaps off",
+      "bxrig appearance font install cascadia --yes",
+      "bxrig appearance background random"
      ],
      "mutates": false,
      "note": "Settings act at once (no --yes); --dry-run shows the commands. What you choose is remembered, and `appearance apply` pushes it again."
@@ -578,10 +578,10 @@
       "display apply | reset"
      ],
      "examples": [
-      "bxcachy display list",
-      "bxcachy display scale DP-2 1.5",
-      "bxcachy display mirror on",
-      "bxcachy display brightness set 40"
+      "bxrig display list",
+      "bxrig display scale DP-2 1.5",
+      "bxrig display mirror on",
+      "bxrig display brightness set 40"
      ],
      "mutates": false,
      "note": "On Hyprland it writes theme/monitors.lua and reloads; on Plasma it uses kscreen-doctor."
@@ -597,9 +597,9 @@
       "power doctor [--json]"
      ],
      "examples": [
-      "bxcachy power profile saver",
-      "bxcachy power lid lock --yes",
-      "bxcachy power doctor"
+      "bxrig power profile saver",
+      "bxrig power lid lock --yes",
+      "bxrig power doctor"
      ],
      "mutates": true,
      "note": "`power setup` does nothing on a machine without a battery unless you add --force."
@@ -615,9 +615,9 @@
       "time ntp on|off [--yes]"
      ],
      "examples": [
-      "bxcachy time zone Europe/Madrid --yes",
-      "bxcachy time sync --yes",
-      "bxcachy time auto on --yes"
+      "bxrig time zone Europe/Madrid --yes",
+      "bxrig time sync --yes",
+      "bxrig time auto on --yes"
      ],
      "mutates": true,
      "note": "`time auto on` sends your Wi-Fi networks or IP address to a location web service; the plan says so first."
@@ -629,7 +629,7 @@
       "toggle stay-awake [on|off]"
      ],
      "examples": [
-      "bxcachy toggle stay-awake"
+      "bxrig toggle stay-awake"
      ],
      "mutates": false
     },
@@ -640,8 +640,8 @@
       "nightshift [on|off|toggle|status] [--location=LAT,LON] [--json]"
      ],
      "examples": [
-      "bxcachy nightshift toggle",
-      "bxcachy nightshift on --location=40.4,-3.7"
+      "bxrig nightshift toggle",
+      "bxrig nightshift on --location=40.4,-3.7"
      ],
      "mutates": false
     },
@@ -652,9 +652,9 @@
       "notify dnd on|off|toggle|status | snooze [30m|2h|90s|off] | clear [--history] [--json]"
      ],
      "examples": [
-      "bxcachy notify dnd toggle",
-      "bxcachy notify snooze 2h",
-      "bxcachy notify clear --history"
+      "bxrig notify dnd toggle",
+      "bxrig notify snooze 2h",
+      "bxrig notify clear --history"
      ],
      "mutates": false
     }
@@ -672,8 +672,8 @@
       "system update [--yes] | lock | suspend | logout|reboot|shutdown [--yes] [--dry-run] [--json]"
      ],
      "examples": [
-      "bxcachy system update --yes",
-      "bxcachy system reboot --yes"
+      "bxrig system update --yes",
+      "bxrig system reboot --yes"
      ],
      "mutates": true,
      "note": "lock and suspend act at once; logout, reboot and shutdown need --yes (the menu asks first)."
@@ -689,9 +689,9 @@
       "security passwordless-sudo on|off [--yes]"
      ],
      "examples": [
-      "bxcachy security status",
-      "bxcachy security fingerprint on --dry-run",
-      "bxcachy security passwordless-sudo on --yes"
+      "bxrig security status",
+      "bxrig security fingerprint on --dry-run",
+      "bxrig security passwordless-sudo on --yes"
      ],
      "mutates": true,
      "note": "Only /etc/pam.d/sudo is ever changed, with a `sufficient` line and a backup; sudoers is checked with visudo first. `--dry-run` prints the exact line."
@@ -703,9 +703,9 @@
       "dns [cloudflare|google|quad9|dhcp|custom IP[,IP...]] [--yes] [--dry-run]"
      ],
      "examples": [
-      "bxcachy dns",
-      "bxcachy dns cloudflare --yes",
-      "bxcachy dns custom 9.9.9.10 --yes"
+      "bxrig dns",
+      "bxrig dns cloudflare --yes",
+      "bxrig dns custom 9.9.9.10 --yes"
      ],
      "mutates": true
     },
@@ -716,8 +716,8 @@
       "kernel list | install NAME | remove NAME [--yes] [--dry-run] [--json]"
      ],
      "examples": [
-      "bxcachy kernel list",
-      "bxcachy kernel install linux-cachyos-lts --yes"
+      "bxrig kernel list",
+      "bxrig kernel install linux-cachyos-lts --yes"
      ],
      "mutates": true
     },
@@ -728,7 +728,7 @@
       "ssh key [--email=ADDRESS] [--yes] [--dry-run] [--json]"
      ],
      "examples": [
-      "bxcachy ssh key --email=me@example.com --yes"
+      "bxrig ssh key --email=me@example.com --yes"
      ],
      "mutates": false
     },
@@ -739,9 +739,9 @@
       "secrets status | setup [--keyring=kwallet|gnome-keyring|none] [--yes] | list [--type=ai|other] | set NAME [--from-file=F] [--type=ai|other] [--provider=ID] | get NAME [--show] | unset NAME --yes | apply [--yes] | global on NAME --yes|off NAME|show | unlock | lock | export FILE [--plain] [--force] --yes | import FILE [--overwrite] --yes | env [NAMES...] | run [NAMES...] [--strict] -- COMMAND [ARGS...] [--json]"
      ],
      "examples": [
-      "bxcachy secrets set ANTHROPIC_API_KEY",
-      "bxcachy secrets run ANTHROPIC_API_KEY -- claude",
-      "bxcachy secrets list"
+      "bxrig secrets set ANTHROPIC_API_KEY",
+      "bxrig secrets run ANTHROPIC_API_KEY -- claude",
+      "bxrig secrets list"
      ],
      "mutates": true
     },
@@ -752,7 +752,7 @@
       "vpn nordvpn setup [--yes] [--json]"
      ],
      "examples": [
-      "bxcachy vpn nordvpn setup --yes"
+      "bxrig vpn nordvpn setup --yes"
      ],
      "mutates": true
     },
@@ -763,20 +763,20 @@
       "cloud remotes | configure | mount NAME [--path=DIR] [--yes] | unmount NAME [--yes] | status [--json]"
      ],
      "examples": [
-      "bxcachy cloud remotes",
-      "bxcachy cloud mount gdrive --path=~/Drive --yes"
+      "bxrig cloud remotes",
+      "bxrig cloud mount gdrive --path=~/Drive --yes"
      ],
      "mutates": true
     },
     {
      "name": "settings",
-     "summary": "Export and import your BxCachy settings as one archive.",
+     "summary": "Export and import your BxRig settings as one archive.",
      "usage": [
       "settings export FILE.tar.gz [--force] | import FILE.tar.gz [--yes] [--json]"
      ],
      "examples": [
-      "bxcachy settings export my-settings.tar.gz",
-      "bxcachy settings import my-settings.tar.gz --yes"
+      "bxrig settings export my-settings.tar.gz",
+      "bxrig settings import my-settings.tar.gz --yes"
      ],
      "mutates": true
     },
@@ -787,8 +787,8 @@
       "dotfiles plan REPO [--method=chezmoi|yadm|stow|links] | apply REPO [--method=M] [--overwrite] [--yes] [--dry-run] | status | undo [--yes] [--dry-run] [--json]"
      ],
      "examples": [
-      "bxcachy dotfiles plan https://github.com/me/dotfiles",
-      "bxcachy dotfiles apply https://github.com/me/dotfiles --yes"
+      "bxrig dotfiles plan https://github.com/me/dotfiles",
+      "bxrig dotfiles apply https://github.com/me/dotfiles --yes"
      ],
      "mutates": true
     },
@@ -805,22 +805,22 @@
       "nas auto on|off NAME SHARE [--yes]",
       "nas test NAME [SHARE]",
       "nas sync NAME SRC --to=SHARE[/PATH] [--delete] [--yes]",
-      "nas use NAME SHARE [--path=bxcachy-backup]"
+      "nas use NAME SHARE [--path=bxrig-backup]"
      ],
      "examples": [
-      "bxcachy nas discover",
-      "bxcachy nas add synology --host=ds920.local --user=me --ask-password",
-      "bxcachy nas shares synology",
-      "bxcachy nas mount synology backups --yes",
-      "bxcachy nas auto on synology backups --yes",
-      "bxcachy nas use synology backups"
+      "bxrig nas discover",
+      "bxrig nas add synology --host=ds920.local --user=me --ask-password",
+      "bxrig nas shares synology",
+      "bxrig nas mount synology backups --yes",
+      "bxrig nas auto on synology backups --yes",
+      "bxrig nas use synology backups"
      ],
      "mutates": true,
-     "note": "SMB mounts are made by root, so the password is also kept in /etc/bxcachy/nas/NAME.cred (mode 600); the plan says so. The SMB version is negotiated unless you give --vers. Nothing on the NAS is deleted unless you add --delete to a sync."
+     "note": "SMB mounts are made by root, so the password is also kept in /etc/bxrig/nas/NAME.cred (mode 600); the plan says so. The SMB version is negotiated unless you give --vers. Nothing on the NAS is deleted unless you add --delete to a sync."
     },
     {
      "name": "backup",
-     "summary": "Backups of your BxCachy setup, of the system and of your files, and a way to move them around.",
+     "summary": "Backups of your BxRig setup, of the system and of your files, and a way to move them around.",
      "usage": [
       "backup config now [--reason=TEXT] [--with-secrets]",
       "backup config list | show ID | diff ID",
@@ -846,23 +846,23 @@
       "backup timeline [--local] [--json]"
      ],
      "examples": [
-      "bxcachy backup config now",
-      "bxcachy backup config list",
-      "bxcachy backup config diff 20261113T153000",
-      "bxcachy backup config restore 20261113T153000 --dry-run",
-      "bxcachy backup config restore 20261113T153000 --only=.config/hypr --yes",
-      "bxcachy backup snapshots setup --yes",
-      "bxcachy backup snapshots list",
-      "bxcachy backup snapshots restore 12 /home/me/projects/app --dry-run",
-      "bxcachy backup data target add do --type=s3 --endpoint=https://nyc3.digitaloceanspaces.com --bucket=mybackups --ask-keys",
-      "bxcachy backup data init do --yes",
-      "bxcachy backup data run --yes",
-      "bxcachy backup data schedule daily --yes",
-      "bxcachy backup data restore latest --to=~/restored --yes",
-      "bxcachy backup send latest --from=usb --to=do --yes",
-      "bxcachy backup export data latest --to=~/projects.zip --path=/home/me/Projects --yes",
-      "bxcachy backup export config 20261113T153000 --to=~/my-setup.tar.gz --yes",
-      "bxcachy backup timeline --local"
+      "bxrig backup config now",
+      "bxrig backup config list",
+      "bxrig backup config diff 20261113T153000",
+      "bxrig backup config restore 20261113T153000 --dry-run",
+      "bxrig backup config restore 20261113T153000 --only=.config/hypr --yes",
+      "bxrig backup snapshots setup --yes",
+      "bxrig backup snapshots list",
+      "bxrig backup snapshots restore 12 /home/me/projects/app --dry-run",
+      "bxrig backup data target add do --type=s3 --endpoint=https://nyc3.digitaloceanspaces.com --bucket=mybackups --ask-keys",
+      "bxrig backup data init do --yes",
+      "bxrig backup data run --yes",
+      "bxrig backup data schedule daily --yes",
+      "bxrig backup data restore latest --to=~/restored --yes",
+      "bxrig backup send latest --from=usb --to=do --yes",
+      "bxrig backup export data latest --to=~/projects.zip --path=/home/me/Projects --yes",
+      "bxrig backup export config 20261113T153000 --to=~/my-setup.tar.gz --yes",
+      "bxrig backup timeline --local"
      ],
      "mutates": true,
      "note": "A config snapshot is taken by itself before update, system update, init, reinstall and refresh (turn it off with backup config auto off). Secrets and SSH keys are never in it unless you add --with-secrets, which stores your secrets export, encrypted with a passphrase you type."
@@ -874,9 +874,9 @@
       "timemachine [--demo] [--local]"
      ],
      "examples": [
-      "bxcachy timemachine",
-      "bxcachy timemachine --local",
-      "bxcachy timemachine --demo"
+      "bxrig timemachine",
+      "bxrig timemachine --local",
+      "bxrig timemachine --demo"
      ],
      "mutates": false,
      "note": "It needs a terminal (also available as bxtimemachine). Restore, export, send and back up now show the plan first and change nothing until you press y. --local skips the network targets so it opens at once; --demo shows made-up data and runs nothing."
@@ -888,13 +888,13 @@
       "java list | available | install MAJOR|IDENTIFIER [--yes] [--dry-run] | default ID|MAJOR [--yes] | default --unset [--yes] | remove ID [--yes] | env [ID|MAJOR] [--json]"
      ],
      "examples": [
-      "bxcachy java list",
-      "bxcachy java install 21 --yes",
-      "bxcachy java default 21 --yes",
-      "bxcachy java env 17"
+      "bxrig java list",
+      "bxrig java install 21 --yes",
+      "bxrig java default 21 --yes",
+      "bxrig java env 17"
      ],
      "mutates": true,
-     "note": "Homes come from SDKMAN, BxCachy's own Temurin installs (~/.local/share/bxcachy/java) and /usr/lib/jvm. With SDKMAN installed (bxcachy sdk setup) installs and removals go through it: a major like 21 picks the newest Temurin, an identifier like 21.0.13.0+9-tem installs exactly that. Without it a Temurin JDK is downloaded straight from Adoptium. The system's own JDKs are never deleted. The default is written to java.sh and java.fish, which the shell starters source, so run bxcachy refresh shell once on an existing setup."
+     "note": "Homes come from SDKMAN, BxRig's own Temurin installs (~/.local/share/bxrig/java) and /usr/lib/jvm. With SDKMAN installed (bxrig sdk setup) installs and removals go through it: a major like 21 picks the newest Temurin, an identifier like 21.0.13.0+9-tem installs exactly that. Without it a Temurin JDK is downloaded straight from Adoptium. The system's own JDKs are never deleted. The default is written to java.sh and java.fish, which the shell starters source, so run bxrig refresh shell once on an existing setup."
     },
     {
      "name": "sdk",
@@ -903,13 +903,13 @@
       "sdk status | setup [--yes] | list java|maven|gradle | available java|maven|gradle | install CANDIDATE VERSION [--yes] | default CANDIDATE VERSION [--yes] | remove CANDIDATE VERSION [--yes] [--dry-run] [--json]"
      ],
      "examples": [
-      "bxcachy sdk setup --yes",
-      "bxcachy sdk available maven",
-      "bxcachy sdk install maven 3.9.9 --yes",
-      "bxcachy sdk default gradle 8.10.2 --yes"
+      "bxrig sdk setup --yes",
+      "bxrig sdk available maven",
+      "bxrig sdk install maven 3.9.9 --yes",
+      "bxrig sdk default gradle 8.10.2 --yes"
      ],
      "mutates": true,
-     "note": "setup installs SDKMAN into ~/.sdkman without touching your shell files. Maven and Gradle reach your shells through ~/.config/bxcachy/sdk.sh and sdk.fish, which the shell starters source (bxcachy refresh shell on an existing setup). Version lists come from api.sdkman.io."
+     "note": "setup installs SDKMAN into ~/.sdkman without touching your shell files. Maven and Gradle reach your shells through ~/.config/bxrig/sdk.sh and sdk.fish, which the shell starters source (bxrig refresh shell on an existing setup). Version lists come from api.sdkman.io."
     },
     {
      "name": "mail",
@@ -918,28 +918,28 @@
       "mail start [--keep] [--smtp-port=N] [--ui-port=N] [--yes] | stop | status | remove [--keep-data] [--yes] | list [--limit=N] | show ID | delete ID [--yes] | clear [--yes] | open [ID] | test [--to=ADDR] [--subject=TEXT] | env [--dry-run] [--json]"
      ],
      "examples": [
-      "bxcachy mail start --yes",
-      "bxcachy mail env",
-      "bxcachy mail test",
-      "bxcachy mail list",
-      "bxcachy mail start --keep --yes"
+      "bxrig mail start --yes",
+      "bxrig mail env",
+      "bxrig mail test",
+      "bxrig mail list",
+      "bxrig mail start --keep --yes"
      ],
      "mutates": true,
-     "note": "Runs Mailpit in a container (the engine bxcachy db engine chose). SMTP is 127.0.0.1:1025 and the web inbox is http://127.0.0.1:8025, both local only. Mail is thrown away when the catcher stops unless you start it with --keep. The Control Center has a Mail page that refreshes by itself."
+     "note": "Runs Mailpit in a container (the engine bxrig db engine chose). SMTP is 127.0.0.1:1025 and the web inbox is http://127.0.0.1:8025, both local only. Mail is thrown away when the catcher stops unless you start it with --keep. The Control Center has a Mail page that refreshes by itself."
     },
     {
      "name": "tui",
-     "summary": "Control Center: every BxCachy screen in one terminal, starting with the Dashboard.",
+     "summary": "Control Center: every BxRig screen in one terminal, starting with the Dashboard.",
      "usage": [
       "tui [PAGE] [--demo] [--icons=on|off] [--json]"
      ],
      "examples": [
-      "bxcachy tui",
-      "bxcachy tui dashboard --json",
-      "bxcachy tui --demo"
+      "bxrig tui",
+      "bxrig tui dashboard --json",
+      "bxrig tui --demo"
      ],
      "mutates": false,
-     "note": "It needs a terminal. The sidebar lists the pages; Tab switches page, q leaves. The Dashboard shows what needs attention, system meters, what runs and your backups, and Enter on a warning shows the plan of the fix before anything changes. --json prints a page's data without a terminal; --demo shows made-up data and runs nothing. Icons are Nerd Font glyphs: on when a Nerd Font is installed, or force them with --icons=on|off or BXCACHY_ICONS."
+     "note": "It needs a terminal. The sidebar lists the pages; Tab switches page, q leaves. The Dashboard shows what needs attention, system meters, what runs and your backups, and Enter on a warning shows the plan of the fix before anything changes. --json prints a page's data without a terminal; --demo shows made-up data and runs nothing. Icons are Nerd Font glyphs: on when a Nerd Font is installed, or force them with --icons=on|off or BXRIG_ICONS."
     },
     {
      "name": "bxtimemachine",
@@ -948,7 +948,7 @@
       "bxtimemachine [--demo] [--local]"
      ],
      "examples": [
-      "bxcachy bxtimemachine"
+      "bxrig bxtimemachine"
      ],
      "mutates": false
     }
@@ -966,21 +966,21 @@
       "boxlang status | use VERSION | matchbox use VERSION | modules list|search TEXT|install SLUG...|installed|outdated|update | vscode | links | welcome [--json]"
      ],
      "examples": [
-      "bxcachy boxlang status",
-      "bxcachy boxlang modules list",
-      "bxcachy boxlang use 1.8.0"
+      "bxrig boxlang status",
+      "bxrig boxlang modules list",
+      "bxrig boxlang use 1.8.0"
      ],
      "mutates": false
     },
     {
      "name": "editor",
-     "summary": "Neovim with LazyVim, the BoxLang plugin and themes that follow the BxCachy theme.",
+     "summary": "Neovim with LazyVim, the BoxLang plugin and themes that follow the BxRig theme.",
      "usage": [
       "editor lazyvim [--yes] | boxlang [--yes] | status | refresh [--force] [--yes] [--json]"
      ],
      "examples": [
-      "bxcachy editor lazyvim --yes",
-      "bxcachy editor status"
+      "bxrig editor lazyvim --yes",
+      "bxrig editor status"
      ],
      "mutates": true
     },
@@ -991,9 +991,9 @@
       "db engines | list | start ENGINE [--name N] [--port P] [--password-file FILE | --ask-password] [--yes] [--dry-run] | stop|status|logs ENGINE [--name N] | remove ENGINE [--name N] [--keep-data] --yes | info ENGINE [--name N] [--show-password] | engine [podman|docker] | menu [--json]"
      ],
      "examples": [
-      "bxcachy db engines",
-      "bxcachy db start postgres --yes",
-      "bxcachy db info postgres"
+      "bxrig db engines",
+      "bxrig db start postgres --yes",
+      "bxrig db info postgres"
      ],
      "mutates": true
     },
@@ -1004,7 +1004,7 @@
       "containers doctor | socket enable [--yes] | docker-compat [--yes] [--json]"
      ],
      "examples": [
-      "bxcachy containers doctor"
+      "bxrig containers doctor"
      ],
      "mutates": true
     },
@@ -1015,9 +1015,9 @@
       "vm list | status [NAME] | size [NAME] | info NAME [--show-password] | doctor | versions linux|windows | create windows [NAME] [--version=V] [--ram=8G] [--cpus=N] [--disk=64G] [--share=PATH|none] | create linux NAME [--tag=ubuntu-xfce] [--cpus=N] [--memory=4G] [--share=PATH|none] [--gpu=none|auto|intel|amd|nvidia] | start|stop|logs NAME | open NAME [--web] [--fullscreen] | remove NAME [--keep-data] [--yes] [--dry-run] [--json]"
      ],
      "examples": [
-      "bxcachy vm doctor",
-      "bxcachy vm create linux dev --tag=ubuntu-xfce --yes",
-      "bxcachy vm open dev"
+      "bxrig vm doctor",
+      "bxrig vm create linux dev --tag=ubuntu-xfce --yes",
+      "bxrig vm open dev"
      ],
      "mutates": true
     },
@@ -1030,23 +1030,23 @@
       "ai list | default [ID] [--yes] | launch [ID] [--dry-run] | session ... | models ... | shell [toggle|status] [--backend=hyprland|yakuake] [--dry-run] [--json]"
      ],
      "examples": [
-      "bxcachy ai list",
-      "bxcachy ai launch",
-      "bxcachy ai models pull llama3.2",
-      "bxcachy ai session start --name=work"
+      "bxrig ai list",
+      "bxrig ai launch",
+      "bxrig ai models pull llama3.2",
+      "bxrig ai session start --name=work"
      ],
      "mutates": true
     },
     {
      "name": "skills",
-     "summary": "Agent skills for BoxLang and BxCachy: install, update, remove.",
+     "summary": "Agent skills for BoxLang and BxRig: install, update, remove.",
      "usage": [
-      "skills list [--tag=T] | search TEXT | show OWNER/REPO/SLUG | install [bxcachy|boxlang|matchbox|OWNER/REPO/SLUG]... [--yes] | installed | update [--yes] | remove NAME [--yes] | status | link [--json]"
+      "skills list [--tag=T] | search TEXT | show OWNER/REPO/SLUG | install [bxrig|boxlang|matchbox|OWNER/REPO/SLUG]... [--yes] | installed | update [--yes] | remove NAME [--yes] | status | link [--json]"
      ],
      "examples": [
-      "bxcachy skills install --yes",
-      "bxcachy skills list",
-      "bxcachy skills status"
+      "bxrig skills install --yes",
+      "bxrig skills list",
+      "bxrig skills status"
      ],
      "mutates": true
     }
@@ -1064,9 +1064,9 @@
       "screenshot screen|region|window [--edit] | ocr | qr | menu [--dry-run] [--json]"
      ],
      "examples": [
-      "bxcachy screenshot region",
-      "bxcachy screenshot screen --edit",
-      "bxcachy screenshot ocr"
+      "bxrig screenshot region",
+      "bxrig screenshot screen --edit",
+      "bxrig screenshot ocr"
      ],
      "mutates": false
     },
@@ -1077,8 +1077,8 @@
       "qr TEXT [--out=FILE.png] [--json]"
      ],
      "examples": [
-      "bxcachy qr https://boxlang.io",
-      "bxcachy qr 'wifi text' --out=wifi.png"
+      "bxrig qr https://boxlang.io",
+      "bxrig qr 'wifi text' --out=wifi.png"
      ],
      "mutates": false
     },
@@ -1089,8 +1089,8 @@
       "record [toggle|start|stop|status] [--region] [--dry-run] [--json]"
      ],
      "examples": [
-      "bxcachy record toggle",
-      "bxcachy record start --region"
+      "bxrig record toggle",
+      "bxrig record start --region"
      ],
      "mutates": false
     },
@@ -1101,8 +1101,8 @@
       "clipboard pick | clear [--yes] | status [--json]"
      ],
      "examples": [
-      "bxcachy clipboard pick",
-      "bxcachy clipboard status"
+      "bxrig clipboard pick",
+      "bxrig clipboard status"
      ],
      "mutates": false
     },
@@ -1113,7 +1113,7 @@
       "emoji"
      ],
      "examples": [
-      "bxcachy emoji"
+      "bxrig emoji"
      ],
      "mutates": false
     },
@@ -1124,7 +1124,7 @@
       "forcequit"
      ],
      "examples": [
-      "bxcachy forcequit"
+      "bxrig forcequit"
      ],
      "mutates": false
     },
@@ -1135,8 +1135,8 @@
       "window minimize|restore"
      ],
      "examples": [
-      "bxcachy window minimize",
-      "bxcachy window restore"
+      "bxrig window minimize",
+      "bxrig window restore"
      ],
      "mutates": false
     },
@@ -1147,7 +1147,7 @@
       "overview [setup]"
      ],
      "examples": [
-      "bxcachy overview"
+      "bxrig overview"
      ],
      "mutates": false
     },
@@ -1158,7 +1158,7 @@
       "quicklook [PATH] [--dry-run] [--json]"
      ],
      "examples": [
-      "bxcachy quicklook photo.jpg"
+      "bxrig quicklook photo.jpg"
      ],
      "mutates": false
     },
@@ -1169,8 +1169,8 @@
       "dolphin doctor [--fix] [--json]"
      ],
      "examples": [
-      "bxcachy dolphin doctor",
-      "bxcachy dolphin doctor --fix"
+      "bxrig dolphin doctor",
+      "bxrig dolphin doctor --fix"
      ],
      "mutates": false
     },
@@ -1181,8 +1181,8 @@
       "dictation setup [superwhisper|voxtype] [--yes] [--dry-run] | status | key [ENGINE] [--json]"
      ],
      "examples": [
-      "bxcachy dictation setup voxtype --yes",
-      "bxcachy dictation status"
+      "bxrig dictation setup voxtype --yes",
+      "bxrig dictation status"
      ],
      "mutates": false
     },
@@ -1193,7 +1193,7 @@
       "strata integrations [--dry-run] [--json]"
      ],
      "examples": [
-      "bxcachy strata integrations --dry-run"
+      "bxrig strata integrations --dry-run"
      ],
      "mutates": false
     },
@@ -1204,7 +1204,7 @@
       "gpu doctor [--json]"
      ],
      "examples": [
-      "bxcachy gpu doctor"
+      "bxrig gpu doctor"
      ],
      "mutates": false
     },
@@ -1215,7 +1215,7 @@
       "input doctor | gestures [--yes] [--dry-run] [--json]"
      ],
      "examples": [
-      "bxcachy input doctor"
+      "bxrig input doctor"
      ],
      "mutates": false
     },
@@ -1226,7 +1226,7 @@
       "airplay on|off|status [--json]"
      ],
      "examples": [
-      "bxcachy airplay on"
+      "bxrig airplay on"
      ],
      "mutates": false
     }

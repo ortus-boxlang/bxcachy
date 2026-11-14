@@ -1,21 +1,21 @@
 ---
 title: Control Center
-summary: One terminal for your whole machine, with a page for each job. Run bxcachy tui.
+summary: One terminal for your whole machine, with a page for each job. Run bxrig tui.
 ---
 
 # Control Center
 
-`bxcachy tui` opens one terminal screen with a list of pages on the left and the open page on the right.
+`bxrig tui` opens one terminal screen with a list of pages on the left and the open page on the right.
 
 ```bash
-bxcachy tui                   # opens on the Dashboard
-bxcachy tui --demo            # made-up data, nothing is run
-bxcachy tui dashboard --json  # the page's data, no terminal needed
+bxrig tui                   # opens on the Dashboard
+bxrig tui --demo            # made-up data, nothing is run
+bxrig tui dashboard --json  # the page's data, no terminal needed
 ```
 
 ## Icons
 
-The page list and page headers carry Nerd Font icons when your terminal has the font (the BxCachy wizard installs one for Starship). They are on when a Nerd Font is found, and you can force them: `bxcachy tui --icons=on` or `--icons=off`, or set `BXCACHY_ICONS`. Without the font they would show as boxes, so BxCachy leaves them off. Emoji are not used, because terminals draw them two cells wide and the tables would not line up.
+The page list and page headers carry Nerd Font icons when your terminal has the font (the BxRig wizard installs one for Starship). They are on when a Nerd Font is found, and you can force them: `bxrig tui --icons=on` or `--icons=off`, or set `BXRIG_ICONS`. Without the font they would show as boxes, so BxRig leaves them off. Emoji are not used, because terminals draw them two cells wide and the tables would not line up.
 
 ## Keys
 
@@ -45,16 +45,16 @@ Each part is read on its own. If one cannot be read, the rest still shows.
 |---|---|
 | Dashboard | what needs attention, meters, what runs, backups |
 | BoxLang | BoxLang versions through `bvm`: use, install, remove |
-| Java | your Java homes: default, remove, and `a` to browse every JDK SDKMAN offers and install one (see `bxcachy java`) |
-| Maven | every Maven version SDKMAN offers, installed ones marked: install, default, remove (see `bxcachy sdk`) |
+| Java | your Java homes: default, remove, and `a` to browse every JDK SDKMAN offers and install one (see `bxrig java`) |
+| Maven | every Maven version SDKMAN offers, installed ones marked: install, default, remove (see `bxrig sdk`) |
 | Gradle | the same for Gradle |
 | Versions | BoxLang, MatchBox, Java and Node in one table; Enter opens the deep page |
 | Ports | what listens on which port and who owns it; stop or kill it, with a plan first. A port with two owners is red |
 | Packages | search the repos and the AUR with `/`, then install or remove |
 | Shortcuts | every shortcut; rebind (it asks for the keys), reset, conflicts |
 | Machines | your VMs (Windows and Linux desktops in containers): start, stop, info, new |
-| Databases | the databases BxCachy runs: start, stop, info, new |
-| Mail | the mail your apps send to the catcher (`bxcachy mail`): headers and text of the highlighted message, delete, clear, open it in the browser, send a test; it refreshes by itself every 3 seconds |
+| Databases | the databases BxRig runs: start, stop, info, new |
+| Mail | the mail your apps send to the catcher (`bxrig mail`): headers and text of the highlighted message, delete, clear, open it in the browser, send a test; it refreshes by itself every 3 seconds |
 | Storage | NAS shares and cloud remotes: mount, unmount, test |
 | Secrets | names only; `v` shows one value for one look |
 | Themes | the 15 themes; Enter applies |

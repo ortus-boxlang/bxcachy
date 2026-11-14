@@ -6,7 +6,7 @@ summary: One guided form for every choice. Re-run it any time.
 
 # The setup wizard
 
-`bxcachy init` opens a full-screen form with these pages: **Desktop**, **Look**, **Input**, **Developer**, **Toolchains**, **Containers**, **Apps**, **AI**, **Extras** and **Import**, then a review screen that lists exactly the commands it will run. Nothing runs until you confirm.
+`bxrig init` opens a full-screen form with these pages: **Desktop**, **Look**, **Input**, **Developer**, **Toolchains**, **Containers**, **Apps**, **AI**, **Extras** and **Import**, then a review screen that lists exactly the commands it will run. Nothing runs until you confirm.
 
 ## Run it again
 
@@ -14,23 +14,23 @@ On a machine that is already set up the wizard starts from your saved answers pl
 
 | Command | Starts from |
 |---|---|
-| `bxcachy init` | your saved answers and what the system has (tune) |
-| `bxcachy init --rerun` | your saved answers only |
-| `bxcachy init --fresh` | the defaults |
-| `bxcachy init --from FILE` | an answers file from another machine |
+| `bxrig init` | your saved answers and what the system has (tune) |
+| `bxrig init --rerun` | your saved answers only |
+| `bxrig init --fresh` | the defaults |
+| `bxrig init --from FILE` | an answers file from another machine |
 
-Nothing the machine already has is ever removed. `bxcachy status` shows the same scan without opening the wizard.
+Nothing the machine already has is ever removed. `bxrig status` shows the same scan without opening the wizard.
 
 ## Without a terminal
 
 ```bash
-bxcachy init --answers answers.json --yes     # apply an answers file
-bxcachy init --defaults --yes                  # the wizard's default answers
-bxcachy init --dry-run                         # show the plan only
-bxcachy init --export answers.json             # save your answers for another machine
+bxrig init --answers answers.json --yes     # apply an answers file
+bxrig init --defaults --yes                  # the wizard's default answers
+bxrig init --dry-run                         # show the plan only
+bxrig init --export answers.json             # save your answers for another machine
 ```
 
-Answers are saved in `~/.config/bxcachy/answers.json` (mode 600). They never contain secrets.
+Answers are saved in `~/.config/bxrig/answers.json` (mode 600). They never contain secrets.
 
 ## Defaults worth knowing
 

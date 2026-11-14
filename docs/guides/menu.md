@@ -1,12 +1,12 @@
 ---
 title: The control center
 order: 2
-summary: One menu for everything BxCachy does, on your launcher, with search.
+summary: One menu for everything BxRig does, on your launcher, with search.
 ---
 
 # The control center
 
-`bxcachy menu` (bound to `Super+Alt+M`) opens a menu on your launcher (Rofi, Walker, Wofi, Fuzzel or Vicinae: `bxcachy runner set NAME`). It follows Omarchy's layout and adds a Develop section for what is ours.
+`bxrig menu` (bound to `Super+Alt+M`) opens a menu on your launcher (Rofi, Walker, Wofi, Fuzzel or Vicinae: `bxrig runner set NAME`). It follows Omarchy's layout and adds a Develop section for what is ours.
 
 | Section | What is in it |
 |---|---|
@@ -17,9 +17,9 @@ summary: One menu for everything BxCachy does, on your launcher, with search.
 | Appearance | Theme, mode, font, background, bar, dock, windows, animations. See [Appearance](appearance.md). |
 | Trigger | Screenshots and recording, toggles (do not disturb, stay awake, night light), emoji, clipboard history, force quit, overview. |
 | Setup | Power, Display, Defaults, Keyboard, Security, Time, DNS, Kernel, Cloud storage, Hardware. |
-| Update | BxCachy updates, the system update (a snapshot first), skills, re-apply appearance and display. |
+| Update | BxRig updates, the system update (a snapshot first), skills, re-apply appearance and display. |
 | Develop | BoxLang, databases, virtual machines, containers, the editor. |
 | Agent | Open an agent, the pull-down AI shell, sessions, local models, API keys. |
 | Learn, About, System | Docs and cheat sheets, the status of this machine, lock, suspend, log out, reboot, shut down. |
 
-Every entry is a command you can type: `bxcachy menu items` lists them with the command each one runs, and `bxcachy menu search TEXT` finds one. Entries that print something open in a terminal and wait for Enter; entries that need a choice (a theme, a font, a time zone, a monitor) ask you in the same menu.
+Every entry is a command you can type: `bxrig menu items` lists them with the command each one runs, and `bxrig menu search TEXT` finds one. Entries that print something open in a terminal and wait for Enter; entries that need a choice (a theme, a font, a time zone, a monitor) ask you in the same menu.
