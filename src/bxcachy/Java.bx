@@ -1,10 +1,11 @@
 // `bxcachy java`: your Java homes in one place. List what is installed (BxCachy installs, SDKMAN and the system), install a Temurin JDK, choose the default, remove one.
 //   bxcachy java list [--json]                  every home: id, version, vendor, where it came from, which is the default and which this shell uses
 //   bxcachy java available [--json]             the Temurin releases you can install (long-term support ones are marked)
-//   bxcachy java install MAJOR [--yes] [--dry-run]   downloads the latest Temurin JDK of that major version into ~/.local/share/bxcachy/java (plan first)
+//   bxcachy java install MAJOR|IDENTIFIER [--yes] [--dry-run]   with SDKMAN installed (bxcachy sdk setup): installs the newest Temurin of that major (or the identifier you give, like 21.0.13.0+9-tem) through SDKMAN;
+//                                               without it: downloads the latest Temurin JDK of that major into ~/.local/share/bxcachy/java. Plan first.
 //   bxcachy java default ID|MAJOR [--yes] [--dry-run]   new shells use this home: writes ~/.config/bxcachy/java.sh and java.fish (the shell starters source them)
 //   bxcachy java default --unset [--yes]        stop setting JAVA_HOME
-//   bxcachy java remove ID [--yes] [--dry-run]  deletes a home that BxCachy installed (never SDKMAN's or the system's)
+//   bxcachy java remove ID [--yes] [--dry-run]  deletes a home that BxCachy or SDKMAN installed here (never the system's)
 //   bxcachy java env [ID|MAJOR]                 prints export lines, for: eval "$(bxcachy java env 21)"
 // An id is the folder name: "temurin-21.0.13_9". A major number (21) picks the newest home of that major.
 // Overrides for tests: BXCACHY_JAVA_DIR, BXCACHY_JAVA_SYSTEM_DIR (default /usr/lib/jvm), BXCACHY_SDKMAN_DIR (default ~/.sdkman), BXCACHY_ADOPTIUM_API,
@@ -49,7 +50,7 @@ class Java {
         var major = listFirst( v, "." );
         if ( major == "1" ) major = listGetAt( v, 2, "." );
         var vendor = releaseValue( arguments.dir, "IMPLEMENTOR" );
-        return { id: arguments.id, major: int( val( major ) ), version: v, vendor: vendor, source: arguments.source, path: arguments.dir, default: false, active: false, removable: arguments.source == "bxcachy" };
+        return { id: arguments.id, major: int( val( major ) ), version: v, vendor: vendor, source: arguments.source, path: arguments.dir, default: false, active: false, removable: arguments.source == "bxcachy" || arguments.source == "sdkman" };
     }
 
     function scan( root, source, prefix ) {
@@ -131,6 +132,13 @@ class Java {
     }
 
     function install( major, yes, dry, asJson ) {
+        var sdk = new bxcachy.Sdk( variables.cli );
+        if ( sdk.installed() && len( arguments.major ) ) {
+            var id = isNumeric( arguments.major ) ? sdk.temurinFor( arguments.major ) : arguments.major;
+            if ( !len( id ) ) return fail( 4, "SDKMAN has no Temurin " & arguments.major & ". See: bxcachy sdk available java", arguments.asJson );
+            return sdk.act( "install", "java", id, arguments.yes, arguments.dry, arguments.asJson );
+        }
+        if ( len( arguments.major ) && !isNumeric( arguments.major ) ) return fail( 4, "An identifier like " & arguments.major & " needs SDKMAN. Install it with: bxcachy sdk setup --yes", arguments.asJson );
         if ( !isNumeric( arguments.major ) ) return say( 2, { error: "usage" }, arguments.asJson, [ "Usage: bxcachy java install MAJOR [--yes] [--dry-run]" ] );
         var m = int( val( arguments.major ) );
         var rel = releases();
@@ -187,6 +195,7 @@ class Java {
         var h = find( arguments.ref );
         if ( !structCount( h ) ) return fail( 4, "no Java home matches " & arguments.ref, arguments.asJson );
         if ( !h.removable ) return fail( 4, h.id & " came from " & h.source & ", so BxCachy will not delete it. Remove it with that tool.", arguments.asJson );
+        if ( h.source == "sdkman" ) return new bxcachy.Sdk( variables.cli ).act( "remove", "java", listLast( h.path, "/" ), arguments.yes, arguments.dry, arguments.asJson );
         var plan = [ "Plan: delete " & h.path & " (" & h.id & ")." ];
         if ( h.default ) plan.append( "It is the default for new shells; the default is cleared too." );
         if ( arguments.dry ) { plan.append( "Dry run: nothing was changed." ); return say( 0, { id: h.id }, arguments.asJson, plan, true ); }

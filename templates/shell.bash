@@ -13,3 +13,5 @@ command -v starship >/dev/null && eval "$(starship init bash)"
 [ -r "${XDG_CONFIG_HOME:-$HOME/.config}/bxcachy/secrets.sh" ] && . "${XDG_CONFIG_HOME:-$HOME/.config}/bxcachy/secrets.sh"
 # Java: the default home chosen with `bxcachy java default` (no file, no change)
 [ -r "${XDG_CONFIG_HOME:-$HOME/.config}/bxcachy/java.sh" ] && . "${XDG_CONFIG_HOME:-$HOME/.config}/bxcachy/java.sh"
+# Maven and Gradle from SDKMAN, set by `bxcachy sdk` (no file, no change)
+[ -r "${XDG_CONFIG_HOME:-$HOME/.config}/bxcachy/sdk.sh" ] && . "${XDG_CONFIG_HOME:-$HOME/.config}/bxcachy/sdk.sh"

@@ -15,7 +15,7 @@ class ControlCenter {
 
     function self() { return getSystemSetting( "BXCACHY_SELF", "bxcachy" ); }
 
-    function pageIds() { return [ "dashboard", "boxlang", "java", "versions", "ports", "packages", "shortcuts", "machines", "databases", "storage", "secrets", "themes", "logs" ]; }
+    function pageIds() { return [ "dashboard", "boxlang", "java", "maven", "gradle", "versions", "ports", "packages", "shortcuts", "machines", "databases", "storage", "secrets", "themes", "logs" ]; }
 
     function provider( demo ) {
         var dd = new bxcachy.DashboardData( variables.cli, variables.runner );
@@ -28,6 +28,8 @@ class ControlCenter {
             new bxcachy.DashboardPage( provider( d ) ),
             new bxcachy.ListPage( new bxcachy.BoxlangProvider( d ) ),
             new bxcachy.ListPage( new bxcachy.JavaProvider( d ) ),
+            new bxcachy.ListPage( new bxcachy.SdkProvider( "maven", d ) ),
+            new bxcachy.ListPage( new bxcachy.SdkProvider( "gradle", d ) ),
             new bxcachy.ListPage( new bxcachy.VersionsProvider( d ) ),
             new bxcachy.ListPage( new bxcachy.PortsProvider( d ) ),
             new bxcachy.ListPage( new bxcachy.PackagesProvider( d ) ),

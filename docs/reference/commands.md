@@ -53,7 +53,7 @@ Settings that only touch your own config (a theme, the bar, the font) act at onc
 
 **Look and feel**: [`theme`](#bxcachy-theme), [`appearance`](#bxcachy-appearance), [`display`](#bxcachy-display), [`power`](#bxcachy-power), [`time`](#bxcachy-time), [`toggle`](#bxcachy-toggle), [`nightshift`](#bxcachy-nightshift), [`notify`](#bxcachy-notify)
 
-**System and security**: [`system`](#bxcachy-system), [`security`](#bxcachy-security), [`dns`](#bxcachy-dns), [`kernel`](#bxcachy-kernel), [`ssh`](#bxcachy-ssh), [`secrets`](#bxcachy-secrets), [`vpn`](#bxcachy-vpn), [`cloud`](#bxcachy-cloud), [`settings`](#bxcachy-settings), [`dotfiles`](#bxcachy-dotfiles), [`nas`](#bxcachy-nas), [`backup`](#bxcachy-backup), [`timemachine`](#bxcachy-timemachine), [`java`](#bxcachy-java), [`tui`](#bxcachy-tui), [`bxtimemachine`](#bxcachy-bxtimemachine)
+**System and security**: [`system`](#bxcachy-system), [`security`](#bxcachy-security), [`dns`](#bxcachy-dns), [`kernel`](#bxcachy-kernel), [`ssh`](#bxcachy-ssh), [`secrets`](#bxcachy-secrets), [`vpn`](#bxcachy-vpn), [`cloud`](#bxcachy-cloud), [`settings`](#bxcachy-settings), [`dotfiles`](#bxcachy-dotfiles), [`nas`](#bxcachy-nas), [`backup`](#bxcachy-backup), [`timemachine`](#bxcachy-timemachine), [`java`](#bxcachy-java), [`sdk`](#bxcachy-sdk), [`tui`](#bxcachy-tui), [`bxtimemachine`](#bxcachy-bxtimemachine)
 
 **Develop**: [`boxlang`](#bxcachy-boxlang), [`editor`](#bxcachy-editor), [`db`](#bxcachy-db), [`containers`](#bxcachy-containers), [`vm`](#bxcachy-vm), [`ai`](#bxcachy-ai), [`skills`](#bxcachy-skills)
 
@@ -1043,10 +1043,10 @@ bxcachy timemachine --demo
 
 ### `bxcachy java` {#bxcachy-java}
 
-Your Java homes: list them, install a Temurin JDK, choose the default for new shells.
+Your Java homes: list them, install a JDK (through SDKMAN when you have it), choose the default for new shells.
 
 ```text
-bxcachy java list | available | install MAJOR [--yes] [--dry-run] | default ID|MAJOR [--yes] | default --unset [--yes] | remove ID [--yes] | env [ID|MAJOR] [--json]
+bxcachy java list | available | install MAJOR|IDENTIFIER [--yes] [--dry-run] | default ID|MAJOR [--yes] | default --unset [--yes] | remove ID [--yes] | env [ID|MAJOR] [--json]
 ```
 
 Changes the system: needs `--yes`. Without it you get the plan (exit 2); `--dry-run` shows it and exits 0.
@@ -1058,7 +1058,26 @@ bxcachy java default 21 --yes
 bxcachy java env 17
 ```
 
-> Homes come from BxCachy installs (~/.local/share/bxcachy/java), SDKMAN and /usr/lib/jvm. Only BxCachy's own installs are ever deleted. The default is written to java.sh and java.fish, which the shell starters source, so run bxcachy refresh shell once on an existing setup.
+> Homes come from SDKMAN, BxCachy's own Temurin installs (~/.local/share/bxcachy/java) and /usr/lib/jvm. With SDKMAN installed (bxcachy sdk setup) installs and removals go through it: a major like 21 picks the newest Temurin, an identifier like 21.0.13.0+9-tem installs exactly that. Without it a Temurin JDK is downloaded straight from Adoptium. The system's own JDKs are never deleted. The default is written to java.sh and java.fish, which the shell starters source, so run bxcachy refresh shell once on an existing setup.
+
+### `bxcachy sdk` {#bxcachy-sdk}
+
+Java, Maven and Gradle through SDKMAN: install, switch, remove.
+
+```text
+bxcachy sdk status | setup [--yes] | list java|maven|gradle | available java|maven|gradle | install CANDIDATE VERSION [--yes] | default CANDIDATE VERSION [--yes] | remove CANDIDATE VERSION [--yes] [--dry-run] [--json]
+```
+
+Changes the system: needs `--yes`. Without it you get the plan (exit 2); `--dry-run` shows it and exits 0.
+
+```bash
+bxcachy sdk setup --yes
+bxcachy sdk available maven
+bxcachy sdk install maven 3.9.9 --yes
+bxcachy sdk default gradle 8.10.2 --yes
+```
+
+> setup installs SDKMAN into ~/.sdkman without touching your shell files. Maven and Gradle reach your shells through ~/.config/bxcachy/sdk.sh and sdk.fish, which the shell starters source (bxcachy refresh shell on an existing setup). Version lists come from api.sdkman.io.
 
 ### `bxcachy tui` {#bxcachy-tui}
 

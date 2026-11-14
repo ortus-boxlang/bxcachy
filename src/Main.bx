@@ -548,6 +548,12 @@ class {
           for ( jvi = 2; jvi <= p.len(); jvi++ ) jvWords.append( p[ jvi ] );
           CLIExit( new bxcachy.Java( cli ).run( jvWords, args.options, structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
           break;
+         case "sdk":
+          // Java, Maven and Gradle through SDKMAN. See COMMAND-CONTRACT.md 13.47.
+          sdkWords = [];
+          for ( sdki = 2; sdki <= p.len(); sdki++ ) sdkWords.append( p[ sdki ] );
+          CLIExit( new bxcachy.Sdk( cli ).run( sdkWords, args.options, structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
+          break;
          case "tui":
           // The Control Center: every BxCachy screen in one terminal. See COMMAND-CONTRACT.md 13.46.
           ccPage = p.len() >= 2 ? p[ 2 ] : "dashboard";

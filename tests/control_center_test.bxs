@@ -52,8 +52,8 @@ check( "screen: the plan box", find( "System update", s2 ) > 0 && find( "Plan: p
 // ---- every page, in demo mode
 cc = new bxcachy.ControlCenter( {} );
 pages = cc.buildPages( true );
-check( "pages: thirteen, in order", pages.len() == 13 && pages[ 1 ].id() == "dashboard" && pages[ 5 ].id() == "ports" && pages[ 9 ].id() == "databases" && pages[ 13 ].id() == "logs" );
-want = { boxlang: "1.9.0-snapshot", java: "temurin-21.0.13_9", versions: "MatchBox", ports: "postgres", shortcuts: "Launcher", machines: "webtop-ubuntu", databases: "postgres", storage: "syno/backups", secrets: "ANTHROPIC_API_KEY", themes: "tokyo-night", logs: "port 5432 already in use" };
+check( "pages: fifteen, in order", pages.len() == 15 && pages[ 1 ].id() == "dashboard" && pages[ 4 ].id() == "maven" && pages[ 5 ].id() == "gradle" && pages[ 7 ].id() == "ports" && pages[ 11 ].id() == "databases" && pages[ 15 ].id() == "logs" );
+want = { boxlang: "1.9.0-snapshot", java: "temurin-21.0.13_9", maven: "3.10.0", gradle: "9.9.1", versions: "MatchBox", ports: "postgres", shortcuts: "Launcher", machines: "webtop-ubuntu", databases: "postgres", storage: "syno/backups", secrets: "ANTHROPIC_API_KEY", themes: "tokyo-night", logs: "port 5432 already in use" };
 big = new bxcachy.ControlCenterApp( pages, "" );
 for ( pg in pages ) {
     if ( pg.id() == "dashboard" ) continue;
@@ -81,6 +81,18 @@ check( "java: i asks for a version, then plans the install", structCount( ask ) 
 for ( ch in [ "2", "5" ] ) big.onKey( ch );
 inst = big.onKey( "Enter" );
 check( "java: the answer becomes the install intent", inst.action == "cli" && inst.args[ 3 ] == "25" && big.mode() == "main" );
+big.goto( "java" ); big.onKey( "a" );
+check( "java: a shows what SDKMAN offers and i installs the highlighted identifier", big.page().state().rows == 5 && big.onKey( "i" ).args[ 3 ] == "25.0.5.0+8-tem" );
+big.onKey( "a" );
+big.goto( "maven" );
+mv = big.page();
+check( "maven: installed versions first, the default starred", mv.state().items[ 1 ].version == "3.9.9" && mv.state().items[ 1 ].default && mv.state().items[ 2 ].version == "3.9.8" && mv.state().rows == 5 );
+big.onKey( "End" );
+mi = big.onKey( "i" );
+check( "maven: i is `sdk install maven VERSION`", mi.args[ 1 ] == "sdk" && mi.args[ 2 ] == "install" && mi.args[ 3 ] == "maven" );
+check( "maven: d on a version that is not installed does nothing", structCount( big.onKey( "d" ) ) == 0 );
+big.onKey( "Home" );
+check( "maven: d on an installed one makes it the default", big.onKey( "d" ).args[ 2 ] == "default" && big.onKey( "x" ).args[ 2 ] == "remove" );
 big.goto( "versions" ); big.onKey( "Down" ); big.onKey( "Down" );
 check( "versions: Enter on Java opens the Java page", structCount( big.onKey( "Enter" ) ) == 0 && big.page().id() == "java" );
 big.goto( "machines" );

@@ -41,7 +41,9 @@ Each part is read on its own. If one cannot be read, the rest still shows.
 |---|---|
 | Dashboard | what needs attention, meters, what runs, backups |
 | BoxLang | BoxLang versions through `bvm`: use, install, remove |
-| Java | your Java homes: default, install a Temurin JDK, remove (see `bxcachy java`) |
+| Java | your Java homes: default, remove, and `a` to browse every JDK SDKMAN offers and install one (see `bxcachy java`) |
+| Maven | every Maven version SDKMAN offers, installed ones marked: install, default, remove (see `bxcachy sdk`) |
+| Gradle | the same for Gradle |
 | Versions | BoxLang, MatchBox, Java and Node in one table; Enter opens the deep page |
 | Ports | what listens on which port and who owns it; stop or kill it, with a plan first. A port with two owners is red |
 | Packages | search the repos and the AUR with `/`, then install or remove |

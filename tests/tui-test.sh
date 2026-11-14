@@ -15,7 +15,7 @@ code() { set +e; "$@" >/dev/null 2>&1; echo $?; set -e; }
 # the other pages in demo mode
 "$binary" tui ports --demo --json | jq -e '.data.rows == 7 and (.data.items | map(select(.conflict)) | length == 2)' >/dev/null || fail 'ports demo'
 "$binary" tui java --demo --json | jq -e '.data.items[0].id == "temurin-21.0.13_9"' >/dev/null || fail 'java demo'
-for pg in boxlang versions shortcuts machines databases storage secrets themes logs; do "$binary" tui "$pg" --demo --json | jq -e '.ok and (.data.rows > 0)' >/dev/null || fail "$pg demo"; done
+for pg in boxlang maven gradle versions shortcuts machines databases storage secrets themes logs; do "$binary" tui "$pg" --demo --json | jq -e '.ok and (.data.rows > 0)' >/dev/null || fail "$pg demo"; done
 "$binary" tui packages --demo --json | jq -e '.data.rows == 0' >/dev/null || fail 'packages start empty until you search'
 
 # the real machine: never fails, has the parts (power switch points at an empty folder: no battery)

@@ -1,0 +1,230 @@
+// `bxcachy sdk`: Java, Maven and Gradle through SDKMAN (https://sdkman.io), so one tool installs and switches all three.
+//   bxcachy sdk status [--json]                       is SDKMAN installed, and what each candidate has: versions, the default, the newest available
+//   bxcachy sdk setup [--yes] [--dry-run]             installs SDKMAN into ~/.sdkman WITHOUT touching your shell files (needs curl, zip and unzip)
+//   bxcachy sdk list CANDIDATE [--json]               what is installed (the default marked)
+//   bxcachy sdk available CANDIDATE [--json]          everything SDKMAN offers (java: vendor, version and identifier)
+//   bxcachy sdk install CANDIDATE VERSION [--yes]     plan first; a first install becomes the default, a later one does not
+//   bxcachy sdk default CANDIDATE VERSION [--yes]     the version new shells use (java, maven or gradle)
+//   bxcachy sdk remove CANDIDATE VERSION [--yes]
+// CANDIDATE is java, maven or gradle. A Java VERSION is an identifier from `sdk available java`, like 21.0.13.0+9-tem; `bxcachy java install 21` picks one for you.
+// Maven and Gradle reach your shells through ~/.config/bxcachy/sdk.sh and sdk.fish (written by setup and default; the shell starters source them).
+// Java's JAVA_HOME stays with `bxcachy java default`. Version lists come from api.sdkman.io; installs run SDKMAN's own `sdk` command in bash.
+// Overrides for tests: BXCACHY_SDKMAN_DIR, BXCACHY_SDKMAN_API (default https://api.sdkman.io/2), BXCACHY_SDKMAN_INSTALLER (default https://get.sdkman.io?rcupdate=false).
+// Exit: 0 ok, 2 plan shown without --yes or bad usage, 4 unknown candidate, version or missing prerequisite or SDKMAN not installed, 6 the sdk command failed.
+class Sdk {
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.config = new bxcachy.ConfigService().quiet( true );
+        return this;
+    }
+
+    function env( name, fallback ) { var v = getSystemSetting( arguments.name, "" ); return len( v ) ? v : arguments.fallback; }
+    function home() { return getSystemSetting( "HOME", "" ); }
+    function dir() { return env( "BXCACHY_SDKMAN_DIR", home() & "/.sdkman" ); }
+    function api() { return env( "BXCACHY_SDKMAN_API", "https://api.sdkman.io/2" ); }
+    function installerUrl() { return env( "BXCACHY_SDKMAN_INSTALLER", "https://get.sdkman.io?rcupdate=false" ); }
+    function candidates() { return [ "java", "maven", "gradle" ]; }
+    function installed() { return fileExists( dir() & "/bin/sdkman-init.sh" ); }
+    function cfgDir() { return variables.config.cfgHome() & "/bxcachy"; }
+    function shFile() { return cfgDir() & "/sdk.sh"; }
+    function fishFile() { return cfgDir() & "/sdk.fish"; }
+
+    function say( code, data, asJson, lines = [], dry = false ) {
+        if ( arguments.asJson ) println( variables.cli.envelope( "sdk", arguments.code, arguments.data, arguments.dry ) );
+        else for ( var l in arguments.lines ) println( l );
+        return arguments.code;
+    }
+    function fail( code, msg, asJson ) { return say( arguments.code, { error: arguments.msg }, arguments.asJson, [ "error: " & arguments.msg ] ); }
+
+    function sh( args, timeout = 1800 ) {
+        try { return systemExecute( "bash", arguments.args, arguments.timeout, true ); } catch ( any e ) { return { exitCode: 127, output: e.message }; }
+    }
+
+    function has( cmd ) {
+        try { return systemExecute( "sh", [ "-c", "command -v " & arguments.cmd ], 5, true ).exitCode == 0; } catch ( any e ) { return false; }
+    }
+
+    // ---- what is on disk ----
+    function installedVersions( cand ) {
+        var d = dir() & "/candidates/" & arguments.cand;
+        var out = [];
+        if ( !directoryExists( d ) ) return out;
+        for ( var n in directoryList( d, false, "name" ) ) if ( n != "current" ) out.append( n );
+        arraySort( out, "textnocase", "desc" );
+        return out;
+    }
+
+    // The version the `current` link points at, or "".
+    function defaultVersion( cand ) {
+        var f = dir() & "/candidates/" & arguments.cand & "/current";
+        try { if ( directoryExists( f ) ) { var real = getCanonicalPath( f ); return listLast( real, "/" ); } } catch ( any e ) {}
+        return "";
+    }
+
+    // ---- what SDKMAN offers ----
+    function fetch( url ) {
+        try { var r = systemExecute( "curl", [ "-fsSL", "--max-time", "25", arguments.url ], 40, true ); return r.exitCode == 0 ? r.output : ""; } catch ( any e ) { return ""; }
+    }
+
+    // `versions/list` text of Java -> [ { vendor, version, id } ]
+    function parseJava( text ) {
+        var out = [];
+        var vendor = "";
+        for ( var line in listToArray( arguments.text, chr( 10 ), true ) ) {
+            if ( find( "|", line ) == 0 || left( trim( line ), 1 ) == "=" || left( trim( line ), 1 ) == "-" ) continue;
+            var parts = listToArray( line, "|", true );
+            if ( parts.len() < 4 ) continue;
+            var v = trim( parts[ 1 ] );
+            if ( v == "Vendor" ) continue;
+            if ( len( v ) ) vendor = v;
+            var id = trim( parts[ 4 ] );
+            if ( !len( id ) ) continue;
+            out.append( { vendor: vendor, version: trim( parts[ 3 ] ), id: id } );
+        }
+        return out;
+    }
+
+    // `versions/list` text of Maven or Gradle -> [ version ], newest first. The list is printed in columns that run down, so the columns are read one after the other.
+    function parseSimple( text ) {
+        var cols = [];
+        for ( var line in listToArray( arguments.text, chr( 10 ), true ) ) {
+            if ( !len( line ) || left( line, 1 ) != " " ) continue;
+            var ci = 0;
+            for ( var tok in listToArray( line, " " ) ) {
+                if ( !reFind( "^[0-9][0-9A-Za-z.+_-]*$", tok ) ) continue;
+                ci++;
+                while ( cols.len() < ci ) cols.append( [] );
+                cols[ ci ].append( tok );
+            }
+        }
+        var out = [];
+        var seen = {};
+        for ( var col in cols ) for ( var v in col ) if ( !structKeyExists( seen, v ) ) { seen[ v ] = true; out.append( v ); }
+        return out;
+    }
+
+    function available( cand ) {
+        var txt = fetch( api() & "/candidates/" & arguments.cand & "/linuxx64/versions/list?current=&installed=" );
+        if ( !len( txt ) ) return { ok: false, rows: [], error: "could not reach " & api() };
+        if ( arguments.cand == "java" ) return { ok: true, rows: parseJava( txt ) };
+        var rows = [];
+        for ( var v in parseSimple( txt ) ) rows.append( { vendor: "", version: v, id: v } );
+        return { ok: true, rows: rows };
+    }
+
+    function latest( cand ) { return trim( fetch( api() & "/candidates/default/" & arguments.cand ) ); }
+
+    // The newest Temurin identifier of a Java major, from the available list, or "".
+    function temurinFor( major ) {
+        var a = available( "java" );
+        if ( !a.ok ) return "";
+        for ( var r in a.rows ) if ( right( r.id, 4 ) == "-tem" && ( left( r.id, len( arguments.major ) + 1 ) == arguments.major & "." || r.id == arguments.major & "-tem" ) ) return r.id;
+        return "";
+    }
+
+    // ---- commands ----
+    function validCand( c ) { return arrayFind( candidates(), arguments.c ) > 0; }
+    function validVer( v ) { return reFind( "^[A-Za-z0-9][A-Za-z0-9.+_-]*$", arguments.v ) > 0; }
+
+    function status( asJson ) {
+        var data = { installed: installed(), dir: dir(), candidates: {} };
+        var lines = [ "SDKMAN: " & ( data.installed ? "installed in " & dir() : "not installed. Install it with: bxcachy sdk setup --yes" ) ];
+        for ( var c in candidates() ) {
+            var vs = installedVersions( c );
+            var def = defaultVersion( c );
+            data.candidates[ c ] = { versions: vs, default: def };
+            lines.append( left( c & "      ", 8 ) & vs.len() & " installed" & ( len( def ) ? ", default " & def : "" ) );
+        }
+        return say( 0, data, arguments.asJson, lines );
+    }
+
+    function writeEnv() {
+        directoryCreate( cfgDir(), true, true );
+        var d = dir();
+        var sh = [ "# Written by `bxcachy sdk`. Maven and Gradle from SDKMAN; Java is set by `bxcachy java default`.", "export SDKMAN_DIR=" & chr( 34 ) & d & chr( 34 ) ];
+        var fish = [ "# Written by `bxcachy sdk`. Maven and Gradle from SDKMAN; Java is set by `bxcachy java default`.", "set -gx SDKMAN_DIR " & d ];
+        for ( var c in [ "maven", "gradle" ] ) {
+            var up = uCase( c );
+            sh.append( "[ -d " & chr( 34 ) & "$SDKMAN_DIR/candidates/" & c & "/current/bin" & chr( 34 ) & " ] && export " & up & "_HOME=" & chr( 34 ) & "$SDKMAN_DIR/candidates/" & c & "/current" & chr( 34 ) & " && export PATH=" & chr( 34 ) & "$" & up & "_HOME/bin:$PATH" & chr( 34 ) );
+            fish.append( "test -d $SDKMAN_DIR/candidates/" & c & "/current/bin; and set -gx " & up & "_HOME $SDKMAN_DIR/candidates/" & c & "/current; and fish_add_path -gP $" & up & "_HOME/bin" );
+        }
+        variables.config.writeAtomic( shFile(), sh.toList( chr( 10 ) ) & chr( 10 ), "644" );
+        variables.config.writeAtomic( fishFile(), fish.toList( chr( 10 ) ) & chr( 10 ), "644" );
+    }
+
+    function setup( yes, dry, asJson ) {
+        if ( installed() ) { writeEnv(); return say( 0, { installed: true, already: true }, arguments.asJson, [ "SDKMAN is already installed in " & dir() & ". The Maven and Gradle shell files are up to date." ] ); }
+        var plan = [ "Plan: install SDKMAN into " & dir() & " (from " & installerUrl() & ").", "Your shell files are NOT changed: the installer runs without its rc update, and BxCachy's own shell starters source what is needed.", "Needs curl, zip and unzip." ];
+        var data = { dir: dir() };
+        var missing = [];
+        for ( var t in [ "curl", "zip", "unzip" ] ) if ( !has( t ) ) missing.append( t );
+        if ( missing.len() ) { plan.append( "error: missing " & missing.toList( ", " ) & ". Install them: bxcachy pkg install " & missing.toList( " " ) ); return say( 4, { error: "missing " & missing.toList( ", " ) }, arguments.asJson, plan ); }
+        if ( arguments.dry ) { plan.append( "Dry run: nothing was changed." ); return say( 0, data, arguments.asJson, plan, true ); }
+        if ( !arguments.yes ) { plan.append( "Nothing was changed. Add --yes to install." ); return say( 2, data, arguments.asJson, plan ); }
+        var r = sh( [ "-c", "curl -fsSL " & chr( 34 ) & "$1" & chr( 34 ) & " | SDKMAN_DIR=" & chr( 34 ) & "$2" & chr( 34 ) & " bash", "_", installerUrl(), dir() ] );
+        if ( r.exitCode != 0 || !installed() ) return fail( 6, "the SDKMAN installer failed: " & trim( right( r.output, 300 ) ), arguments.asJson );
+        writeEnv();
+        return say( 0, { installed: true, dir: dir() }, arguments.asJson, [ "SDKMAN is installed in " & dir() & ".", "Next: bxcachy java install 21 --yes, bxcachy sdk install maven 3.9.9 --yes" ] );
+    }
+
+    function list( cand, asJson ) {
+        var vs = installedVersions( arguments.cand );
+        var def = defaultVersion( arguments.cand );
+        var lines = [];
+        for ( var v in vs ) lines.append( ( v == def ? "* " : "  " ) & v );
+        if ( !vs.len() ) lines.append( "No " & arguments.cand & " installed through SDKMAN." );
+        return say( 0, { candidate: arguments.cand, versions: vs, default: def }, arguments.asJson, lines );
+    }
+
+    function listAvailable( cand, asJson ) {
+        var a = available( arguments.cand );
+        if ( !a.ok ) return fail( 6, a.error, arguments.asJson );
+        var have = installedVersions( arguments.cand );
+        var rows = [];
+        var lines = [];
+        for ( var r in a.rows ) { r.installed = arrayFind( have, r.id ) > 0; rows.append( r ); lines.append( ( r.installed ? "* " : "  " ) & left( r.vendor & repeatString( " ", 16 ), 16 ) & left( r.version & repeatString( " ", 20 ), 20 ) & r.id ); }
+        return say( 0, { candidate: arguments.cand, available: rows }, arguments.asJson, lines );
+    }
+
+    // Runs `sdk ACTION ...` in bash with SDKMAN loaded. stdin "n" answers the "make it the default?" question with no.
+    function runSdk( action, cand, ver ) {
+        var verb = arguments.action == "remove" ? "uninstall" : arguments.action;
+        return sh( [ "-c", "export SDKMAN_DIR=" & chr( 34 ) & "$1" & chr( 34 ) & " && source " & chr( 34 ) & "$1/bin/sdkman-init.sh" & chr( 34 ) & " && " & ( arguments.action == "install" ? "echo n | " : "" ) & "sdk " & verb & " " & chr( 34 ) & "$2" & chr( 34 ) & " " & chr( 34 ) & "$3" & chr( 34 ) & " < /dev/null", "_", dir(), arguments.cand, arguments.ver ] );
+    }
+
+    function act( action, cand, ver, yes, dry, asJson ) {
+        if ( !validCand( arguments.cand ) ) return say( 2, { error: "usage" }, arguments.asJson, [ "Usage: bxcachy sdk " & arguments.action & " java|maven|gradle VERSION [--yes] [--dry-run]" ] );
+        if ( !len( arguments.ver ) || !validVer( arguments.ver ) ) return say( 2, { error: "usage" }, arguments.asJson, [ "Usage: bxcachy sdk " & arguments.action & " " & arguments.cand & " VERSION   (see: bxcachy sdk available " & arguments.cand & ")" ] );
+        if ( !installed() ) return fail( 4, "SDKMAN is not installed. Install it with: bxcachy sdk setup --yes", arguments.asJson );
+        var have = installedVersions( arguments.cand );
+        var isHave = arrayFind( have, arguments.ver ) > 0;
+        if ( arguments.action != "install" && !isHave ) return fail( 4, arguments.cand & " " & arguments.ver & " is not installed. See: bxcachy sdk list " & arguments.cand, arguments.asJson );
+        if ( arguments.action == "install" && isHave ) return say( 0, { candidate: arguments.cand, version: arguments.ver, already: true }, arguments.asJson, [ arguments.cand & " " & arguments.ver & " is already installed." ] );
+        var verb = arguments.action == "install" ? "install" : ( arguments.action == "default" ? "make the default" : "remove" );
+        var plan = [ "Plan: sdk " & ( arguments.action == "remove" ? "uninstall" : arguments.action ) & " " & arguments.cand & " " & arguments.ver & " (" & verb & " " & arguments.cand & " " & arguments.ver & ")." ];
+        if ( arguments.action == "install" && !have.len() ) plan.append( "It is the first " & arguments.cand & ", so SDKMAN makes it the default." );
+        var data = { candidate: arguments.cand, version: arguments.ver, action: arguments.action };
+        if ( arguments.dry ) { plan.append( "Dry run: nothing was changed." ); return say( 0, data, arguments.asJson, plan, true ); }
+        if ( !arguments.yes ) { plan.append( "Nothing was changed. Add --yes to apply." ); return say( 2, data, arguments.asJson, plan ); }
+        var r = runSdk( arguments.action, arguments.cand, arguments.ver );
+        if ( r.exitCode != 0 ) return fail( 6, "sdk " & arguments.action & " failed: " & trim( right( r.output, 400 ) ), arguments.asJson );
+        writeEnv();
+        var done = [ "Done: " & arguments.action & " " & arguments.cand & " " & arguments.ver ];
+        if ( arguments.cand == "java" && arguments.action == "install" ) done.append( "Use it in new shells: bxcachy java default sdkman-" & arguments.ver & " --yes" );
+        return say( 0, data, arguments.asJson, done );
+    }
+
+    function run( words, opts, yes, dry, asJson ) {
+        var sub = arguments.words.len() ? arguments.words[ 1 ] : "status";
+        var cand = arguments.words.len() >= 2 ? arguments.words[ 2 ] : "";
+        var ver = arguments.words.len() >= 3 ? arguments.words[ 3 ] : "";
+        if ( sub == "status" ) return status( arguments.asJson );
+        if ( sub == "setup" ) return setup( arguments.yes, arguments.dry, arguments.asJson );
+        if ( sub == "list" || sub == "available" ) {
+            if ( !validCand( cand ) ) return say( 2, { error: "usage" }, arguments.asJson, [ "Usage: bxcachy sdk " & sub & " java|maven|gradle [--json]" ] );
+            return sub == "list" ? list( cand, arguments.asJson ) : listAvailable( cand, arguments.asJson );
+        }
+        if ( sub == "install" || sub == "default" || sub == "remove" ) return act( sub, cand, ver, arguments.yes, arguments.dry, arguments.asJson );
+        return say( 2, { error: "usage" }, arguments.asJson, [ "Usage: bxcachy sdk status|setup|list C|available C|install C V|default C V|remove C V [--yes] [--dry-run] [--json]" ] );
+    }
+}

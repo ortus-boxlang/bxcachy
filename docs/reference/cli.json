@@ -883,9 +883,9 @@
     },
     {
      "name": "java",
-     "summary": "Your Java homes: list them, install a Temurin JDK, choose the default for new shells.",
+     "summary": "Your Java homes: list them, install a JDK (through SDKMAN when you have it), choose the default for new shells.",
      "usage": [
-      "java list | available | install MAJOR [--yes] [--dry-run] | default ID|MAJOR [--yes] | default --unset [--yes] | remove ID [--yes] | env [ID|MAJOR] [--json]"
+      "java list | available | install MAJOR|IDENTIFIER [--yes] [--dry-run] | default ID|MAJOR [--yes] | default --unset [--yes] | remove ID [--yes] | env [ID|MAJOR] [--json]"
      ],
      "examples": [
       "bxcachy java list",
@@ -894,7 +894,22 @@
       "bxcachy java env 17"
      ],
      "mutates": true,
-     "note": "Homes come from BxCachy installs (~/.local/share/bxcachy/java), SDKMAN and /usr/lib/jvm. Only BxCachy's own installs are ever deleted. The default is written to java.sh and java.fish, which the shell starters source, so run bxcachy refresh shell once on an existing setup."
+     "note": "Homes come from SDKMAN, BxCachy's own Temurin installs (~/.local/share/bxcachy/java) and /usr/lib/jvm. With SDKMAN installed (bxcachy sdk setup) installs and removals go through it: a major like 21 picks the newest Temurin, an identifier like 21.0.13.0+9-tem installs exactly that. Without it a Temurin JDK is downloaded straight from Adoptium. The system's own JDKs are never deleted. The default is written to java.sh and java.fish, which the shell starters source, so run bxcachy refresh shell once on an existing setup."
+    },
+    {
+     "name": "sdk",
+     "summary": "Java, Maven and Gradle through SDKMAN: install, switch, remove.",
+     "usage": [
+      "sdk status | setup [--yes] | list java|maven|gradle | available java|maven|gradle | install CANDIDATE VERSION [--yes] | default CANDIDATE VERSION [--yes] | remove CANDIDATE VERSION [--yes] [--dry-run] [--json]"
+     ],
+     "examples": [
+      "bxcachy sdk setup --yes",
+      "bxcachy sdk available maven",
+      "bxcachy sdk install maven 3.9.9 --yes",
+      "bxcachy sdk default gradle 8.10.2 --yes"
+     ],
+     "mutates": true,
+     "note": "setup installs SDKMAN into ~/.sdkman without touching your shell files. Maven and Gradle reach your shells through ~/.config/bxcachy/sdk.sh and sdk.fish, which the shell starters source (bxcachy refresh shell on an existing setup). Version lists come from api.sdkman.io."
     },
     {
      "name": "tui",

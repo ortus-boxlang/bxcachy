@@ -1,32 +1,54 @@
 // Java Manager: your Java homes (BxCachy installs, SDKMAN, the system) through `bxcachy java`. Install, set the default, remove.
 class JavaProvider {
-    function init( demo = false ) { variables.demo = arguments.demo; variables.sys = new bxcachy.TuiSys(); return this; }
+    function init( demo = false ) { variables.demo = arguments.demo; variables.sys = new bxcachy.TuiSys(); variables.view = "homes"; return this; }
     function id() { return "java"; }
     function title() { return "Java"; }
-    function hint() { return "* default for new shells   > this shell"; }
+    function hint() { return variables.view == "homes" ? "* default for new shells   > this shell   (a: what you can install)" : "everything SDKMAN offers   (a: back to your homes)"; }
     function live() { return false; }
-    function emptyText() { return "No Java found. Press i to install one."; }
-    function columns() { return [ { key: "mark", label: "", w: 4 }, { key: "version", label: "version", w: 14 }, { key: "vendor", label: "vendor", w: 24 }, { key: "source", label: "from", w: 10 }, { key: "path", label: "path", w: 0 } ]; }
-    function style( r ) { return r.default ? "ok" : ""; }
-    function detail( r ) { return [ r.id & "   " & r.path, ( r.default ? "The default for new shells. " : "" ) & ( r.active ? "This shell uses it." : "" ) & ( r.removable ? "" : " Managed by " & r.source & "." ) ]; }
+    function emptyText() { return variables.view == "homes" ? "No Java found. Press a to see what you can install, or i and type 21." : "Could not read the list. Check your network."; }
+    function columns() {
+        if ( variables.view == "available" ) return [ { key: "mark", label: "", w: 4 }, { key: "vendor", label: "vendor", w: 20 }, { key: "version", label: "version", w: 22 }, { key: "id", label: "identifier", w: 0 } ];
+        return [ { key: "mark", label: "", w: 4 }, { key: "version", label: "version", w: 14 }, { key: "vendor", label: "vendor", w: 24 }, { key: "source", label: "from", w: 10 }, { key: "path", label: "path", w: 0 } ];
+    }
+    function style( r ) { return r.default ? "ok" : ( variables.view == "available" && !r.installed ? "" : "" ); }
+    function detail( r ) {
+        if ( variables.view == "available" ) return [ r.vendor & " " & r.version & "   " & r.id, r.installed ? "Already installed." : "Press i to install it through SDKMAN." ];
+        return [ r.id & "   " & r.path, ( r.default ? "The default for new shells. " : "" ) & ( r.active ? "This shell uses it." : "" ) & ( r.removable ? "" : " Managed by " & r.source & "." ) ];
+    }
 
     function actions() {
+        var me = this;
         return [
-            { key: "d", label: "default", run: function( r ) { return { action: "cli", title: "Default Java: " & r.version, args: [ "java", "default", r.id ] }; } },
-            { key: "i", label: "install", run: function( r ) { return { action: "ask", title: "Install Java", prompt: "Which major version? (21, 17, 25 ...)", make: function( v ) { return { action: "cli", title: "Install Java " & v, args: [ "java", "install", v ] }; } }; } },
-            { key: "x", label: "remove", run: function( r ) { return { action: "cli", title: "Remove " & r.id, args: [ "java", "remove", r.id ] }; } }
+            { key: "d", label: "default", run: function( r ) { return me.viewName() == "homes" ? { action: "cli", title: "Default Java: " & r.version, args: [ "java", "default", r.id ] } : {}; } },
+            { key: "i", label: "install", run: function( r ) {
+                if ( me.viewName() == "available" ) return { action: "cli", title: "Install Java " & r.version, args: [ "java", "install", r.id ] };
+                return { action: "ask", title: "Install Java", prompt: "Which major version? (21, 17, 25 ...)", make: function( v ) { return { action: "cli", title: "Install Java " & v, args: [ "java", "install", v ] }; } };
+            } },
+            { key: "x", label: "remove", run: function( r ) { return me.viewName() == "homes" ? { action: "cli", title: "Remove " & r.id, args: [ "java", "remove", r.id ] } : {}; } },
+            { key: "a", label: "available", run: function( r ) { me.toggle(); return { action: "reload" }; } }
         ];
     }
 
+    function viewName() { return variables.view; }
+    function toggle() { variables.view = variables.view == "homes" ? "available" : "homes"; }
+
     function load( q = "" ) {
+        if ( variables.view == "available" ) return loadAvailable();
         var homes = variables.demo ? demoHomes() : ( variables.sys.bx( [ "java", "list" ] ).homes ?: [] );
         var rows = [];
         for ( var h in homes ) { h.mark = ( h.default ? "*" : " " ) & ( h.active ? ">" : " " ); rows.append( h ); }
         return rows;
     }
 
+    function loadAvailable() {
+        var src = variables.demo ? [ { vendor: "Temurin", version: "25.0.5.0+8", id: "25.0.5.0+8-tem", installed: false }, { vendor: "Temurin", version: "21.0.13.0+9", id: "21.0.13.0+9-tem", installed: true }, { vendor: "Temurin", version: "17.0.21.0+9", id: "17.0.21.0+9-tem", installed: false }, { vendor: "Corretto", version: "21.0.13.0+10", id: "21.0.13.0+10-amzn", installed: false }, { vendor: "GraalVM CE", version: "21.0.2", id: "21.0.2-graalce", installed: false } ] : ( variables.sys.bx( [ "sdk", "available", "java" ] ).available ?: [] );
+        var rows = [];
+        for ( var a in src ) rows.append( { mark: a.installed ? "●" : " ", vendor: a.vendor, version: a.version, id: a.id, installed: a.installed, default: false } );
+        return rows;
+    }
+
     function demoHomes() {
-        var h = function( id, v, vendor, source, path, def, act ) { return { id: id, major: int( val( listFirst( v, "." ) ) ), version: v, vendor: vendor, source: source, path: path, default: def, active: act, removable: source == "bxcachy" }; };
-        return [ h( "temurin-21.0.13_9", "21.0.13", "Eclipse Adoptium", "bxcachy", "~/.local/share/bxcachy/java/temurin-21.0.13_9", true, true ), h( "sdkman-17.0.13-tem", "17.0.13", "Eclipse Adoptium", "sdkman", "~/.sdkman/candidates/java/17.0.13-tem", false, false ), h( "system-java-11-openjdk", "11.0.25", "Arch Linux", "system", "/usr/lib/jvm/java-11-openjdk", false, false ) ];
+        var h = function( id, v, vendor, source, path, def, act ) { return { id: id, major: int( val( listFirst( v, "." ) ) ), version: v, vendor: vendor, source: source, path: path, default: def, active: act, removable: source != "system" }; };
+        return [ h( "temurin-21.0.13_9", "21.0.13", "Eclipse Adoptium", "bxcachy", "~/.local/share/bxcachy/java/temurin-21.0.13_9", true, true ), h( "sdkman-17.0.21.0+9-tem", "17.0.21", "Eclipse Adoptium", "sdkman", "~/.sdkman/candidates/java/17.0.21.0+9-tem", false, false ), h( "system-java-11-openjdk", "11.0.25", "Arch Linux", "system", "/usr/lib/jvm/java-11-openjdk", false, false ) ];
     }
 }
