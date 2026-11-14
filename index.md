@@ -36,6 +36,10 @@ Your setup, your system and your files, backed up to a NAS or the cloud, and one
 One terminal for your machine: what needs attention, what runs and how fresh your backups are.
 :::
 
+::: card title="Mail catcher" href="guides/mail.md"
+A local inbox for the mail your apps send while you develop. One command, nothing leaves your machine.
+:::
+
 ::: card title="Every app, your choice" href="guides/apps.md"
 A curated catalog of 280 apps and web apps, with one-click Google, Microsoft and Apple suites.
 :::

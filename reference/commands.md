@@ -53,7 +53,7 @@ Settings that only touch your own config (a theme, the bar, the font) act at onc
 
 **Look and feel**: [`theme`](#bxcachy-theme), [`appearance`](#bxcachy-appearance), [`display`](#bxcachy-display), [`power`](#bxcachy-power), [`time`](#bxcachy-time), [`toggle`](#bxcachy-toggle), [`nightshift`](#bxcachy-nightshift), [`notify`](#bxcachy-notify)
 
-**System and security**: [`system`](#bxcachy-system), [`security`](#bxcachy-security), [`dns`](#bxcachy-dns), [`kernel`](#bxcachy-kernel), [`ssh`](#bxcachy-ssh), [`secrets`](#bxcachy-secrets), [`vpn`](#bxcachy-vpn), [`cloud`](#bxcachy-cloud), [`settings`](#bxcachy-settings), [`dotfiles`](#bxcachy-dotfiles), [`nas`](#bxcachy-nas), [`backup`](#bxcachy-backup), [`timemachine`](#bxcachy-timemachine), [`java`](#bxcachy-java), [`sdk`](#bxcachy-sdk), [`tui`](#bxcachy-tui), [`bxtimemachine`](#bxcachy-bxtimemachine)
+**System and security**: [`system`](#bxcachy-system), [`security`](#bxcachy-security), [`dns`](#bxcachy-dns), [`kernel`](#bxcachy-kernel), [`ssh`](#bxcachy-ssh), [`secrets`](#bxcachy-secrets), [`vpn`](#bxcachy-vpn), [`cloud`](#bxcachy-cloud), [`settings`](#bxcachy-settings), [`dotfiles`](#bxcachy-dotfiles), [`nas`](#bxcachy-nas), [`backup`](#bxcachy-backup), [`timemachine`](#bxcachy-timemachine), [`java`](#bxcachy-java), [`sdk`](#bxcachy-sdk), [`mail`](#bxcachy-mail), [`tui`](#bxcachy-tui), [`bxtimemachine`](#bxcachy-bxtimemachine)
 
 **Develop**: [`boxlang`](#bxcachy-boxlang), [`editor`](#bxcachy-editor), [`db`](#bxcachy-db), [`containers`](#bxcachy-containers), [`vm`](#bxcachy-vm), [`ai`](#bxcachy-ai), [`skills`](#bxcachy-skills)
 
@@ -1078,6 +1078,26 @@ bxcachy sdk default gradle 8.10.2 --yes
 ```
 
 > setup installs SDKMAN into ~/.sdkman without touching your shell files. Maven and Gradle reach your shells through ~/.config/bxcachy/sdk.sh and sdk.fish, which the shell starters source (bxcachy refresh shell on an existing setup). Version lists come from api.sdkman.io.
+
+### `bxcachy mail` {#bxcachy-mail}
+
+A mail catcher for development: a local inbox for the mail your apps send, in a container.
+
+```text
+bxcachy mail start [--keep] [--smtp-port=N] [--ui-port=N] [--yes] | stop | status | remove [--keep-data] [--yes] | list [--limit=N] | show ID | delete ID [--yes] | clear [--yes] | open [ID] | test [--to=ADDR] [--subject=TEXT] | env [--dry-run] [--json]
+```
+
+Changes the system: needs `--yes`. Without it you get the plan (exit 2); `--dry-run` shows it and exits 0.
+
+```bash
+bxcachy mail start --yes
+bxcachy mail env
+bxcachy mail test
+bxcachy mail list
+bxcachy mail start --keep --yes
+```
+
+> Runs Mailpit in a container (the engine bxcachy db engine chose). SMTP is 127.0.0.1:1025 and the web inbox is http://127.0.0.1:8025, both local only. Mail is thrown away when the catcher stops unless you start it with --keep. The Control Center has a Mail page that refreshes by itself.
 
 ### `bxcachy tui` {#bxcachy-tui}
 

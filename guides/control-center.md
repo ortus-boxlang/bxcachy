@@ -54,6 +54,7 @@ Each part is read on its own. If one cannot be read, the rest still shows.
 | Shortcuts | every shortcut; rebind (it asks for the keys), reset, conflicts |
 | Machines | your VMs (Windows and Linux desktops in containers): start, stop, info, new |
 | Databases | the databases BxCachy runs: start, stop, info, new |
+| Mail | the mail your apps send to the catcher (`bxcachy mail`): headers and text of the highlighted message, delete, clear, open it in the browser, send a test; it refreshes by itself every 3 seconds |
 | Storage | NAS shares and cloud remotes: mount, unmount, test |
 | Secrets | names only; `v` shows one value for one look |
 | Themes | the 15 themes; Enter applies |
