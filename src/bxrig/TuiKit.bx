@@ -119,6 +119,37 @@ class TuiKit {
         return ls.len();
     }
 
+    // Colour pixel art (a { w, h, palette, rows } struct, see BrandPixels) drawn with half blocks: two pixel rows per text row. "." in a row is
+    // transparent (the cell keeps what is under it); `bg` is the colour behind a cell that is only half covered. Returns the height in text rows.
+    function pixelArt( x, y, art, bg ) {
+        var chars = "0123456789abcdefghijklmnopqrstuvwxyz";
+        var pal = arguments.art.palette;
+        var rows = arguments.art.rows;
+        var trows = int( rows.len() / 2 );
+        for ( var r = 0; r < trows; r++ ) {
+            var top = rows[ r * 2 + 1 ];
+            var bot = rows[ r * 2 + 2 ];
+            var runText = ""; var runFg = ""; var runBg = ""; var runX = 0;
+            for ( var cx = 1; cx <= arguments.art.w + 1; cx++ ) {
+                var glyph = ""; var fg = ""; var cb = arguments.bg;
+                if ( cx <= arguments.art.w ) {
+                    var t = mid( top, cx, 1 ); var b = mid( bot, cx, 1 );
+                    if ( t != "." && b != "." ) {
+                        var tc = pal[ find( t, chars ) ]; var bc = pal[ find( b, chars ) ];
+                        if ( tc == bc ) { glyph = "█"; fg = tc; } else { glyph = "▀"; fg = tc; cb = bc; }
+                    } else if ( t != "." ) { glyph = "▀"; fg = pal[ find( t, chars ) ]; }
+                    else if ( b != "." ) { glyph = "▄"; fg = pal[ find( b, chars ) ]; }
+                }
+                if ( len( runText ) && ( glyph == "" || fg != runFg || cb != runBg || right( runText, 1 ) != glyph ) ) {
+                    put( arguments.x + runX - 1, arguments.y + r, runText, runFg, runBg );
+                    runText = "";
+                }
+                if ( glyph != "" ) { if ( !len( runText ) ) { runX = cx; runFg = fg; runBg = cb; } runText &= glyph; }
+            }
+        }
+        return trows;
+    }
+
     // ---- clicks ----
     function clearHits() { variables.hits = []; }
     function hit( kind, x, y, w, h, n = 0, m = 0 ) { variables.hits.append( { kind: arguments.kind, x: arguments.x, y: arguments.y, w: arguments.w, h: arguments.h, n: arguments.n, m: arguments.m } ); }

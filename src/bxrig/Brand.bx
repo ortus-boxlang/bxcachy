@@ -31,6 +31,14 @@ class Brand {
         ];
     }
 
+    // The laptop logo as colour pixel art: "large" (48 columns, 17 rows), "medium" (32, 11) or "small" (20, 7). See TuiKit.pixelArt.
+    function laptop( size = "large" ) {
+        var px = new bxrig.BrandPixels();
+        if ( arguments.size == "small" ) return px.small();
+        if ( arguments.size == "medium" ) return px.medium();
+        return px.large();
+    }
+
     function word() { return "▌BxRig▐"; }
 
     // "large", "small" or "word".

@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/brand/bxrig-banner.png" alt="BxRig, your Linux dev rig, anywhere." width="720"></p>
+
 # BxRig
 
 BxRig brings an opinionated, beautiful and efficient desktop to Linux, built for developers.

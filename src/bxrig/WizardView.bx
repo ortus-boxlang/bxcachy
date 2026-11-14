@@ -113,14 +113,22 @@ class WizardView {
     }
 
     function welcome( app, tick, width, height, phase ) {
-        var iconW = 0; for ( var l in variables.icon ) iconW = max( iconW, len( l ) );
         var markW = 0; for ( var l in variables.wordmark ) markW = max( markW, len( l ) );
-        var totalH = variables.icon.len() + 1 + variables.wordmark.len() + 4;
+        // the laptop: the largest size that leaves room for the wordmark, tagline and the footer
+        var brand = new bxrig.Brand();
+        var art = {}; var artH = 0;
+        for ( var sz in [ "large", "medium", "small" ] ) {
+            var cand = brand.laptop( sz );
+            var rowsNeeded = int( cand.rows.len() / 2 );
+            if ( rowsNeeded + 1 + variables.wordmark.len() + 4 + 10 <= arguments.height && cand.w + 2 <= arguments.width ) { art = cand; artH = rowsNeeded; break; }
+        }
+        var totalH = artH + ( artH ? 1 : 0 ) + variables.wordmark.len() + 4;
         var top = max( 1, int( ( arguments.height - totalH ) / 2 ) );
         var cx = int( arguments.width / 2 );
-        starfield( arguments.width, arguments.height, { x: max( 0, cx - int( markW / 2 ) - 1 ), y: top, w: markW + 2, h: totalH + 1 }, arguments.tick );
-        artBlock( cx - int( iconW / 2 ), top, variables.icon, arguments.phase );
-        var y = top + variables.icon.len() + 1;
+        var boxW = max( markW, structKeyExists( art, "w" ) ? art.w : 0 );
+        starfield( arguments.width, arguments.height, { x: max( 0, cx - int( boxW / 2 ) - 1 ), y: top, w: boxW + 2, h: totalH + 1 }, arguments.tick );
+        if ( artH ) variables.kit.pixelArt( cx - int( art.w / 2 ), top, art, variables.BASE );
+        var y = top + artH + ( artH ? 1 : 0 );
         if ( markW < arguments.width - 2 ) artBlock( cx - int( markW / 2 ), y, variables.wordmark, arguments.phase );
         else gtext( cx - 3, y, "BxRig", true, arguments.phase, variables.BASE );
         y += variables.wordmark.len() + 1;

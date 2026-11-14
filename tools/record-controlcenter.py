@@ -120,6 +120,12 @@ def draw_frame(path):
             bg = color(c.bg, DEF_BG); fgc = color(c.fg, DEF_FG)
             if c.reverse: bg, fgc = fgc, bg
             if bg != DEF_BG: d.rectangle([x*cw, y*ch_h, (x+1)*cw, (y+1)*ch_h], fill=bg)
+            if c.data in ('▀', '▄', '█'):
+                x0, y0, x1, y1 = x*cw, y*ch_h, (x+1)*cw, (y+1)*ch_h
+                ym = (y0 + y1) // 2
+                box = (x0, y0, x1, y1) if c.data == '█' else (x0, y0, x1, ym) if c.data == '▀' else (x0, ym, x1, y1)
+                d.rectangle([box[0], box[1], box[2] - 1, box[3] - 1], fill=fgc)
+                continue
             if c.data != ' ':
                 f = f_bold if c.bold else f_reg
                 if f_sym and 0xe000 <= ord(c.data[0]) <= 0xf8ff: f = f_sym

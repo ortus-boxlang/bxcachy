@@ -17,21 +17,20 @@ def img(href, x, y, size):
 defs = f'<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="{G2}"/><stop offset="1" stop-color="{G1}"/></linearGradient></defs>'
 FONT = "font-family=\"Inter, 'Noto Sans', 'DejaVu Sans', sans-serif\""
 
+LAPTOP = uri('brand/bxrig-laptop.svg')
+
 def mark(x, y, size, mono=False):
-    """The BxRig mark: a rounded box in the brand gradient with Bx inside. mono draws it in the quiet text colour."""
-    sw = size * 0.07
-    pad = sw / 2
-    stroke = SUB if mono else "url(#g)"
-    fill = SUB if mono else "url(#g)"
-    return (f'<rect x="{x+pad:.1f}" y="{y+pad:.1f}" width="{size-sw:.1f}" height="{size-sw:.1f}" rx="{size*0.22:.1f}" fill="none" stroke="{stroke}" stroke-width="{sw:.1f}"/>'
-            f'<text x="{x+size/2:.1f}" y="{y+size*0.66:.1f}" text-anchor="middle" {FONT} font-size="{size*0.5:.1f}" font-weight="800" fill="{fill}">Bx</text>')
+    """The BxRig mark: the laptop with the BoxLang emblem (assets/brand/bxrig-laptop.svg, drawn by the owner). `size` is its width; it is 4:3.
+    mono is kept for callers that wanted a quiet version; the laptop has one look."""
+    h = size * 0.75
+    return f'<image href="{LAPTOP}" x="{x}" y="{y + (size - h) / 2:.1f}" width="{size}" height="{h:.1f}"/>'
 def word(x, y, size, anchor="middle", extra=""):
     return f'<text x="{x}" y="{y}" text-anchor="{anchor}" {FONT} font-size="{size}" font-weight="700" fill="url(#g)" {extra}>Bx<tspan fill="{TEXT}">Rig</tspan></text>'
 def svg(w, h, body):
     return f'<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 {w} {h}" width="{w}" height="{h}">{defs}{body}</svg>\n'
 
 W, H = 2560, 1440
-# app icon: the BxRig mark on a rounded dark tile
+# app icon: the BxRig laptop on a rounded dark tile
 open('icon.svg', 'w').write(svg(256, 256, f'<rect width="256" height="256" rx="56" fill="{BASE}"/>{mark(48, 48, 160)}'))
 # logo: icon + wordmark, for dark backgrounds
 open('logo.svg', 'w').write(svg(720, 200, f'{mark(14, 20, 160)}{word(200, 124, 96, "start")}'))

@@ -52,5 +52,14 @@ ik = new bxrig.TuiKit( tui );
 check( "icons: off by default, an empty string", ik.icon( "home" ) == "" && !ik.hasIcons() );
 ik.setIcons( true );
 check( "icons: on gives one Nerd Font character, unknown names give nothing", len( ik.icon( "home" ) ) == 1 && ik.icon( "home" ) == chr( 61461 ) && ik.icon( "java" ) == chr( 59192 ) && ik.icon( "nope" ) == "" );
+// ---- pixel art
+pk = new bxrig.TuiKit( tui );
+pk.fillRect( 0, 0, 80, 24, pk.color( "BASE" ) );
+art = { w: 4, h: 4, palette: [ "##ff0000", "##00ff00" ], rows: [ "0011", "0011", "1...", "...." ] };
+check( "pixelArt: returns its height in text rows", pk.pixelArt( 2, 1, art, pk.color( "BASE" ) ) == 2 );
+ps = tui.render_to_string( 80, 24 );
+check( "pixelArt: two same-colour pixels are a full block, a lone top pixel is an upper half block", find( "██", ps ) > 0 && find( "▀", ps ) > 0 );
+laptop = new bxrig.Brand().laptop( "large" );
+check( "brand: the laptop comes in three sizes, 48, 32 and 20 pixels wide", laptop.w == 48 && laptop.rows.len() == 34 && new bxrig.Brand().laptop( "medium" ).w == 32 && new bxrig.Brand().laptop( "small" ).w == 20 && len( laptop.palette ) > 10 );
 if ( failures > 0 ) { println( failures & " failed" ); exit( 1 ); }
 println( "all passed" );

@@ -9,6 +9,7 @@ function shot( w = 120, h = 36, tick = 100 ) { view.paint( app, tick, w, h ); re
 
 s = shot();
 check( "welcome: powered by BoxLang and the address", find( "Powered by BoxLang", s ) > 0 && find( "www.boxlang.io", s ) > 0 );
+check( "welcome: the laptop (half blocks) sits above the wordmark", find( "▀", s ) > 0 );
 check( "welcome: wordmark art, tagline and prompt", find( "███", s ) > 0 && find( "Beautiful by default", s ) > 0 && find( "press  enter  to begin", s ) > 0 );
 
 app.onKey( "Enter" );
