@@ -32,3 +32,4 @@
 - [Architecture](https://bxcachy.boxlang.io/architecture/index.md) ([HTML](https://bxcachy.boxlang.io/architecture/index.html))
 - [Control Center](https://bxcachy.boxlang.io/guides/control-center.md) ([HTML](https://bxcachy.boxlang.io/guides/control-center/index.html))
 - [Mail catcher](https://bxcachy.boxlang.io/guides/mail.md) ([HTML](https://bxcachy.boxlang.io/guides/mail/index.html))
+- [Pictures in the terminal](https://bxcachy.boxlang.io/guides/images.md) ([HTML](https://bxcachy.boxlang.io/guides/images/index.html))
