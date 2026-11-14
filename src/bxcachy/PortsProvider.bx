@@ -3,6 +3,7 @@
 class PortsProvider {
     function init( demo = false ) { variables.demo = arguments.demo; variables.sys = new bxcachy.TuiSys(); return this; }
     function id() { return "ports"; }
+    function icon() { return "plug"; }
     function title() { return "Ports"; }
     function hint() { return "ports and processes: what listens where"; }
     function live() { return false; }

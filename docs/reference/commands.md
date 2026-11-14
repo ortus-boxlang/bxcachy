@@ -1084,7 +1084,7 @@ bxcachy sdk default gradle 8.10.2 --yes
 Control Center: every BxCachy screen in one terminal, starting with the Dashboard.
 
 ```text
-bxcachy tui [PAGE] [--demo] [--json]
+bxcachy tui [PAGE] [--demo] [--icons=on|off] [--json]
 ```
 
 ```bash
@@ -1093,7 +1093,7 @@ bxcachy tui dashboard --json
 bxcachy tui --demo
 ```
 
-> It needs a terminal. The sidebar lists the pages; Tab switches page, q leaves. The Dashboard shows what needs attention, system meters, what runs and your backups, and Enter on a warning shows the plan of the fix before anything changes. --json prints a page's data without a terminal; --demo shows made-up data and runs nothing.
+> It needs a terminal. The sidebar lists the pages; Tab switches page, q leaves. The Dashboard shows what needs attention, system meters, what runs and your backups, and Enter on a warning shows the plan of the fix before anything changes. --json prints a page's data without a terminal; --demo shows made-up data and runs nothing. Icons are Nerd Font glyphs: on when a Nerd Font is installed, or force them with --icons=on|off or BXCACHY_ICONS.
 
 ### `bxcachy bxtimemachine` {#bxcachy-bxtimemachine}
 

@@ -100,14 +100,23 @@ class ControlCenter {
         return 2;
     }
 
-    function run( pageId = "dashboard", demo = false ) {
+    // Icons are Nerd Font glyphs. "on" and "off" are explicit; "" follows BXCACHY_ICONS, then looks for a Nerd Font on the machine.
+    function iconsEnabled( opt = "" ) {
+        var o = len( arguments.opt ) ? arguments.opt : getSystemSetting( "BXCACHY_ICONS", "" );
+        if ( o == "on" ) return true;
+        if ( o == "off" ) return false;
+        try { return systemExecute( "sh", [ "-c", "fc-list 2>/dev/null | grep -qi 'nerd'" ], 5, true ).exitCode == 0; } catch ( any e ) { return false; }
+    }
+
+    function run( pageId = "dashboard", demo = false, icons = "" ) {
         var start = arguments.pageId;
         var me = this;
+        var iconsOn = iconsEnabled( arguments.icons );
         while ( true ) {
             var app = new bxcachy.ControlCenterApp( buildPages( arguments.demo ), start );
             new bxcachy.TuiRunner().run(
                 app,
-                function( tui ) { return new bxcachy.ControlCenterView( tui ); },
+                function( tui ) { return new bxcachy.ControlCenterView( tui ).setIcons( iconsOn ); },
                 function( intent ) { me.handle( app, intent ); }
             );
             start = app.page().id();

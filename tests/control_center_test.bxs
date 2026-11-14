@@ -121,5 +121,13 @@ bp = new bxcachy.BoxlangProvider( false ).parseList( "Installed versions:" & chr
 check( "bvm parser: every version, the starred one is active", bp.len() == 3 && bp[ 2 ].active && !bp[ 1 ].active && bp[ 3 ].version == "1.9.0-snapshot" );
 lp = new bxcachy.LogsProvider( false ).parseLine( '{"PRIORITY":"3","SYSLOG_IDENTIFIER":"podman","MESSAGE":"boom","__REALTIME_TIMESTAMP":"1794583800000000"}' );
 check( "journal parser: level, unit, message", lp.level == "error" && lp.unit == "podman" && lp.message == "boom" && lp.time == "15:30:00" );
+// icons: the sidebar and page headers carry them when switched on, nothing when off
+app5 = new bxcachy.ControlCenterApp( cc.buildPages( true ), "ports" );
+view.setIcons( false ); view.paint( app5, 5, 120, 38 ); plain = tui.render_to_string( 120, 38 );
+view.setIcons( true ); view.paint( app5, 5, 120, 38 ); withIcons = tui.render_to_string( 120, 38 );
+glyph = function( code ) { return chr( code ); };
+check( "icons: off draws none of them", find( chr( 61461 ), plain ) == 0 && find( chr( 61926 ), plain ) == 0 );
+check( "icons: on draws the home, plug and coffee icons in the sidebar and the plug in the header", find( chr( 61461 ), withIcons ) > 0 && find( chr( 61926 ), withIcons ) > 0 && find( chr( 61684 ), withIcons ) > 0 && find( "Ports", withIcons ) > 0 );
+check( "icons: the page list still reads the same", find( "Dashboard", withIcons ) > 0 && find( "Databases", withIcons ) > 0 );
 if ( failures > 0 ) { println( failures & " failed" ); exit( 1 ); }
 println( "all passed" );

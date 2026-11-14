@@ -13,6 +13,7 @@ ap.add_argument('--cols', type=int, default=120)
 ap.add_argument('--rows', type=int, default=38)
 ap.add_argument('--fps', type=int, default=12)
 ap.add_argument('--bin', default='bxcachy')
+ap.add_argument('--icons', default='on', choices=['on', 'off'])
 ap.add_argument('--shots', action='store_true', help='also save a PNG of the last frame of each step')
 args = ap.parse_args()
 
@@ -46,7 +47,7 @@ shutil.rmtree(frames_dir, ignore_errors=True); os.makedirs(frames_dir)
 pid, fd = pty.fork()
 if pid == 0:
     env = dict(os.environ, TERM='xterm-256color', COLORTERM='truecolor')
-    cmd = [args.bin, 'tui', '--demo']
+    cmd = [args.bin, 'tui', '--demo', '--icons=' + args.icons]
     os.execvpe(cmd[0], cmd, dict(env, LANG='C.UTF-8'))
 fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack('HHHH', rows, cols, 0, 0))
 t0 = time.time(); chunks = []
@@ -83,6 +84,9 @@ def font(path, size=FS):
     return ImageFont.truetype(path, size)
 JB = '/usr/share/fonts/truetype/jetbrains-mono/'
 f_reg = font(JB + 'JetBrainsMono-Regular.ttf'); f_bold = font(JB + 'JetBrainsMono-Bold.ttf')
+import glob
+_sym = (glob.glob(os.path.expanduser('~/.local/share/fonts/*Symbols*Nerd*Mono*.ttf')) + glob.glob('/usr/share/fonts/**/*Symbols*Nerd*Mono*.ttf', recursive=True) + glob.glob('/tmp/nf/SymbolsNerdFontMono-Regular.ttf'))
+f_sym = font(_sym[0]) if _sym else None
 f_fb = font('/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf'); f_fbb = font('/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf')
 bbox = f_reg.getbbox('M'); cw = int(round(f_reg.getlength('M'))); ch_h = int(FS * 1.25)
 W, H = cols * cw, rows * ch_h
@@ -118,7 +122,9 @@ def draw_frame(path):
             if bg != DEF_BG: d.rectangle([x*cw, y*ch_h, (x+1)*cw, (y+1)*ch_h], fill=bg)
             if c.data != ' ':
                 f = f_bold if c.bold else f_reg
-                if not has_glyph(f, c.data): f = f_fbb if c.bold else f_fb
+                if f_sym and 0xe000 <= ord(c.data[0]) <= 0xf8ff: f = f_sym
+                elif not has_glyph(f, c.data):
+                    f = f_sym if (f_sym and (0xe000 <= ord(c.data[0]) <= 0xf8ff) and has_glyph(f_sym, c.data)) else (f_fbb if c.bold else f_fb)
                 d.text((x*cw, y*ch_h + 1), c.data, font=f, fill=fgc)
     img.save(path)
 

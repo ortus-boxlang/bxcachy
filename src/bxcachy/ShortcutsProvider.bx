@@ -2,6 +2,7 @@
 class ShortcutsProvider {
     function init( demo = false ) { variables.demo = arguments.demo; variables.sys = new bxcachy.TuiSys(); return this; }
     function id() { return "shortcuts"; }
+    function icon() { return "keyboard"; }
     function title() { return "Shortcuts"; }
     function hint() { return "your keys, in one list"; }
     function live() { return false; }

@@ -2,6 +2,7 @@
 class StorageProvider {
     function init( demo = false ) { variables.demo = arguments.demo; variables.sys = new bxcachy.TuiSys(); return this; }
     function id() { return "storage"; }
+    function icon() { return "hdd"; }
     function title() { return "Storage"; }
     function hint() { return "NAS and cloud"; }
     function live() { return false; }

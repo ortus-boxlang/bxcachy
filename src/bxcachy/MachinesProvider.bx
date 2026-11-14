@@ -2,6 +2,7 @@
 class MachinesProvider {
     function init( demo = false, data = "" ) { variables.demo = arguments.demo; variables.data = isSimpleValue( arguments.data ) ? new bxcachy.DashboardData( {} ) : arguments.data; return this; }
     function id() { return "machines"; }
+    function icon() { return "desktop"; }
     function title() { return "Machines"; }
     function hint() { return "Windows and Linux desktops in containers"; }
     function live() { return false; }

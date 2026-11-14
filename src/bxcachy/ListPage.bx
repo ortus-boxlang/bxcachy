@@ -22,6 +22,7 @@ class ListPage {
 
     function id() { return variables.p.id(); }
     function title() { return variables.p.title(); }
+    function icon() { return variables.p.icon(); }
     function state() {
         var items = [];
         for ( var r in variables.rows ) { var c = {}; for ( var k in r ) if ( k != "__text" ) c[ k ] = r[ k ]; items.append( c ); }
@@ -107,9 +108,12 @@ class ListPage {
     function paint( kit, x, y, w, h, tick, phase ) {
         var k = arguments.kit;
         var C = function( n ) { return k.color( n ); };
-        k.put( arguments.x + 1, arguments.y, variables.p.title(), C( "TEXT" ), C( "BASE" ), true );
+        var ico = k.icon( variables.p.icon() );
+        if ( len( ico ) ) k.put( arguments.x + 1, arguments.y, ico, C( "GREEN" ), C( "BASE" ) );
+        var tx = arguments.x + 1 + ( len( ico ) ? 2 : 0 );
+        k.put( tx, arguments.y, variables.p.title(), C( "TEXT" ), C( "BASE" ), true );
         var hint = variables.p.hint();
-        k.put( arguments.x + 3 + len( variables.p.title() ), arguments.y, k.trunc( hint, arguments.w - len( variables.p.title() ) - 28 ), C( "OVERLAY" ), C( "BASE" ) );
+        k.put( tx + 2 + len( variables.p.title() ), arguments.y, k.trunc( hint, arguments.w - len( variables.p.title() ) - 28 ), C( "OVERLAY" ), C( "BASE" ) );
         var fl = variables.mode != "list" ? "/ " & variables.input & "▌" : ( len( variables.list.query() ) ? "/ " & variables.list.query() : ( len( variables.query ) ? "/ " & variables.query : "" ) );
         if ( len( fl ) ) k.put( arguments.x + arguments.w - len( fl ) - 2, arguments.y, fl, variables.mode != "list" ? C( "GREEN" ) : C( "CYAN" ), C( "BASE" ), true );
         var detailH = 6;

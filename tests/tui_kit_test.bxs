@@ -48,5 +48,9 @@ check( "kit: confirm modal shows the plan and both buttons", find( "Restore?", s
 check( "kit: modal buttons are click regions", kit.hitAt( 14, 16 ).kind == "yes" || kit.hitAt( 14, 15 ).kind == "yes" || kit.hitAt( 14, 14 ).kind == "yes" || kit.hitAt( 14, 17 ).kind == "yes" );
 kit.setFade( 0.5 ); kit.put( 1, 1, "faded", kit.color( "GREEN" ) ); kit.setFade( 1 );
 check( "kit: fade draws without failing", find( "faded", shot() ) > 0 );
+ik = new bxcachy.TuiKit( tui );
+check( "icons: off by default, an empty string", ik.icon( "home" ) == "" && !ik.hasIcons() );
+ik.setIcons( true );
+check( "icons: on gives one Nerd Font character, unknown names give nothing", len( ik.icon( "home" ) ) == 1 && asc( ik.icon( "home" ) ) == 61461 && asc( ik.icon( "java" ) ) == 59192 && ik.icon( "nope" ) == "" );
 if ( failures > 0 ) { println( failures & " failed" ); exit( 1 ); }
 println( "all passed" );

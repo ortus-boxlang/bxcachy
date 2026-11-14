@@ -2,6 +2,7 @@
 class PackagesProvider {
     function init( demo = false ) { variables.demo = arguments.demo; variables.sys = new bxcachy.TuiSys(); return this; }
     function id() { return "packages"; }
+    function icon() { return "download"; }
     function title() { return "Packages"; }
     function hint() { return "press / and type what you are looking for"; }
     function live() { return true; }

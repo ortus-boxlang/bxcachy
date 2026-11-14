@@ -3,6 +3,7 @@
 class BoxlangProvider {
     function init( demo = false ) { variables.demo = arguments.demo; variables.sys = new bxcachy.TuiSys(); return this; }
     function id() { return "boxlang"; }
+    function icon() { return "archive"; }
     function title() { return "BoxLang"; }
     function hint() { return "versions installed with bvm"; }
     function live() { return false; }

@@ -18,12 +18,23 @@ class TuiKit {
         };
         variables.hits = [];
         variables.fade = 1;
+        variables.icons = false;
+        // Nerd Font (Font Awesome range) code points; each is one cell wide in a Nerd Font and is checked against the Symbols Nerd Font.
+        variables.glyphs = {
+            home: "f015", gear: "f013", coffee: "f0f4", terminal: "f120", server: "f233", database: "f1c0", cloud: "f0c2", key: "f084", brush: "f1fc", file: "f0f6", keyboard: "f11c",
+            cube: "f1b2", download: "f019", plug: "f1e6", desktop: "f108", hdd: "f0a0", history: "f1da", java: "e738", tags: "f02c", archive: "f187", wrench: "f0ad", envelope: "f0e0", check: "f00c"
+        };
         return this;
     }
 
     function tui() { return variables.tui; }
     function color( name ) { return variables.pal[ arguments.name ]; }
     function setFade( f ) { variables.fade = arguments.f; return this; }
+
+    // Icons are Nerd Font glyphs, drawn only when switched on (a terminal without the font would show boxes). icon( name ) is "" when off or the name is unknown.
+    function setIcons( on ) { variables.icons = arguments.on; return this; }
+    function hasIcons() { return variables.icons; }
+    function icon( name ) { return variables.icons && structKeyExists( variables.glyphs, arguments.name ) ? chr( inputBaseN( variables.glyphs[ arguments.name ], 16 ) ) : ""; }
 
     // ---- colours ----
     function rgb( hex ) { var h = replace( arguments.hex, "#", "", "all" ); return [ inputBaseN( mid( h, 1, 2 ), 16 ), inputBaseN( mid( h, 3, 2 ), 16 ), inputBaseN( mid( h, 5, 2 ), 16 ) ]; }

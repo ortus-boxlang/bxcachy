@@ -3,6 +3,7 @@
 class SdkProvider {
     function init( cand, demo = false ) { variables.cand = arguments.cand; variables.demo = arguments.demo; variables.sys = new bxcachy.TuiSys(); variables.ready = true; return this; }
     function id() { return variables.cand; }
+    function icon() { return variables.cand == "maven" ? "wrench" : "gear"; }
     function title() { return uCase( left( variables.cand, 1 ) ) & mid( variables.cand, 2, 20 ); }
     function hint() { return variables.ready ? "through SDKMAN · * default · ● installed" : "SDKMAN is not installed. Press S to set it up."; }
     function live() { return false; }

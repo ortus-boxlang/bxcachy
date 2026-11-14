@@ -2,6 +2,7 @@
 class LogsProvider {
     function init( demo = false ) { variables.demo = arguments.demo; variables.sys = new bxcachy.TuiSys(); variables.prio = 2; return this; }
     function id() { return "logs"; }
+    function icon() { return "file"; }
     function title() { return "Logs"; }
     function hint() { return "this boot · priority " & levels()[ variables.prio ] & " and worse"; }
     function live() { return false; }

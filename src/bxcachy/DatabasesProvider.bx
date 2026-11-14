@@ -2,6 +2,7 @@
 class DatabasesProvider {
     function init( demo = false, data = "" ) { variables.demo = arguments.demo; variables.data = isSimpleValue( arguments.data ) ? new bxcachy.DashboardData( {} ) : arguments.data; return this; }
     function id() { return "databases"; }
+    function icon() { return "database"; }
     function title() { return "Databases"; }
     function hint() { return "running in " & "podman or docker"; }
     function live() { return false; }

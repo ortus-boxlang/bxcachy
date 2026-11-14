@@ -13,6 +13,10 @@ bxcachy tui --demo            # made-up data, nothing is run
 bxcachy tui dashboard --json  # the page's data, no terminal needed
 ```
 
+## Icons
+
+The page list and page headers carry Nerd Font icons when your terminal has the font (the BxCachy wizard installs one for Starship). They are on when a Nerd Font is found, and you can force them: `bxcachy tui --icons=on` or `--icons=off`, or set `BXCACHY_ICONS`. Without the font they would show as boxes, so BxCachy leaves them off. Emoji are not used, because terminals draw them two cells wide and the tables would not line up.
+
 ## Keys
 
 | Key | What it does |

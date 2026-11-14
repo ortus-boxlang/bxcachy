@@ -13,6 +13,7 @@ class DashboardPage {
     }
 
     function id() { return "dashboard"; }
+    function icon() { return "home"; }
     function usesLeft() { return false; }
     function title() { return "Dashboard"; }
 

@@ -2,6 +2,7 @@
 class ThemesProvider {
     function init( demo = false ) { variables.demo = arguments.demo; variables.sys = new bxcachy.TuiSys(); return this; }
     function id() { return "themes"; }
+    function icon() { return "brush"; }
     function title() { return "Themes"; }
     function hint() { return "Enter applies a theme"; }
     function live() { return false; }

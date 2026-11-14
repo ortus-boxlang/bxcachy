@@ -2,6 +2,7 @@
 class VersionsProvider {
     function init( demo = false ) { variables.demo = arguments.demo; variables.sys = new bxcachy.TuiSys(); return this; }
     function id() { return "versions"; }
+    function icon() { return "tags"; }
     function title() { return "Versions"; }
     function hint() { return "bvm, mvm and nvm in one place"; }
     function live() { return false; }
