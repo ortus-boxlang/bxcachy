@@ -146,6 +146,8 @@ jobs:
           (cd src && matchbox ../tests/wizard_view_test.bxs)
           (cd src && matchbox ../tests/time_machine_test.bxs)
           (cd src && matchbox ../tests/tui_kit_test.bxs)
+          (cd src && matchbox ../tests/image_cache_test.bxs)
+          (cd src && matchbox ../tests/app_icons_test.bxs)
           (cd src && matchbox ../tests/control_center_test.bxs)
           (cd src && matchbox ../tests/init_plan_test.bxs)
           (cd src && matchbox ../tests/theme_colors_test.bxs)

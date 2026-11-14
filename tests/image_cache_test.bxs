@@ -1,0 +1,71 @@
+// ImageCache: downloads in the background, safely. A local server serves good and bad pictures. Run from src/: (cd src && matchbox ../tests/image_cache_test.bxs)
+// The safety rules under test: https only, magic bytes, size cap (with and without a length), timeouts, a remembered failure is not retried, a bounded cache, nothing throws or blocks.
+failures = 0;
+function check( label, ok ) { if ( ok ) println( "ok   " & label ); else { println( "FAIL " & label ); failures++; } }
+function sh( cmd ) { return systemExecute( "sh", [ "-c", cmd ], 60, true ); }
+tmp = trim( sh( "mktemp -d" ).output );
+portFile = tmp & "/port";
+sh( "nohup python3 ../tests/image_server.py " & portFile & " >/dev/null 2>&1 </dev/null & echo $! > " & tmp & "/pid" );
+port = "";
+for ( i = 1; i <= 60 && !len( port ); i++ ) { if ( fileExists( portFile ) ) port = trim( fileRead( portFile ) ); else sh( "sleep 0.1" ); }
+check( "the local server is up", len( port ) > 0 );
+url = function( path ) { return "http://127.0.0.1:" & port & path; };
+function requests( path ) { var n = 0; for ( var l in listToArray( fileExists( portFile & ".log" ) ? fileRead( portFile & ".log" ) : "", chr( 10 ) ) ) if ( trim( l ) == path ) n++; return n; }
+// wait until the status is not pending any more (max ~12 s)
+function settle( c, u, kind ) { for ( var i = 1; i <= 120; i++ ) { if ( c.status( u, kind ) != "pending" && c.status( u, kind ) != "none" ) return c.status( u, kind ); sh( "sleep 0.1" ); } return c.status( u, kind ); }
+
+cache = new bxrig.ImageCache( { base: tmp & "/cache", allowHttp: true, maxTime: 2, capKb: 100000 } );
+strict = new bxrig.ImageCache( { base: tmp & "/cache-strict" } );
+check( "https only: http is refused when it is not allowed", strict.get( url( "/good.png" ), "icons" ) == "" && strict.status( url( "/good.png" ), "icons" ) == "none" && requests( "/good.png" ) == 0 );
+check( "https only: other schemes, spaces and quotes are refused", !cache.allowed( "file:///etc/passwd" ) && !cache.allowed( "ftp://x/y.png" ) && !cache.allowed( "http://127.0.0.1/a b.png" ) && !cache.allowed( "http://127.0.0.1/a'b.png" ) && !cache.allowed( "" ) && cache.allowed( "https://example.com/a.png" ) );
+
+t0 = getTickCount();
+first = cache.get( url( "/good.png" ), "icons" );
+elapsed = getTickCount() - t0;
+check( "get never waits: the first call answers at once with nothing", first == "" && elapsed < 1500 );
+st = settle( cache, url( "/good.png" ), "icons" );
+p = cache.get( url( "/good.png" ), "icons" );
+check( "a good PNG ends up cached and get returns its path", st == "cached" && right( p, 4 ) == ".png" && fileExists( p ) );
+check( "the cached file is the picture, written under its final name only", sh( "head -c 4 " & p & " | od -An -tx1 | tr -d ' \\n'" ).output == "89504e47" || find( "89504e47", sh( "head -c 4 " & p & " | od -An -tx1" ).output ) > 0 );
+cache.get( url( "/good.png" ), "icons" ); cache.get( url( "/good.png" ), "icons" );
+check( "a cached picture is not fetched again", requests( "/good.png" ) == 1 );
+check( "no temporary file is left behind", trim( sh( "ls -a " & tmp & "/cache/images/icons | grep -c '\\.part' || true" ).output ) == "0" );
+
+for ( kind in [ "gif", "jpg", "webp" ] ) { cache.get( url( "/good." & kind ), "icons" ); settle( cache, url( "/good." & kind ), "icons" ); }
+check( "GIF, JPEG and WebP are accepted by their magic bytes", right( cache.get( url( "/good.gif" ), "icons" ), 4 ) == ".gif" && right( cache.get( url( "/good.jpg" ), "icons" ), 4 ) == ".jpg" && right( cache.get( url( "/good.webp" ), "icons" ), 5 ) == ".webp" );
+
+for ( bad in [ "/bad.png", "/empty.png", "/huge.png", "/huge-nolen.png", "/nope.png" ] ) { cache.get( url( bad ), "icons" ); settle( cache, url( bad ), "icons" ); }
+check( "text, an empty body and a 404 are rejected and marked failed", cache.status( url( "/bad.png" ), "icons" ) == "failed" && cache.status( url( "/empty.png" ), "icons" ) == "failed" && cache.status( url( "/nope.png" ), "icons" ) == "failed" );
+check( "a body over 5 MB is rejected, with a length and without one", cache.status( url( "/huge.png" ), "icons" ) == "failed" && cache.status( url( "/huge-nolen.png" ), "icons" ) == "failed" );
+check( "no rejected file is kept", !len( cache.cachedPath( url( "/bad.png" ), "icons" ) ) && !len( cache.cachedPath( url( "/huge.png" ), "icons" ) ) && !len( cache.cachedPath( url( "/huge-nolen.png" ), "icons" ) ) );
+for ( i = 1; i <= 6; i++ ) cache.get( url( "/bad.png" ), "icons" );
+check( "a failed URL is remembered: six more calls make no new request", requests( "/bad.png" ) == 1 );
+
+t1 = getTickCount();
+cache.get( url( "/slow.png" ), "icons" );
+check( "a slow server does not block the caller", getTickCount() - t1 < 1500 );
+sst = settle( cache, url( "/slow.png" ), "icons" );
+check( "a slow server is cut off by the timeout and marked failed", sst == "failed" );
+
+// a failure is retried once the marker is old (6 hours)
+mk = tmp & "/cache/images/icons/" & cache.key( url( "/bad.png" ) ) & ".fail";
+fileWrite( mk, "1000" );
+check( "an old failure marker is ignored (retry allowed)", cache.status( url( "/bad.png" ), "icons" ) == "none" );
+
+// never throws
+junk = [ "", "   ", "https://", "https://" & repeatString( "a", 3000 ), "javascript:alert(1)", "http://127.0.0.1:1/a.png" ];
+allEmpty = true;
+for ( j in junk ) { r = cache.get( j, "icons" ); if ( r != "" ) allEmpty = false; }
+check( "junk URLs give an empty answer and no error", allEmpty );
+check( "a kind with path characters cannot leave the cache folder", find( "..", cache.dir( "../../etc" ) ) == 0 && cache.dir( "../../etc" ) == tmp & "/cache/images/etc" );
+check( "an unreadable cache folder is survived", new bxrig.ImageCache( { base: "/proc/nope/x", allowHttp: true } ).get( url( "/good.png" ), "icons" ) == "" );
+
+// the cache is capped: oldest files go first
+small = new bxrig.ImageCache( { base: tmp & "/cache-cap", allowHttp: true, maxTime: 3, capKb: 8 } );
+for ( n in [ "/good.png", "/good.gif", "/good.jpg", "/good.webp" ] ) { small.get( url( n ), "shots" ); settle( small, url( n ), "shots" ); sh( "sleep 1" ); }
+left = trim( sh( "ls " & tmp & "/cache-cap/images/shots | grep -vc '\\.fail' || true" ).output );
+check( "over the cap the oldest pictures are removed", int( val( left ) ) < 4 );
+
+sh( "kill $(cat " & tmp & "/pid) 2>/dev/null; rm -rf " & tmp );
+if ( failures > 0 ) { println( failures & " failed" ); exit( 1 ); }
+println( "all passed" );

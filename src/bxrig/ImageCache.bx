@@ -1,0 +1,123 @@
+// Pictures from the network for the TUIs (app icons, screenshots), fetched in the background and kept on disk. It never blocks and never throws:
+//   cache = new bxrig.ImageCache()
+//   path = cache.get( url, "icons" )    "" until the picture is on disk (a background download starts the first time), then the local path
+//   cache.status( url, kind )           "cached", "pending", "failed" (remembered for 6 hours) or "none" (never asked)
+// A page calls get() every frame and draws the letter tile while it answers "": the paint loop never waits for the network.
+// Safety rules, all of them enforced by the download script and covered by tests/image_cache_test.bxs:
+//   only https URLs (BXRIG_IMAGE_ALLOW_HTTP=1 allows http for tests); curl with --connect-timeout 5, --max-time 15 (BXRIG_IMAGE_MAX_TIME) and --max-filesize 5 MB, plus a size check after;
+//   the file must start with the magic bytes of a PNG, JPEG, WebP or GIF before it is accepted; it is written under a temporary name and renamed;
+//   a URL that failed is remembered for 6 hours (a marker file), so a page does not retry it every frame; a download that has been pending for more than 60 seconds is retried;
+//   the cache is capped at 200 MB, the oldest files go first; everything is wrapped in try/catch.
+// Where: ~/.cache/bxrig/images/KIND/ (XDG_CACHE_HOME is honored; BXRIG_CACHE_HOME replaces the base folder).
+class ImageCache {
+    // opts (tests and callers that know better): { base, allowHttp, maxTime, capKb, maxBytes }. The environment covers the same things:
+    // BXRIG_CACHE_HOME, BXRIG_IMAGE_ALLOW_HTTP=1, BXRIG_IMAGE_MAX_TIME (seconds, default 15), BXRIG_IMAGE_CAP_KB (default 204800).
+    function init( opts = {} ) {
+        variables.opts = arguments.opts;
+        variables.maxBytes = arguments.opts.maxBytes ?: 5242880;
+        variables.capKb = arguments.opts.capKb ?: int( val( env( "BXRIG_IMAGE_CAP_KB", "204800" ) ) );
+        variables.maxTime = arguments.opts.maxTime ?: int( val( env( "BXRIG_IMAGE_MAX_TIME", "15" ) ) );
+        variables.failSeconds = 6 * 3600;
+        variables.pendingSeconds = max( 60, variables.maxTime * 4 );
+        return this;
+    }
+
+    function env( name, fallback ) { var v = getSystemSetting( arguments.name, "" ); return len( v ) ? v : arguments.fallback; }
+
+    function base() {
+        if ( structKeyExists( variables.opts, "base" ) ) return variables.opts.base;
+        var home = env( "HOME", "" );
+        var xdg = env( "XDG_CACHE_HOME", home & "/.cache" );
+        return env( "BXRIG_CACHE_HOME", xdg & "/bxrig" );
+    }
+
+    function dir( kind ) { return base() & "/images/" & reReplace( arguments.kind, "[^a-z0-9_-]", "", "all" ); }
+    function key( url ) { return lCase( hash( arguments.url ) ); }
+    function now() { return new bxrig.BackupTimeline( {} ).nowEpoch(); }
+
+    function allowed( url ) {
+        var u = arguments.url;
+        if ( left( u, 8 ) == "https://" && len( u ) < 2000 && !reFind( "[\s'" & chr( 34 ) & "]", u ) ) return true;
+        return ( ( variables.opts.allowHttp ?: false ) || env( "BXRIG_IMAGE_ALLOW_HTTP", "" ) == "1" ) && left( u, 7 ) == "http://" && len( u ) < 2000 && !reFind( "[\s'" & chr( 34 ) & "]", u );
+    }
+
+    // The file that holds the picture once it is cached, or "".
+    function cachedPath( url, kind ) {
+        var stem = dir( arguments.kind ) & "/" & key( arguments.url );
+        for ( var ext in [ "png", "jpg", "webp", "gif" ] ) if ( fileExists( stem & "." & ext ) ) return stem & "." & ext;
+        return "";
+    }
+
+    function markerAge( file ) {
+        try {
+            if ( !fileExists( arguments.file ) ) return -1;
+            var t = int( val( trim( fileRead( arguments.file ) ) ) );
+            return t > 0 ? now() - t : 0;
+        } catch ( any e ) { return -1; }
+    }
+
+    function status( url, kind ) {
+        try {
+            if ( len( cachedPath( arguments.url, arguments.kind ) ) ) return "cached";
+            var stem = dir( arguments.kind ) & "/" & key( arguments.url );
+            var f = markerAge( stem & ".fail" );
+            if ( f >= 0 && f < variables.failSeconds ) return "failed";
+            var p = markerAge( stem & ".pending" );
+            if ( p >= 0 && p < variables.pendingSeconds ) return "pending";
+        } catch ( any e ) {}
+        return "none";
+    }
+
+    // The path of the picture if it is on disk; otherwise "" and, the first time, a background download. Never blocks, never throws.
+    function get( url, kind = "icons" ) {
+        try {
+            if ( !allowed( arguments.url ) ) return "";
+            var have = cachedPath( arguments.url, arguments.kind );
+            if ( len( have ) ) return have;
+            var st = status( arguments.url, arguments.kind );
+            if ( st == "failed" || st == "pending" ) return "";
+            start( arguments.url, arguments.kind );
+        } catch ( any e ) {}
+        return "";
+    }
+
+    // The download, as a shell script with positional arguments (nothing from the URL is ever part of the script text). ^ stands for a double quote.
+    function script() {
+        var lines = [
+            "url=$1; dir=$2; stem=$3; cap=$4; maxb=$5; now=$6; mt=$7; tmp=^$dir/.$stem.part^",
+            "mkdir -p ^$dir^ || exit 0",
+            "echo $now > ^$dir/$stem.pending^",
+            "fail() { rm -f ^$tmp^ ^$dir/$stem.pending^; echo $now > ^$dir/$stem.fail^; exit 0; }",
+            "curl -fsSL --connect-timeout 5 --max-time $mt --max-filesize $maxb --proto '=https,http' --proto-redir '=https' -o ^$tmp^ ^$url^ >/dev/null 2>&1 || fail",
+            "size=$(wc -c < ^$tmp^ 2>/dev/null || echo 0)",
+            "[ ^$size^ -gt 0 ] && [ ^$size^ -le ^$maxb^ ] || fail",
+            "magic=$(head -c 12 ^$tmp^ | od -An -tx1 | tr -d '[:space:]')",
+            "case ^$magic^ in",
+            "  89504e47*) ext=png ;;",
+            "  ffd8ff*) ext=jpg ;;",
+            "  47494638*) ext=gif ;;",
+            "  52494646????????57454250) ext=webp ;;",
+            "  *) fail ;;",
+            "esac",
+            "mv -f ^$tmp^ ^$dir/$stem.$ext^ && rm -f ^$dir/$stem.pending^ ^$dir/$stem.fail^",
+            "root=$(dirname ^$dir^)",
+            "total=$(du -sk ^$root^ 2>/dev/null | cut -f1)",
+            "while [ ^${total:-0}^ -gt ^$cap^ ]; do",
+            "  oldest=$(find ^$root^ -type f ! -name '*.fail' ! -name '*.pending' -exec stat -c '%Y %n' {} + 2>/dev/null | sort -n | head -n 1 | cut -d' ' -f2-)",
+            "  [ -n ^$oldest^ ] || break",
+            "  rm -f ^$oldest^",
+            "  total=$(du -sk ^$root^ 2>/dev/null | cut -f1)",
+            "done",
+            "exit 0"
+        ];
+        return replace( lines.toList( chr( 10 ) ), "^", chr( 34 ), "all" );
+    }
+
+    function start( url, kind ) {
+        var d = dir( arguments.kind );
+        directoryCreate( d, true, true );
+        // the script runs detached: stdin, stdout and stderr are closed so this call returns at once
+        var outer = replace( "nohup sh -c ^$1^ _ ^$2^ ^$3^ ^$4^ ^$5^ ^$6^ ^$7^ ^$8^ >/dev/null 2>&1 </dev/null &", "^", chr( 34 ), "all" );
+        systemExecute( "sh", [ "-c", outer, "_", script(), arguments.url, d, key( arguments.url ), variables.capKb, variables.maxBytes, now(), variables.maxTime ], 10, false );
+    }
+}

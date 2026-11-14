@@ -851,3 +851,11 @@ Fonts are not a question: the install always adds JetBrains Mono, JetBrains Mono
 ### 14.5 Tasks
 
 W1 this section; W2 native TUI in MatchBox; W3 `install.sh` (done); W4 init engine (planner and headless run); W5 catalog additions; W6 parametrized starters; W7 TUI pages; W8 CI and docs; W9 `bxrig db`; W10 dotfiles import; W11 `bxrig runner`.
+
+### 13.51 Pictures in the TUIs (decided with the owner 2026-11-14)
+
+- **Optional, never fatal.** A picture that is missing, slow, too big or broken becomes a letter tile; no picture call blocks a frame or throws. Details and limits are in `docs/guides/images.md`.
+- **Pieces:** `TuiKit.image` and `imageOrTile` (drawing, via MatchBox `tui.image`), `ImageCache` (background https downloads, magic byte check, size and time caps, failures remembered 6 hours, 200 MB cache at `~/.cache/bxrig/images`), `AppIcons` (installed icon theme, AppStream icons, Dashboard Icons by name, AppStream screenshots).
+- **Sources and attribution:** Dashboard Icons (Apache-2.0, logos remain their owners' trademarks, used to identify the app); AppStream data from `archlinux-appstream-data`. No web image search.
+- **Settings:** `BXRIG_IMAGES=on|off`, `BXRIG_CACHE_HOME`, `BXRIG_IMAGE_CAP_KB`, `BXRIG_IMAGE_MAX_TIME`, `BXRIG_SHARE_DIR`.
+- **Build:** the compiler needs MatchBox built with `--features bif-tui`.

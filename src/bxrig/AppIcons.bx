@@ -1,0 +1,217 @@
+// Pictures for apps: an icon to put beside a name, and screenshots. Everything answers at once with a local file path or "" and never throws;
+// whatever has to come from the network is fetched in the background by ImageCache, so a page just asks again on the next frame.
+//   icons = new bxrig.AppIcons()
+//   icons.iconFor( "thunderbird", "dark" )   -> "/usr/share/icons/hicolor/128x128/apps/thunderbird.png" or "" (show a letter tile then)
+//   icons.screenshotsFor( "org.mozilla.thunderbird" ) -> [ local paths ] (empty until the lookup and the downloads are done)
+// Where an icon comes from, first match wins:
+//   1. the app is installed: its .desktop file names an icon (Icon=), found as a PNG in the icon themes (hicolor first, sizes 128 to 48) or /usr/share/pixmaps,
+//      or given as an absolute path;
+//   2. AppStream icons of the repositories (archlinux-appstream-data): <share>/swcatalog/icons/ORIGIN/SIZE/*_NAME.png (or app-info/icons);
+//   3. Dashboard Icons (https://dashboardicons.com, Apache-2.0): PNG by kebab-case name from the jsDelivr CDN, with -light or -dark as the second try;
+//   4. "": the caller draws a letter tile.
+// SVG icons are skipped (no rasterizer is shipped). Screenshots come from the AppStream collection XML (<share>/swcatalog/xml/*.xml.gz or
+// app-info/xmls/*.xml.gz) by component id: a background job scans the compressed XML with zcat and awk (it is never loaded whole) and writes the URLs to
+// <cache>/appstream/ID.urls; the pictures themselves are fetched by ImageCache (kind "shots").
+// opts (tests): { share, home, iconBase, cache: {ImageCache opts} }. Environment: BXRIG_SHARE_DIR replaces /usr/share.
+class AppIcons {
+    function init( opts = {} ) {
+        variables.opts = arguments.opts;
+        variables.cache = new bxrig.ImageCache( arguments.opts.cache ?: {} );
+        variables.seen = {};
+        variables.sizes = [ "128x128", "256x256", "96x96", "64x64", "48x48", "72x72", "512x512" ];
+        return this;
+    }
+
+    function env( name, fallback ) { var v = getSystemSetting( arguments.name, "" ); return len( v ) ? v : arguments.fallback; }
+    function share() { return variables.opts.share ?: env( "BXRIG_SHARE_DIR", "/usr/share" ); }
+    function home() { return variables.opts.home ?: env( "HOME", "" ); }
+    function userShare() { return structKeyExists( variables.opts, "home" ) ? variables.opts.home & "/.local/share" : env( "XDG_DATA_HOME", home() & "/.local/share" ); }
+    function iconBase() { return variables.opts.iconBase ?: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png"; }
+
+    // "Visual Studio Code" -> "visual-studio-code"
+    function slug( name ) {
+        var s = lCase( trim( arguments.name ) );
+        s = reReplace( s, "[^a-z0-9]+", "-", "all" );
+        return reReplace( s, "^-+|-+$", "", "all" );
+    }
+
+    // The names to try for a package or app name: itself, and without the usual packaging suffixes.
+    function names( name ) {
+        var base = slug( arguments.name );
+        var out = [];
+        if ( len( base ) ) out.append( base );
+        var stripped = reReplace( base, "-(bin|git|stable|beta|nightly|desktop|appimage|flatpak|qt|gtk|gui)$", "" );
+        if ( len( stripped ) && stripped != base ) out.append( stripped );
+        return out;
+    }
+
+    // Icon= of the [Desktop Entry] group of a .desktop file.
+    function readIconName( desktopFile ) {
+        try {
+            var inMain = false;
+            for ( var line in listToArray( fileRead( arguments.desktopFile ), chr( 10 ) ) ) {
+                var l = trim( line );
+                if ( left( l, 1 ) == "[" ) { if ( l == "[Desktop Entry]" ) inMain = true; else if ( inMain ) break; continue; }
+                if ( inMain && left( l, 5 ) == "Icon=" ) return trim( mid( l, 6, 400 ) );
+            }
+        } catch ( any e ) {}
+        return "";
+    }
+
+    function isPicture( path ) { var e = lCase( listLast( arguments.path, "." ) ); return arrayFind( [ "png", "jpg", "jpeg", "webp", "gif" ], e ) > 0; }
+
+    // A picture of the named icon in the icon themes or pixmaps, or "".
+    function themed( iconName ) {
+        var ic = arguments.iconName;
+        if ( !len( ic ) ) return "";
+        if ( left( ic, 1 ) == "/" ) return fileExists( ic ) && isPicture( ic ) ? ic : "";
+        if ( find( "/", ic ) || find( "..", ic ) ) return "";
+        var roots = [ userShare() & "/icons", share() & "/icons" ];
+        for ( var root in roots ) {
+            if ( !directoryExists( root ) ) continue;
+            var themes = [ "hicolor" ];
+            try { for ( var t in directoryList( root, false, "name" ) ) if ( t != "hicolor" && directoryExists( root & "/" & t ) ) themes.append( t ); } catch ( any e ) {}
+            for ( var th in themes ) for ( var sz in variables.sizes ) {
+                var n = listFirst( sz, "x" );
+                for ( var f in [ root & "/" & th & "/" & sz & "/apps/" & ic & ".png", root & "/" & th & "/apps/" & n & "/" & ic & ".png", root & "/" & th & "/" & sz & "/" & ic & ".png" ] ) if ( fileExists( f ) ) return f;
+            }
+        }
+        for ( var px in [ share() & "/pixmaps/" & ic & ".png", userShare() & "/pixmaps/" & ic & ".png" ] ) if ( fileExists( px ) ) return px;
+        return "";
+    }
+
+    function installed( name ) {
+        for ( var nm in names( arguments.name ) ) {
+            for ( var d in [ userShare() & "/applications/" & nm & ".desktop", share() & "/applications/" & nm & ".desktop" ] ) {
+                if ( !fileExists( d ) ) continue;
+                var hit = themed( readIconName( d ) );
+                if ( len( hit ) ) return hit;
+            }
+            var direct = themed( nm );
+            if ( len( direct ) ) return direct;
+        }
+        return "";
+    }
+
+    function appstream( name ) {
+        for ( var nm in names( arguments.name ) ) {
+            for ( var root in [ share() & "/swcatalog/icons", share() & "/app-info/icons" ] ) {
+                if ( !directoryExists( root ) ) continue;
+                try {
+                    for ( var origin in directoryList( root, false, "name" ) ) for ( var sz in variables.sizes ) {
+                        var dir = root & "/" & origin & "/" & sz;
+                        if ( !directoryExists( dir ) ) continue;
+                        var found = directoryList( dir, false, "name", "*_" & nm & ".png" );
+                        if ( !found.len() && fileExists( dir & "/" & nm & ".png" ) ) return dir & "/" & nm & ".png";
+                        if ( found.len() ) return dir & "/" & found[ 1 ];
+                    }
+                } catch ( any e ) {}
+            }
+        }
+        return "";
+    }
+
+    // Dashboard Icons: the plain name first; when that is known to be missing the variant that suits the theme ("dark" background wants -light).
+    function dashboard( name, theme ) {
+        for ( var nm in names( arguments.name ) ) {
+            var plain = iconBase() & "/" & nm & ".png";
+            var p = variables.cache.get( plain, "icons" );
+            if ( len( p ) ) return p;
+            if ( variables.cache.status( plain, "icons" ) == "failed" ) {
+                var variant = iconBase() & "/" & nm & ( arguments.theme == "light" ? "-dark" : "-light" ) & ".png";
+                var v = variables.cache.get( variant, "icons" );
+                if ( len( v ) ) return v;
+            }
+        }
+        return "";
+    }
+
+    // A local picture for the app, or "". Local lookups are remembered for the life of this object; the network step is asked again on every call.
+    function iconFor( name, theme = "dark" ) {
+        try {
+            var key = lCase( arguments.name );
+            if ( !structKeyExists( variables.seen, key ) ) {
+                var local = installed( arguments.name );
+                if ( !len( local ) ) local = appstream( arguments.name );
+                variables.seen[ key ] = local;
+            }
+            if ( len( variables.seen[ key ] ) ) return variables.seen[ key ];
+            return dashboard( arguments.name, arguments.theme );
+        } catch ( any e ) { return ""; }
+    }
+
+    // ---- screenshots ----
+    function xmlFiles() {
+        var out = [];
+        for ( var d in [ share() & "/swcatalog/xml", share() & "/app-info/xmls" ] ) {
+            if ( !directoryExists( d ) ) continue;
+            try { for ( var f in directoryList( d, false, "name", "*.xml.gz" ) ) out.append( d & "/" & f ); } catch ( any e ) {}
+        }
+        return out;
+    }
+
+    function indexDir() { return variables.cache.base() & "/appstream"; }
+
+    // The scan, as a shell script with positional arguments: ID, OUTFILE, NOW, then the XML files. ^ stands for a double quote.
+    function scanScript() {
+        var awk = "index($0, ^<id>^ id ^</id>^) { inside=1 } inside && /<image/ { u=substr($0, index($0, ^<image^)); u=substr(u, index(u, ^>^)+1); sub(/<.*$/, ^^, u); if (u != ^^) { t=($0 ~ /type=^thumbnail^/) ? ^t^ : ^s^; print t ^ ^ u } } inside && /<[/]component>/ { exit }";
+        var lines = [
+            "id=$1; out=$2; now=$3; shift 3",
+            "mkdir -p ^$(dirname ^$out^)^",
+            "echo $now > ^$out.scan^",
+            "for f in ^$@^; do",
+            "  zcat ^$f^ 2>/dev/null | awk -v id=^$id^ '" & awk & "' >> ^$out.tmp^",
+            "done",
+            "touch ^$out.tmp^",
+            "mv -f ^$out.tmp^ ^$out^; rm -f ^$out.scan^",
+            "exit 0"
+        ];
+        return replace( lines.toList( chr( 10 ) ), "^", chr( 34 ), "all" );
+    }
+
+    function startScan( id, files ) {
+        var idx = indexDir() & "/" & arguments.id & ".urls";
+        var outer = replace( "s=$1; shift; nohup sh -c ^$s^ _ ^$@^ >/dev/null 2>&1 </dev/null &", "^", chr( 34 ), "all" );
+        var args = [ "-c", outer, "_", scanScript(), arguments.id, idx, variables.cache.now() ];
+        for ( var f in arguments.files ) args.append( f );
+        systemExecute( "sh", args, 10, false );
+    }
+
+    // The screenshot URLs for a component id from its index file ([] when it is not built yet). Thumbnails are preferred over full size images.
+    function screenshotUrls( id ) {
+        var idx = indexDir() & "/" & arguments.id & ".urls";
+        var thumbs = []; var sources = [];
+        if ( !fileExists( idx ) ) return [];
+        for ( var line in listToArray( fileRead( idx ), chr( 10 ) ) ) {
+            var tl = trim( line );
+            if ( len( tl ) < 3 ) continue;
+            if ( left( tl, 1 ) == "t" ) thumbs.append( trim( mid( tl, 3, 1900 ) ) ); else if ( left( tl, 1 ) == "s" ) sources.append( trim( mid( tl, 3, 1900 ) ) );
+        }
+        return thumbs.len() ? thumbs : sources;
+    }
+
+    // Local paths of the screenshots of a component, up to 4. Starts the index scan and the downloads in the background; [] until they are done.
+    function screenshotsFor( appstreamId ) {
+        var out = [];
+        try {
+            var id = arguments.appstreamId;
+            if ( !reFind( "^[A-Za-z0-9._-]{1,200}$", id ) ) return out;
+            var idx = indexDir() & "/" & id & ".urls";
+            if ( !fileExists( idx ) ) {
+                var scanning = variables.cache.markerAge( idx & ".scan" );
+                var files = xmlFiles();
+                if ( files.len() && !( scanning >= 0 && scanning < 300 ) ) startScan( id, files );
+                return out;
+            }
+            var urls = screenshotUrls( id );
+            var n = 0;
+            for ( var u in urls ) {
+                n++;
+                if ( n > 4 ) break;
+                var p = variables.cache.get( u, "shots" );
+                if ( len( p ) ) out.append( p );
+            }
+        } catch ( any e ) {}
+        return out;
+    }
+}

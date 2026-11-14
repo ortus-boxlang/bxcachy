@@ -61,5 +61,21 @@ ps = tui.render_to_string( 80, 24 );
 check( "pixelArt: two same-colour pixels are a full block, a lone top pixel is an upper half block", find( "██", ps ) > 0 && find( "▀", ps ) > 0 );
 laptop = new bxrig.Brand().laptop( "large" );
 check( "brand: the laptop comes in three sizes, 48, 32 and 20 pixels wide", laptop.w == 48 && laptop.rows.len() == 34 && new bxrig.Brand().laptop( "medium" ).w == 32 && new bxrig.Brand().laptop( "small" ).w == 20 && len( laptop.palette ) > 10 );
+// ---- pictures: never throw, fall back to a letter tile
+imgdir = trim( systemExecute( "mktemp", [ "-d" ], 10, true ).output );
+systemExecute( "sh", [ "-c", "echo iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg== | base64 -d > " & imgdir & "/ok.png; echo not a picture > " & imgdir & "/bad.png" ], 10, true );
+mk = new bxrig.TuiKit( tui );
+mk.setImages( true );
+mk.fillRect( 0, 0, 80, 24, mk.color( "BASE" ) );
+check( "image: a real PNG draws and answers true", mk.image( 2, 1, 8, 4, imgdir & "/ok.png" ) == true );
+check( "image: missing file, junk file, empty path and zero size answer false and do not throw", mk.image( 2, 1, 8, 4, imgdir & "/none.png" ) == false && mk.image( 2, 1, 8, 4, imgdir & "/bad.png" ) == false && mk.image( 2, 1, 8, 4, "" ) == false && mk.image( 2, 1, 0, 4, imgdir & "/ok.png" ) == false );
+mk.setImages( false );
+check( "image: off means nothing is drawn", mk.image( 2, 1, 8, 4, imgdir & "/ok.png" ) == false && !mk.hasImages() );
+mk.setImages( true );
+mk.fillRect( 0, 0, 80, 24, mk.color( "BASE" ) );
+check( "imageOrTile: a bad picture becomes a tile with the capital letter of the name", mk.imageOrTile( 2, 1, 6, 3, imgdir & "/bad.png", "thunderbird" ) == false );
+ts = tui.render_to_string( 80, 24 );
+check( "iconTile: the first letter is drawn upper case", find( "T", ts ) > 0 );
+systemExecute( "rm", [ "-rf", imgdir ], 10, true );
 if ( failures > 0 ) { println( failures & " failed" ); exit( 1 ); }
 println( "all passed" );

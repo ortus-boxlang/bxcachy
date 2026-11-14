@@ -6,7 +6,7 @@
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 mb="${MATCHBOX:-/home/user/matchbox/target/debug/matchbox}"
-[[ -x "$mb" ]] || { echo "MatchBox not found at $mb (build it: cd /home/user/matchbox && cargo build)" >&2; exit 4; }
+[[ -x "$mb" ]] || { echo "MatchBox not found at $mb (build it: cd /home/user/matchbox && cargo build --features bif-tui)" >&2; exit 4; }
 mkdir -p "$root/dist"
 "$root/bootstrap/gen-catalog.sh" >/dev/null
 "$root/bootstrap/gen-assets.sh" >/dev/null

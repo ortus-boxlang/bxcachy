@@ -19,6 +19,7 @@ class TuiKit {
         variables.hits = [];
         variables.fade = 1;
         variables.icons = false;
+        variables.images = imagesDefault();
         // Nerd Font (Font Awesome range) code points; each is one cell wide in a Nerd Font and is checked against the Symbols Nerd Font.
         variables.glyphs = {
             home: "f015", gear: "f013", coffee: "f0f4", terminal: "f120", server: "f233", database: "f1c0", cloud: "f0c2", key: "f084", brush: "f1fc", file: "f0f6", keyboard: "f11c",
@@ -148,6 +149,51 @@ class TuiKit {
             }
         }
         return trows;
+    }
+
+    // ---- pictures ----
+    // Pictures (app icons, screenshots) go through the canvas's tui.image: real graphics in Kitty and Ghostty, half blocks everywhere else.
+    // They are on unless BXRIG_IMAGES=off, or the canvas reports no support; BXRIG_IMAGES=on forces them. Nothing here ever throws or blocks.
+    function imagesDefault() {
+        var o = getSystemSetting( "BXRIG_IMAGES", "" );
+        if ( o == "off" ) return false;
+        if ( o == "on" ) return true;
+        try { var s = variables.tui.image_support(); return len( s ) && s != "none"; } catch ( any e ) { return false; }
+    }
+    function setImages( on ) { variables.images = arguments.on; return this; }
+    function hasImages() { return variables.images; }
+
+    // Draws the picture at `path` inside the cell rectangle; true when it was drawn. opts: { fit: "contain"|"cover", protocol }. A missing, bad or
+    // too big file, a canvas without images or any error gives false and draws nothing.
+    function image( x, y, w, h, path, opts = {} ) {
+        try {
+            if ( !variables.images || !len( arguments.path ) || !fileExists( arguments.path ) || arguments.w < 1 || arguments.h < 1 ) return false;
+            return variables.tui.image( arguments.x, arguments.y, arguments.w, arguments.h, arguments.path, arguments.opts ) == true;
+        } catch ( any e ) { return false; }
+    }
+
+    // A tile with the first letter of `name` on a colour taken from the name: what to show when there is no picture. Always draws something.
+    function iconTile( x, y, w, h, name, fg = "" ) {
+        var p = variables.pal;
+        var tints = [ p.CYAN, p.GREEN, p.MAUVE, p.PEACH, p.SKY, p.YELLOW, p.RED ];
+        var letters = "abcdefghijklmnopqrstuvwxyz0123456789";
+        var nm = lCase( trim( arguments.name ) );
+        var sum = 0;
+        for ( var i = 1; i <= len( nm ); i++ ) sum += ( find( mid( nm, i, 1 ), letters ) + 1 ) * i;
+        var tint = tints[ ( sum mod tints.len() ) + 1 ];
+        var back = mix( p.MANTLE, tint, 0.32 );
+        fillRect( arguments.x, arguments.y, arguments.w, arguments.h, back );
+        var letter = len( nm ) ? uCase( left( nm, 1 ) ) : "?";
+        put( arguments.x + int( ( arguments.w - 1 ) / 2 ), arguments.y + int( ( arguments.h - 1 ) / 2 ), letter, len( arguments.fg ) ? arguments.fg : tint, back, true );
+    }
+
+    // The picture if there is one, otherwise the letter tile. true when a picture was drawn.
+    function imageOrTile( x, y, w, h, path, name ) {
+        try {
+            if ( image( arguments.x, arguments.y, arguments.w, arguments.h, arguments.path ) ) return true;
+            iconTile( arguments.x, arguments.y, arguments.w, arguments.h, arguments.name );
+        } catch ( any e ) {}
+        return false;
     }
 
     // ---- clicks ----
