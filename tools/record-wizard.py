@@ -12,7 +12,7 @@ ap.add_argument('--out', default=os.path.join(here, '..', 'recording'))
 ap.add_argument('--cols', type=int, default=120)
 ap.add_argument('--rows', type=int, default=36)
 ap.add_argument('--fps', type=int, default=12)
-ap.add_argument('--bin', default='bxcachy')
+ap.add_argument('--bin', default='bxrig')
 ap.add_argument('--pages')
 ap.add_argument('--shots', action='store_true', help='also save a PNG of the last frame of each step')
 args = ap.parse_args()
@@ -132,7 +132,7 @@ for i in range(n):
 print('frames', n, 'size', W, 'x', H)
 
 # --- encode ---
-mp4 = os.path.join(args.out, 'bxcachy-wizard.mp4'); gif = os.path.join(args.out, 'bxcachy-wizard.gif')
+mp4 = os.path.join(args.out, 'bxrig-wizard.mp4'); gif = os.path.join(args.out, 'bxrig-wizard.gif')
 subprocess.run(['ffmpeg','-y','-loglevel','error','-framerate',str(args.fps),'-i',os.path.join(frames_dir,'f%05d.png'),'-c:v','libx264','-pix_fmt','yuv420p','-crf','20',mp4], check=True)
 subprocess.run(['ffmpeg','-y','-loglevel','error','-framerate',str(args.fps),'-i',os.path.join(frames_dir,'f%05d.png'),'-vf','scale=960:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=128[p];[b][p]paletteuse','-loop','0',gif], check=True)
 print('wrote', mp4, gif)

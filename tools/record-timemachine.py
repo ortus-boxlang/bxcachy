@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Records BxTimeMachine (bxcachy timemachine --demo): runs it in a pseudo-terminal, plays scripted keystrokes, emulates the screen with pyte and
+"""Records BxTimeMachine (bxrig timemachine --demo): runs it in a pseudo-terminal, plays scripted keystrokes, emulates the screen with pyte and
 draws every frame with Pillow, then encodes a video (and a GIF) with ffmpeg.
 Usage: python3 tools/record-timemachine.py [--out DIR] [--cols 120] [--rows 38] [--bin PATH]   (needs Pillow, pyte, ffmpeg)"""
 import argparse, codecs, os, pty, select, struct, fcntl, termios, time, subprocess, sys, shutil
@@ -12,7 +12,7 @@ ap.add_argument('--out', default=os.path.join(here, '..', 'recording', 'timemach
 ap.add_argument('--cols', type=int, default=120)
 ap.add_argument('--rows', type=int, default=38)
 ap.add_argument('--fps', type=int, default=12)
-ap.add_argument('--bin', default='bxcachy')
+ap.add_argument('--bin', default='bxrig')
 ap.add_argument('--shots', action='store_true', help='also save a PNG of the last frame of each step')
 args = ap.parse_args()
 
@@ -136,7 +136,7 @@ for i in range(n):
 print('frames', n, 'size', W, 'x', H, 'screenshots', len(os.listdir(shots_dir)))
 
 # --- encode ---
-mp4 = os.path.join(args.out, 'bxcachy-timemachine.mp4'); gif = os.path.join(args.out, 'bxcachy-timemachine.gif')
+mp4 = os.path.join(args.out, 'bxrig-timemachine.mp4'); gif = os.path.join(args.out, 'bxrig-timemachine.gif')
 subprocess.run(['ffmpeg','-y','-loglevel','error','-framerate',str(args.fps),'-i',os.path.join(frames_dir,'f%05d.png'),'-c:v','libx264','-pix_fmt','yuv420p','-crf','20',mp4], check=True)
 subprocess.run(['ffmpeg','-y','-loglevel','error','-framerate',str(args.fps),'-i',os.path.join(frames_dir,'f%05d.png'),'-vf','scale=960:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=128[p];[b][p]paletteuse=dither=bayer',gif], check=True)
 shutil.rmtree(frames_dir, ignore_errors=True)

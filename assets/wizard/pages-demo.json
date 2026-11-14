@@ -1,17 +1,17 @@
 {
-  "title": "BxCachy",
-  "tagline": "Your developer machine, set up in minutes.",
+  "title": "BxRig",
+  "tagline": "Your dev rig. Beautiful by default.",
   "version": "0.12.0",
   "pages": [
     {
       "id": "desktop",
       "title": "Desktop",
-      "intro": "Hyprland with Noctalia is the BxCachy desktop. KDE Plasma stays on your machine either way; it is only configured if you choose it.",
+      "intro": "Hyprland with Noctalia is the BxRig desktop. KDE Plasma stays on your machine either way; it is only configured if you choose it.",
       "questions": [
         {
           "type": "choice",
           "id": "desktops",
-          "label": "Which desktops should BxCachy set up?",
+          "label": "Which desktops should BxRig set up?",
           "default": "hyprland",
           "help": "KDE Plasma is never removed. Choosing Hyprland leaves it untouched.",
           "options": [
@@ -22,13 +22,13 @@
             },
             {
               "value": "both",
-              "label": "Both: Hyprland + Noctalia, and KDE Plasma with BxCachy tiling",
-              "description": "Configure both with the shared BxCachy keys, and pick which one starts at login."
+              "label": "Both: Hyprland + Noctalia, and KDE Plasma with BxRig tiling",
+              "description": "Configure both with the shared BxRig keys, and pick which one starts at login."
             },
             {
               "value": "plasma",
-              "label": "KDE Plasma with BxCachy tiling only",
-              "description": "Keep Plasma and add HyprKwin tiling on top. Toggle it any time with: bxcachy tiling on|off."
+              "label": "KDE Plasma with BxRig tiling only",
+              "description": "Keep Plasma and add HyprKwin tiling on top. Toggle it any time with: bxrig tiling on|off."
             }
           ]
         },
@@ -138,8 +138,8 @@
           "type": "choice",
           "id": "plasma_panels",
           "label": "Plasma panels",
-          "help": "BxCachy layout: a top status panel (launcher, workspaces, active window, clock, media, system vitals, tray, in rounded islands) and a bottom dock. Your current panels are backed up first and can be restored with: bxcachy plasma panels undo.",
-          "default": "bxcachy",
+          "help": "BxRig layout: a top status panel (launcher, workspaces, active window, clock, media, system vitals, tray, in rounded islands) and a bottom dock. Your current panels are backed up first and can be restored with: bxrig plasma panels undo.",
+          "default": "bxrig",
           "when": {
             "id": "desktops",
             "in": [
@@ -149,8 +149,8 @@
           },
           "options": [
             {
-              "value": "bxcachy",
-              "label": "BxCachy layout (recommended)",
+              "value": "bxrig",
+              "label": "BxRig layout (recommended)",
               "description": "Top status panel plus a bottom icons-only dock, styled with Panel Colorizer."
             },
             {
@@ -235,7 +235,7 @@
           "options": [
             {
               "value": "box",
-              "label": "BxCachy",
+              "label": "BxRig",
               "description": "The BoxLang icon on a soft dark glow."
             },
             {
@@ -259,32 +259,32 @@
           "type": "choice",
           "id": "theme_name",
           "label": "Color theme",
-          "default": "bxcachy",
-          "help": "Colors the shell, terminals, btop, Neovim and window borders. Change it any time: bxcachy theme set NAME. Dark/Light above is overridden by the theme unless you chose Auto.",
+          "default": "bxrig",
+          "help": "Colors the shell, terminals, btop, Neovim and window borders. Change it any time: bxrig theme set NAME. Dark/Light above is overridden by the theme unless you chose Auto.",
           "options": [
             {
-              "value": "bxcachy",
-              "label": "BxCachy",
+              "value": "bxrig",
+              "label": "BxRig",
               "description": "Catppuccin Frappe neutrals with the BoxLang greens (the default)."
             },
             {
-              "value": "bxcachy-light",
-              "label": "BxCachy Light",
+              "value": "bxrig-light",
+              "label": "BxRig Light",
               "description": "Latte neutrals with deeper greens."
             },
             {
-              "value": "bxcachy-midnight",
-              "label": "BxCachy Midnight",
+              "value": "bxrig-midnight",
+              "label": "BxRig Midnight",
               "description": "Near-black, easy on OLED screens."
             },
             {
-              "value": "bxcachy-cyan",
-              "label": "BxCachy Cyan",
+              "value": "bxrig-cyan",
+              "label": "BxRig Cyan",
               "description": "Macchiato neutrals with the BoxLang cyan accent."
             },
             {
-              "value": "bxcachy-forest",
-              "label": "BxCachy Forest",
+              "value": "bxrig-forest",
+              "label": "BxRig Forest",
               "description": "Muted, low-contrast greens."
             },
             {
@@ -495,7 +495,7 @@
             {
               "value": "ghostty",
               "label": "Ghostty",
-              "description": "Fast, native, GPU accelerated. The BxCachy default."
+              "description": "Fast, native, GPU accelerated. The BxRig default."
             },
             {
               "value": "kitty",
@@ -559,7 +559,7 @@
           "id": "editor_starter",
           "label": "Neovim setup",
           "default": "none",
-          "help": "LazyVim is a ready-made Neovim configuration. BxCachy adds transparency, BoxLang syntax and theme following. An existing ~/.config/nvim is never touched.",
+          "help": "LazyVim is a ready-made Neovim configuration. BxRig adds transparency, BoxLang syntax and theme following. An existing ~/.config/nvim is never touched.",
           "options": [
             {
               "value": "none",
@@ -569,7 +569,7 @@
             {
               "value": "lazyvim",
               "label": "LazyVim starter",
-              "description": "Installs Neovim and its tools, then the LazyVim starter with the BxCachy layer and BoxLang syntax."
+              "description": "Installs Neovim and its tools, then the LazyVim starter with the BxRig layer and BoxLang syntax."
             }
           ]
         }
@@ -578,12 +578,12 @@
     {
       "id": "tools",
       "title": "Toolchains",
-      "intro": "Languages and build tools. BoxLang is always installed, because BxCachy is built on it.",
+      "intro": "Languages and build tools. BoxLang is always installed, because BxRig is built on it.",
       "questions": [
         {
           "type": "info",
           "label": "Always installed: BoxLang",
-          "help": "BoxLang with Java 21, its version managers (bvm, mvm) and MatchBox, so BxCachy and your BoxLang tools always work."
+          "help": "BoxLang with Java 21, its version managers (bvm, mvm) and MatchBox, so BxRig and your BoxLang tools always work."
         },
         {
           "type": "multi",
@@ -660,7 +660,7 @@
           "type": "multi",
           "id": "boxlang_modules",
           "label": "BoxLang modules",
-          "help": "Installed with bx-module from ForgeBox. Browse them all later with: bxcachy boxlang modules list.",
+          "help": "Installed with bx-module from ForgeBox. Browse them all later with: bxrig boxlang modules list.",
           "default": [],
           "options": [
             {
@@ -810,7 +810,7 @@
               "description": "Search and analytics. Needs vm.max_map_count 262144 and about 1 GB of memory."
             }
           ],
-          "help": "Local containers on 127.0.0.1, with generated passwords. Nothing starts unless you pick it. Manage them with: bxcachy db"
+          "help": "Local containers on 127.0.0.1, with generated passwords. Nothing starts unless you pick it. Manage them with: bxrig db"
         },
         {
           "type": "choice",
@@ -826,7 +826,7 @@
             {
               "value": "generate",
               "label": "Generated (recommended)",
-              "description": "A strong random password for each, kept in a private file. Show it any time with: bxcachy db info ENGINE --show-password"
+              "description": "A strong random password for each, kept in a private file. Show it any time with: bxrig db info ENGINE --show-password"
             },
             {
               "value": "ask",
@@ -840,14 +840,14 @@
           "id": "mail_catcher",
           "label": "Mail catcher",
           "default": false,
-          "help": "A local inbox for the mail your apps send while you develop (Mailpit in a container, SMTP on 127.0.0.1:1025, inbox at http://127.0.0.1:8025). Mail is thrown away when it stops. Manage it with: bxcachy mail"
+          "help": "A local inbox for the mail your apps send while you develop (Mailpit in a container, SMTP on 127.0.0.1:1025, inbox at http://127.0.0.1:8025). Mail is thrown away when it stops. Manage it with: bxrig mail"
         },
         {
           "type": "choice",
           "id": "vm_windows",
           "label": "Windows VM",
           "default": "none",
-          "help": "A Windows virtual machine in a container (needs KVM). It installs itself on the first start and you use it with `bxcachy vm open`. You need your own Windows license.",
+          "help": "A Windows virtual machine in a container (needs KVM). It installs itself on the first start and you use it with `bxrig vm open`. You need your own Windows license.",
           "options": [
             {
               "value": "none",
@@ -906,7 +906,7 @@
           "id": "vm_linux",
           "label": "Linux desktop in a container",
           "default": "none",
-          "help": "A full Linux desktop you open in the browser (LinuxServer webtop). Create more later with `bxcachy vm create linux NAME`.",
+          "help": "A full Linux desktop you open in the browser (LinuxServer webtop). Create more later with `bxrig vm create linux NAME`.",
           "options": [
             {
               "value": "none",
@@ -950,14 +950,14 @@
     {
       "id": "nas",
       "title": "NAS",
-      "intro": "Connect a network drive (Synology, TrueNAS or any SMB or NFS share) so BxCachy can mount it, even automatically, and back up to it. Skip this page if you do not have one.",
+      "intro": "Connect a network drive (Synology, TrueNAS or any SMB or NFS share) so BxRig can mount it, even automatically, and back up to it. Skip this page if you do not have one.",
       "questions": [
         {
           "type": "confirm",
           "id": "nas_use",
           "label": "I have a NAS to connect",
           "default": false,
-          "help": "You can add more later with bxcachy nas add."
+          "help": "You can add more later with bxrig nas add."
         },
         {
           "type": "text",
@@ -975,7 +975,7 @@
           "id": "nas_host",
           "label": "Address of the NAS",
           "placeholder": "ds920.local or 192.168.1.20",
-          "help": "Find it with: bxcachy nas discover",
+          "help": "Find it with: bxrig nas discover",
           "when": {
             "id": "nas_use",
             "equals": "true"
@@ -1090,7 +1090,7 @@
             {
               "value": "rclone",
               "label": "An rclone remote (FTP and more)",
-              "description": "Set it up first with bxcachy cloud configure."
+              "description": "Set it up first with bxrig cloud configure."
             },
             {
               "value": "local",
@@ -1236,7 +1236,7 @@
           "type": "text",
           "id": "remote_path",
           "label": "Folder",
-          "placeholder": "bxcachy-backup",
+          "placeholder": "bxrig-backup",
           "help": "Inside the bucket, the remote or the disk. For a disk, the full path.",
           "when": {
             "id": "remote_type",
@@ -1256,7 +1256,7 @@
     {
       "id": "backups",
       "title": "Backups",
-      "intro": "Three layers, any of them. BxCachy keeps the passwords and keys in your keyring and shows a plan before it changes anything.",
+      "intro": "Three layers, any of them. BxRig keeps the passwords and keys in your keyring and shows a plan before it changes anything.",
       "questions": [
         {
           "type": "multi",
@@ -1268,7 +1268,7 @@
           "options": [
             {
               "value": "config",
-              "label": "My BxCachy setup",
+              "label": "My BxRig setup",
               "description": "A small snapshot of your settings and config files before every update, init and refresh, so a mistake is one command to undo."
             },
             {
@@ -1306,21 +1306,21 @@
             {
               "value": "off",
               "label": "Only when I ask",
-              "description": "bxcachy backup data run, or the Time Machine screen."
+              "description": "bxrig backup data run, or the Time Machine screen."
             }
           ]
         },
         {
           "type": "info",
           "label": "Look at them any time",
-          "help": "bxcachy timemachine shows every backup on one timeline, with browse, restore, export and send."
+          "help": "bxrig timemachine shows every backup on one timeline, with browse, restore, export and send."
         }
       ]
     },
     {
       "id": "apps",
       "title": "Apps",
-      "intro": "Defaults come from the BxCachy catalog.",
+      "intro": "Defaults come from the BxRig catalog.",
       "questions": [
         {
           "type": "choice",
@@ -1331,7 +1331,7 @@
             {
               "value": "defaults",
               "label": "Basic: the recommended set (recommended)",
-              "description": "An opinionated selection of apps for developers, from the BxCachy catalog. Nothing to pick."
+              "description": "An opinionated selection of apps for developers, from the BxRig catalog. Nothing to pick."
             },
             {
               "value": "custom",
@@ -1436,7 +1436,7 @@
           "type": "choice",
           "id": "launcher",
           "label": "App launcher",
-          "help": "What opens your apps and commands. BxCachy never changes your shortcuts.",
+          "help": "What opens your apps and commands. BxRig never changes your shortcuts.",
           "default": "noctalia",
           "when": {
             "id": "desktops",
@@ -1477,7 +1477,7 @@
           "type": "choice",
           "id": "menu",
           "label": "Menu style",
-          "help": "What BxCachy's own menus use.",
+          "help": "What BxRig's own menus use.",
           "default": "rofi",
           "options": [
             {
@@ -1544,7 +1544,7 @@
           "type": "choice",
           "id": "ai_default",
           "label": "Default agent",
-          "help": "The one `bxcachy ai launch` opens in your terminal. You can change it later.",
+          "help": "The one `bxrig ai launch` opens in your terminal. You can change it later.",
           "default": "claude-code",
           "when": {
             "id": "ai_agents",
@@ -1585,7 +1585,7 @@
             {
               "value": "pane",
               "label": "Pane",
-              "description": "Desktop app for parallel agents with a diff viewer and git workflow. The BxCachy default."
+              "description": "Desktop app for parallel agents with a diff viewer and git workflow. The BxRig default."
             },
             {
               "value": "orca",
@@ -1603,7 +1603,7 @@
           "type": "choice",
           "id": "ai_keys",
           "label": "API keys",
-          "help": "Stored in your desktop keyring (BxCachy installs one if you have none), never in files or shell history. Skip any prompt you do not want.",
+          "help": "Stored in your desktop keyring (BxRig installs one if you have none), never in files or shell history. Skip any prompt you do not want.",
           "default": "later",
           "when": {
             "id": "ai_agents",
@@ -1613,7 +1613,7 @@
             {
               "value": "later",
               "label": "Add them later",
-              "description": "Nothing is asked now. Later: bxcachy secrets set NAME."
+              "description": "Nothing is asked now. Later: bxrig secrets set NAME."
             },
             {
               "value": "now",
@@ -1847,17 +1847,17 @@
           "type": "multi",
           "id": "agent_skills",
           "label": "Agent skills",
-          "help": "Skills teach your coding agents (Claude Code, Codex, Gemini, OpenCode) how to use BxCachy, BoxLang and MatchBox. They are stored once in ~/.agents/skills and linked into each agent. Find more with: bxcachy skills search TEXT (the skills.boxlang.io hub).",
+          "help": "Skills teach your coding agents (Claude Code, Codex, Gemini, OpenCode) how to use BxRig, BoxLang and MatchBox. They are stored once in ~/.agents/skills and linked into each agent. Find more with: bxrig skills search TEXT (the skills.boxlang.io hub).",
           "default": [
-            "bxcachy",
+            "bxrig",
             "boxlang",
             "matchbox"
           ],
           "options": [
             {
-              "value": "bxcachy",
-              "label": "BxCachy",
-              "description": "How to use and change this machine (five small skills, shipped with BxCachy)."
+              "value": "bxrig",
+              "label": "BxRig",
+              "description": "How to use and change this machine (five small skills, shipped with BxRig)."
             },
             {
               "value": "boxlang",
@@ -1917,7 +1917,7 @@
             {
               "value": "nordvpn",
               "label": "NordVPN",
-              "description": "NordVPN's command-line client (AUR). BxCachy also enables its service and your group."
+              "description": "NordVPN's command-line client (AUR). BxRig also enables its service and your group."
             }
           ]
         },
@@ -1975,7 +1975,7 @@
             "cliphist",
             "wf-recorder"
           ],
-          "help": "Small tools with BxCachy shortcuts on Hyprland: clipboard history (Super+Shift+V) and screen recording (Super+Shift+R).",
+          "help": "Small tools with BxRig shortcuts on Hyprland: clipboard history (Super+Shift+V) and screen recording (Super+Shift+R).",
           "when": {
             "id": "desktops",
             "in": [
@@ -2045,7 +2045,7 @@
           "id": "cloud_storage",
           "label": "Cloud storage (rclone)",
           "default": false,
-          "help": "Installs rclone and fuse3. Afterwards `bxcachy cloud configure` adds your accounts and `bxcachy cloud mount NAME` makes a folder of one."
+          "help": "Installs rclone and fuse3. Afterwards `bxrig cloud configure` adds your accounts and `bxrig cloud mount NAME` makes a folder of one."
         },
         {
           "type": "choice",
@@ -2071,7 +2071,7 @@
           "id": "update_notifications",
           "label": "Notify me about updates",
           "default": true,
-          "help": "A daily check; you get a desktop notification when BxCachy or the system has updates. Turn off with: bxcachy update notifications off."
+          "help": "A daily check; you get a desktop notification when BxRig or the system has updates. Turn off with: bxrig update notifications off."
         },
         {
           "type": "confirm",
@@ -2085,7 +2085,7 @@
     {
       "id": "import",
       "title": "Import",
-      "intro": "Bring your own dotfiles. This runs last, so your files win over BxCachy's starter configs.",
+      "intro": "Bring your own dotfiles. This runs last, so your files win over BxRig's starter configs.",
       "questions": [
         {
           "type": "text",
@@ -2098,7 +2098,7 @@
         {
           "type": "info",
           "label": "How it works",
-          "help": "BxCachy detects whether the repository uses chezmoi, yadm, stow or plain files. Nothing is replaced without asking: files you already have are listed, and each one is backed up first. Undo any time with: bxcachy dotfiles undo."
+          "help": "BxRig detects whether the repository uses chezmoi, yadm, stow or plain files. Nothing is replaced without asking: files you already have are listed, and each one is backed up first. Undo any time with: bxrig dotfiles undo."
         }
       ]
     }
