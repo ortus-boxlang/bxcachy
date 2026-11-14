@@ -62,8 +62,7 @@ class DashboardPage {
         var colW = int( ( arguments.w - 3 ) / 2 );
         var bx2 = arguments.x + colW + 3;
         // header line
-        p.logo( arguments.x + 1, arguments.y, "word", arguments.phase, C( "BASE" ) );
-        var hx = arguments.x + 10;
+        var hx = arguments.x + 1;
         p.put( hx, arguments.y, d.host, C( "TEXT" ), C( "BASE" ), true );
         var up = d.uptime >= 86400 ? int( d.uptime / 86400 ) & " d " & int( ( d.uptime mod 86400 ) / 3600 ) & " h" : int( d.uptime / 3600 ) & " h";
         p.put( hx + 1 + len( d.host ), arguments.y, d.os & " · " & d.kernel & " · up " & up, C( "OVERLAY" ), C( "BASE" ) );

@@ -3,7 +3,7 @@
 class ControlCenterView {
     function init( tui ) {
         variables.kit = new bxrig.TuiKit( arguments.tui );
-        variables.sideW = 16;
+        variables.sideW = 20;
         return this;
     }
 
@@ -21,12 +21,12 @@ class ControlCenterView {
         // sidebar
         k.fillRect( 0, 0, sw, arguments.height - 1, C( "MANTLE" ) );
         k.logo( 1, 1, "small", phase, C( "MANTLE" ) );
-        k.put( 1, 4, "Control Center", C( "OVERLAY" ), C( "MANTLE" ) );
+        k.put( 1, 5, "Control Center", C( "OVERLAY" ), C( "MANTLE" ) );
         var i = 0;
         for ( var p in arguments.app.pageList() ) {
             i++;
             var on = i == arguments.app.index();
-            var y = 5 + i;
+            var y = 6 + i;
             if ( on ) k.fillRect( 0, y, sw, 1, C( "SURFACE0" ) );
             var bg = on ? C( "SURFACE0" ) : C( "MANTLE" );
             k.put( 1, y, on ? ( arguments.app.focus() == "sidebar" ? "▸" : "▪" ) : " ", C( "GREEN" ), bg, true );

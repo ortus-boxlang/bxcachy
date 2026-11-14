@@ -7,25 +7,27 @@ class Brand {
     function oneLiner() { return "BxRig brings an opinionated, beautiful and efficient desktop to Linux, built for developers."; }
     function description() { return "BxRig turns a fresh Linux install into a polished developer rig: a themed desktop, the languages and tools you use, and one terminal screen to manage it all."; }
 
-    // 40 columns, 7 rows: a lowercase x, an i with its dot and a g that drops below the line, so it reads BxRig.
+    // 34 columns, 8 rows: a pixel font, two columns per pixel, so it reads BxRig with a lowercase x, an i and a g that drops below the line.
     function large() {
         return [
-            "██████╗           ██████╗  ██╗",
-            "██╔══██╗ ██╗  ██╗ ██╔══██╗ ╚═╝  ██████╗",
-            "██████╔╝ ╚██╗██╔╝ ██████╔╝ ██╗ ██╔════╝",
-            "██╔══██╗  ██╔██╗  ██╔══██╗ ██║ ██║  ███╗",
-            "██████╔╝ ██╔╝ ██╗ ██║  ██║ ██║ ██║   ██║",
-            "╚═════╝  ╚═╝  ╚═╝ ╚═╝  ╚═╝ ╚═╝ ╚██████╔╝",
-            "                                ╚═════╝"
+            "████            ████    ██",
+            "██  ██          ██  ██",
+            "████    ██  ██  ████    ██    ████",
+            "██  ██    ██    ██  ██  ██  ██  ██",
+            "██  ██    ██    ██  ██  ██  ██  ██",
+            "████    ██  ██  ██  ██  ██    ████",
+            "                                ██",
+            "                            ████"
         ];
     }
 
-    // 19 columns, 3 rows.
+    // 17 columns, 4 rows: the same letters in half blocks.
     function small() {
         return [
-            "┏┓      ┏━┓ • ┏━╸",
-            "┣┻┓ ▀▄▀ ┣┳┛ ┃ ┃╺┓",
-            "┗━┛ ▄▀▄ ╹┗╸ ╹ ┗━┛"
+            "█▀▄     █▀▄ ▀",
+            "█▀▄ ▀▄▀ █▀▄ █ ▄▀█",
+            "█▄▀ ▄▀▄ █ █ █ ▀▄█",
+            "              ▄▄▀"
         ];
     }
 
