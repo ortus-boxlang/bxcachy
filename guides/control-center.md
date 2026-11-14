@@ -8,10 +8,24 @@ summary: One terminal for your whole machine, with a page for each job. Run bxri
 `bxrig tui` opens one terminal screen with a list of pages on the left and the open page on the right.
 
 ```bash
-bxrig tui                   # opens on the Dashboard
+bxrig tui                   # opens on the Dashboard, sidebar open
+bxrig tui databases         # one page on its own, sidebar collapsed
+bxrig tui list              # every page id and title (--json for scripts)
 bxrig tui --demo            # made-up data, nothing is run
 bxrig tui dashboard --json  # the page's data, no terminal needed
 ```
+
+## One page at a time
+
+`bxrig tui PAGE` opens that page alone, with the page list collapsed, so it feels like an app of its own: `bxrig tui databases`, `bxrig tui ports`, `bxrig tui mail`. An unknown page prints the list and exits 2. The top row shows where you are, `BXRIG › Databases`.
+
+Open and close the page list with the backslash key or `Ctrl+b` (while a page is taking text, such as a filter, only `Ctrl+b` works). You can also click the thin strip at the left edge or the breadcrumb row, or press `Left`. Tab and Shift+Tab still change page. `--sidebar` and `--no-sidebar` force it either way. On a terminal narrower than 90 columns it starts collapsed so the page gets the room. BxRig does not remember the state: the next `bxrig tui` starts open again.
+
+You can open any page without a terminal open first:
+
+- **Menu:** `bxrig menu` has a Control Center section at the end. The first entry opens everything, then one entry per page. Each opens in your default terminal.
+- **Application menu (optional):** `bxrig launchers on --yes` adds one entry per page ("BxRig Databases", with the BxRig icon) to your application menu. `bxrig launchers status` shows them and `bxrig launchers off --yes` (or `bxrig remove launchers --yes`) takes them away. Entries you edited are kept. Nothing is added unless you ask.
+- **Shortcuts:** every page has an unbound shortcut (`tui-databases`, ...). Give it keys with `bxrig keys set tui-databases Super+Alt+D --yes`, then `bxrig keys apply --yes`.
 
 ## Icons
 
@@ -22,7 +36,8 @@ The page list and page headers carry Nerd Font icons when your terminal has the 
 | Key | What it does |
 |---|---|
 | Tab, Shift+Tab (or `]`, `[`) | next and previous page |
-| Left | move to the page list (Up and Down pick a page), Right or Enter goes back |
+| Left | move to the page list (Up and Down pick a page), Right or Enter goes back; with the list collapsed, Left opens it |
+| `\`, Ctrl+b | collapse or open the page list |
 | q, Escape, Ctrl+c | leave |
 | mouse | click a page or a row, scroll the wheel |
 
