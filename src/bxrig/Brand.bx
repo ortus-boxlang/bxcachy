@@ -7,27 +7,24 @@ class Brand {
     function oneLiner() { return "BxRig brings an opinionated, beautiful and efficient desktop to Linux, built for developers."; }
     function description() { return "BxRig turns a fresh Linux install into a polished developer rig: a themed desktop, the languages and tools you use, and one terminal screen to manage it all."; }
 
-    // 34 columns, 8 rows: a pixel font, two columns per pixel, so it reads BxRig with a lowercase x, an i and a g that drops below the line.
+    // 38 columns, 6 rows: a pixel font in capitals, two columns per pixel (BXRIG; the TUIs use capitals for the terminal wordmark, the logo keeps BxRig).
     function large() {
         return [
-            "████            ████    ██",
-            "██  ██          ██  ██",
-            "████    ██  ██  ████    ██    ████",
-            "██  ██    ██    ██  ██  ██  ██  ██",
-            "██  ██    ██    ██  ██  ██  ██  ██",
-            "████    ██  ██  ██  ██  ██    ████",
-            "                                ██",
-            "                            ████"
+            "████    ██  ██  ████    ██████    ████",
+            "██  ██  ██  ██  ██  ██    ██    ██",
+            "████      ██    ████      ██    ██",
+            "██  ██    ██    ██  ██    ██    ██  ██",
+            "██  ██  ██  ██  ██  ██    ██    ██  ██",
+            "████    ██  ██  ██  ██  ██████    ████"
         ];
     }
 
-    // 17 columns, 4 rows: the same letters in half blocks.
+    // 19 columns, 3 rows: the same letters in half blocks.
     function small() {
         return [
-            "█▀▄     █▀▄ ▀",
-            "█▀▄ ▀▄▀ █▀▄ █ ▄▀█",
-            "█▄▀ ▄▀▄ █ █ █ ▀▄█",
-            "              ▄▄▀"
+            "█▀▄ █ █ █▀▄ ▀█▀ ▄▀▀",
+            "█▀▄  █  █▀▄  █  █ ▄",
+            "█▄▀ █ █ █ █ ▄█▄ ▀▄█"
         ];
     }
 
@@ -39,7 +36,7 @@ class Brand {
         return px.large();
     }
 
-    function word() { return "▌BxRig▐"; }
+    function word() { return "▌BXRIG▐"; }
 
     // "large", "small" or "word".
     function lines( size = "large" ) {

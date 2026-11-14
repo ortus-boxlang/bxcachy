@@ -3,14 +3,12 @@ class WizardData {
     // The splash icon, as half-block pixel art (one string, lines joined by newlines).
     function icon() { return ''; }
     // The BxRig wordmark, same format.
-    function wordmark() { return '████            ████    ██
-██  ██          ██  ██
-████    ██  ██  ████    ██    ████
-██  ██    ██    ██  ██  ██  ██  ██
-██  ██    ██    ██  ██  ██  ██  ██
-████    ██  ██  ██  ██  ██    ████
-                                ██
-                            ████'; }
+    function wordmark() { return '████    ██  ██  ████    ██████    ████
+██  ██  ██  ██  ██  ██    ██    ██
+████      ██    ████      ██    ██
+██  ██    ██    ██  ██    ██    ██  ██
+██  ██  ██  ██  ██  ██    ██    ██  ██
+████    ██  ██  ██  ██  ██████    ████'; }
     // The built-in pages (JSON, the format bxrig-wizard --pages reads).
     function demoPages() { return '{
   "title": "BxRig",

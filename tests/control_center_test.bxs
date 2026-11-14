@@ -43,7 +43,7 @@ s = tui.render_to_string( 110, 34 );
 check( "screen: sidebar, header and the meters", find( "Control Center", s ) > 0 && find( "Dashboard", s ) > 0 && find( "orion", s ) > 0 && find( "CachyOS", s ) > 0 && find( "CPU", s ) > 0 && find( "RAM", s ) > 0 );
 check( "screen: attention, machines and backups", find( "Needs attention", s ) > 0 && find( "14 updates available", s ) > 0 && find( "postgres", s ) > 0 && find( "win11", s ) > 0 && find( "Files nas", s ) > 0 && find( "3 days ago", s ) > 0 );
 check( "screen: key hints", find( "quit", s ) > 0 && find( "pages", s ) > 0 );
-check( "screen: a click on the first warning and on the sidebar", view.hitAt( 25, 5 ).kind == "att" && view.hitAt( 3, 7 ).kind == "nav" );
+check( "screen: a click on the first warning and on the sidebar", view.hitAt( 25, 5 ).kind == "att" && view.hitAt( 3, 6 ).kind == "nav" );
 app4.showPlan( "System update", [ "Plan: pacman -Syu" ], it );
 view.paint( app4, 101, 110, 34 );
 s2 = tui.render_to_string( 110, 34 );

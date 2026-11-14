@@ -1,26 +1,23 @@
-BxRig ASCII art (monospace; the TUIs paint it with the brand gradient, cyan #00DBFF to green #00FF78).
+BXRIG ASCII art (capitals in the terminal; the logo banner keeps BxRig) (monospace; the TUIs paint it with the brand gradient, cyan #00DBFF to green #00FF78).
 
-LARGE (34 columns, 8 rows)
+LARGE (38 columns, 6 rows)
 
-████            ████    ██
-██  ██          ██  ██
-████    ██  ██  ████    ██    ████
-██  ██    ██    ██  ██  ██  ██  ██
-██  ██    ██    ██  ██  ██  ██  ██
-████    ██  ██  ██  ██  ██    ████
-                                ██
-                            ████
+████    ██  ██  ████    ██████    ████
+██  ██  ██  ██  ██  ██    ██    ██
+████      ██    ████      ██    ██
+██  ██    ██    ██  ██    ██    ██  ██
+██  ██  ██  ██  ██  ██    ██    ██  ██
+████    ██  ██  ██  ██  ██████    ████
 
-SMALL (17 columns, 4 rows)
+SMALL (19 columns, 3 rows)
 
-█▀▄     █▀▄ ▀
-█▀▄ ▀▄▀ █▀▄ █ ▄▀█
-█▄▀ ▄▀▄ █ █ █ ▀▄█
-              ▄▄▀
+█▀▄ █ █ █▀▄ ▀█▀ ▄▀▀
+█▀▄  █  █▀▄  █  █ ▄
+█▄▀ █ █ █ █ ▄█▄ ▀▄█
 
 WORDMARK (one line)
 
-▌BxRig▐
+▌BXRIG▐
 
 TAGLINE
 

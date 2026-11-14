@@ -130,7 +130,7 @@ class WizardView {
         if ( artH ) variables.kit.pixelArt( cx - int( art.w / 2 ), top, art, variables.BASE );
         var y = top + artH + ( artH ? 1 : 0 );
         if ( markW < arguments.width - 2 ) artBlock( cx - int( markW / 2 ), y, variables.wordmark, arguments.phase );
-        else gtext( cx - 3, y, "BxRig", true, arguments.phase, variables.BASE );
+        else gtext( cx - 3, y, "BXRIG", true, arguments.phase, variables.BASE );
         y += variables.wordmark.len() + 1;
         var tag = len( app.spec().tagline ) ? app.spec().tagline : new bxrig.Brand().tagline();
         put( cx - int( len( tag ) / 2 ), y, tag, variables.SUB, variables.BASE );
