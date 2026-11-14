@@ -1,4 +1,5 @@
-// `bxrig launchers`: one application-menu entry per Control Center page (opt-in), each opening that page solo in your terminal.
+// `bxrig launchers`: one application-menu entry per Control Center page (opt-in), each opening that page solo in your terminal,
+// grouped in a "BxRig" submenu (Categories=X-BxRig plus a menu merge file and a .directory file; flat launchers like rofi ignore the folder).
 //   on [--yes] [--dry-run]    writes ~/.local/share/applications/bxrig-tui-PAGE.desktop for every page ("BxRig Databases", Icon=bxrig,
 //                             Exec = your terminal + bxrig tui PAGE) and puts the BxRig icon in ~/.local/share/icons/hicolor/256x256/apps/bxrig.png
 //   off [--yes] [--dry-run]   removes the entries BxRig wrote and the icon when it is still the one BxRig wrote
@@ -20,6 +21,9 @@ class Launchers {
     function dataHome() { return getSystemSetting( "XDG_DATA_HOME", getSystemSetting( "HOME", "" ) & "/.local/share" ); }
     function appsDir() { return dataHome() & "/applications"; }
     function iconFile() { return dataHome() & "/icons/hicolor/256x256/apps/bxrig.png"; }
+    function configHome() { return getSystemSetting( "XDG_CONFIG_HOME", getSystemSetting( "HOME", "" ) & "/.config" ); }
+    function directoryFile() { return dataHome() & "/desktop-directories/bxrig.directory"; }
+    function menuFile() { return configHome() & "/menus/applications-merged/bxrig.menu"; }
     function fileFor( id ) { return appsDir() & "/bxrig-tui-" & arguments.id & ".desktop"; }
 
     function say( command, code, data, asJson, lines = [] ) {
@@ -42,7 +46,20 @@ class Launchers {
         return "[Desktop Entry]" & chr( 10 ) & "Type=Application" & chr( 10 ) & "Name=BxRig " & arguments.page.title & chr( 10 )
             & "Comment=BxRig " & arguments.page.title & " in a terminal" & chr( 10 )
             & "Exec=" & words.toList( " " ) & chr( 10 ) & "Icon=bxrig" & chr( 10 ) & "Terminal=false" & chr( 10 )
-            & "Categories=Development;System;" & chr( 10 ) & "X-BxRig-Launcher=tui" & chr( 10 );
+            & "Categories=X-BxRig;" & chr( 10 ) & "X-BxRig-Launcher=tui" & chr( 10 );
+    }
+
+    // The two files that make the "BxRig" submenu: the folder (name and icon) and the menu merge that fills it with the X-BxRig entries.
+    function extras() {
+        var nl = chr( 10 );
+        var dir = "[Desktop Entry]" & nl & "Type=Directory" & nl & "Name=BxRig" & nl & "Comment=Your dev rig" & nl & "Icon=bxrig" & nl & "X-BxRig-Launcher=tui" & nl;
+        var menu = "<!DOCTYPE Menu PUBLIC ""-//freedesktop//DTD Menu 1.0//EN"" ""http://www.freedesktop.org/standards/menu-spec/menu-1.0.dtd"">" & nl
+            & "<!-- X-BxRig-Launcher=tui -->" & nl & "<Menu>" & nl & "  <Name>Applications</Name>" & nl & "  <Menu>" & nl & "    <Name>BxRig</Name>" & nl
+            & "    <Directory>bxrig.directory</Directory>" & nl & "    <Include><Category>X-BxRig</Category></Include>" & nl & "  </Menu>" & nl & "</Menu>" & nl;
+        return [
+            { name: "bxrig-directory", target: directoryFile(), mode: "644", content: dir },
+            { name: "bxrig-menu", target: menuFile(), mode: "644", content: menu }
+        ];
     }
 
     // [ { id, title, file, state } ] for the terminal argv (state: missing, clean, outdated, drifted, blocked).
@@ -89,6 +106,9 @@ class Launchers {
         var data = { enabled: present > 0, present: present, total: rs.len(), icon: fileExists( iconFile() ), terminal: structKeyExists( term, "id" ) ? term.id : "", launchers: publicRows( rs ) };
         var lines = [ present & " of " & rs.len() & " launchers in the application menu" & ( structKeyExists( term, "id" ) ? " (terminal: " & term.id & ")" : " (no terminal found)" ) ];
         for ( var r in rs ) lines.append( ( r.state == "missing" ? "  -  " : "  +  " ) & "BxRig " & r.title & ( r.state == "drifted" ? "   (edited by you)" : "" ) );
+        var sub = extras().filter( function( e ) { return fileExists( e.target ); } ).len();
+        data.submenu = sub == 2;
+        lines.append( "Submenu BxRig: " & ( sub == 2 ? "yes" : "no" ) );
         if ( !present ) lines.append( "Turn them on: bxrig launchers on --yes" );
         return say( "launchers status", 0, data, arguments.asJson, lines );
     }
@@ -105,17 +125,22 @@ class Launchers {
         var kept = [];
         for ( var r in rs ) { if ( r.state == "drifted" || r.state == "blocked" ) kept.append( r ); else if ( r.state != "clean" ) plan.append( r ); }
         var iconWrite = !fileExists( iconFile() );
-        var data = { terminal: term.id, write: plan.map( function( r ) { return r.file; } ), keep: kept.map( function( r ) { return r.file; } ), icon: iconFile(), icon_write: iconWrite };
+        var extraPlan = extras().filter( function( e ) { return !fileExists( e.target ) || mine( e.target ); } );
+        var data = { submenu: extraPlan.map( function( e ) { return e.target; } ), terminal: term.id, write: plan.map( function( r ) { return r.file; } ), keep: kept.map( function( r ) { return r.file; } ), icon: iconFile(), icon_write: iconWrite };
         if ( !arguments.yes || arguments.dryRun ) {
             var lines = [ ( arguments.dryRun ? "Dry run" : "Plan" ) & ": " & plan.len() & " launchers for the application menu, opening in " & term.id ];
             for ( var p in plan ) lines.append( "  write " & p.file );
             for ( var k in kept ) lines.append( "  keep  " & k.file & " (edited by you)" );
+            for ( var x in extraPlan ) lines.append( "  write " & x.target & " (the BxRig submenu)" );
             lines.append( iconWrite ? "  write " & iconFile() : "  keep  " & iconFile() & " (already there)" );
             lines.append( arguments.dryRun ? "Nothing was changed." : "Nothing was changed. Add --yes to apply." );
             return say( cmd, arguments.dryRun ? 0 : 2, data, arguments.asJson, lines );
         }
         for ( var r in plan ) {
             if ( variables.config.configWrite( r.entry, r.entry.content, "apply", true, false ) != 0 ) return say( cmd, 6, { error: "Could not write " & r.file }, arguments.asJson, [ "error: could not write " & r.file ] );
+        }
+        for ( var x in extraPlan ) {
+            if ( variables.config.configWrite( x, x.content, "apply", true, false ) != 0 ) return say( cmd, 6, { error: "Could not write " & x.target }, arguments.asJson, [ "error: could not write " & x.target ] );
         }
         if ( iconWrite ) {
             try { new bxrig.Assets( variables.cli, variables.runner ).decode( "icon.png", iconFile() ); }
@@ -140,17 +165,20 @@ class Launchers {
         if ( fileExists( iconFile() ) && gone.len() ) {
             try { iconGone = sha( iconFile() ) == embeddedIconHash(); } catch ( any e ) { iconGone = false; }
         }
-        var data = { remove: gone.map( function( r ) { return r.file; } ), keep: kept.map( function( r ) { return r.file; } ), icon_remove: iconGone };
-        if ( !gone.len() && !kept.len() ) return say( cmd, 0, data, arguments.asJson, [ "No launchers are in the application menu." ] );
+        var extraGone = !kept.len() ? extras().filter( function( e ) { return mine( e.target ); } ) : [];
+        var data = { submenu: extraGone.map( function( e ) { return e.target; } ), remove: gone.map( function( r ) { return r.file; } ), keep: kept.map( function( r ) { return r.file; } ), icon_remove: iconGone };
+        if ( !gone.len() && !kept.len() && !extraGone.len() ) return say( cmd, 0, data, arguments.asJson, [ "No launchers are in the application menu." ] );
         if ( !arguments.yes || arguments.dryRun ) {
             var lines = [ ( arguments.dryRun ? "Dry run" : "Plan" ) & ": remove " & gone.len() & " launchers from the application menu" ];
             for ( var g in gone ) lines.append( "  delete " & g.file );
             for ( var k in kept ) lines.append( "  keep   " & k.file & " (edited by you)" );
+            for ( var x in extraGone ) lines.append( "  delete " & x.target );
             if ( iconGone ) lines.append( "  delete " & iconFile() );
             lines.append( arguments.dryRun ? "Nothing was changed." : "Nothing was changed. Add --yes to apply." );
             return say( cmd, arguments.dryRun ? 0 : 2, data, arguments.asJson, lines );
         }
         for ( var g in gone ) fileDelete( g.file );
+        for ( var x in extraGone ) fileDelete( x.target );
         if ( iconGone ) fileDelete( iconFile() );
         return say( cmd, 0, data, arguments.asJson, [ "Removed " & gone.len() & " launchers." & ( kept.len() ? " Kept " & kept.len() & " you edited." : "" ) ] );
     }

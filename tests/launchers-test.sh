@@ -29,7 +29,11 @@ run "$binary" launchers on --dry-run | grep -q "write $apps/bxrig-tui-databases.
 f="$apps/bxrig-tui-databases.desktop"
 grep -qx 'Name=BxRig Databases' "$f" || fail "name: $(cat "$f")"
 grep -qx 'Icon=bxrig' "$f" || fail 'icon name'
-grep -qx 'Categories=Development;System;' "$f" || fail 'categories'
+grep -qx 'Categories=X-BxRig;' "$f" || fail 'categories'
+dirf="$tmp/data/desktop-directories/bxrig.directory"; menuf="$tmp/home/.config/menus/applications-merged/bxrig.menu"
+grep -qx 'Name=BxRig' "$dirf" || fail 'the submenu folder'
+grep -q '<Category>X-BxRig</Category>' "$menuf" || fail 'the menu merge'
+run "$binary" launchers status --json | jq -e '.data.submenu == true' >/dev/null || fail 'status submenu'
 grep -qx 'Exec=ghostty -e /opt/bxrig/bxrig tui databases' "$f" || fail "exec: $(grep '^Exec' "$f")"
 ! grep -q StartupWMClass "$f" || fail 'no StartupWMClass is written'
 [[ "$(stat -c %a "$f")" == 644 ]] || fail 'mode 644'
@@ -50,6 +54,7 @@ run "$binary" launchers off --dry-run | grep -q "keep   $f" || fail 'off plan ke
 [[ "$(code "$binary" launchers off --yes)" == 0 ]] || fail 'off --yes exits 0'
 [[ "$(ls "$apps"/bxrig-tui-*.desktop | wc -l)" == 1 && -f "$f" ]] || fail 'off removed only the unedited entries'
 grep -qx mine "$icon" || fail 'off removed an icon you changed'
+[[ -f "$dirf" && -f "$menuf" ]] || fail 'the submenu stays while a kept entry needs it'
 rm "$f"
 
 # the icon goes while it is still BxRig's; `remove launchers` is the same as `launchers off`
@@ -71,6 +76,7 @@ grep -qx 'Exec=kitty /opt/bxrig/bxrig tui logs' "$apps/bxrig-tui-logs.desktop" |
 printf 'com.mitchellh.ghostty.desktop\n' > "$tmp/cfg/xdg-terminals.list"
 [[ "$(code "$binary" launchers off --yes)" == 0 ]] || fail 'off after the terminal changed'
 [[ -z "$(ls "$apps"/bxrig-tui-*.desktop 2>/dev/null)" ]] || fail 'off left entries after the terminal changed'
+[[ ! -e "$dirf" && ! -e "$menuf" ]] || fail 'off left the submenu files'
 
 # no terminal at all: exit 4
 rm "$tmp/bin/ghostty" "$tmp/bin/kitty"; rm -f "$tmp/cfg/xdg-terminals.list"
