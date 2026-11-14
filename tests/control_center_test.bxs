@@ -142,5 +142,55 @@ glyph = function( code ) { return chr( code ); };
 check( "icons: off draws none of them", find( chr( 61461 ), plain ) == 0 && find( chr( 61926 ), plain ) == 0 );
 check( "icons: on draws the home, plug and coffee icons in the sidebar and the plug in the header", find( chr( 61461 ), withIcons ) > 0 && find( chr( 61926 ), withIcons ) > 0 && find( chr( 61684 ), withIcons ) > 0 && find( "Ports", withIcons ) > 0 );
 check( "icons: the page list still reads the same", find( "Dashboard", withIcons ) > 0 && find( "Databases", withIcons ) > 0 );
+// ---- the sidebar: collapse, toggle keys, breadcrumb, width, solo pages
+reg = new bxrig.ControlCenterPages();
+check( "registry: the pages are the Control Center pages, in order", reg.ids().len() == 16 && reg.ids().toList( "," ) == cc.buildPages( true ).map( function( q ) { return q.id(); } ).toList( "," ) && reg.find( "databases" ).title == "Databases" && structIsEmpty( reg.find( "nope" ) ) );
+sb = new bxrig.ControlCenterApp( cc.buildPages( true ), "ports" );
+check( "sidebar: open by default", sb.sidebarOpen() );
+sb.onKey( chr( 92 ) ); check( "sidebar: the backslash key collapses it", !sb.sidebarOpen() );
+sb.onKey( chr( 92 ) ); check( "sidebar: and opens it again", sb.sidebarOpen() );
+sb.onKey( "Ctrl+b" ); check( "sidebar: Ctrl+b collapses it", !sb.sidebarOpen() );
+sb.onKey( "Left" ); check( "sidebar: Left expands a collapsed sidebar", sb.sidebarOpen() && sb.focus() == "page" );
+sb.onKey( "Left" ); check( "sidebar: Left again moves focus into it", sb.focus() == "sidebar" );
+sb.onKey( "Ctrl+b" ); check( "sidebar: collapsing returns the focus to the page", !sb.sidebarOpen() && sb.focus() == "page" );
+sb.onKey( "Tab" ); check( "sidebar: Tab still changes page while collapsed", sb.page().id() == "packages" && !sb.sidebarOpen() );
+sb.onKey( "Shift+Tab" ); check( "sidebar: Shift+Tab goes back", sb.page().id() == "ports" );
+solo = new bxrig.ControlCenterApp( cc.buildPages( true ), "databases", "off" );
+check( "solo: a page started collapsed", !solo.sidebarOpen() && solo.page().id() == "databases" );
+solo.act( { kind: "sidetoggle" } ); check( "solo: a click on the toggle opens it", solo.sidebarOpen() );
+forced = new bxrig.ControlCenterApp( cc.buildPages( true ), "ports", "on" ); forced.noteWidth( 70 );
+check( "sidebar: --sidebar stays open on a narrow terminal", forced.sidebarOpen() );
+nar = new bxrig.ControlCenterApp( cc.buildPages( true ), "ports" ); nar.noteWidth( 80 );
+check( "sidebar: below 90 columns it starts collapsed", !nar.sidebarOpen() );
+nar.onKey( chr( 92 ) ); nar.noteWidth( 80 ); check( "sidebar: and the key opens it, wide or not", nar.sidebarOpen() );
+nar.noteWidth( 200 ); check( "sidebar: once toggled the width no longer decides", nar.sidebarOpen() );
+wide = new bxrig.ControlCenterApp( cc.buildPages( true ), "ports" ); wide.noteWidth( 120 );
+check( "sidebar: at 120 columns it is open", wide.sidebarOpen() );
+cap = new bxrig.ControlCenterApp( cc.buildPages( true ), "ports" ); cap.noteWidth( 120 );
+cap.onKey( "/" ); cap.onKey( chr( 92 ) );
+check( "sidebar: while a page takes text the backslash is text, not a toggle", cap.sidebarOpen() );
+cap.onKey( "Ctrl+b" ); check( "sidebar: but Ctrl+b still toggles", !cap.sidebarOpen() );
+// the screen: collapsed shows the breadcrumb and gives the page the room
+sbv = new bxrig.ControlCenterApp( cc.buildPages( true ), "ports", "on" );
+view.setIcons( false ); view.paint( sbv, 5, 120, 38 ); openScr = tui.render_to_string( 120, 38 );
+check( "screen: open has the sidebar title and the tab hint", find( "Control Center", openScr ) > 0 && find( "tab  next page", openScr ) > 0 );
+check( "screen: the keys bar teaches the toggle", find( "sidebar", openScr ) > 0 );
+sbv.onKey( chr( 92 ) ); view.paint( sbv, 6, 120, 38 ); shut = tui.render_to_string( 120, 38 );
+check( "screen: collapsed drops the sidebar and shows BXRIG > Ports", find( "tab  next page", shut ) == 0 && find( "Control Center", shut ) == 0 && find( "Ports", shut ) > 0 && find( "BXRIG", shut ) > 0 && find( chr( 8250 ), shut ) > 0 );
+check( "screen: collapsed still lists the demo rows", find( "postgres", shut ) > 0 );
+check( "screen: a click on the strip or the breadcrumb is the toggle", view.hitAt( 0, 10 ).kind == "sidetoggle" && view.hitAt( 15, 0 ).kind == "sidetoggle" );
+solo2 = new bxrig.ControlCenterApp( cc.buildPages( true ), "databases", "off" );
+view.paint( solo2, 7, 90, 30 ); s90 = tui.render_to_string( 90, 30 );
+check( "screen: a solo page at 90 columns shows its rows", find( "Databases", s90 ) > 0 && find( "postgres", s90 ) > 0 );
+// a narrow terminal draws the collapsed layout by itself
+nv = new bxrig.ControlCenterApp( cc.buildPages( true ), "ports" );
+view.paint( nv, 8, 80, 30 ); n80 = tui.render_to_string( 80, 30 );
+check( "screen: 80 columns start collapsed", !nv.sidebarOpen() && find( "tab  next page", n80 ) == 0 && find( "BXRIG", n80 ) > 0 );
+// the menu and the shortcut table follow the registry
+mt = new bxrig.MenuTree().sections();
+ccs = mt.filter( function( e ) { return e.label == "Control Center"; } );
+check( "menu: a last Control Center section, the whole thing first, then every page", mt[ mt.len() ].label == "Control Center" && ccs.len() == 1 && ccs[ 1 ].children.len() == 17 && ccs[ 1 ].children[ 1 ].argv.len() == 1 && ccs[ 1 ].children[ 12 ].argv[ 2 ] == "databases" );
+tr = new bxrig.Shortcuts( {} ).table().filter( function( r ) { return left( r.id, 4 ) == "tui-"; } );
+check( "shortcuts: one unbound row per page, running bxrig tui PAGE", tr.len() == 16 && tr[ 1 ].keys == "" && find( "tui databases", tr[ 11 ].dispatch ) > 0 );
 if ( failures > 0 ) { println( failures & " failed" ); exit( 1 ); }
 println( "all passed" );

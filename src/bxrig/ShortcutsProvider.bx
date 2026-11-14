@@ -11,7 +11,7 @@ class ShortcutsProvider {
     function emptyText() { return "No shortcuts found."; }
     function columns() { return [ { key: "action", label: "action", w: 26 }, { key: "keys", label: "keys", w: 22 }, { key: "origin", label: "origin", w: 10 }, { key: "how", label: "through", w: 0 } ]; }
     function style( r ) { return r.custom ? "ok" : ""; }
-    function detail( r ) { return [ r.action & ": " & r.keys, r.custom ? "Yours. Press r to go back to the default." : "The default. Press e to change it." ]; }
+    function detail( r ) { return [ r.action & ": " & ( r.keys == "unbound" ? "no keys yet" : r.keys ), r.custom ? "Yours. Press r to go back to the default." : ( r.keys == "unbound" ? "Not bound. Press e to give it keys." : "The default. Press e to change it." ) ]; }
 
     function actions() {
         return [
@@ -24,7 +24,7 @@ class ShortcutsProvider {
     function load( q = "" ) {
         var src = variables.demo ? [ { id: "launcher", action: "Launcher", keys: "Super+Space", custom: false, how: "hyprland" }, { id: "terminal", action: "Terminal", keys: "Super+Return", custom: false, how: "hyprland" }, { id: "ai-shell", action: "Pull-down AI", keys: "Super+grave", custom: true, how: "hyprland" }, { id: "clipboard", action: "Clipboard history", keys: "Super+V", custom: false, how: "hyprland" } ] : ( variables.sys.bx( [ "keys", "show" ] ).shortcuts ?: [] );
         var rows = [];
-        for ( var s in src ) rows.append( { id: s.id, action: s.action, keys: s.keys, custom: s.custom, origin: s.custom ? "yours" : "default", how: s.how ?: "" } );
+        for ( var s in src ) rows.append( { id: s.id, action: s.action, keys: len( s.keys ) ? s.keys : "unbound", custom: s.custom, origin: s.custom ? "yours" : "default", how: s.how ?: "" } );
         return rows;
     }
 }

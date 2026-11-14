@@ -504,6 +504,21 @@
      "mutates": false
     },
     {
+     "name": "launchers",
+     "summary": "Application-menu entries for the Control Center pages (opt-in): on, off, status.",
+     "usage": [
+      "launchers on|off|status [--yes] [--dry-run] [--json]"
+     ],
+     "examples": [
+      "bxrig launchers status",
+      "bxrig launchers on --dry-run",
+      "bxrig launchers on --yes",
+      "bxrig launchers off --yes"
+     ],
+     "mutates": true,
+     "note": "`on` writes one entry per page to ~/.local/share/applications (BxRig Databases, ...), each opening `bxrig tui PAGE` in your terminal, and the BxRig icon to ~/.local/share/icons/hicolor/256x256/apps/bxrig.png. An entry you edited is kept, never overwritten or removed. `off` (or `bxrig remove launchers`) takes them out again. Nothing is added unless you ask."
+    },
+    {
      "name": "config",
      "summary": "The managed config files: list, diff, apply, restore a backup, history. A file you edited is never overwritten.",
      "usage": [
@@ -929,17 +944,20 @@
     },
     {
      "name": "tui",
-     "summary": "Control Center: every BxRig screen in one terminal, starting with the Dashboard.",
+     "summary": "Control Center: every BxRig screen in one terminal, or one page on its own.",
      "usage": [
-      "tui [PAGE] [--demo] [--icons=on|off] [--json]"
+      "tui [PAGE] [--sidebar|--no-sidebar] [--demo] [--icons=on|off] [--json]",
+      "tui list [--json]"
      ],
      "examples": [
       "bxrig tui",
+      "bxrig tui databases",
+      "bxrig tui list",
       "bxrig tui dashboard --json",
       "bxrig tui --demo"
      ],
      "mutates": false,
-     "note": "It needs a terminal. The sidebar lists the pages; Tab switches page, q leaves. The Dashboard shows what needs attention, system meters, what runs and your backups, and Enter on a warning shows the plan of the fix before anything changes. --json prints a page's data without a terminal; --demo shows made-up data and runs nothing. Icons are Nerd Font glyphs: on when a Nerd Font is installed, or force them with --icons=on|off or BXRIG_ICONS."
+     "note": "It needs a terminal. `bxrig tui` opens the Control Center with the sidebar; `bxrig tui PAGE` opens that page alone with the sidebar collapsed, like an app of its own (an unknown page exits 2). The backslash key or Ctrl+b (or a click on the left strip or the breadcrumb) opens and closes the sidebar, Tab and Shift+Tab still change page, and Left opens a collapsed sidebar. --sidebar and --no-sidebar force it either way; below 90 columns it starts collapsed. Nothing is remembered. `tui list` prints the page ids and titles. Enter on a warning shows the plan of the fix before anything changes. --json prints a page's data without a terminal; --demo shows made-up data and runs nothing. Icons are Nerd Font glyphs: on when a Nerd Font is installed, or force them with --icons=on|off or BXRIG_ICONS."
     },
     {
      "name": "bxtimemachine",

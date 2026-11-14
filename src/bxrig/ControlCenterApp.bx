@@ -4,8 +4,11 @@
 //   app.outcome() is "running", "quit", or "launch:NAME" (leave the Control Center and run that screen).
 // Keys: Tab and Shift+Tab (or ] and [) change page; Left moves to the sidebar (Up and Down pick a page there), Right or Enter goes back to the page;
 // q, Escape or Ctrl+c leave. A page gets every other key while the page has focus. A page intent of "goto" opens another page; "launch" leaves.
+// The sidebar: \ and Ctrl+b collapse and expand it (while a page is taking text only Ctrl+b does); with it collapsed Left expands it again; a click on
+// a "sidetoggle" region does the same. It opens as `sidebar` says: "" open (but collapsed on a narrow terminal), "on" open always, "off" collapsed.
+// Nothing about it is remembered.
 class ControlCenterApp {
-    function init( pages, startId = "" ) {
+    function init( pages, startId = "", sidebar = "" ) {
         variables.pages = arguments.pages;
         variables.idx = 1;
         for ( var i = 1; i <= variables.pages.len(); i++ ) if ( variables.pages[ i ].id() == arguments.startId ) variables.idx = i;
@@ -16,7 +19,22 @@ class ControlCenterApp {
         variables.message = "";
         variables.ask = {};
         variables.loaded = {};
+        variables.sidebar = arguments.sidebar != "off";
+        variables.forced = arguments.sidebar == "on";
+        variables.toggled = arguments.sidebar == "off";
+        variables.narrow = false;
         ensureLoaded();
+        return this;
+    }
+
+    // ---- the sidebar ----
+    // The view tells the app how wide the terminal is; below 90 columns the sidebar starts collapsed unless it was asked for or toggled.
+    function noteWidth( width ) { variables.narrow = arguments.width < 90; }
+    function sidebarOpen() { return ( variables.toggled || variables.forced ) ? variables.sidebar : ( variables.sidebar && !variables.narrow ); }
+    function toggleSidebar() {
+        variables.sidebar = !sidebarOpen();
+        variables.toggled = true;
+        if ( !variables.sidebar ) variables.focus = "page";
         return this;
     }
 
@@ -81,9 +99,11 @@ class ControlCenterApp {
             if ( k == "n" || k == "N" || k == "Escape" || k == "q" ) variables.mode = "main";
             return {};
         }
+        if ( k == "Ctrl+b" ) { toggleSidebar(); return {}; }
+        if ( compare( k, chr( 92 ) ) == 0 && !pageCaptures() ) { toggleSidebar(); return {}; }
         if ( k == "Tab" || k == "]" ) { step( 1 ); return {}; }
         if ( k == "Shift+Tab" || k == "BackTab" || k == "[" ) { step( -1 ); return {}; }
-        if ( variables.focus == "sidebar" ) {
+        if ( variables.focus == "sidebar" && sidebarOpen() ) {
             if ( k == "Up" || compare( k, "k" ) == 0 ) { step( -1 ); return {}; }
             if ( k == "Down" || compare( k, "j" ) == 0 ) { step( 1 ); return {}; }
             if ( k == "Right" || k == "Enter" || compare( k, "l" ) == 0 ) { variables.focus = "page"; return {}; }
@@ -91,7 +111,7 @@ class ControlCenterApp {
             return {};
         }
         if ( pageCaptures() ) return handleIntent( page().onKey( k ) );
-        if ( k == "Left" ) { variables.focus = "sidebar"; return {}; }
+        if ( k == "Left" ) { if ( sidebarOpen() ) variables.focus = "sidebar"; else toggleSidebar(); return {}; }
         if ( compare( k, "q" ) == 0 || k == "Escape" ) { variables.outcome = "quit"; return {}; }
         return handleIntent( page().onKey( k ) );
     }
@@ -108,6 +128,7 @@ class ControlCenterApp {
         }
         if ( variables.mode == "result" ) { variables.mode = "main"; return {}; }
         if ( variables.mode == "ask" ) { if ( h.kind == "askok" ) return onKey( "Enter" ); if ( h.kind == "askno" ) return onKey( "Escape" ); return {}; }
+        if ( h.kind == "sidetoggle" ) { toggleSidebar(); return {}; }
         if ( h.kind == "nav" ) { variables.idx = h.n; variables.focus = "page"; ensureLoaded(); return {}; }
         return handleIntent( page().act( h ) );
     }

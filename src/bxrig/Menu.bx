@@ -45,6 +45,7 @@ class Menu {
         switch ( e.kind ) {
             case "spawn": return "opens: " & c;
             case "run": return "shows in a terminal: " & c;
+            case "tui": return "opens in a terminal: " & c & ( structKeyExists( e, "icon" ) ? " (icon: " & e.icon & ")" : "" );
             case "open": return "opens " & e.url;
             case "pick": return "choose from " & e.source & ", then: " & c;
             case "ask": return "asks for text, then: " & c;
@@ -182,6 +183,18 @@ class Menu {
         return 0;
     }
 
+    // A Control Center page in its own terminal window: the terminal closes when you leave the page (no "press Enter" step).
+    function startTui( entry ) {
+        var term = terminalArgv();
+        if ( !term.len() ) { println( "error: this entry needs a terminal program (ghostty, kitty, foot, alacritty or konsole)" ); return 4; }
+        var argv = [];
+        for ( var t in term ) argv.append( t );
+        argv.append( self() );
+        for ( var a in arguments.entry.argv ) argv.append( a );
+        detach( argv );
+        return 0;
+    }
+
     function sub( argv, value ) {
         return arguments.argv.map( function( a ) { return replace( a, "{}", value, "all" ); } );
     }
@@ -283,6 +296,7 @@ class Menu {
             case "pkgsearch": return pkgSearchFlow( arguments.runner, e );
             case "catalog": return catalogFlow( arguments.runner, e );
             case "open": detach( [ "xdg-open", e.url ] ); return 0;
+            case "tui": return startTui( e );
         }
         if ( structKeyExists( e, "confirm" ) && !confirm( arguments.runner, e.confirm ) ) return 0;
         return start( e );

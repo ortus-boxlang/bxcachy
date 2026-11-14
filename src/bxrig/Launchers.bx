@@ -1,0 +1,168 @@
+// `bxrig launchers`: one application-menu entry per Control Center page (opt-in), each opening that page solo in your terminal.
+//   on [--yes] [--dry-run]    writes ~/.local/share/applications/bxrig-tui-PAGE.desktop for every page ("BxRig Databases", Icon=bxrig,
+//                             Exec = your terminal + bxrig tui PAGE) and puts the BxRig icon in ~/.local/share/icons/hicolor/256x256/apps/bxrig.png
+//   off [--yes] [--dry-run]   removes the entries BxRig wrote and the icon when it is still the one BxRig wrote
+//   status                    which entries exist (and whether you edited one)
+// The terminal is the one `bxrig ai launch` uses (first line of ~/.config/xdg-terminals.list, else the first installed known terminal).
+// Files go through the config service (backup and journal); an entry you edited by hand is kept and reported, never overwritten or removed.
+// No StartupWMClass is written: it has to equal the window class the terminal gives, and not every terminal can set one (konsole has no flag).
+// Exit: 0 done, 2 plan without --yes, 4 precondition (no terminal, root, base64 missing), 6 write failed.
+class Launchers {
+    function init( cli, runner = "" ) {
+        variables.cli = arguments.cli;
+        variables.runner = arguments.runner;
+        variables.inst = new bxrig.Installer( arguments.runner );
+        variables.config = new bxrig.ConfigService().quiet( true );
+        return this;
+    }
+
+    function self() { return getSystemSetting( "BXRIG_SELF", "bxrig" ); }
+    function dataHome() { return getSystemSetting( "XDG_DATA_HOME", getSystemSetting( "HOME", "" ) & "/.local/share" ); }
+    function appsDir() { return dataHome() & "/applications"; }
+    function iconFile() { return dataHome() & "/icons/hicolor/256x256/apps/bxrig.png"; }
+    function fileFor( id ) { return appsDir() & "/bxrig-tui-" & arguments.id & ".desktop"; }
+
+    function say( command, code, data, asJson, lines = [] ) {
+        if ( arguments.asJson ) println( variables.cli.envelope( arguments.command, arguments.code, arguments.data, false ) );
+        else for ( var l in arguments.lines ) println( l );
+        return arguments.code;
+    }
+
+    // A desktop Exec word: quoted when it holds a space or a quote.
+    function word( w ) {
+        if ( !reFind( "[ ""'\\]", arguments.w ) ) return arguments.w;
+        return """" & replace( replace( arguments.w, chr( 92 ), chr( 92 ) & chr( 92 ), "all" ), """", chr( 92 ) & """", "all" ) & """";
+    }
+
+    // The entry text for one page and a terminal argv.
+    function entryText( page, termArgv ) {
+        var words = [];
+        for ( var t in arguments.termArgv ) words.append( word( t ) );
+        words.append( word( self() ) ); words.append( "tui" ); words.append( arguments.page.id );
+        return "[Desktop Entry]" & chr( 10 ) & "Type=Application" & chr( 10 ) & "Name=BxRig " & arguments.page.title & chr( 10 )
+            & "Comment=BxRig " & arguments.page.title & " in a terminal" & chr( 10 )
+            & "Exec=" & words.toList( " " ) & chr( 10 ) & "Icon=bxrig" & chr( 10 ) & "Terminal=false" & chr( 10 )
+            & "Categories=Development;System;" & chr( 10 ) & "X-BxRig-Launcher=tui" & chr( 10 );
+    }
+
+    // [ { id, title, file, state } ] for the terminal argv (state: missing, clean, outdated, drifted, blocked).
+    function rows( termArgv ) {
+        var out = [];
+        for ( var p in new bxrig.ControlCenterPages().list() ) {
+            var entry = { name: "tui-" & p.id, target: fileFor( p.id ), mode: "644", content: len( arguments.termArgv ) ? entryText( p, arguments.termArgv ) : "" };
+            var st = fileExists( entry.target ) || directoryExists( entry.target ) ? ( len( arguments.termArgv ) ? variables.config.configState( entry ) : "present" ) : "missing";
+            out.append( { id: p.id, title: p.title, file: entry.target, state: st, entry: entry } );
+        }
+        return out;
+    }
+
+    function publicRows( rows ) {
+        return arguments.rows.map( function( r ) { return { id: r.id, title: r.title, file: r.file, state: r.state }; } );
+    }
+
+    function mine( file ) {
+        if ( !fileExists( arguments.file ) ) return false;
+        return find( "X-BxRig-Launcher=tui", fileRead( arguments.file ) ) > 0;
+    }
+
+    // SHA-256 of a file (a PNG is not text, so fileRead cannot hash it).
+    function sha( path ) {
+        var r = variables.inst.exec( [ "sha256sum", arguments.path ], 30 );
+        if ( r.exitCode != 0 ) throw( type = "Launchers.sha", message = "sha256sum failed" );
+        return listFirst( trim( r.output ), " " );
+    }
+
+    // The hash of the embedded icon, written to a scratch file first.
+    function embeddedIconHash() {
+        var tmp = variables.config.stateDir() & "/launcher-icon.png";
+        new bxrig.Assets( variables.cli, variables.runner ).decode( "icon.png", tmp );
+        var h = sha( tmp );
+        fileDelete( tmp );
+        return h;
+    }
+
+    // `launchers status`
+    function status( asJson ) {
+        var term = new bxrig.Ai( variables.cli, variables.runner ).terminal();
+        var rs = rows( structKeyExists( term, "argv" ) ? term.argv : [] );
+        var present = rs.filter( function( r ) { return r.state != "missing"; } ).len();
+        var data = { enabled: present > 0, present: present, total: rs.len(), icon: fileExists( iconFile() ), terminal: structKeyExists( term, "id" ) ? term.id : "", launchers: publicRows( rs ) };
+        var lines = [ present & " of " & rs.len() & " launchers in the application menu" & ( structKeyExists( term, "id" ) ? " (terminal: " & term.id & ")" : " (no terminal found)" ) ];
+        for ( var r in rs ) lines.append( ( r.state == "missing" ? "  -  " : "  +  " ) & "BxRig " & r.title & ( r.state == "drifted" ? "   (edited by you)" : "" ) );
+        if ( !present ) lines.append( "Turn them on: bxrig launchers on --yes" );
+        return say( "launchers status", 0, data, arguments.asJson, lines );
+    }
+
+    // `launchers on [--yes] [--dry-run]`
+    function on( yes, dryRun, asJson ) {
+        var cmd = "launchers on";
+        if ( variables.inst.isRoot() ) return say( cmd, 4, { error: "Run as a regular user" }, arguments.asJson, [ "error: run as a regular user" ] );
+        if ( !variables.inst.hasCommand( "base64" ) ) return say( cmd, 4, { error: "base64 not found" }, arguments.asJson, [ "error: base64 (coreutils) was not found" ] );
+        var term = new bxrig.Ai( variables.cli, variables.runner ).terminal();
+        if ( !structKeyExists( term, "argv" ) ) return say( cmd, 4, { error: "No terminal" }, arguments.asJson, [ "error: no terminal program found (ghostty, kitty, foot, alacritty or konsole)" ] );
+        var rs = rows( term.argv );
+        var plan = [];
+        var kept = [];
+        for ( var r in rs ) { if ( r.state == "drifted" || r.state == "blocked" ) kept.append( r ); else if ( r.state != "clean" ) plan.append( r ); }
+        var iconWrite = !fileExists( iconFile() );
+        var data = { terminal: term.id, write: plan.map( function( r ) { return r.file; } ), keep: kept.map( function( r ) { return r.file; } ), icon: iconFile(), icon_write: iconWrite };
+        if ( !arguments.yes || arguments.dryRun ) {
+            var lines = [ ( arguments.dryRun ? "Dry run" : "Plan" ) & ": " & plan.len() & " launchers for the application menu, opening in " & term.id ];
+            for ( var p in plan ) lines.append( "  write " & p.file );
+            for ( var k in kept ) lines.append( "  keep  " & k.file & " (edited by you)" );
+            lines.append( iconWrite ? "  write " & iconFile() : "  keep  " & iconFile() & " (already there)" );
+            lines.append( arguments.dryRun ? "Nothing was changed." : "Nothing was changed. Add --yes to apply." );
+            return say( cmd, arguments.dryRun ? 0 : 2, data, arguments.asJson, lines );
+        }
+        for ( var r in plan ) {
+            if ( variables.config.configWrite( r.entry, r.entry.content, "apply", true, false ) != 0 ) return say( cmd, 6, { error: "Could not write " & r.file }, arguments.asJson, [ "error: could not write " & r.file ] );
+        }
+        if ( iconWrite ) {
+            try { new bxrig.Assets( variables.cli, variables.runner ).decode( "icon.png", iconFile() ); }
+            catch ( any e ) { return say( cmd, 6, { error: "Could not write the icon" }, arguments.asJson, [ "error: could not write " & iconFile() ] ); }
+        }
+        return say( cmd, 0, data, arguments.asJson, [ "Added " & plan.len() & " launchers to the application menu." & ( kept.len() ? " Kept " & kept.len() & " you edited." : "" ) ] );
+    }
+
+    // `launchers off [--yes] [--dry-run]`: only entries BxRig wrote (marked) and still unedited go; the icon goes when it is still BxRig's.
+    function off( yes, dryRun, asJson ) {
+        var cmd = "launchers off";
+        var term = new bxrig.Ai( variables.cli, variables.runner ).terminal();
+        var rs = rows( structKeyExists( term, "argv" ) ? term.argv : [] );
+        var gone = [];
+        var kept = [];
+        for ( var r in rs ) {
+            if ( r.state == "missing" ) continue;
+            // with a terminal known the state says whether it is still exactly what BxRig wrote; without one, the marker has to do
+            if ( ( r.state == "clean" || r.state == "outdated" || ( r.state == "present" && mine( r.file ) ) ) ) gone.append( r ); else kept.append( r );
+        }
+        var iconGone = false;
+        if ( fileExists( iconFile() ) && gone.len() ) {
+            try { iconGone = sha( iconFile() ) == embeddedIconHash(); } catch ( any e ) { iconGone = false; }
+        }
+        var data = { remove: gone.map( function( r ) { return r.file; } ), keep: kept.map( function( r ) { return r.file; } ), icon_remove: iconGone };
+        if ( !gone.len() && !kept.len() ) return say( cmd, 0, data, arguments.asJson, [ "No launchers are in the application menu." ] );
+        if ( !arguments.yes || arguments.dryRun ) {
+            var lines = [ ( arguments.dryRun ? "Dry run" : "Plan" ) & ": remove " & gone.len() & " launchers from the application menu" ];
+            for ( var g in gone ) lines.append( "  delete " & g.file );
+            for ( var k in kept ) lines.append( "  keep   " & k.file & " (edited by you)" );
+            if ( iconGone ) lines.append( "  delete " & iconFile() );
+            lines.append( arguments.dryRun ? "Nothing was changed." : "Nothing was changed. Add --yes to apply." );
+            return say( cmd, arguments.dryRun ? 0 : 2, data, arguments.asJson, lines );
+        }
+        for ( var g in gone ) fileDelete( g.file );
+        if ( iconGone ) fileDelete( iconFile() );
+        return say( cmd, 0, data, arguments.asJson, [ "Removed " & gone.len() & " launchers." & ( kept.len() ? " Kept " & kept.len() & " you edited." : "" ) ] );
+    }
+
+    // `launchers on|off|status`
+    function run( words, yes, dryRun, asJson ) {
+        var sub = arguments.words.len() ? arguments.words[ 1 ] : "status";
+        if ( arguments.words.len() > 1 ) sub = "?";
+        if ( sub == "on" ) return on( arguments.yes, arguments.dryRun, arguments.asJson );
+        if ( sub == "off" ) return off( arguments.yes, arguments.dryRun, arguments.asJson );
+        if ( sub == "status" ) return status( arguments.asJson );
+        println( "Usage: bxrig launchers on|off|status [--yes] [--dry-run] [--json]" );
+        return 2;
+    }
+}

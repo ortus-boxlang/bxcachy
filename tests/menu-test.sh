@@ -28,7 +28,7 @@ play() { rm -f "$FAKE/n" "$FAKE/spawn.log" "$FAKE/terminal.log" "$FAKE/open.log"
 flatidx() { run "$binary" menu items --json | jq -r --arg p "$1" 'def f($pre): if .kind == "sub" then (.label as $l | .children[] | f($pre + $l + " > ")) else $pre + .label end; [.data.menu[] | f("")] | index($p)'; }
 
 # ---- the tree as data (Omarchy's skeleton plus Develop) ----
-run "$binary" menu items --json | jq -e '(.data.menu | map(.label)) == ["Apps","Install","Remove","Appearance","Trigger","Setup","Update","Develop","Agent","Learn","About","System"] and .data.entries >= 200' >/dev/null || fail "menu sections: $(run "$binary" menu items --json | jq -c '.data.menu | map(.label)')"
+run "$binary" menu items --json | jq -e '(.data.menu | map(.label)) == ["Apps","Install","Remove","Appearance","Trigger","Setup","Update","Develop","Agent","Learn","About","System","Control Center"] and .data.entries >= 200' >/dev/null || fail "menu sections: $(run "$binary" menu items --json | jq -c '.data.menu | map(.label)')"
 run "$binary" menu items --json | jq -e '[.data.menu[] | select(.label == "Install") | .children[] | .label] | index("Package (repos and AUR)") == 0 and index("Catalog") == 2' >/dev/null || fail 'Install starts with package search and the catalog'
 run "$binary" menu items | grep -q 'Next theme   (opens: bxrig theme next)' || fail 'menu items text, nested'
 run "$binary" menu items | grep -q '    Development   (lists the Development apps' || fail 'catalog groups are in the tree'
@@ -45,56 +45,63 @@ done
 run "$binary" runner menu-set rofi >/dev/null
 
 # ---- Agent (9) -> Open the default agent (0): detached, no terminal; Back (9), Exit (13) ----
-play 9 0 9 13; wait_for "$FAKE/spawn.log" || fail 'the spawn entry did not start'
+play 9 0 9 14; wait_for "$FAKE/spawn.log" || fail 'the spawn entry did not start'
 grep -q 'bxrig ai launch' "$FAKE/spawn.log" || fail "spawn: $(cat "$FAKE/spawn.log")"
 [[ ! -s "$FAKE/terminal.log" ]] || fail "a spawn entry opened a terminal: $(cat "$FAKE/terminal.log")"
 # a run entry opens a terminal and waits for Enter
-play 9 5 9 13; wait_for "$FAKE/terminal.log" || fail 'the run entry did not open a terminal'
+play 9 5 9 14; wait_for "$FAKE/terminal.log" || fail 'the run entry did not open a terminal'
 grep -q "terminal -e sh -c .* _ $tmp/self ai models list" "$FAKE/terminal.log" || fail "run entry: $(cat "$FAKE/terminal.log")"
 # Apps (1) starts the app grid
-play 1 13; wait_for "$FAKE/spawn.log"; grep -q 'bxrig apps' "$FAKE/spawn.log" || fail "apps: $(cat "$FAKE/spawn.log")"
+play 1 14; wait_for "$FAKE/spawn.log"; grep -q 'bxrig apps' "$FAKE/spawn.log" || fail "apps: $(cat "$FAKE/spawn.log")"
 # cancelling at the top leaves without running anything
 rm -f "$FAKE/n" "$FAKE/spawn.log" "$FAKE/terminal.log"; : > "$FAKE/answers"; run "$binary" menu || fail 'cancel exits 0'; sleep 0.3
 [[ ! -s "$FAKE/terminal.log" && ! -s "$FAKE/spawn.log" ]] || fail 'a cancelled menu ran something'
 
 # ---- Search (0): one flat list of every entry ----
-play 0 0 13; wait_for "$FAKE/spawn.log"; grep -q 'bxrig apps' "$FAKE/spawn.log" || fail 'search: the first flat entry is Apps'
+play 0 0 14; wait_for "$FAKE/spawn.log"; grep -q 'bxrig apps' "$FAKE/spawn.log" || fail 'search: the first flat entry is Apps'
 i="$(flatidx 'Appearance > Next theme')"; [[ "$i" =~ ^[0-9]+$ ]] || fail 'flatidx'
-play 0 "$i" 13; wait_for "$FAKE/spawn.log"; grep -q 'bxrig theme next' "$FAKE/spawn.log" || fail "search runs the chosen entry: $(cat "$FAKE/spawn.log" 2>/dev/null)"
-j="$(flatidx 'Learn > BxRig docs')"; play 0 "$j" 13; wait_for "$FAKE/open.log"; grep -q 'xdg-open https://bxcachy.boxlang.io/' "$FAKE/open.log" || fail 'an open entry runs xdg-open'
+play 0 "$i" 14; wait_for "$FAKE/spawn.log"; grep -q 'bxrig theme next' "$FAKE/spawn.log" || fail "search runs the chosen entry: $(cat "$FAKE/spawn.log" 2>/dev/null)"
+j="$(flatidx 'Learn > BxRig docs')"; play 0 "$j" 14; wait_for "$FAKE/open.log"; grep -q 'xdg-open https://bxcachy.boxlang.io/' "$FAKE/open.log" || fail 'an open entry runs xdg-open'
 
 # ---- pick: Appearance (4) -> Theme (0) -> the first theme in the list (0) ----
-play 4 0 0 7 13; wait_for "$FAKE/spawn.log"; grep -q '^bxrig theme set bxrig$' "$FAKE/spawn.log" || fail "theme picker: $(cat "$FAKE/spawn.log" 2>/dev/null)"
-play 4 0 '' 7 13; sleep 0.3; ! grep -q 'theme set' "$FAKE/spawn.log" 2>/dev/null || fail 'cancelling the picker ran something'
+play 4 0 0 7 14; wait_for "$FAKE/spawn.log"; grep -q '^bxrig theme set bxrig$' "$FAKE/spawn.log" || fail "theme picker: $(cat "$FAKE/spawn.log" 2>/dev/null)"
+play 4 0 '' 7 14; sleep 0.3; ! grep -q 'theme set' "$FAKE/spawn.log" 2>/dev/null || fail 'cancelling the picker ran something'
 
 # ---- confirm: System (12) -> Reboot (3): Cancel (0) runs nothing, Yes (1) runs it ----
-play 12 3 0 5 13; sleep 0.3; ! grep -q 'system reboot' "$FAKE/spawn.log" 2>/dev/null || fail 'Cancel at the confirmation rebooted'
-play 12 3 1 5 13; wait_for "$FAKE/spawn.log"; grep -q '^bxrig system reboot --yes$' "$FAKE/spawn.log" || fail "reboot after Yes: $(cat "$FAKE/spawn.log" 2>/dev/null)"
-play 12 0 5 13; wait_for "$FAKE/spawn.log"; grep -q '^bxrig system lock$' "$FAKE/spawn.log" || fail 'lock acts at once, without a confirmation'
+play 12 3 0 5 14; sleep 0.3; ! grep -q 'system reboot' "$FAKE/spawn.log" 2>/dev/null || fail 'Cancel at the confirmation rebooted'
+play 12 3 1 5 14; wait_for "$FAKE/spawn.log"; grep -q '^bxrig system reboot --yes$' "$FAKE/spawn.log" || fail "reboot after Yes: $(cat "$FAKE/spawn.log" 2>/dev/null)"
+play 12 0 5 14; wait_for "$FAKE/spawn.log"; grep -q '^bxrig system lock$' "$FAKE/spawn.log" || fail 'lock acts at once, without a confirmation'
 
 # ---- Remove (3) -> Package (0): the explicit packages, confirm, a terminal runs the removal ----
-play 3 0 0 1 6 13; wait_for "$FAKE/terminal.log"; grep -q "$tmp/self pkg remove htop --yes" "$FAKE/terminal.log" || fail "remove a package: $(cat "$FAKE/terminal.log" 2>/dev/null)"
-play 3 0 0 0 6 13; sleep 0.3; [[ ! -s "$FAKE/terminal.log" ]] || fail 'Cancel at the confirmation removed the package'
+play 3 0 0 1 6 14; wait_for "$FAKE/terminal.log"; grep -q "$tmp/self pkg remove htop --yes" "$FAKE/terminal.log" || fail "remove a package: $(cat "$FAKE/terminal.log" 2>/dev/null)"
+play 3 0 0 0 6 14; sleep 0.3; [[ ! -s "$FAKE/terminal.log" ]] || fail 'Cancel at the confirmation removed the package'
 
 # ---- Install (2) -> Package (0): type a name, pick a result, confirm; an installed result is only noted ----
-play 2 0 ripgrep 0 1 9 13; wait_for "$FAKE/terminal.log"; grep -q "$tmp/self pkg install ripgrep --yes" "$FAKE/terminal.log" || fail "install from the package search: $(cat "$FAKE/terminal.log" 2>/dev/null)"
+play 2 0 ripgrep 0 1 9 14; wait_for "$FAKE/terminal.log"; grep -q "$tmp/self pkg install ripgrep --yes" "$FAKE/terminal.log" || fail "install from the package search: $(cat "$FAKE/terminal.log" 2>/dev/null)"
 grep -q 'pkg search ripgrep --source=all' "$FAKE/spawn.log" || fail 'the menu searched through bxrig pkg search'
-play 2 0 ripgrep 1 0 9 13; sleep 0.3; [[ ! -s "$FAKE/terminal.log" ]] || fail 'an installed package was installed again'
+play 2 0 ripgrep 1 0 9 14; sleep 0.3; [[ ! -s "$FAKE/terminal.log" ]] || fail 'an installed package was installed again'
 # ask: Install (2) -> Virtual machine (4) -> Linux desktop (1): type a name
-play 2 4 1 dev 4 9 13; wait_for "$FAKE/terminal.log"; grep -q "$tmp/self vm create linux dev --yes" "$FAKE/terminal.log" || fail "ask entry: $(cat "$FAKE/terminal.log" 2>/dev/null)"
+play 2 4 1 dev 4 9 14; wait_for "$FAKE/terminal.log"; grep -q "$tmp/self vm create linux dev --yes" "$FAKE/terminal.log" || fail "ask entry: $(cat "$FAKE/terminal.log" 2>/dev/null)"
 # catalog: Install (2) -> Catalog (2) -> Development (0) -> the first app (0), confirm (1)
 first="$(jq -r '[.apps[] | select(.group == "development")] | sort_by(.name | ascii_downcase) | .[0].id' "$root/catalog/apps.json")"
-play 2 2 0 0 1 0 9 13; wait_for "$FAKE/terminal.log"; grep -q "$tmp/self install $first --yes" "$FAKE/terminal.log" || fail "catalog install of $first: $(cat "$FAKE/terminal.log" 2>/dev/null)"
+play 2 2 0 0 1 0 9 14; wait_for "$FAKE/terminal.log"; grep -q "$tmp/self install $first --yes" "$FAKE/terminal.log" || fail "catalog install of $first: $(cat "$FAKE/terminal.log" 2>/dev/null)"
 
 # ---- web apps: create (Install > Web app > Create), typed name and URL, then `web add NAME URL --yes` ----
-play 2 3 0 Notion https://notion.so 5 9 13; wait_for "$FAKE/spawn.log"
+play 2 3 0 Notion https://notion.so 5 9 14; wait_for "$FAKE/spawn.log"
 grep -q '^bxrig web add Notion https://notion.so --yes$' "$FAKE/spawn.log" || fail "web add from the menu: $(cat "$FAKE/spawn.log" 2>/dev/null)"
-play 2 3 0 '' 5 9 13; sleep 0.3; ! grep -q 'web add' "$FAKE/spawn.log" 2>/dev/null || fail 'an empty name added something'
+play 2 3 0 '' 5 9 14; sleep 0.3; ! grep -q 'web add' "$FAKE/spawn.log" 2>/dev/null || fail 'an empty name added something'
 # remove (Remove > Web app): pick, confirm
 mkdir -p "$tmp/data/applications"; printf '[Desktop Entry]\nType=Application\nName=Notion\nExec=brave --app=https://notion.so\nX-BxRig-Web=https://notion.so\n' > "$tmp/data/applications/bxrig-web-Notion.desktop"
-rm -f "$FAKE/n" "$FAKE/spawn.log"; printf '3\n2\n0\n1\n6\n13\n' > "$FAKE/answers"; run env XDG_DATA_HOME="$tmp/data" "$binary" menu >/dev/null
+rm -f "$FAKE/n" "$FAKE/spawn.log"; printf '3\n2\n0\n1\n6\n14\n' > "$FAKE/answers"; run env XDG_DATA_HOME="$tmp/data" "$binary" menu >/dev/null
 grep -q '^bxrig web rm Notion --yes$' "$FAKE/spawn.log" || fail "remove a web app from the menu: $(cat "$FAKE/spawn.log" 2>/dev/null)"
-rm -f "$FAKE/n" "$FAKE/spawn.log"; printf '3\n2\n0\n0\n6\n13\n' > "$FAKE/answers"; run env XDG_DATA_HOME="$tmp/data" "$binary" menu >/dev/null; [[ ! -s "$FAKE/spawn.log" ]] || fail 'Cancel at the confirmation removed the web app'
+rm -f "$FAKE/n" "$FAKE/spawn.log"; printf '3\n2\n0\n0\n6\n14\n' > "$FAKE/answers"; run env XDG_DATA_HOME="$tmp/data" "$binary" menu >/dev/null; [[ ! -s "$FAKE/spawn.log" ]] || fail 'Cancel at the confirmation removed the web app'
+
+# ---- Control Center (13): entry 0 opens the whole thing, entry 11 is Databases solo; both open in a terminal, detached ----
+play 13 0 14; wait_for "$FAKE/terminal.log" || fail 'the Control Center entry did not open a terminal'
+grep -q "terminal -e $tmp/self tui$" "$FAKE/terminal.log" || fail "control center: $(cat "$FAKE/terminal.log")"
+play 13 11 14; wait_for "$FAKE/terminal.log" || fail 'a page entry did not open a terminal'
+grep -q "terminal -e $tmp/self tui databases$" "$FAKE/terminal.log" || fail "databases solo: $(cat "$FAKE/terminal.log")"
+run "$binary" menu items --json | jq -e '[.data.menu[] | select(.label == "Control Center") | .children[] | .argv[1]] | length == 17' >/dev/null || fail 'Control Center lists the top entry and the 16 pages'
 
 # ---- a provider that cannot take typed text (Wofi) opens a terminal that asks the same questions ----
 printf '#!/usr/bin/env bash\ncat > /dev/null\nn=$(( $(cat "$FAKE/n" 2>/dev/null || echo 0) + 1 )); echo $n > "$FAKE/n"\nsed -n "${n}p" "$FAKE/answers"\n' > "$tmp/bin/wofi"; chmod +x "$tmp/bin/wofi"

@@ -49,7 +49,7 @@ Settings that only touch your own config (a theme, the bar, the font) act at onc
 
 **Install and remove**: [`install`](#bxrig-install), [`remove`](#bxrig-remove), [`pkg`](#bxrig-pkg), [`catalog`](#bxrig-catalog), [`plan`](#bxrig-plan), [`install-plan`](#bxrig-install-plan), [`optional-plan`](#bxrig-optional-plan), [`profile-plan`](#bxrig-profile-plan), [`profile-install-plan`](#bxrig-profile-install-plan), [`profile-install`](#bxrig-profile-install), [`optional-install`](#bxrig-optional-install), [`profile-list`](#bxrig-profile-list), [`optional-list`](#bxrig-optional-list), [`desktop-list`](#bxrig-desktop-list), [`tui-list`](#bxrig-tui-list), [`web-list`](#bxrig-web-list), [`package-status`](#bxrig-package-status), [`package-source`](#bxrig-package-source), [`dev-plan`](#bxrig-dev-plan), [`prerequisites`](#bxrig-prerequisites), [`apps-doctor`](#bxrig-apps-doctor), [`web`](#bxrig-web), [`toolchain`](#bxrig-toolchain)
 
-**Desktop setup**: [`setup`](#bxrig-setup), [`session`](#bxrig-session), [`tiling`](#bxrig-tiling), [`plasma`](#bxrig-plasma), [`keys`](#bxrig-keys), [`runner`](#bxrig-runner), [`default`](#bxrig-default), [`layout`](#bxrig-layout), [`assets`](#bxrig-assets), [`config`](#bxrig-config)
+**Desktop setup**: [`setup`](#bxrig-setup), [`session`](#bxrig-session), [`tiling`](#bxrig-tiling), [`plasma`](#bxrig-plasma), [`keys`](#bxrig-keys), [`runner`](#bxrig-runner), [`default`](#bxrig-default), [`layout`](#bxrig-layout), [`assets`](#bxrig-assets), [`launchers`](#bxrig-launchers), [`config`](#bxrig-config)
 
 **Look and feel**: [`theme`](#bxrig-theme), [`appearance`](#bxrig-appearance), [`display`](#bxrig-display), [`power`](#bxrig-power), [`time`](#bxrig-time), [`toggle`](#bxrig-toggle), [`nightshift`](#bxrig-nightshift), [`notify`](#bxrig-notify)
 
@@ -610,6 +610,25 @@ bxrig assets list | install [--yes] [--dry-run] [--json]
 bxrig assets list
 ```
 
+### `bxrig launchers` {#bxrig-launchers}
+
+Application-menu entries for the Control Center pages (opt-in): on, off, status.
+
+```text
+bxrig launchers on|off|status [--yes] [--dry-run] [--json]
+```
+
+Changes the system: needs `--yes`. Without it you get the plan (exit 2); `--dry-run` shows it and exits 0.
+
+```bash
+bxrig launchers status
+bxrig launchers on --dry-run
+bxrig launchers on --yes
+bxrig launchers off --yes
+```
+
+> `on` writes one entry per page to ~/.local/share/applications (BxRig Databases, ...), each opening `bxrig tui PAGE` in your terminal, and the BxRig icon to ~/.local/share/icons/hicolor/256x256/apps/bxrig.png. An entry you edited is kept, never overwritten or removed. `off` (or `bxrig remove launchers`) takes them out again. Nothing is added unless you ask.
+
 ### `bxrig config` {#bxrig-config}
 
 The managed config files: list, diff, apply, restore a backup, history. A file you edited is never overwritten.
@@ -1101,19 +1120,22 @@ bxrig mail start --keep --yes
 
 ### `bxrig tui` {#bxrig-tui}
 
-Control Center: every BxRig screen in one terminal, starting with the Dashboard.
+Control Center: every BxRig screen in one terminal, or one page on its own.
 
 ```text
-bxrig tui [PAGE] [--demo] [--icons=on|off] [--json]
+bxrig tui [PAGE] [--sidebar|--no-sidebar] [--demo] [--icons=on|off] [--json]
+bxrig tui list [--json]
 ```
 
 ```bash
 bxrig tui
+bxrig tui databases
+bxrig tui list
 bxrig tui dashboard --json
 bxrig tui --demo
 ```
 
-> It needs a terminal. The sidebar lists the pages; Tab switches page, q leaves. The Dashboard shows what needs attention, system meters, what runs and your backups, and Enter on a warning shows the plan of the fix before anything changes. --json prints a page's data without a terminal; --demo shows made-up data and runs nothing. Icons are Nerd Font glyphs: on when a Nerd Font is installed, or force them with --icons=on|off or BXRIG_ICONS.
+> It needs a terminal. `bxrig tui` opens the Control Center with the sidebar; `bxrig tui PAGE` opens that page alone with the sidebar collapsed, like an app of its own (an unknown page exits 2). The backslash key or Ctrl+b (or a click on the left strip or the breadcrumb) opens and closes the sidebar, Tab and Shift+Tab still change page, and Left opens a collapsed sidebar. --sidebar and --no-sidebar force it either way; below 90 columns it starts collapsed. Nothing is remembered. `tui list` prints the page ids and titles. Enter on a warning shows the plan of the fix before anything changes. --json prints a page's data without a terminal; --demo shows made-up data and runs nothing. Icons are Nerd Font glyphs: on when a Nerd Font is installed, or force them with --icons=on|off or BXRIG_ICONS.
 
 ### `bxrig bxtimemachine` {#bxrig-bxtimemachine}
 

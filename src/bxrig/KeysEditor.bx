@@ -60,6 +60,7 @@ class KeysEditor {
         var rows = variables.sc.editable();
         var byCombo = {};
         for ( var r in rows ) {
+            if ( !len( r.keys ) ) continue;
             var c = variables.sc.normalize( r.keys );
             if ( !structKeyExists( byCombo, c ) ) byCombo[ c ] = [];
             byCombo[ c ].append( r.id );
@@ -99,7 +100,7 @@ class KeysEditor {
         var clash = userBinds().filter( function( ub ) { return ub.combo == combo; } );
         if ( clash.len() && !arguments.force ) return say( cmd, 4, { error: "Used in your files", file: clash[ 1 ].file, line: clash[ 1 ].line }, arguments.asJson, [ "error: " & arguments.keys & " is already bound in your " & clash[ 1 ].file & " line " & clash[ 1 ].line & " (add --force to use it anyway)" ] );
         var data = { id: arguments.id, keys: arguments.keys, was: row.keys };
-        if ( !arguments.yes ) return say( cmd, 2, data, arguments.asJson, [ "Plan: " & row.action & " changes from " & row.keys & " to " & arguments.keys, "Nothing was changed. Add --yes to apply, then: bxrig keys apply --yes" ] );
+        if ( !arguments.yes ) return say( cmd, 2, data, arguments.asJson, [ "Plan: " & row.action & " changes from " & ( len( row.keys ) ? row.keys : "no keys" ) & " to " & arguments.keys, "Nothing was changed. Add --yes to apply, then: bxrig keys apply --yes" ] );
         var cur = variables.sc.loadOverrides();
         cur[ arguments.id ] = arguments.keys;
         if ( !writeOverrides( cur ) ) return say( cmd, 6, { error: "Could not write " & file() }, arguments.asJson, [ "error: could not write " & file() ] );

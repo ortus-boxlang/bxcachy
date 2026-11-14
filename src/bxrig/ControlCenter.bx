@@ -1,11 +1,13 @@
 // Runs the Control Center, one terminal for all BxRig screens: `bxrig tui [PAGE] [--demo]`.
-//   bxrig tui                open the Control Center on the Dashboard
-//   bxrig tui PAGE           open on a page (dashboard)
+//   bxrig tui                open the Control Center on the Dashboard, sidebar open
+//   bxrig tui PAGE           open that page with the sidebar collapsed, like an app of its own (\ or Ctrl+b opens it)
+//   bxrig tui list           the page ids (--json for scripts)
 //   bxrig tui PAGE --json    print that page's data and exit (no terminal needed), for scripts and tests
-//   --demo                     made-up data, nothing is run
+//   --sidebar / --no-sidebar force the sidebar open or collapsed at the start
+//   --demo                   made-up data, nothing is run
 // A page can send you to a full screen such as BxTimeMachine (`launch`); when you leave it you come back to the same page.
 // Everything that changes something shows the plan first (the same command with --dry-run), and only a y runs it.
-// Exit: 0 after leaving, 2 for an unknown page, 4 when there is no terminal.
+// Exit: 0 after leaving, 2 for an unknown page or usage, 4 when there is no terminal.
 class ControlCenter {
     function init( cli, runner = "" ) {
         variables.cli = arguments.cli;
@@ -15,7 +17,15 @@ class ControlCenter {
 
     function self() { return getSystemSetting( "BXRIG_SELF", "bxrig" ); }
 
-    function pageIds() { return [ "dashboard", "boxlang", "java", "maven", "gradle", "versions", "ports", "packages", "shortcuts", "machines", "databases", "mail", "storage", "secrets", "themes", "logs" ]; }
+    function pageIds() { return new bxrig.ControlCenterPages().ids(); }
+
+    // `tui list`
+    function listPages( asJson ) {
+        var rows = new bxrig.ControlCenterPages().list();
+        if ( arguments.asJson ) println( variables.cli.envelope( "tui list", 0, { pages: rows } ) );
+        else for ( var r in rows ) println( r.id & "  " & r.title );
+        return 0;
+    }
 
     function provider( demo ) {
         var dd = new bxrig.DashboardData( variables.cli, variables.runner );
@@ -109,18 +119,21 @@ class ControlCenter {
         try { return systemExecute( "sh", [ "-c", "fc-list 2>/dev/null | grep -qi 'nerd'" ], 5, true ).exitCode == 0; } catch ( any e ) { return false; }
     }
 
-    function run( pageId = "dashboard", demo = false, icons = "" ) {
+    // sidebar: "" (open, collapsed when the terminal is narrow), "on" or "off".
+    function run( pageId = "dashboard", demo = false, icons = "", sidebar = "" ) {
         var start = arguments.pageId;
         var me = this;
         var iconsOn = iconsEnabled( arguments.icons );
+        var sb = arguments.sidebar;
         while ( true ) {
-            var app = new bxrig.ControlCenterApp( buildPages( arguments.demo ), start );
+            var app = new bxrig.ControlCenterApp( buildPages( arguments.demo ), start, sb );
             new bxrig.TuiRunner().run(
                 app,
                 function( tui ) { return new bxrig.ControlCenterView( tui ).setIcons( iconsOn ); },
                 function( intent ) { me.handle( app, intent ); }
             );
             start = app.page().id();
+            sb = app.sidebarOpen() ? "on" : "off";
             var out = app.outcome();
             if ( left( out, 7 ) != "launch:" ) break;
             var target = mid( out, 8, 40 );

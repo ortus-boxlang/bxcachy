@@ -130,6 +130,8 @@ class Shortcuts {
             { id: "dnd", keys: "Super+Alt+N", action: "Do Not Disturb on or off", kind: "hypr-bind", dispatch: execBxrig( "notify dnd toggle" ) },
             { id: "all-apps", keys: "Super+Alt+Space", action: "All apps in one window (like Omarchy 4.5's app grid)", kind: "hypr-bind", dispatch: execBxrig( "apps" ) }
         ];
+        // one unbound row per Control Center page (bind it in the keys editor): it opens that page alone in a terminal
+        for ( var pg in new bxrig.ControlCenterPages().list() ) rows.append( { id: "tui-" & pg.id, keys: "", action: "BxRig " & pg.title & " (Control Center page)", kind: "hypr-bind", dispatch: execBxrig( "tui " & pg.id ) } );
         // your overrides (only the rows that are bindings can be changed; remaps are xremap's)
         for ( var r in rows ) {
             if ( r.kind != "remap" && structKeyExists( variables.overrides, r.id ) && parseKeys( variables.overrides[ r.id ] ).ok ) r.keys = variables.overrides[ r.id ];
@@ -205,7 +207,7 @@ class Shortcuts {
             '',
             '-- Shared shortcuts from the bxrig table'
         ];
-        for ( var r in table() ) if ( r.kind == "bind" || r.kind == "hypr-bind" ) out.append( bindLine( r ) );
+        for ( var r in table() ) if ( ( r.kind == "bind" || r.kind == "hypr-bind" ) && len( r.keys ) ) out.append( bindLine( r ) );
         out.append( '' );
         out.append( '-- Theme accent: `bxrig theme set` writes ~/.config/bxrig/theme/hypr.lua (the focused and unfocused border colours)' );
         out.append( 'do' );

@@ -15,7 +15,7 @@ class {
         var config = new bxrig.ConfigService();
         // One shared flag check for every command: unknown flags are usage errors and nothing runs.
         for ( var flag in args.options ) {
-            if ( !arrayFind( [ "yes", "dry-run", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider", "backend", "dir", "email", "region", "browser", "path", "from", "export", "from-system", "fresh", "rerun", "fix", "edit", "history", "out", "agenda", "without-weather", "desktops", "preset", "no-open", "location", "notify", "defaults", "tag", "mode", "keep-wallpaper", "version", "tag", "ram", "cpus", "disk", "memory", "share", "gpu", "web", "fullscreen", "limit", "explicit", "aur", "list", "host", "protocol", "user", "vers", "to", "delete", "starter", "reason", "with-secrets", "only", "packages", "keep", "home", "description", "type", "url", "bucket", "endpoint", "region", "project", "credentials", "remote", "container", "keys-file", "ask-keys", "target", "include", "deep", "scheduled", "mode", "daily", "weekly", "monthly", "from", "local", "all", "unset", "icons", "smtp-port", "ui-port", "subject" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
+            if ( !arrayFind( [ "yes", "dry-run", "sidebar", "force", "json", "quiet", "group", "category", "tier", "kind", "source", "profile", "optional", "shell", "keys", "undo-keys", "build", "method", "overwrite", "name", "port", "password-file", "ask-password", "keep-data", "show-password", "prompt", "print-answers", "layout", "workspaces", "natural-scroll", "layouts", "theme", "wallpaper", "terminal", "default", "also", "pages", "out", "answers", "demo", "from-file", "show", "strict", "plain", "overwrite", "keyring", "default", "type", "provider", "backend", "dir", "email", "region", "browser", "path", "from", "export", "from-system", "fresh", "rerun", "fix", "edit", "history", "out", "agenda", "without-weather", "desktops", "preset", "no-open", "location", "notify", "defaults", "tag", "mode", "keep-wallpaper", "version", "tag", "ram", "cpus", "disk", "memory", "share", "gpu", "web", "fullscreen", "limit", "explicit", "aur", "list", "host", "protocol", "user", "vers", "to", "delete", "starter", "reason", "with-secrets", "only", "packages", "keep", "home", "description", "type", "url", "bucket", "endpoint", "region", "project", "credentials", "remote", "container", "keys-file", "ask-keys", "target", "include", "deep", "scheduled", "mode", "daily", "weekly", "monthly", "from", "local", "all", "unset", "icons", "smtp-port", "ui-port", "subject" ], flag ) && !( cmd == "secrets" && p.len() >= 2 && p[2] == "run" ) ) {
                 println( "Unknown option: --" & flag );
                 CLIExit( 2 );
             }
@@ -469,6 +469,8 @@ class {
           // Uninstall catalog apps (their packages or web launchers) or any package. See COMMAND-CONTRACT.md 13.34.
           rmIds = [];
           for ( rmi = 2; rmi <= p.len(); rmi++ ) rmIds.append( p[ rmi ] );
+          // `remove launchers` takes the Control Center entries out of the application menu (the same as `launchers off`)
+          if ( rmIds.len() == 1 && rmIds[ 1 ] == "launchers" ) CLIExit( new bxrig.Launchers( cli ).off( structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
           CLIExit( new bxrig.Pkg( cli ).removeApps( rmIds, structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
           break;
          case "appearance":
@@ -565,16 +567,24 @@ class {
           CLIExit( new bxrig.Mail( cli ).run( mlWords, args.options, structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
           break;
          case "tui":
-          // The Control Center: every BxRig screen in one terminal. See COMMAND-CONTRACT.md 13.46.
-          ccPage = p.len() >= 2 ? p[ 2 ] : "dashboard";
+          // The Control Center: every BxRig screen in one terminal. `tui` opens it with the sidebar, `tui PAGE` opens one page without. See COMMAND-CONTRACT.md 13.46 and 13.50.
+          ccPage = p.len() >= 2 ? p[ 2 ] : "";
           ccDemo = structKeyExists( args.options, "demo" );
           if ( p.len() > 2 ) {
-           println( "Usage: bxrig tui [PAGE] [--demo] [--icons=on|off] [--json]" );
+           println( "Usage: bxrig tui [PAGE | list] [--sidebar | --no-sidebar] [--demo] [--icons=on|off] [--json]" );
            CLIExit( 2 );
           }
-          if ( asJson ) CLIExit( new bxrig.ControlCenter( cli ).dump( ccPage, ccDemo, true ) );
+          if ( ccPage == "list" ) CLIExit( new bxrig.ControlCenter( cli ).listPages( asJson ) );
+          if ( len( ccPage ) && !arrayFind( new bxrig.ControlCenterPages().ids(), ccPage ) ) {
+           println( "Unknown page " & ccPage & ". Pages: " & new bxrig.ControlCenterPages().ids().toList( ", " ) );
+           CLIExit( 2 );
+          }
+          if ( asJson ) CLIExit( new bxrig.ControlCenter( cli ).dump( len( ccPage ) ? ccPage : "dashboard", ccDemo, true ) );
+          // the parser turns --no-sidebar into sidebar=false, so one option carries both flags (the last one wins)
+          ccSide = len( ccPage ) ? "off" : "";
+          if ( structKeyExists( args.options, "sidebar" ) ) ccSide = args.options.sidebar == false ? "off" : "on";
           try {
-           CLIExit( new bxrig.ControlCenter( cli ).run( ccPage, ccDemo, structKeyExists( args.options, "icons" ) ? args.options.icons : "" ) );
+           CLIExit( new bxrig.ControlCenter( cli ).run( len( ccPage ) ? ccPage : "dashboard", ccDemo, structKeyExists( args.options, "icons" ) ? args.options.icons : "", ccSide ) );
           } catch ( any ccErr ) {
            println( "bxrig tui needs a terminal (" & ccErr.message & ")." );
            CLIExit( 4 );
@@ -956,6 +966,12 @@ class {
           }
           println( "Usage: bxrig keys show | mac [on|off|status] [--yes] | set ID KEYS [--yes] [--force] | reset ID [--yes] | conflicts | render xremap|hyprland|plasma | check | apply [--yes] [--dry-run] [--force] [--json]" );
           CLIExit( 2 );
+          break;
+         case "launchers":
+          // One application-menu entry per Control Center page, opt-in: launchers on|off|status [--yes] [--dry-run]. See COMMAND-CONTRACT.md 13.50.
+          lnWords = [];
+          for ( lni = 2; lni <= p.len(); lni++ ) lnWords.append( p[ lni ] );
+          CLIExit( new bxrig.Launchers( cli ).run( lnWords, structKeyExists( args.options, "yes" ), structKeyExists( args.options, "dry-run" ), asJson ) );
           break;
          case "assets":
           // The embedded brand images: assets list | assets install [--yes] [--dry-run].

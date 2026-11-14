@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Records the Control Center (bxrig tui --demo): runs it in a pseudo-terminal, plays scripted keystrokes, emulates the screen with pyte and
 draws every frame with Pillow, then encodes a video (and a GIF) with ffmpeg.
-Usage: python3 tools/record-timemachine.py [--out DIR] [--cols 120] [--rows 38] [--bin PATH]   (needs Pillow, pyte, ffmpeg)"""
+Usage: python3 tools/record-controlcenter.py [--out DIR] [--cols 120] [--rows 38] [--bin PATH]   (needs Pillow, pyte, ffmpeg)"""
 import argparse, codecs, os, pty, select, struct, fcntl, termios, time, subprocess, sys, shutil
 import pyte
 from PIL import Image, ImageDraw, ImageFont
@@ -17,7 +17,7 @@ ap.add_argument('--icons', default='on', choices=['on', 'off'])
 ap.add_argument('--shots', action='store_true', help='also save a PNG of the last frame of each step')
 args = ap.parse_args()
 
-KEYS = {'enter': '\r', 'down': '\x1b[B', 'up': '\x1b[A', 'left': '\x1b[D', 'right': '\x1b[C', 'space': ' ', 'tab': '\t', 'esc': '\x1b', 'backtab': '\x1b[Z', 'bs': '\x7f'}
+KEYS = {'enter': '\r', 'down': '\x1b[B', 'up': '\x1b[A', 'left': '\x1b[D', 'right': '\x1b[C', 'space': ' ', 'tab': '\t', 'esc': '\x1b', 'backtab': '\x1b[Z', 'bs': '\x7f', 'backslash': chr(92)}
 # scenario: (seconds to wait after, action[, screenshot name]). action is a key name, "wait", or "text:..." typed char by char
 SCENARIO = [
     (2.4, 'wait', '01-dashboard'),
@@ -25,16 +25,24 @@ SCENARIO = [
     (0.9, 'tab'), (1.6, 'wait', '03-boxlang'),
     (0.9, 'tab'), (1.6, 'wait', '04-java'), (0.8, 'down'), (0.8, 'd'), (1.6, 'wait', '05-java-default-plan'), (0.8, 'n'),
     (0.9, 'i'), (0.6, 'text:25'), (1.4, 'wait', '06-java-install-ask'), (0.7, 'esc'),
-    (0.9, 'tab'), (1.6, 'wait', '07-versions'),
-    (0.9, 'tab'), (1.8, 'wait', '08-ports'), (0.8, '/'), (0.4, 'text:redis'), (1.4, 'wait', '09-ports-filter'), (0.7, 'enter'), (0.8, 'x'), (1.6, 'wait', '10-ports-stop-plan'), (0.7, 'n'),
-    (0.9, 'tab'), (1.2, 'wait'), (0.8, '/'), (0.4, 'text:docker'), (0.8, 'enter'), (1.8, 'wait', '11-packages'),
-    (0.9, 'tab'), (1.6, 'wait', '12-shortcuts'),
-    (0.9, 'tab'), (1.6, 'wait', '13-machines'),
-    (0.9, 'tab'), (1.6, 'wait', '14-storage'),
-    (0.9, 'tab'), (1.6, 'wait', '15-secrets'),
-    (0.9, 'tab'), (1.6, 'wait', '16-themes'),
-    (0.9, 'tab'), (1.6, 'wait', '17-logs'), (0.8, 'p'), (1.4, 'wait', '18-logs-info'),
-    (0.7, 'tab'), (1.4, 'wait', '19-back-to-dashboard'),
+    (0.9, 'tab'), (1.4, 'wait', '07-maven'),
+    (0.9, 'tab'), (1.4, 'wait', '08-gradle'),
+    (0.9, 'tab'), (1.6, 'wait', '09-versions'),
+    (0.9, 'tab'), (1.8, 'wait', '10-ports'), (0.8, '/'), (0.4, 'text:redis'), (1.4, 'wait', '11-ports-filter'), (0.7, 'enter'), (0.8, 'x'), (1.6, 'wait', '12-ports-stop-plan'), (0.7, 'n'),
+    (0.9, 'tab'), (1.2, 'wait'), (0.8, '/'), (0.4, 'text:docker'), (0.8, 'enter'), (1.8, 'wait', '13-packages'),
+    (0.9, 'tab'), (1.6, 'wait', '14-shortcuts'),
+    (0.9, 'tab'), (1.6, 'wait', '15-machines'),
+    (0.9, 'tab'), (1.6, 'wait', '16-databases'),
+    (0.9, 'tab'), (1.6, 'wait', '17-mail'),
+    (0.9, 'tab'), (1.6, 'wait', '18-storage'),
+    (0.9, 'tab'), (1.6, 'wait', '19-secrets'),
+    (0.9, 'tab'), (1.6, 'wait', '20-themes'),
+    (0.9, 'tab'), (1.6, 'wait', '21-logs'), (0.8, 'p'), (1.4, 'wait', '22-logs-info'),
+    # the sidebar toggle: collapse (the page takes the width, the top row is the breadcrumb), open it again with Left, then back
+    (1.0, 'backslash'), (1.8, 'wait', '23-logs-collapsed'),
+    (0.9, 'backtab'), (1.4, 'wait', '24-themes-collapsed'),
+    (0.9, 'left'), (1.6, 'wait', '25-sidebar-open-again'),
+    (0.7, 'tab'), (1.4, 'wait', '26-back-to-dashboard'),
     (0.5, 'q'),
 ]
 

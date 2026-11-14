@@ -10,7 +10,7 @@ class KeySheet {
 
     function lines() {
         var rows = new bxrig.Shortcuts().show();
-        return rows.map( function( r ) { return r.keys & "   " & r.action & "   (" & r.how & ( r.custom ? ", yours" : "" ) & ")"; } );
+        return rows.map( function( r ) { return ( len( r.keys ) ? r.keys : "(no keys)" ) & "   " & r.action & "   (" & r.how & ( r.custom ? ", yours" : "" ) & ")"; } );
     }
 
     function run( asJson ) {

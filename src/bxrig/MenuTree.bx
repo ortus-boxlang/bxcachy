@@ -4,6 +4,7 @@
 //   sub        children
 //   spawn      starts `bxrig ARGV` detached (no window)
 //   run        runs `bxrig ARGV` in a terminal window and waits for Enter (for output and for sudo prompts)
+//   tui        runs `bxrig tui ARGV` in a terminal window that closes when you leave it (`icon` names the page's icon)
 //   open       opens a URL with xdg-open
 //   pick       asks you to choose from `source` (see Menu.choices), then runs argv with {} replaced by the choice (mode spawn or run)
 //   pkgsearch  asks for text, lists matching packages (source all, repo or aur), asks, then runs `pkg install`
@@ -23,6 +24,7 @@ class MenuTree {
     }
 
     function run( label, argv ) { return { label: arguments.label, kind: "run", argv: arguments.argv }; }
+    function tui( label, argv, icon = "" ) { var e = { label: arguments.label, kind: "tui", argv: [ "tui" ] }; for ( var a in arguments.argv ) e.argv.append( a ); if ( len( arguments.icon ) ) e.icon = arguments.icon; return e; }
     function link( label, url ) { return { label: arguments.label, kind: "open", url: arguments.url }; }
     function sub( label, children ) { return { label: arguments.label, kind: "sub", children: arguments.children }; }
 
@@ -30,6 +32,13 @@ class MenuTree {
         var e = { label: arguments.label, kind: "pick", source: arguments.source, argv: arguments.argv, mode: arguments.mode };
         if ( len( arguments.confirm ) ) e.confirm = arguments.confirm;
         return e;
+    }
+
+    // One entry per Control Center page: it opens that page alone, sidebar collapsed (`bxrig tui PAGE`).
+    function controlCenterEntries() {
+        var out = [ tui( "Open the Control Center (every page, with the sidebar)", [], "terminal" ) ];
+        for ( var pg in new bxrig.ControlCenterPages().list() ) out.append( tui( pg.title, [ pg.id ], pg.icon ) );
+        return out;
     }
 
     // catalogGroups: [ { id, title } ] from the catalog, in order.
@@ -346,7 +355,8 @@ class MenuTree {
                 spawn( "Logout", [ "system", "logout", "--yes" ], "Log out now?" ),
                 spawn( "Reboot", [ "system", "reboot", "--yes" ], "Reboot now?" ),
                 spawn( "Shutdown", [ "system", "shutdown", "--yes" ], "Shut down now?" )
-            ] )
+            ] ),
+            sub( "Control Center", controlCenterEntries() )
         ];
     }
 }
