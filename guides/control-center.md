@@ -46,7 +46,8 @@ Each part is read on its own. If one cannot be read, the rest still shows.
 | Ports | what listens on which port and who owns it; stop or kill it, with a plan first. A port with two owners is red |
 | Packages | search the repos and the AUR with `/`, then install or remove |
 | Shortcuts | every shortcut; rebind (it asks for the keys), reset, conflicts |
-| Machines | databases and VMs: start, stop, info |
+| Machines | your VMs (Windows and Linux desktops in containers): start, stop, info, new |
+| Databases | the databases BxCachy runs: start, stop, info, new |
 | Storage | NAS shares and cloud remotes: mount, unmount, test |
 | Secrets | names only; `v` shows one value for one look |
 | Themes | the 15 themes; Enter applies |
