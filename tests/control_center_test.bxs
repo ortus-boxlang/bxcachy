@@ -52,8 +52,8 @@ check( "screen: the plan box", find( "System update", s2 ) > 0 && find( "Plan: p
 // ---- every page, in demo mode
 cc = new bxcachy.ControlCenter( {} );
 pages = cc.buildPages( true );
-check( "pages: twelve, in order", pages.len() == 12 && pages[ 1 ].id() == "dashboard" && pages[ 5 ].id() == "ports" && pages[ 12 ].id() == "logs" );
-want = { boxlang: "1.9.0-snapshot", java: "temurin-21.0.13_9", versions: "MatchBox", ports: "postgres", shortcuts: "Launcher", machines: "webtop-ubuntu", storage: "syno/backups", secrets: "ANTHROPIC_API_KEY", themes: "tokyo-night", logs: "port 5432 already in use" };
+check( "pages: thirteen, in order", pages.len() == 13 && pages[ 1 ].id() == "dashboard" && pages[ 5 ].id() == "ports" && pages[ 9 ].id() == "databases" && pages[ 13 ].id() == "logs" );
+want = { boxlang: "1.9.0-snapshot", java: "temurin-21.0.13_9", versions: "MatchBox", ports: "postgres", shortcuts: "Launcher", machines: "webtop-ubuntu", databases: "postgres", storage: "syno/backups", secrets: "ANTHROPIC_API_KEY", themes: "tokyo-night", logs: "port 5432 already in use" };
 big = new bxcachy.ControlCenterApp( pages, "" );
 for ( pg in pages ) {
     if ( pg.id() == "dashboard" ) continue;
@@ -84,8 +84,13 @@ check( "java: the answer becomes the install intent", inst.action == "cli" && in
 big.goto( "versions" ); big.onKey( "Down" ); big.onKey( "Down" );
 check( "versions: Enter on Java opens the Java page", structCount( big.onKey( "Enter" ) ) == 0 && big.page().id() == "java" );
 big.goto( "machines" );
-big.onKey( "Down" ); big.onKey( "Down" ); st = big.onKey( "s" );
+check( "machines: VMs only", big.page().state().rows == 2 );
+st = big.onKey( "s" );
 check( "machines: s on a stopped VM starts it", st.args[ 1 ] == "vm" && st.args[ 2 ] == "start" && st.args[ 3 ] == "win11" );
+big.goto( "databases" );
+check( "databases: the two demo databases", big.page().state().rows == 2 );
+dst = big.onKey( "s" );
+check( "databases: s on a running one stops it by engine and name", dst.args[ 1 ] == "db" && dst.args[ 2 ] == "stop" && dst.args[ 3 ] == "postgres" && dst.args[ 4 ] == "--name=postgres" );
 big.goto( "packages" ); big.onKey( "/" ); for ( ch in [ "d", "o", "c", "k" ] ) big.onKey( ch ); big.onKey( "Enter" );
 check( "packages: a live search loads the matches", big.page().state().rows == 4 );
 check( "packages: i on an AUR package adds --aur", ( function() { big.onKey( "Down" ); big.onKey( "Down" ); big.onKey( "Down" ); var it = big.onKey( "i" ); return it.args[ it.args.len() ] == "--aur"; } )() );

@@ -1,0 +1,26 @@
+// Databases: the databases BxCachy runs in containers (PostgreSQL, Redis, MongoDB and more), with start, stop, info and new. Reads `db list` (through DashboardData).
+class DatabasesProvider {
+    function init( demo = false, data = "" ) { variables.demo = arguments.demo; variables.data = isSimpleValue( arguments.data ) ? new bxcachy.DashboardData( {} ) : arguments.data; return this; }
+    function id() { return "databases"; }
+    function title() { return "Databases"; }
+    function hint() { return "running in " & "podman or docker"; }
+    function live() { return false; }
+    function emptyText() { return "No databases yet. Press n to start one, like postgres."; }
+    function columns() { return [ { key: "mark", label: "", w: 3 }, { key: "name", label: "name", w: 22 }, { key: "engine", label: "engine", w: 16 }, { key: "state", label: "state", w: 10 }, { key: "port", label: "port", w: 8 } ]; }
+    function style( r ) { return r.state == "running" ? "" : "dim"; }
+    function detail( r ) { return [ r.name & " (" & r.engine & ")" & ( r.port ? " on port " & r.port : "" ), r.state == "running" ? "Running. Press s to stop it." : "Stopped. Press s to start it." ]; }
+
+    function actions() {
+        return [
+            { key: "s", label: "start/stop", run: function( r ) { var verb = r.state == "running" ? "stop" : "start"; return { action: "cli", title: ( verb == "stop" ? "Stop " : "Start " ) & r.name, args: [ "db", verb, r.engine, "--name=" & r.name ] }; } },
+            { key: "i", label: "info", run: function( r ) { return { action: "show", title: "Info: " & r.name, args: [ "db", "info", r.engine, "--name=" & r.name ] }; } },
+            { key: "n", label: "new", run: function( r ) { return { action: "ask", title: "New database", prompt: "Engine (postgres, redis, mysql, mariadb, mongodb ...)", make: function( v ) { return { action: "cli", title: "Start " & v, args: [ "db", "start", v ] }; } }; } }
+        ];
+    }
+
+    function load( q = "" ) {
+        var rows = [];
+        for ( var m in variables.data.machines() ) if ( m.kind == "db" ) rows.append( { mark: m.state == "running" ? "●" : "○", name: m.name, engine: m.engine ?: "", state: m.state, port: m.port ? m.port : "" } );
+        return rows;
+    }
+}
