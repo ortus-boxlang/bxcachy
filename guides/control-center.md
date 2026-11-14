@@ -24,7 +24,7 @@ Open and close the page list with the backslash key or `Ctrl+b` (while a page is
 You can open any page without a terminal open first:
 
 - **Menu:** `bxrig menu` has a Control Center section at the end. The first entry opens everything, then one entry per page. Each opens in your default terminal.
-- **Application menu (optional):** `bxrig launchers on --yes` adds one entry per page ("BxRig Databases", with the BxRig icon) to your application menu. `bxrig launchers status` shows them and `bxrig launchers off --yes` (or `bxrig remove launchers --yes`) takes them away. Entries you edited are kept. Nothing is added unless you ask.
+- **Application menu (optional):** `bxrig launchers on --yes` adds one entry per page ("BxRig Databases", with the BxRig icon) to a "BxRig" submenu of your application menu (menus without folders, like rofi, list them flat). `bxrig launchers status` shows them and `bxrig launchers off --yes` (or `bxrig remove launchers --yes`) takes them away. Entries you edited are kept. Nothing is added unless you ask.
 - **Shortcuts:** every page has an unbound shortcut (`tui-databases`, ...). Give it keys with `bxrig keys set tui-databases Super+Alt+D --yes`, then `bxrig keys apply --yes`.
 
 ## Icons
