@@ -92,7 +92,7 @@ class ListPage {
                 if ( variables.p.live() ) load(); else variables.list.filter( "" );
                 variables.mode = "list";
             } else if ( k == "Backspace" ) {
-                variables.input = len( variables.input ) ? left( variables.input, len( variables.input ) - 1 ) : "";
+                variables.input = len( variables.input ) > 1 ? left( variables.input, len( variables.input ) - 1 ) : "";
                 if ( !variables.p.live() ) variables.list.filter( variables.input );
             } else if ( len( k ) == 1 || k == "Space" ) {
                 variables.input &= ( k == "Space" ? " " : k );

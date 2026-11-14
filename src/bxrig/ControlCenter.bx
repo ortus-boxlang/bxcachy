@@ -36,6 +36,7 @@ class ControlCenter {
         var d = arguments.demo;
         return [
             new bxrig.DashboardPage( provider( d ) ),
+            new bxrig.AppsPage( d ),
             new bxrig.ListPage( new bxrig.BoxlangProvider( d ) ),
             new bxrig.ListPage( new bxrig.JavaProvider( d ) ),
             new bxrig.ListPage( new bxrig.SdkProvider( "maven", d ) ),
@@ -90,7 +91,10 @@ class ControlCenter {
         var args = arguments.intent.args;
         if ( !structKeyExists( arguments.intent, "confirmed" ) ) {
             var r = runCli( withFlag( args, "--dry-run" ) );
-            arguments.app.showPlan( arguments.intent.title, listToArray( trim( r.output ), chr( 10 ) ), arguments.intent );
+            var shown = [];
+            if ( structKeyExists( arguments.intent, "preface" ) ) { for ( var pl in arguments.intent.preface ) shown.append( pl ); shown.append( "" ); }
+            for ( var ol in listToArray( trim( r.output ), chr( 10 ) ) ) shown.append( ol );
+            arguments.app.showPlan( arguments.intent.title, shown, arguments.intent );
             return;
         }
         var res = runCli( withFlag( args, "--yes" ) );
@@ -104,7 +108,7 @@ class ControlCenter {
             p.load();
             var st = p.state();
             if ( arguments.asJson ) println( variables.cli.envelope( "tui " & p.id(), 0, st ) );
-            else println( p.title() & ": " & ( structKeyExists( st, "attention" ) ? st.attention.len() & " things to look at" : st.rows & " rows" ) );
+            else println( p.title() & ": " & ( structKeyExists( st, "attention" ) ? st.attention.len() & " things to look at" : ( isArray( st.rows ) ? st.rows.len() : st.rows ) & " rows" ) );
             return 0;
         }
         println( "Unknown page " & arguments.pageId & ". Pages: " & pageIds().toList( ", " ) );

@@ -22,6 +22,13 @@ KEYS = {'enter': '\r', 'down': '\x1b[B', 'up': '\x1b[A', 'left': '\x1b[D', 'righ
 SCENARIO = [
     (2.4, 'wait', '01-dashboard'),
     (0.8, 'down'), (0.8, 'up'), (0.9, 'enter'), (1.6, 'wait', '02-update-plan'), (0.8, 'n'),
+    # the Apps manager: search is always on, typing searches; Discover finds catalog apps first; Updates has one button
+    (0.9, 'tab'), (1.8, 'wait', '03-apps-installed'),
+    (0.5, 'text:fire'), (1.2, 'wait', '03b-apps-search'), (0.6, 'esc'),
+    (0.8, 'down'), (0.6, 'x'), (1.6, 'wait', '03c-apps-remove-plan'), (0.8, 'n'),
+    (0.8, 'right'), (1.4, 'wait', '03d-apps-discover'), (0.5, 'text:email'), (2.2, 'wait', '03e-apps-email'),
+    (0.7, 'down'), (0.7, 'down'), (0.7, 'i'), (1.8, 'wait', '03f-apps-install-plan'), (0.8, 'n'),
+    (0.7, 'esc'), (0.5, 'esc'), (0.6, 'right'), (1.6, 'wait', '03g-apps-updates'), (0.8, 'down'), (0.6, 'u'), (1.8, 'wait', '03h-apps-update-plan'), (0.8, 'n'),
     (0.9, 'tab'), (1.6, 'wait', '03-boxlang'),
     (0.9, 'tab'), (1.6, 'wait', '04-java'), (0.8, 'down'), (0.8, 'd'), (1.6, 'wait', '05-java-default-plan'), (0.8, 'n'),
     (0.9, 'i'), (0.6, 'text:25'), (1.4, 'wait', '06-java-install-ask'), (0.7, 'esc'),

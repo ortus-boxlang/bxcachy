@@ -297,7 +297,7 @@ class WizardApp {
         var tid = textFieldId();
         if ( len( tid ) ) {
             if ( len( arguments.key ) == 1 ) { variables.answers[ tid ] = answerString( tid ) & arguments.key; return this; }
-            if ( arguments.key == "Backspace" ) { var s = answerString( tid ); variables.answers[ tid ] = len( s ) ? left( s, len( s ) - 1 ) : ""; return this; }
+            if ( arguments.key == "Backspace" ) { var s = answerString( tid ); variables.answers[ tid ] = len( s ) > 1 ? left( s, len( s ) - 1 ) : ""; return this; }
             if ( arguments.key == "Ctrl+u" ) { variables.answers[ tid ] = ""; return this; }
         }
         switch ( arguments.key ) {

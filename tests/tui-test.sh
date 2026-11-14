@@ -31,7 +31,7 @@ echo '{"host":"x","os":"Test","kernel":"1","uptime":60,"cpu":0.1,"mem":{"used":1
 BXRIG_DASHBOARD_FILE="$tmp/d.json" "$binary" tui dashboard --json | jq -e '.data.data.host == "x" and (.data.attention | length == 0)' >/dev/null || fail 'forced data'
 
 # tui list: every page with its title and icon name, one registry for the menu, the launchers and the shortcuts
-"$binary" tui list --json | jq -e '.ok and (.data.pages | length == 16) and .data.pages[0].id == "dashboard" and (.data.pages | map(select(.id == "databases")) | .[0].title == "Databases") and all(.data.pages[]; (.icon | length) > 0)' >/dev/null || fail 'tui list --json'
+"$binary" tui list --json | jq -e '.ok and (.data.pages | length == 17) and .data.pages[0].id == "dashboard" and (.data.pages | map(select(.id == "databases")) | .[0].title == "Databases") and all(.data.pages[]; (.icon | length) > 0)' >/dev/null || fail 'tui list --json'
 "$binary" tui list | grep -q '^databases  Databases$' || fail 'tui list text'
 for pg in $("$binary" tui list --json | jq -r '.data.pages[].id'); do "$binary" tui "$pg" --demo --json >/dev/null || fail "tui $pg --json from the list"; done
 [[ "$(code "$binary" tui list --json)" == 0 ]] || fail 'tui list exits 0'
@@ -39,7 +39,7 @@ for pg in $("$binary" tui list --json | jq -r '.data.pages[].id'); do "$binary" 
 [[ "$(code "$binary" tui databases --sidebar --json --demo)" == 0 ]] || fail '--sidebar is a known flag'
 [[ "$(code "$binary" tui databases --no-sidebar --json --demo)" == 0 ]] || fail '--no-sidebar is a known flag'
 # an unknown page names the pages and exits 2
-out="$("$binary" tui nope 2>&1 || true)"; [[ "$out" == *"Pages: dashboard, boxlang"* ]] || fail 'unknown page lists the pages'
+out="$("$binary" tui nope 2>&1 || true)"; [[ "$out" == *"Pages: dashboard, apps, boxlang"* ]] || fail 'unknown page lists the pages'
 
 # the sidebar in a real pseudo-terminal: the Control Center opens it, a page alone collapses it, the flags and a narrow terminal decide
 if command -v python3 >/dev/null; then

@@ -5,6 +5,7 @@ class ControlCenterPages {
     function list() {
         return [
             { id: "dashboard", title: "Dashboard", icon: "home" },
+            { id: "apps", title: "Apps", icon: "cube" },
             { id: "boxlang", title: "BoxLang", icon: "archive" },
             { id: "java", title: "Java", icon: "coffee" },
             { id: "maven", title: "Maven", icon: "wrench" },

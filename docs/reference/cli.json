@@ -952,12 +952,13 @@
      "examples": [
       "bxrig tui",
       "bxrig tui databases",
+      "bxrig tui apps",
       "bxrig tui list",
       "bxrig tui dashboard --json",
       "bxrig tui --demo"
      ],
      "mutates": false,
-     "note": "It needs a terminal. `bxrig tui` opens the Control Center with the sidebar; `bxrig tui PAGE` opens that page alone with the sidebar collapsed, like an app of its own (an unknown page exits 2). The backslash key or Ctrl+b (or a click on the left strip or the breadcrumb) opens and closes the sidebar, Tab and Shift+Tab still change page, and Left opens a collapsed sidebar. --sidebar and --no-sidebar force it either way; below 90 columns it starts collapsed. Nothing is remembered. `tui list` prints the page ids and titles. Enter on a warning shows the plan of the fix before anything changes. --json prints a page's data without a terminal; --demo shows made-up data and runs nothing. Icons are Nerd Font glyphs: on when a Nerd Font is installed, or force them with --icons=on|off or BXRIG_ICONS."
+     "note": "It needs a terminal. `bxrig tui` opens the Control Center with the sidebar; `bxrig tui PAGE` opens that page alone with the sidebar collapsed, like an app of its own (an unknown page exits 2). The backslash key or Ctrl+b (or a click on the left strip or the breadcrumb) opens and closes the sidebar, Tab and Shift+Tab still change page, and Left opens a collapsed sidebar. --sidebar and --no-sidebar force it either way; below 90 columns it starts collapsed. Nothing is remembered. `tui list` prints the page ids and titles. Enter on a warning shows the plan of the fix before anything changes. --json prints a page's data without a terminal; --demo shows made-up data and runs nothing. Icons are Nerd Font glyphs: on when a Nerd Font is installed, or force them with --icons=on|off or BXRIG_ICONS. `tui apps` is the Apps manager: Installed, Discover and Updates tabs, a search box that is always there, install and remove with a plan first (see the Apps guide)."
     },
     {
      "name": "bxtimemachine",

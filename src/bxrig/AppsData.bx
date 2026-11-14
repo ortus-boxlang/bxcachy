@@ -1,0 +1,472 @@
+// What the Apps manager knows, gathered from the machine. No drawing and no keys here: the model decides, the page draws, and a future desktop
+// app can use this class as it is.
+//   installed( all )      the apps you have: every package that owns a visible .desktop file (or every package with all = true), with source, version, size
+//   catalog()             the curated catalog as rows, searchLocal( text ) and categories()
+//   startSearch / pollSearch   repo and AUR results for a text, fetched in the background (never blocks)
+//   startUpdates / pollUpdates updates from checkupdates (and an AUR helper), fetched in the background
+//   details( row )        description, URL, dependencies and what needs it, read when a row is selected
+//   removalPreview( pkg ) what removing a package takes with it, in words
+//   demo()                made-up data for `bxrig tui apps --demo`
+// Sources named in plain words: a repo name (core, extra, cachyos...), "AUR" (community build scripts), "Flatpak", "built here" (installed from
+// somewhere else) and "web app".
+// Test switches: BXRIG_DESKTOP_DIRS (colon separated folders of .desktop files), BXRIG_CACHE_HOME (where background results go).
+// Every external command is optional: a missing pacman, checkupdates, flatpak or network gives an empty list and a sentence in state().
+class AppsData {
+    function init( cli = {}, demo = false ) {
+        variables.cli = arguments.cli;
+        variables.demo = arguments.demo;
+        variables.sys = new bxrig.TuiSys();
+        variables.repoMap = {};
+        variables.repoMapLoaded = false;
+        variables.notes = [];
+        variables.synonyms = { email: "mail", emails: "mail", browser: "browsers", editor: "editors", video: "media", music: "audio", chat: "communication", pdf: "documents" };
+        return this;
+    }
+
+    function env( name, fallback ) { var v = getSystemSetting( arguments.name, "" ); return len( v ) ? v : arguments.fallback; }
+    function home() { return getSystemSetting( "HOME", "" ); }
+    function isDemo() { return variables.demo; }
+    function notes() { return variables.notes; }
+    function note( text ) { if ( !arrayFind( variables.notes, arguments.text ) ) variables.notes.append( arguments.text ); }
+    function selfName() { return variables.sys.self(); }
+
+    // The Exec line without field codes (%f %U ...); %% is a literal percent sign.
+    function cleanExec( exec ) {
+        var t = replace( arguments.exec, "%%", chr( 1 ), "all" );
+        t = reReplace( t, "%[a-zA-Z]", "", "all" );
+        return trim( replace( reReplace( t, " +", " ", "all" ), chr( 1 ), "%", "all" ) );
+    }
+
+    function has( cmd ) { return variables.sys.has( arguments.cmd ); }
+    function cacheDir() {
+        var base = env( "BXRIG_CACHE_HOME", len( getSystemSetting( "XDG_CACHE_HOME", "" ) ) ? getSystemSetting( "XDG_CACHE_HOME", "" ) & "/bxrig" : home() & "/.cache/bxrig" );
+        return base & "/apps";
+    }
+
+    // ---- desktop entries ----
+    function desktopDirs() {
+        var d = env( "BXRIG_DESKTOP_DIRS", "" );
+        if ( len( d ) ) return listToArray( d, ":" );
+        var out = [ "/usr/share/applications", "/usr/local/share/applications", home() & "/.local/share/applications" ];
+        return out;
+    }
+
+    // The keys of the [Desktop Entry] group that matter here.
+    function parseDesktop( file ) {
+        var e = { name: "", exec: "", icon: "", type: "", hidden: false, comment: "", categories: "" };
+        try {
+            var inEntry = false;
+            for ( var raw in listToArray( fileRead( arguments.file ), chr( 10 ), true ) ) {
+                var line = trim( raw );
+                if ( left( line, 1 ) == "[" ) { inEntry = line == "[Desktop Entry]"; continue; }
+                if ( !inEntry || !find( "=", line ) ) continue;
+                var at = find( "=", line );
+                var key = left( line, at - 1 );
+                var val = mid( line, at + 1, len( line ) );
+                if ( compare( key, "Name" ) == 0 && !len( e.name ) ) e.name = val;
+                else if ( compare( key, "Exec" ) == 0 && !len( e.exec ) ) e.exec = val;
+                else if ( compare( key, "Icon" ) == 0 && !len( e.icon ) ) e.icon = val;
+                else if ( compare( key, "Comment" ) == 0 && !len( e.comment ) ) e.comment = val;
+                else if ( compare( key, "Categories" ) == 0 ) e.categories = val;
+                else if ( compare( key, "Type" ) == 0 ) e.type = val;
+                else if ( ( compare( key, "NoDisplay" ) == 0 || compare( key, "Hidden" ) == 0 ) && lCase( val ) == "true" ) e.hidden = true;
+            }
+        } catch ( any x ) {}
+        return e;
+    }
+
+    // [ { file, name, exec, icon, comment, categories } ] of the visible applications; a later folder wins for the same file name.
+    function desktopEntries() {
+        var byFile = {};
+        for ( var d in desktopDirs() ) {
+            if ( !directoryExists( d ) ) continue;
+            var names = [];
+            try { names = directoryList( d, false, "name" ); } catch ( any e ) { continue; }
+            for ( var f in names ) {
+                if ( right( f, 8 ) != ".desktop" ) continue;
+                var e = parseDesktop( d & "/" & f );
+                if ( e.hidden || e.type != "Application" || !len( e.name ) ) { structDelete( byFile, f ); continue; }
+                e.file = d & "/" & f;
+                byFile[ f ] = e;
+            }
+        }
+        var out = [];
+        for ( var k in structKeyArray( byFile ) ) out.append( byFile[ k ] );
+        return out;
+    }
+
+    // ---- pacman ----
+    function pacman( args, timeout = 60 ) { return variables.sys.run( "pacman", arguments.args, arguments.timeout ); }
+
+    // "repo pkg version [installed]" for every sync repo: pkg -> repo. One call, kept for the life of this object.
+    function repoOf( pkg ) {
+        if ( !variables.repoMapLoaded ) {
+            variables.repoMapLoaded = true;
+            var r = pacman( [ "-Sl" ], 60 );
+            if ( r.exitCode == 0 ) for ( var line in listToArray( r.output, chr( 10 ) ) ) {
+                var p = listToArray( trim( line ), " " );
+                if ( p.len() >= 2 ) variables.repoMap[ p[ 2 ] ] = p[ 1 ];
+            }
+        }
+        return structKeyExists( variables.repoMap, arguments.pkg ) ? variables.repoMap[ arguments.pkg ] : "";
+    }
+
+    // `pacman -Qi` text (blocks separated by a blank line) -> { name: { version, description, size, installed, url, depends, requiredBy } }
+    function parseQi( text ) {
+        var out = {};
+        var cur = {};
+        var key = "";
+        for ( var raw in listToArray( arguments.text, chr( 10 ), true ) ) {
+            if ( !len( trim( raw ) ) ) {
+                if ( structKeyExists( cur, "name" ) ) out[ cur.name ] = cur;
+                cur = {}; key = "";
+                continue;
+            }
+            var at = find( " : ", raw );
+            if ( at > 0 ) {
+                var k = trim( left( raw, at - 1 ) );
+                var v = trim( mid( raw, at + 3, len( raw ) ) );
+                if ( k == "Name" ) cur.name = v;
+                else if ( k == "Version" ) cur.version = v;
+                else if ( k == "Description" ) cur.description = v;
+                else if ( k == "Installed Size" ) cur.size = sizeBytes( v );
+                else if ( k == "Install Date" ) cur.installed = v;
+                else if ( k == "URL" ) cur.url = v;
+                else if ( k == "Depends On" ) cur.depends = v == "None" ? 0 : listToArray( v, " " ).len();
+                else if ( k == "Required By" ) cur.requiredBy = v == "None" ? [] : listToArray( v, " " );
+                else if ( k == "Repository" ) cur.repo = v;
+            }
+        }
+        if ( structKeyExists( cur, "name" ) ) out[ cur.name ] = cur;
+        return out;
+    }
+
+    // "1.5 MiB" -> bytes.
+    function sizeBytes( text ) {
+        var p = listToArray( trim( arguments.text ), " " );
+        if ( p.len() < 2 || !isNumeric( p[ 1 ] ) ) return 0;
+        var u = lCase( p[ 2 ] );
+        var m = left( u, 1 ) == "k" ? 1024 : ( left( u, 1 ) == "m" ? 1048576 : ( left( u, 1 ) == "g" ? 1073741824 : 1 ) );
+        return int( val( p[ 1 ] ) * m );
+    }
+
+    // `pacman -Qo` output: "/usr/share/applications/x.desktop is owned by pkg 1.2-3" -> { file: pkg }
+    function parseQo( text ) {
+        var out = {};
+        for ( var line in listToArray( arguments.text, chr( 10 ) ) ) {
+            var at = find( " is owned by ", line );
+            if ( at > 0 ) {
+                var rest = trim( mid( line, at + 13, len( line ) ) );
+                var file = trim( left( line, at - 1 ) );
+                out[ file ] = listFirst( rest, " " );
+            }
+        }
+        return out;
+    }
+
+    function sourceFor( pkg, foreign ) {
+        if ( structKeyExists( arguments.foreign, arguments.pkg ) ) return "AUR";
+        var r = repoOf( arguments.pkg );
+        return len( r ) ? r : "built here";
+    }
+
+    // ---- installed apps ----
+    // Rows: { kind: "installed", id, name, pkg, version, source, size, installed, description, exec, icon, file }. ONE `pacman -Qo` for all the desktop files.
+    function installed( all = false ) {
+        if ( variables.demo ) return demoInstalled();
+        var rows = [];
+        var pacmanOk = has( "pacman" );
+        if ( !pacmanOk ) note( "pacman was not found, so installed apps cannot be listed here." );
+        var entries = desktopEntries();
+        var foreign = {};
+        var fr = pacmanOk ? pacman( [ "-Qm" ], 30 ) : { exitCode: 1, output: "" };
+        if ( fr.exitCode == 0 ) for ( var l in listToArray( fr.output, chr( 10 ) ) ) { var fp = listToArray( trim( l ), " " ); if ( fp.len() ) foreign[ fp[ 1 ] ] = true; }
+        var owner = {};
+        if ( pacmanOk && entries.len() ) {
+            var args = [ "-Qo" ];
+            for ( var e in entries ) args.append( e.file );
+            var qo = pacman( args, 60 );
+            owner = parseQo( qo.output );
+        }
+        var pkgs = [];
+        for ( var e2 in entries ) if ( structKeyExists( owner, e2.file ) && !arrayFind( pkgs, owner[ e2.file ] ) ) pkgs.append( owner[ e2.file ] );
+        var qi = {};
+        if ( pacmanOk && pkgs.len() ) { var qa = [ "-Qi" ]; for ( var p in pkgs ) qa.append( p ); qi = parseQi( pacman( qa, 60 ).output ); }
+        // one row per package: the launcher named after the package wins, otherwise the one with the shortest file name
+        var best = {};
+        var order = [];
+        arraySort( entries, function( a, b ) { return compare( a.file, b.file ); } );
+        for ( var e3 in entries ) {
+            var pk = structKeyExists( owner, e3.file ) ? owner[ e3.file ] : "";
+            var key = len( pk ) ? pk : e3.file;
+            var base = replace( getFileFromPath( e3.file ), ".desktop", "" );
+            e3.rank = base == pk ? 0 : len( base ) + 1;
+            if ( !structKeyExists( best, key ) ) { best[ key ] = e3; order.append( key ); }
+            else if ( e3.rank < best[ key ].rank ) best[ key ] = e3;
+        }
+        for ( var ky in order ) {
+            var e4 = best[ ky ];
+            var pk2 = structKeyExists( owner, e4.file ) ? owner[ e4.file ] : "";
+            var d = len( pk2 ) && structKeyExists( qi, pk2 ) ? qi[ pk2 ] : {};
+            rows.append( {
+                kind: "installed", id: pk2, name: e4.name, pkg: pk2, version: d.version ?: "", source: len( pk2 ) ? sourceFor( pk2, foreign ) : "built here", size: d.size ?: 0,
+                installed: d.installed ?: "", description: len( e4.comment ) ? e4.comment : ( d.description ?: "" ), exec: e4.exec, icon: e4.icon, file: e4.file
+            } );
+        }
+        if ( arguments.all && pacmanOk ) {
+            var shown = {};
+            for ( var r in rows ) if ( len( r.pkg ) ) shown[ r.pkg ] = true;
+            var all2 = pacman( [ "-Q" ], 30 );
+            for ( var ln in listToArray( all2.output, chr( 10 ) ) ) {
+                var pp = listToArray( trim( ln ), " " );
+                if ( pp.len() < 2 || structKeyExists( shown, pp[ 1 ] ) ) continue;
+                rows.append( { kind: "installed", id: pp[ 1 ], name: pp[ 1 ], pkg: pp[ 1 ], version: pp[ 2 ], source: sourceFor( pp[ 1 ], foreign ), size: 0, installed: "", description: "", exec: "", icon: "", file: "" } );
+            }
+        }
+        for ( var f in flatpakRows() ) rows.append( f );
+        return rows;
+    }
+
+    // Every installed package name, one `pacman -Qq` call: { name: true }.
+    function installedNames() {
+        var out = {};
+        if ( variables.demo ) { for ( var r in demoInstalled() ) out[ r.pkg ] = true; out.thunderbird = true; return out; }
+        if ( !has( "pacman" ) ) return out;
+        for ( var l in listToArray( pacman( [ "-Qq" ], 30 ).output, chr( 10 ) ) ) if ( len( trim( l ) ) ) out[ trim( l ) ] = true;
+        return out;
+    }
+
+    // Flatpak apps, only when flatpak exists.
+    function flatpakRows() {
+        var out = [];
+        if ( !has( "flatpak" ) ) return out;
+        var r = variables.sys.run( "flatpak", [ "list", "--app", "--columns=application,name,version,size" ], 30 );
+        if ( r.exitCode != 0 ) return out;
+        for ( var line in listToArray( r.output, chr( 10 ) ) ) {
+            var p = listToArray( line, chr( 9 ) );
+            if ( p.len() < 2 ) continue;
+            out.append( { kind: "installed", id: p[ 1 ], name: p[ 2 ], pkg: "", flatpak: p[ 1 ], version: p.len() >= 3 ? p[ 3 ] : "", source: "Flatpak", size: p.len() >= 4 ? sizeBytes( p[ 4 ] ) : 0, installed: "", description: "", exec: "flatpak run " & p[ 1 ], icon: "", file: "" } );
+        }
+        return out;
+    }
+
+    // ---- the catalog ----
+    function catalog() {
+        var rows = [];
+        var data = new bxrig.Catalog().load();
+        var groupTitle = {};
+        for ( var g in data.groups ) groupTitle[ g.id ] = g.title;
+        for ( var a in data.apps ) {
+            var targets = a.targets ?: [];
+            rows.append( {
+                kind: "app", id: a.id, name: a.name, pkg: targets.len() ? targets[ 1 ] : "", description: a.description, source: a.source == "pacman" ? ( a.repo ?: "repo" ) : ( a.source == "aur" ? "AUR" : ( a.source == "web" ? "web app" : ( a.source == "pkgbuild" ? "built here" : a.source ) ) ),
+                group: a.group, groupTitle: groupTitle[ a.group ] ?: a.group, category: a.category, appKind: a.kind, homepage: a.homepage ?: "", catalog: true, aur: a.source == "aur"
+            } );
+        }
+        return rows;
+    }
+
+    // Categories of the catalog: [ { key, name, group, count, blurb } ] in the catalog's own order. Web apps are left out of the counts (they are not installed with a package).
+    function categories( rows ) {
+        var data = new bxrig.Catalog().load();
+        var blurb = {};
+        for ( var g in data.groups ) blurb[ g.id ] = g.blurb;
+        var counts = {};
+        for ( var r in arguments.rows ) counts[ r.group & "/" & r.category ] = ( counts[ r.group & "/" & r.category ] ?: 0 ) + 1;
+        var out = [];
+        var gtitle = {};
+        for ( var g2 in data.groups ) gtitle[ g2.id ] = g2.title;
+        var cats = duplicate( data.categories );
+        var gorder = {};
+        for ( var g3 in data.groups ) gorder[ g3.id ] = g3.order;
+        arraySort( cats, function( a, b ) { var d = gorder[ a.group ] - gorder[ b.group ]; return d != 0 ? d : a.order - b.order; } );
+        for ( var c in cats ) {
+            var key = c.group & "/" & c.title;
+            if ( !structKeyExists( counts, key ) ) continue;
+            out.append( { kind: "category", key: key, group: c.group, name: c.title, groupTitle: gtitle[ c.group ], title: c.title, count: counts[ key ], description: blurb[ c.group ], source: "" } );
+        }
+        return out;
+    }
+
+    // Catalog rows matching every word of the text (id, name, description, category, group); a few words also match their usual synonym ("email" finds mail).
+    function searchLocal( rows, text ) {
+        var words = listToArray( lCase( trim( arguments.text ) ), " " );
+        var out = [];
+        if ( !words.len() ) return out;
+        for ( var r in arguments.rows ) {
+            var hay = lCase( ( r.id ?: "" ) & " " & ( r.name ?: "" ) & " " & ( r.description ?: "" ) & " " & ( r.category ?: "" ) & " " & ( r.groupTitle ?: "" ) & " " & ( r.pkg ?: "" ) );
+            var ok = true;
+            for ( var w in words ) {
+                var alt = structKeyExists( variables.synonyms, w ) ? variables.synonyms[ w ] : "";
+                if ( !find( w, hay ) && !( len( alt ) && find( alt, hay ) ) ) { ok = false; break; }
+            }
+            if ( ok ) {
+                var score = 0;
+                var nm = lCase( r.name ?: "" );
+                for ( var w2 in words ) { if ( nm == w2 ) score += 100; else if ( find( w2, nm ) == 1 ) score += 50; else if ( find( w2, nm ) ) score += 25; if ( find( w2, lCase( r.category ?: "" ) ) ) score += 10; }
+                r.score = score;
+                out.append( r );
+            }
+        }
+        arraySort( out, function( a, b ) { return b.score != a.score ? b.score - a.score : compareNoCase( a.name, b.name ); } );
+        return out;
+    }
+
+    // ---- background work ----
+    // A detached shell script that writes OUT when it is done (the file appears only when complete). Nothing from the arguments is part of the script text.
+    function detached( script, args ) {
+        var shell = "nohup sh -c " & chr( 34 ) & "$1" & chr( 34 ) & " _";
+        for ( var j = 2; j <= arguments.args.len() + 1; j++ ) shell &= " " & chr( 34 ) & "$" & j & chr( 34 );
+        shell &= " >/dev/null 2>&1 </dev/null &";
+        var argv = [ "-c", shell, "_", arguments.script ];
+        for ( var a in arguments.args ) argv.append( a );
+        try { systemExecute( "sh", argv, 10, false ); return true; } catch ( any e ) { return false; }
+    }
+
+    function searchFile( text ) { return cacheDir() & "/search-" & lCase( hash( lCase( arguments.text ) ) ); }
+
+    // Starts `bxrig pkg search TEXT` in the background. false when it was already started or the text is unusable.
+    function startSearch( text ) {
+        if ( variables.demo ) return false;
+        var t = trim( arguments.text );
+        if ( !reFind( "^[A-Za-z0-9._+ -]{2,60}$", t ) ) return false;
+        var f = searchFile( t );
+        if ( fileExists( f & ".json" ) || fileExists( f & ".run" ) ) return false;
+        directoryCreate( cacheDir(), true, true );
+        var script = "out=$1; self=$2; text=$3; limit=$4; : > ^$out.run^; ^$self^ pkg search ^$text^ --limit=^$limit^ --json > ^$out.tmp^ 2>/dev/null; mv -f ^$out.tmp^ ^$out.json^; rm -f ^$out.run^";
+        return detached( replace( script, "^", chr( 34 ), "all" ), [ f, variables.sys.self(), t, "24" ] );
+    }
+
+    // The rows of a finished search: { done: bool, rows: [] }.
+    function pollSearch( text ) {
+        if ( variables.demo ) return demoSearch( arguments.text );
+        var f = searchFile( trim( arguments.text ) ) & ".json";
+        if ( !fileExists( f ) ) return { done: false, rows: [] };
+        var rows = [];
+        try {
+            var j = jsonDeserialize( fileRead( f ) );
+            var results = isStruct( j ) && structKeyExists( j, "data" ) && structKeyExists( j.data, "results" ) ? j.data.results : [];
+            for ( var x in results ) rows.append( {
+                kind: "package", id: x.name, name: x.name, pkg: x.name, version: x.version ?: "", description: x.description ?: "", source: ( x.source ?: "repo" ) == "aur" ? "AUR" : ( len( x.repo ?: "" ) ? x.repo : "repo" ),
+                installed: x.installed ?: false, aur: ( x.source ?: "" ) == "aur", votes: x.votes ?: 0
+            } );
+        } catch ( any e ) { return { done: true, rows: [], error: "The package search answered something unexpected." }; }
+        return { done: true, rows: rows };
+    }
+
+    function updatesFile() { return cacheDir() & "/updates"; }
+
+    // Starts the update check in the background (checkupdates syncs a temporary copy of the databases, so it can take a few seconds).
+    function startUpdates() {
+        if ( variables.demo ) return false;
+        var f = updatesFile();
+        if ( fileExists( f & ".run" ) ) return false;
+        directoryCreate( cacheDir(), true, true );
+        deleteFile( f & ".txt" );
+        var script = "out=$1; : > ^$out.run^; { if command -v checkupdates >/dev/null 2>&1; then checkupdates 2>/dev/null | sed 's/.*/repo &/'; rc=$?; else echo NOCHECKUPDATES; fi; for h in yay paru; do if command -v $h >/dev/null 2>&1; then $h -Qua 2>/dev/null | sed 's/.*/aur &/'; break; fi; done; } > ^$out.tmp^; mv -f ^$out.tmp^ ^$out.txt^; rm -f ^$out.run^";
+        return detached( replace( script, "^", chr( 34 ), "all" ), [ f ] );
+    }
+
+    function deleteFile( f ) { try { if ( fileExists( arguments.f ) ) fileDelete( arguments.f ); } catch ( any e ) {} }
+
+    // { done, rows, state } with rows { kind: "update", id, name, pkg, version, newVersion, source }.
+    function pollUpdates() {
+        if ( variables.demo ) return demoUpdates();
+        var f = updatesFile() & ".txt";
+        if ( !fileExists( f ) ) return { done: false, rows: [], missing: false };
+        return parseUpdates( fileRead( f ) );
+    }
+
+    // Lines "repo NAME OLD -> NEW" or "aur NAME OLD -> NEW"; NOCHECKUPDATES when the tool is missing.
+    function parseUpdates( text ) {
+        var rows = [];
+        var missing = false;
+        for ( var line in listToArray( arguments.text, chr( 10 ) ) ) {
+            var t = trim( line );
+            if ( t == "NOCHECKUPDATES" ) { missing = true; continue; }
+            var p = listToArray( t, " " );
+            if ( p.len() < 5 || p[ 4 ] != "->" ) continue;
+            var fromAur = p[ 1 ] == "aur";
+            rows.append( { kind: "update", id: p[ 2 ], name: p[ 2 ], pkg: p[ 2 ], version: p[ 3 ], newVersion: p[ 5 ], source: fromAur ? "AUR" : ( len( repoOf( p[ 2 ] ) ) ? repoOf( p[ 2 ] ) : "repo" ), description: "" } );
+        }
+        return { done: true, rows: rows, missing: missing };
+    }
+
+    // ---- selected row ----
+    // Detail for the preview: { description, url, depends, requiredBy, size, installed, version }; {} when nothing is known. One pacman call.
+    function details( row ) {
+        if ( variables.demo ) return demoDetails( arguments.row );
+        var r = arguments.row;
+        var pkg = r.pkg ?: "";
+        if ( !len( pkg ) || !reFind( "^[a-z0-9@._+-]{1,100}$", pkg ) || !has( "pacman" ) ) return {};
+        var q = pacman( [ r.kind == "installed" || r.kind == "update" ? "-Qi" : "-Si", pkg ], 20 );
+        if ( q.exitCode != 0 ) return {};
+        var parsed = parseQi( q.output );
+        return structKeyExists( parsed, pkg ) ? parsed[ pkg ] : {};
+    }
+
+    // What removing a package does, in words: { lines: [], dependents: n, unused: n }. Reads `pacman -Qi` and `pacman -Rns --print`.
+    function removalPreview( pkg ) {
+        var out = { lines: [], dependents: 0, unused: 0, blocked: false };
+        var p = arguments.pkg;
+        if ( variables.demo ) {
+            out.unused = 3;
+            out.lines = [ "This also removes 3 unused dependencies that only " & p & " needed.", "Your files and settings in your home folder stay." ];
+            return out;
+        }
+        if ( !reFind( "^[a-z0-9@._+-]{1,100}$", p ) || !has( "pacman" ) ) return out;
+        var qi = parseQi( pacman( [ "-Qi", p ], 20 ).output );
+        if ( structKeyExists( qi, p ) && structKeyExists( qi[ p ], "requiredBy" ) ) out.dependents = qi[ p ].requiredBy.len();
+        var rp = pacman( [ "-Rns", "--print", "--print-format", "%n", p ], 20 );
+        if ( rp.exitCode == 0 ) {
+            var names = [];
+            for ( var l in listToArray( rp.output, chr( 10 ) ) ) if ( len( trim( l ) ) && trim( l ) != p ) names.append( trim( l ) );
+            out.unused = names.len();
+        }
+        if ( out.dependents > 0 ) {
+            out.blocked = true;
+            out.lines.append( out.dependents & " other " & ( out.dependents == 1 ? "package needs" : "packages need" ) & " " & p & " (" & left( qi[ p ].requiredBy.toList( ", " ), 80 ) & "). Removing it will be refused unless those go first." );
+        }
+        if ( out.unused > 0 ) out.lines.append( "This also removes " & out.unused & " unused " & ( out.unused == 1 ? "dependency" : "dependencies" ) & " that only " & p & " needed." );
+        else out.lines.append( "Nothing else goes with it." );
+        out.lines.append( "Your files and settings in your home folder stay." );
+        return out;
+    }
+
+    // ---- demo data ----
+    function demoInstalled() {
+        var d = function( name, pkg, version, source, size, desc ) { return { kind: "installed", id: pkg, name: name, pkg: pkg, version: version, source: source, size: size, installed: "2026-10-02", description: desc, exec: pkg, icon: "", file: "" }; };
+        return [
+            d( "Firefox", "firefox", "133.0-1", "extra", 285000000, "Fast, private and safe web browser" ), d( "Thunderbird", "thunderbird", "128.5.0-1", "extra", 232000000, "Standalone mail and news reader" ),
+            d( "Ghostty", "ghostty", "1.0.1-1", "extra", 31000000, "A fast, feature-rich, GPU-accelerated terminal" ), d( "VLC", "vlc", "3.0.21-2", "extra", 98000000, "Multi-platform multimedia player and framework" ),
+            d( "Visual Studio Code", "visual-studio-code-bin", "1.95.3-1", "AUR", 380000000, "Editor for building and debugging modern web and cloud applications" ), d( "Slack", "slack-desktop", "4.41.97-1", "AUR", 330000000, "Team communication" ),
+            d( "Obsidian", "obsidian", "1.7.7-1", "cachyos", 210000000, "A powerful knowledge base on top of plain text files" ), d( "Strata", "strata", "0.9.2-1", "built here", 42000000, "A friendly file manager" )
+        ];
+    }
+
+    function demoSearch( text ) {
+        var all = [
+            { kind: "package", id: "thunderbird", name: "thunderbird", pkg: "thunderbird", version: "128.5.0-1", description: "Standalone mail and news reader from mozilla.org", source: "extra", installed: true, aur: false, votes: 0 },
+            { kind: "package", id: "evolution", name: "evolution", pkg: "evolution", version: "3.54.1-1", description: "Manage your email, contacts and schedule", source: "extra", installed: false, aur: false, votes: 0 },
+            { kind: "package", id: "geary", name: "geary", pkg: "geary", version: "46.0-3", description: "A lightweight email client for GNOME", source: "extra", installed: false, aur: false, votes: 0 },
+            { kind: "package", id: "kmail", name: "kmail", pkg: "kmail", version: "24.08.3-1", description: "KDE mail client", source: "extra", installed: false, aur: false, votes: 0 },
+            { kind: "package", id: "mailspring", name: "mailspring", pkg: "mailspring", version: "1.14.0-1", description: "A beautiful, fast and maintained fork of Nylas Mail", source: "AUR", installed: false, aur: true, votes: 120 }
+        ];
+        var out = [];
+        for ( var r in all ) if ( find( lCase( trim( arguments.text ) ), lCase( r.name & " " & r.description ) ) || find( "mail", lCase( arguments.text ) ) && find( "mail", lCase( r.description & r.name ) ) ) out.append( r );
+        return { done: true, rows: out };
+    }
+
+    function demoUpdates() {
+        return { done: true, missing: false, rows: [
+            { kind: "update", id: "firefox", name: "firefox", pkg: "firefox", version: "133.0-1", newVersion: "133.0.3-1", source: "extra", description: "" },
+            { kind: "update", id: "linux-cachyos", name: "linux-cachyos", pkg: "linux-cachyos", version: "6.18.3-2", newVersion: "6.18.4-1", source: "cachyos", description: "" },
+            { kind: "update", id: "visual-studio-code-bin", name: "visual-studio-code-bin", pkg: "visual-studio-code-bin", version: "1.95.3-1", newVersion: "1.96.0-1", source: "AUR", description: "" }
+        ] };
+    }
+
+    function demoDetails( row ) {
+        if ( ( arguments.row.kind ?: "" ) != "installed" && !( arguments.row.installed ?: false ) ) return {};
+        return { version: arguments.row.version ?: "", description: arguments.row.description ?: "", depends: 14, requiredBy: [], size: arguments.row.size ?: 52000000, installed: "2026-10-02" };
+    }
+}

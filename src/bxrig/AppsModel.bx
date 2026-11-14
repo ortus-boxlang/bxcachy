@@ -1,0 +1,437 @@
+// The model of the Apps manager page: tabs, the search box, the three lists, the selected row and what each key does. Pure: no drawing, and the only
+// outside world is the AppsData it is given (the tests give it fake commands and fake .desktop files).
+//   m = new bxrig.AppsModel( data )     m.load()     m.poll( tick )  (the page calls it on every paint: background results, the search delay, details)
+//   m.onKey( key ) -> intent ( {} | { action: "cli" | "exec" | "show", ... } | { action: "quit" } | { action: "sidebar" } )     m.act( hit ) -> intent
+//   Tabs: 1 Installed, 2 Discover, 3 Updates.  Focus: "search" (typing goes into the search box, the start state) or "list" (keys are actions).
+//   Installed shows the apps that have a launcher, the packages come with `all`. Discover with no text shows the catalog categories, with text it shows the
+//   catalog matches first, then the repository and AUR matches that arrive in the background. Updates lists what checkupdates found.
+class AppsModel {
+    function init( data ) {
+        variables.data = arguments.data;
+        variables.tab = 1;
+        variables.focus = "search";
+        variables.queries = [ "", "", "" ];
+        variables.clock = 0;
+        variables.queryTick = 0;
+        variables.searchedFor = "";
+        variables.searching = false;
+        variables.searchError = "";
+        variables.searchRows = [];
+        variables.installedRows = [];
+        variables.catalogRows = [];
+        variables.cats = [];
+        variables.installedSet = {};
+        variables.updates = { done: false, rows: [], missing: false };
+        variables.updatesChecked = false;
+        variables.sortBy = "name";
+        variables.srcFilter = "";
+        variables.catView = "";
+        variables.loaded = false;
+        variables.lists = [ new bxrig.TuiList( [] ), new bxrig.TuiList( [] ), new bxrig.TuiList( [] ) ];
+        variables.selKey = "";
+        variables.selTick = 0;
+        variables.detail = {};
+        variables.detailFor = "";
+        variables.detailCache = {};
+        variables.rowsShown = 8;
+        variables.message = "";
+        return this;
+    }
+
+    // ---- loading ----
+    function load() {
+        variables.installedRows = variables.data.installed( false );
+        variables.catalogRows = variables.data.catalog();
+        variables.cats = variables.data.categories( variables.catalogRows );
+        variables.installedSet = variables.data.installedNames();
+        variables.updatesChecked = false;
+        variables.loaded = true;
+        startUpdateCheck();
+        rebuild();
+        return this;
+    }
+
+    function startUpdateCheck() {
+        variables.updatesChecked = true;
+        variables.data.startUpdates();
+        variables.updates = variables.data.pollUpdates();
+    }
+
+    function isLoaded() { return variables.loaded; }
+    function data() { return variables.data; }
+    function tab() { return variables.tab; }
+    function focus() { return variables.focus; }
+    function query() { return variables.queries[ variables.tab ]; }
+    function message() { return variables.message; }
+    function searching() { return variables.searching; }
+    function searchError() { return variables.searchError; }
+    function setRowsShown( n ) { variables.rowsShown = max( 1, arguments.n ); }
+    function sortBy() { return variables.sortBy; }
+    function sourceFilter() { return variables.srcFilter; }
+    function categoryView() { return variables.catView; }
+    function updatesDone() { return variables.updates.done; }
+    function updatesMissing() { return variables.updates.missing; }
+    function installedCount() { return variables.installedRows.len(); }
+    function updateCount() { return variables.updates.rows.len(); }
+    function notes() { return variables.data.notes(); }
+    function list() { return variables.lists[ variables.tab ]; }
+    function rows() { return list().items(); }
+    function selected() { return list().selected(); }
+    function hasSelection() { return !isSimpleValue( selected() ); }
+
+    function tabNames() {
+        return [ "Installed (" & variables.installedRows.len() & ")", "Discover", "Updates" & ( variables.updates.done ? " (" & variables.updates.rows.len() & ")" : " (...)" ) ];
+    }
+
+    function goTab( n ) {
+        var was = variables.tab;
+        var carry = query();
+        variables.tab = max( 1, min( 3, arguments.n ) );
+        // the text you typed follows you between Installed and Discover (both look for an app); Updates keeps its own
+        if ( was != variables.tab && was < 3 && variables.tab < 3 && !len( query() ) ) { variables.queries[ variables.tab ] = carry; variables.queryTick = variables.clock; }
+        variables.catView = "";
+        rebuild();
+        return this;
+    }
+
+    // ---- building the three lists ----
+    function words() {
+        var out = [];
+        for ( var w in listToArray( lCase( trim( query() ) ), " " ) ) out.append( w );
+        return out;
+    }
+
+    function matches( row, ws ) {
+        if ( !arguments.ws.len() ) return true;
+        var hay = lCase( ( arguments.row.name ?: "" ) & " " & ( arguments.row.pkg ?: "" ) & " " & ( arguments.row.description ?: "" ) & " " & ( arguments.row.source ?: "" ) );
+        for ( var w in arguments.ws ) if ( !find( w, hay ) ) return false;
+        return true;
+    }
+
+    function sources() {
+        var seen = {};
+        var out = [];
+        for ( var r in variables.installedRows ) if ( !structKeyExists( seen, r.source ) ) { seen[ r.source ] = true; out.append( r.source ); }
+        arraySort( out, "textnocase" );
+        return out;
+    }
+
+    function installedItems() {
+        var ws = words();
+        var out = [];
+        for ( var r in variables.installedRows ) {
+            if ( len( variables.srcFilter ) && compare( r.source, variables.srcFilter ) != 0 ) continue;
+            if ( matches( r, ws ) ) out.append( r );
+        }
+        var by = variables.sortBy;
+        arraySort( out, function( a, b ) {
+            if ( by == "size" && a.size != b.size ) return b.size - a.size;
+            if ( by == "source" && compareNoCase( a.source, b.source ) != 0 ) return compareNoCase( a.source, b.source );
+            return compareNoCase( a.name, b.name );
+        } );
+        return out;
+    }
+
+    function mark( row ) {
+        var r = arguments.row;
+        r.installed = len( r.pkg ?: "" ) && structKeyExists( variables.installedSet, r.pkg );
+        return r;
+    }
+
+    function discoverItems() {
+        var q = trim( query() );
+        if ( !len( q ) ) {
+            if ( !len( variables.catView ) ) return variables.cats;
+            var inCat = [];
+            for ( var r in variables.catalogRows ) if ( ( r.group & "/" & r.category ) == variables.catView ) inCat.append( mark( r ) );
+            arraySort( inCat, function( a, b ) { return compareNoCase( a.name, b.name ); } );
+            return inCat;
+        }
+        var out = [];
+        var seenPkg = {};
+        for ( var l in variables.data.searchLocal( variables.catalogRows, q ) ) {
+            out.append( mark( l ) );
+            if ( len( l.pkg ?: "" ) ) seenPkg[ l.pkg ] = true;
+        }
+        if ( variables.searchedFor == q ) for ( var s in variables.searchRows ) {
+            if ( structKeyExists( seenPkg, s.pkg ) ) continue;
+            s.installed = s.installed || structKeyExists( variables.installedSet, s.pkg );
+            out.append( s );
+        }
+        return out;
+    }
+
+    function updateItems() {
+        var ws = words();
+        var out = [];
+        for ( var r in variables.updates.rows ) if ( matches( r, ws ) ) out.append( r );
+        return out;
+    }
+
+    function rebuild() {
+        var items = variables.tab == 1 ? installedItems() : ( variables.tab == 2 ? discoverItems() : updateItems() );
+        variables.lists[ variables.tab ].setItems( items );
+        variables.selKey = "";
+    }
+
+    // ---- the clock: delays and background results ----
+    function setQuery( text ) {
+        if ( arguments.text == query() ) return;
+        variables.queries[ variables.tab ] = arguments.text;
+        variables.queryTick = variables.clock;
+        variables.searchError = "";
+        rebuild();
+    }
+
+    function poll( tick ) {
+        variables.clock = arguments.tick;
+        var q = trim( query() );
+        var changed = false;
+        if ( variables.tab == 2 && len( q ) >= 2 && q != variables.searchedFor && variables.clock - variables.queryTick >= 8 ) {
+            variables.searchedFor = q;
+            variables.searchRows = [];
+            variables.searching = true;
+            variables.data.startSearch( q );
+        }
+        if ( variables.searching && variables.searchedFor == q ) {
+            var r = variables.data.pollSearch( q );
+            if ( r.done ) {
+                variables.searching = false;
+                variables.searchRows = r.rows;
+                variables.searchError = r.error ?: "";
+                changed = true;
+            }
+        } else if ( variables.searching ) variables.searching = false;
+        if ( !variables.updates.done && variables.updatesChecked && variables.clock mod 10 == 0 ) {
+            var u = variables.data.pollUpdates();
+            if ( u.done ) { variables.updates = u; changed = variables.tab == 3 || changed; }
+        }
+        if ( changed ) rebuild();
+        var sel = selected();
+        var key = isSimpleValue( sel ) ? "" : ( sel.kind & ":" & ( sel.id ?: sel.key ?: "" ) );
+        if ( key != variables.selKey ) { variables.selKey = key; variables.selTick = variables.clock; variables.detail = {}; variables.detailFor = ""; }
+        else if ( len( key ) && variables.detailFor != key && variables.clock - variables.selTick >= 3 ) {
+            variables.detailFor = key;
+            if ( !structKeyExists( variables.detailCache, key ) ) variables.detailCache[ key ] = ( sel.kind == "category" ) ? {} : variables.data.details( sel );
+            variables.detail = variables.detailCache[ key ];
+        }
+    }
+
+    // For output without a screen (`tui apps --json`): waits up to `seconds` for the update check to finish.
+    function settle( seconds ) {
+        var tries = int( arguments.seconds * 5 );
+        while ( !variables.updates.done && variables.updatesChecked && tries > 0 ) {
+            sleep( 200 );
+            var u = variables.data.pollUpdates();
+            if ( u.done ) { variables.updates = u; rebuild(); }
+            tries = tries - 1;
+        }
+        return this;
+    }
+
+    // Details of the selected row once they are read ({} until then).
+    function detail() { return variables.detail; }
+
+    // ---- what a row can do ----
+    // [ { key, label, intent } ] for a row.
+    function actionsFor( row ) {
+        var r = arguments.row;
+        var out = [];
+        if ( isSimpleValue( r ) ) return out;
+        var self = variables.data.selfName();
+        if ( r.kind == "category" ) return [ { key: "Enter", label: "browse", intent: { action: "apps-browse" } } ];
+        if ( r.kind == "update" ) {
+            out.append( { key: "u", label: "update all", intent: updateAllIntent() } );
+            out.append( { key: "n", label: "info", intent: { action: "show", title: "Info: " & r.name, args: [ "pkg", "info", r.pkg ] } } );
+            return out;
+        }
+        if ( r.kind == "installed" ) {
+            if ( len( r.exec ?: "" ) ) out.append( { key: "o", label: "open", intent: openIntent( r ) } );
+            out.append( { key: "x", label: "remove", intent: removeIntent( r ) } );
+            if ( len( r.pkg ?: "" ) ) out.append( { key: "n", label: "info", intent: { action: "show", title: "Info: " & r.name, args: [ "pkg", "info", r.pkg ] } } );
+            return out;
+        }
+        // a catalog app or a package from the repositories or the AUR
+        if ( r.installed ?: false ) {
+            out.append( { key: "x", label: "remove", intent: removeIntent( r ) } );
+        } else {
+            out.append( { key: "i", label: "install", intent: installIntent( r ) } );
+        }
+        if ( len( r.pkg ?: "" ) && ( r.appKind ?: "" ) != "web" ) out.append( { key: "n", label: "info", intent: { action: "show", title: "Info: " & r.name, args: [ "pkg", "info", r.pkg ] } } );
+        return out;
+    }
+
+    function installIntent( r ) {
+        var row = arguments.r;
+        var words = [ "Install " & row.name & ( ( row.source ?: "" ) == "AUR" ? " from the AUR (build scripts shared by the community, so look before you trust)." : ( ( row.source ?: "" ) == "web app" ? " as a web app: it opens in its own window." : ( len( row.source ?: "" ) ? " from the " & row.source & " repository." : "." ) ) ), "It is added to your apps. Nothing else you have is touched." ];
+        if ( row.catalog ?: false ) return { action: "cli", title: "Install " & row.name, args: [ "install", row.id ], preface: words };
+        var a = [ "pkg", "install", row.pkg ];
+        if ( row.aur ?: false ) a.append( "--aur" );
+        return { action: "cli", title: "Install " & row.name, args: a, preface: words };
+    }
+
+    function updateAllIntent() {
+        return { action: "cli", title: "Update everything", args: [ "system", "update" ], preface: [ "Update every app and the system together.", "Arch updates everything at once on purpose: updating one app alone can break the others." ] };
+    }
+
+    function openIntent( r ) {
+        var row = arguments.r;
+        return {
+            action: "exec", title: "Open " & row.name, argv: [ "sh", "-c", "nohup sh -c " & chr( 34 ) & "$1" & chr( 34 ) & " >/dev/null 2>&1 </dev/null &", "_", variables.data.cleanExec( row.exec ) ],
+            plan: [ row.name & " opens in its own window.", "Closing this screen is not needed." ]
+        };
+    }
+
+    // Removing says in plain words what goes with the app. Flatpaks use flatpak; everything else is `bxrig pkg remove`.
+    function removeIntent( r ) {
+        var row = arguments.r;
+        var plan = [];
+        if ( len( row.flatpak ?: "" ) ) {
+            plan.append( "Remove " & row.name & " (Flatpak)." );
+            plan.append( "Its Flatpak data stays in your home folder." );
+            return { action: "exec", title: "Remove " & row.name, argv: [ "flatpak", "uninstall", "-y", row.flatpak ], plan: plan };
+        }
+        var pk = len( row.pkg ?: "" ) ? row.pkg : ( row.id ?: "" );
+        plan.append( "Remove " & row.name & ( len( row.source ?: "" ) ? " (from " & row.source & ")" : "" ) & "." );
+        var pv = variables.data.removalPreview( pk );
+        for ( var l in pv.lines ) plan.append( l );
+        plan.append( "" );
+        plan.append( "Press y to remove it, n to keep it." );
+        return { action: "exec", title: "Remove " & row.name, argv: [ variables.data.selfName(), "pkg", "remove", pk, "--yes" ], plan: plan };
+    }
+
+    // The intent of a key on a row, by the action's key letter.
+    function intentFor( key ) {
+        var row = selected();
+        for ( var a in actionsFor( row ) ) if ( compare( a.key, arguments.key ) == 0 ) return a.intent;
+        return {};
+    }
+
+    // The main thing Enter does on a row.
+    function primary() {
+        var row = selected();
+        var acts = actionsFor( row );
+        if ( !acts.len() ) return {};
+        return acts[ 1 ].intent;
+    }
+
+    // ---- keys ----
+    // Named keys (Enter, Up, Ctrl+b...) are longer than one character, so a one character key is text.
+    function printable( k ) { return arguments.k == "Space" || len( arguments.k ) == 1; }
+
+    function browse() {
+        var sel = selected();
+        if ( !isSimpleValue( sel ) && sel.kind == "category" ) { variables.catView = sel.key; rebuild(); list().home(); }
+        return {};
+    }
+
+    function back() {
+        if ( variables.tab == 2 && len( variables.catView ) ) { variables.catView = ""; rebuild(); return true; }
+        return false;
+    }
+
+    function typeChar( ch ) {
+        var t = arguments.ch == "Space" ? " " : arguments.ch;
+        setQuery( query() & t );
+        variables.focus = "search";
+        list().home();
+    }
+
+    function onKey( key ) {
+        var k = arguments.key;
+        variables.message = "";
+        if ( k == "Left" ) { goTab( variables.tab - 1 ); return {}; }
+        if ( k == "Right" ) { goTab( variables.tab + 1 ); return {}; }
+        if ( variables.focus == "search" ) {
+            if ( k == "Escape" ) {
+                if ( len( query() ) ) { setQuery( "" ); return {}; }
+                if ( back() ) return {};
+                return { action: "quit" };
+            }
+            if ( k == "Backspace" ) { if ( len( query() ) ) setQuery( len( query() ) == 1 ? "" : left( query(), len( query() ) - 1 ) ); return {}; }
+            if ( k == "Down" || k == "Enter" ) { if ( rows().len() ) variables.focus = "list"; return {}; }
+            if ( k == "PageDown" ) { if ( rows().len() ) variables.focus = "list"; list().page( 1, variables.rowsShown ); return {}; }
+            if ( printable( k ) ) { typeChar( k ); return {}; }
+            return {};
+        }
+        // list focus
+        if ( k == "Up" || compare( k, "k" ) == 0 ) { if ( list().cursor() <= 1 ) variables.focus = "search"; else list().move( -1 ); return {}; }
+        if ( k == "Down" || compare( k, "j" ) == 0 ) { list().move( 1 ); return {}; }
+        if ( k == "PageUp" ) { list().page( -1, variables.rowsShown ); return {}; }
+        if ( k == "PageDown" ) { list().page( 1, variables.rowsShown ); return {}; }
+        if ( k == "Home" ) { list().home(); return {}; }
+        if ( k == "End" ) { list().end(); return {}; }
+        if ( k == "Enter" ) {
+            var sel = selected();
+            if ( !isSimpleValue( sel ) && sel.kind == "category" ) return browse();
+            return primary();
+        }
+        if ( k == "Escape" || k == "Backspace" ) { if ( !back() ) variables.focus = "search"; return {}; }
+        if ( k == "/" ) { variables.focus = "search"; return {}; }
+        if ( compare( k, "q" ) == 0 ) return { action: "quit" };
+        if ( compare( k, chr( 92 ) ) == 0 ) return { action: "sidebar" };
+        if ( compare( k, "1" ) == 0 ) { goTab( 1 ); return {}; }
+        if ( compare( k, "2" ) == 0 ) { goTab( 2 ); return {}; }
+        if ( compare( k, "3" ) == 0 ) { goTab( 3 ); return {}; }
+        if ( compare( k, "r" ) == 0 ) { variables.searchedFor = ""; variables.searchRows = []; load(); variables.message = "Refreshed."; return {}; }
+        if ( compare( k, "s" ) == 0 && variables.tab == 1 ) {
+            variables.sortBy = variables.sortBy == "name" ? "size" : ( variables.sortBy == "size" ? "source" : "name" );
+            rebuild();
+            return {};
+        }
+        if ( compare( k, "f" ) == 0 && variables.tab == 1 ) {
+            var ss = sources();
+            var nxt = "";
+            if ( !len( variables.srcFilter ) ) nxt = ss.len() ? ss[ 1 ] : "";
+            else for ( var i = 1; i <= ss.len(); i++ ) if ( compare( ss[ i ], variables.srcFilter ) == 0 ) { nxt = i < ss.len() ? ss[ i + 1 ] : ""; break; }
+            variables.srcFilter = nxt;
+            rebuild();
+            return {};
+        }
+        var it = intentFor( k );
+        if ( structCount( it ) ) return it;
+        if ( printable( k ) ) { typeChar( k ); return {}; }
+        return {};
+    }
+
+    // A click: kind "atab" n, "arow" n, "asearch", "aact" n (the n-th action of the selected row).
+    function act( hit ) {
+        var h = arguments.hit;
+        if ( h.kind == "atab" ) { goTab( h.n ); return {}; }
+        if ( h.kind == "asearch" ) { variables.focus = "search"; return {}; }
+        if ( h.kind == "arow" ) {
+            var was = list().cursor();
+            list().select( h.n );
+            variables.focus = "list";
+            if ( was == h.n ) return onKey( "Enter" );
+            return {};
+        }
+        if ( h.kind == "aupdate" ) return updateAllIntent();
+        if ( h.kind == "aact" ) {
+            var acts = actionsFor( selected() );
+            if ( h.n >= 1 && h.n <= acts.len() ) {
+                if ( acts[ h.n ].intent.action == "apps-browse" ) return browse();
+                return acts[ h.n ].intent;
+            }
+        }
+        return {};
+    }
+
+    function onScroll( dir ) { list().move( arguments.dir == "up" ? -3 : 3 ); return {}; }
+
+    // What a test or `--json` reads.
+    function state() {
+        var out = [];
+        var n = 0;
+        for ( var r in rows() ) {
+            n++;
+            if ( n > 60 ) break;
+            out.append( { kind: r.kind, id: r.id ?: r.key ?: "", name: r.name, source: r.source ?: "", version: r.version ?: "", size: r.size ?: 0, installed: r.kind == "installed" ? true : ( r.installed ?: false ), since: r.kind == "installed" ? ( r.installed ?: "" ) : "", description: r.description ?: "" } );
+        }
+        return {
+            tab: [ "installed", "discover", "updates" ][ variables.tab ], focus: variables.focus, query: query(), counts: { installed: variables.installedRows.len(), updates: variables.updates.rows.len() },
+            updatesDone: variables.updates.done, updatesMissing: variables.updates.missing, searching: variables.searching, sort: variables.sortBy, filter: variables.srcFilter,
+            category: variables.catView, rows: out, cursor: list().cursor(), notes: notes()
+        };
+    }
+}

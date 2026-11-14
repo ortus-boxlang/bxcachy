@@ -13,7 +13,7 @@ code() { set +e; run "$@" >/dev/null 2>&1; local c=$?; set -e; echo "$c"; }
 apps="$tmp/data/applications"; icon="$tmp/data/icons/hicolor/256x256/apps/bxrig.png"
 
 # nothing exists until you ask
-run "$binary" launchers status --json | jq -e '.data.enabled == false and .data.present == 0 and .data.total == 16' >/dev/null || fail 'status before'
+run "$binary" launchers status --json | jq -e '.data.enabled == false and .data.present == 0 and .data.total == 17' >/dev/null || fail 'status before'
 [[ "$(code "$binary" launchers on)" == 2 ]] || fail 'on without --yes is a plan (exit 2)'
 [[ "$(code "$binary" launchers on --dry-run)" == 0 ]] || fail 'dry run exits 0'
 [[ ! -e "$apps" && ! -e "$icon" ]] || fail 'a plan or dry run wrote files'
@@ -25,7 +25,7 @@ run "$binary" launchers status --json | jq -e '.data.enabled == false and .data.
 printf 'com.mitchellh.ghostty.desktop\n' > "$tmp/cfg/xdg-terminals.list"
 run "$binary" launchers on --dry-run | grep -q "write $apps/bxrig-tui-databases.desktop" || fail 'plan names the files'
 [[ "$(code "$binary" launchers on --yes)" == 0 ]] || fail 'on --yes exits 0'
-[[ "$(ls "$apps"/bxrig-tui-*.desktop | wc -l)" == 16 ]] || fail 'one entry per page'
+[[ "$(ls "$apps"/bxrig-tui-*.desktop | wc -l)" == 17 ]] || fail 'one entry per page'
 f="$apps/bxrig-tui-databases.desktop"
 grep -qx 'Name=BxRig Databases' "$f" || fail "name: $(cat "$f")"
 grep -qx 'Icon=bxrig' "$f" || fail 'icon name'
@@ -34,8 +34,8 @@ grep -qx 'Exec=ghostty -e /opt/bxrig/bxrig tui databases' "$f" || fail "exec: $(
 ! grep -q StartupWMClass "$f" || fail 'no StartupWMClass is written'
 [[ "$(stat -c %a "$f")" == 644 ]] || fail 'mode 644'
 cmp "$icon" "$root/assets/icon.png" || fail 'the icon is the embedded one'
-run "$binary" launchers status --json | jq -e '.data.enabled and .data.present == 16 and .data.icon and .data.terminal == "ghostty"' >/dev/null || fail 'status after'
-run "$binary" launchers status | grep -q '16 of 16 launchers' || fail 'status text'
+run "$binary" launchers status --json | jq -e '.data.enabled and .data.present == 17 and .data.icon and .data.terminal == "ghostty"' >/dev/null || fail 'status after'
+run "$binary" launchers status | grep -q '17 of 17 launchers' || fail 'status text'
 
 # again: nothing to do
 [[ "$(code "$binary" launchers on --yes)" == 0 ]] || fail 'on twice is fine'
@@ -57,7 +57,7 @@ rm "$icon"
 [[ "$(code "$binary" launchers on --yes)" == 0 ]] || fail 'on again'
 cmp "$icon" "$root/assets/icon.png" || fail 'the icon is written again when it is missing'
 [[ "$(code "$binary" remove launchers)" == 2 ]] || fail 'remove launchers without --yes is a plan'
-[[ "$(ls "$apps"/bxrig-tui-*.desktop | wc -l)" == 16 ]] || fail 'the plan removed files'
+[[ "$(ls "$apps"/bxrig-tui-*.desktop | wc -l)" == 17 ]] || fail 'the plan removed files'
 [[ "$(code "$binary" remove launchers --yes)" == 0 ]] || fail 'remove launchers --yes'
 [[ -z "$(ls "$apps"/bxrig-tui-*.desktop 2>/dev/null)" && ! -e "$icon" ]] || fail 'remove launchers left files behind'
 run "$binary" launchers off --yes | grep -q 'No launchers' || fail 'off with nothing there says so'

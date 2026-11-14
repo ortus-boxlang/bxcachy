@@ -73,6 +73,8 @@ class ControlCenterApp {
         if ( arguments.it.action == "goto" ) { goto( arguments.it.page ); return {}; }
         if ( arguments.it.action == "reload" ) { page().load(); return {}; }
         if ( arguments.it.action == "ask" ) { variables.ask = { title: arguments.it.title, prompt: arguments.it.prompt, make: arguments.it.make, input: "" }; variables.mode = "ask"; return {}; }
+        if ( arguments.it.action == "quit" ) { variables.outcome = "quit"; return {}; }
+        if ( arguments.it.action == "sidebar" ) { toggleSidebar(); return {}; }
         if ( arguments.it.action == "launch" ) { variables.outcome = "launch:" & arguments.it.target; return {}; }
         return arguments.it;
     }
@@ -89,7 +91,7 @@ class ControlCenterApp {
                 variables.mode = "main";
                 return len( v ) ? variables.ask.make( v ) : {};
             }
-            if ( k == "Backspace" ) { variables.ask.input = len( variables.ask.input ) ? left( variables.ask.input, len( variables.ask.input ) - 1 ) : ""; return {}; }
+            if ( k == "Backspace" ) { variables.ask.input = len( variables.ask.input ) > 1 ? left( variables.ask.input, len( variables.ask.input ) - 1 ) : ""; return {}; }
             if ( k == "Space" ) variables.ask.input &= " ";
             else if ( len( k ) == 1 ) variables.ask.input &= k;
             return {};
@@ -101,8 +103,8 @@ class ControlCenterApp {
         }
         if ( k == "Ctrl+b" ) { toggleSidebar(); return {}; }
         if ( compare( k, chr( 92 ) ) == 0 && !pageCaptures() ) { toggleSidebar(); return {}; }
-        if ( k == "Tab" || k == "]" ) { step( 1 ); return {}; }
-        if ( k == "Shift+Tab" || k == "BackTab" || k == "[" ) { step( -1 ); return {}; }
+        if ( k == "Tab" ) { step( 1 ); return {}; }
+        if ( k == "Shift+Tab" || k == "BackTab" ) { step( -1 ); return {}; }
         if ( variables.focus == "sidebar" && sidebarOpen() ) {
             if ( k == "Up" || compare( k, "k" ) == 0 ) { step( -1 ); return {}; }
             if ( k == "Down" || compare( k, "j" ) == 0 ) { step( 1 ); return {}; }
@@ -111,6 +113,8 @@ class ControlCenterApp {
             return {};
         }
         if ( pageCaptures() ) return handleIntent( page().onKey( k ) );
+        if ( k == "]" ) { step( 1 ); return {}; }
+        if ( k == "[" ) { step( -1 ); return {}; }
         if ( k == "Left" ) { if ( sidebarOpen() ) variables.focus = "sidebar"; else toggleSidebar(); return {}; }
         if ( compare( k, "q" ) == 0 || k == "Escape" ) { variables.outcome = "quit"; return {}; }
         return handleIntent( page().onKey( k ) );

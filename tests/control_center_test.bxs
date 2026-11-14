@@ -52,8 +52,8 @@ check( "screen: the plan box", find( "System update", s2 ) > 0 && find( "Plan: p
 // ---- every page, in demo mode
 cc = new bxrig.ControlCenter( {} );
 pages = cc.buildPages( true );
-check( "pages: sixteen, in order", pages.len() == 16 && pages[ 1 ].id() == "dashboard" && pages[ 4 ].id() == "maven" && pages[ 5 ].id() == "gradle" && pages[ 7 ].id() == "ports" && pages[ 11 ].id() == "databases" && pages[ 12 ].id() == "mail" && pages[ 16 ].id() == "logs" );
-want = { boxlang: "1.9.0-snapshot", java: "temurin-21.0.13_9", maven: "3.10.0", gradle: "9.9.1", versions: "MatchBox", ports: "postgres", shortcuts: "Launcher", machines: "webtop-ubuntu", databases: "postgres", mail: "Your order 4821 has shipped", storage: "syno/backups", secrets: "ANTHROPIC_API_KEY", themes: "tokyo-night", logs: "port 5432 already in use" };
+check( "pages: seventeen, in order", pages.len() == 17 && pages[ 1 ].id() == "dashboard" && pages[ 2 ].id() == "apps" && pages[ 5 ].id() == "maven" && pages[ 6 ].id() == "gradle" && pages[ 8 ].id() == "ports" && pages[ 12 ].id() == "databases" && pages[ 13 ].id() == "mail" && pages[ 17 ].id() == "logs" );
+want = { apps: "Firefox", boxlang: "1.9.0-snapshot", java: "temurin-21.0.13_9", maven: "3.10.0", gradle: "9.9.1", versions: "MatchBox", ports: "postgres", shortcuts: "Launcher", machines: "webtop-ubuntu", databases: "postgres", mail: "Your order 4821 has shipped", storage: "syno/backups", secrets: "ANTHROPIC_API_KEY", themes: "tokyo-night", logs: "port 5432 already in use" };
 big = new bxrig.ControlCenterApp( pages, "" );
 for ( pg in pages ) {
     if ( pg.id() == "dashboard" ) continue;
@@ -144,7 +144,7 @@ check( "icons: on draws the home, plug and coffee icons in the sidebar and the p
 check( "icons: the page list still reads the same", find( "Dashboard", withIcons ) > 0 && find( "Databases", withIcons ) > 0 );
 // ---- the sidebar: collapse, toggle keys, breadcrumb, width, solo pages
 reg = new bxrig.ControlCenterPages();
-check( "registry: the pages are the Control Center pages, in order", reg.ids().len() == 16 && reg.ids().toList( "," ) == cc.buildPages( true ).map( function( q ) { return q.id(); } ).toList( "," ) && reg.find( "databases" ).title == "Databases" && structIsEmpty( reg.find( "nope" ) ) );
+check( "registry: the pages are the Control Center pages, in order", reg.ids().len() == 17 && reg.ids().toList( "," ) == cc.buildPages( true ).map( function( q ) { return q.id(); } ).toList( "," ) && reg.find( "databases" ).title == "Databases" && structIsEmpty( reg.find( "nope" ) ) );
 sb = new bxrig.ControlCenterApp( cc.buildPages( true ), "ports" );
 check( "sidebar: open by default", sb.sidebarOpen() );
 sb.onKey( chr( 92 ) ); check( "sidebar: the backslash key collapses it", !sb.sidebarOpen() );
@@ -189,8 +189,8 @@ check( "screen: 80 columns start collapsed", !nv.sidebarOpen() && find( "tab  ne
 // the menu and the shortcut table follow the registry
 mt = new bxrig.MenuTree().sections();
 ccs = mt.filter( function( e ) { return e.label == "Control Center"; } );
-check( "menu: a last Control Center section, the whole thing first, then every page", mt[ mt.len() ].label == "Control Center" && ccs.len() == 1 && ccs[ 1 ].children.len() == 17 && ccs[ 1 ].children[ 1 ].argv.len() == 1 && ccs[ 1 ].children[ 12 ].argv[ 2 ] == "databases" );
+check( "menu: a last Control Center section, the whole thing first, then every page", mt[ mt.len() ].label == "Control Center" && ccs.len() == 1 && ccs[ 1 ].children.len() == 18 && ccs[ 1 ].children[ 1 ].argv.len() == 1 && ccs[ 1 ].children[ 13 ].argv[ 2 ] == "databases" );
 tr = new bxrig.Shortcuts( {} ).table().filter( function( r ) { return left( r.id, 4 ) == "tui-"; } );
-check( "shortcuts: one unbound row per page, running bxrig tui PAGE", tr.len() == 16 && tr[ 1 ].keys == "" && find( "tui databases", tr[ 11 ].dispatch ) > 0 );
+check( "shortcuts: one unbound row per page, running bxrig tui PAGE", tr.len() == 17 && tr[ 1 ].keys == "" && find( "tui databases", tr[ 12 ].dispatch ) > 0 );
 if ( failures > 0 ) { println( failures & " failed" ); exit( 1 ); }
 println( "all passed" );

@@ -868,3 +868,12 @@ W1 this section; W2 native TUI in MatchBox; W3 `install.sh` (done); W4 init engi
 - **Sources and attribution:** Dashboard Icons (Apache-2.0, logos remain their owners' trademarks, used to identify the app); AppStream data from `archlinux-appstream-data`. No web image search.
 - **Settings:** `BXRIG_IMAGES=on|off`, `BXRIG_CACHE_HOME`, `BXRIG_IMAGE_CAP_KB`, `BXRIG_IMAGE_MAX_TIME`, `BXRIG_SHARE_DIR`.
 - **Build:** the compiler needs MatchBox built with `--features bif-tui`.
+
+### 13.52 The Apps manager (decided with the owner 2026-11-14)
+
+- **One page, three jobs.** `apps` is the second Control Center page (after Dashboard): Installed, Discover and Updates tabs, a search box that is always visible, a list and a preview. `bxrig tui apps [--demo] [--json]` runs it alone; `--json` prints the installed list and the update count (waiting up to 6 seconds for the update check).
+- **Classes.** `AppsData` (everything read from the machine, with demo data), `AppsModel` (tabs, search, keys, intents; pure), `AppsPage` (drawing). A future desktop app uses `AppsData` as it is.
+- **Sources of truth.** Installed: `.desktop` files, ONE `pacman -Qo` for all of them, `pacman -Qm` (AUR), `pacman -Sl` (repository names), `pacman -Qi` (size, date), `flatpak list` when flatpak exists. Discover: the embedded catalog first, then `bxrig pkg search --json` for the repositories and the AUR, run in a detached background job. Updates: `checkupdates` and `yay` or `paru -Qua` in a detached job. The page never waits for them.
+- **Keys.** Search focus: every printable key is text, Escape clears then quits, Down or Enter go to the list. List focus: `i x o n u s f r / 1 2 3`, Left and Right change tab, `q` quits, backslash toggles the sidebar. Tab and Shift+Tab always change page; `[` and `]` change page only on pages that do not take text. Pages ask the Control Center to quit or toggle the sidebar with the intents `{ action: "quit" }` and `{ action: "sidebar" }`.
+- **Changes.** Install goes through `bxrig install ID` or `bxrig pkg install NAME [--aur]` with its own `--dry-run` plan. Remove is an `exec` intent whose plan is written in words (what else goes, who needs it, that home files stay) and runs `bxrig pkg remove NAME --yes`. Update all is `bxrig system update`. Nothing runs before `y`.
+- **Tests.** `tests/apps_manager_test.bxs` (parsers, model, screens at 80x24 and 120x36), `tests/apps-manager-test.sh` (fake pacman, checkupdates, flatpak and `.desktop` files; asserts `-Qo` is called once).

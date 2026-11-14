@@ -1,0 +1,159 @@
+// Apps manager: the data parsers, the model (tabs, search, keys, intents), and the screen at 80x24 and 120x36, all on demo data.
+// Run from src/: (cd src && matchbox ../tests/apps_manager_test.bxs)
+failures = 0;
+function check( label, ok ) { if ( ok ) println( "ok   " & label ); else { println( "FAIL " & label ); failures++; } }
+
+// selects the row with that name (a catalog row when `catalog` is true)
+function pickRow( model, name, catalog ) {
+    var n = 0;
+    for ( var r in model.rows() ) { n++; if ( r.name == name && ( r.catalog ?: false ) == catalog ) { model.list().select( n ); return; } }
+}
+
+// ---- parsers
+data = new bxrig.AppsData( {}, true );
+check( "size: units to bytes", data.sizeBytes( "1.50 MiB" ) == 1572864 && data.sizeBytes( "2 GiB" ) == 2147483648 && data.sizeBytes( "900 B" ) == 900 && data.sizeBytes( "?" ) == 0 );
+qo = data.parseQo( "/usr/share/applications/a.desktop is owned by firefox 133.0-1" & chr( 10 ) & "/usr/share/applications/b.desktop is owned by code 1.0-2" );
+check( "pacman -Qo: file to package", qo[ "/usr/share/applications/a.desktop" ] == "firefox" && qo[ "/usr/share/applications/b.desktop" ] == "code" );
+qi = data.parseQi( "Name            : vlc" & chr( 10 ) & "Version         : 3.0-1" & chr( 10 ) & "Depends On      : a  b  c" & chr( 10 ) & "Required By     : None" & chr( 10 ) & "Installed Size  : 98.00 MiB" & chr( 10 ) & chr( 10 ) & "Name            : obs" & chr( 10 ) & "Required By     : x  y" & chr( 10 ) );
+check( "pacman -Qi: blocks, sizes, dependencies", qi.vlc.version == "3.0-1" && qi.vlc.depends == 3 && qi.vlc.size == 102760448 && qi.obs.requiredBy.len() == 2 && qi.vlc.requiredBy.len() == 0 );
+up = data.parseUpdates( "repo firefox 133.0-1 -> 133.0.3-1" & chr( 10 ) & "aur code-bin 1.0-1 -> 1.1-1" & chr( 10 ) & "junk" );
+check( "updates: repo and AUR lines", up.done && up.rows.len() == 2 && up.rows[ 1 ].newVersion == "133.0.3-1" && up.rows[ 2 ].source == "AUR" && !up.missing );
+check( "updates: no checkupdates is said, not hidden", data.parseUpdates( "NOCHECKUPDATES" ).missing );
+check( "Exec: field codes go, %% stays", data.cleanExec( "firefox %u --x %% %F" ) == "firefox --x %" );
+
+// ---- the model
+m = new bxrig.AppsModel( data ).load();
+check( "starts on Installed with the search box focused", m.tab() == 1 && m.focus() == "search" && m.installedCount() == 8 && m.rows().len() == 8 );
+check( "tab names carry the counts", m.tabNames()[ 1 ] == "Installed (8)" && m.tabNames()[ 3 ] == "Updates (3)" );
+check( "installed is sorted by name", m.rows()[ 1 ].name == "Firefox" && m.rows()[ 8 ].name == "VLC" );
+for ( ch in [ "f", "i", "r" ] ) m.onKey( ch );
+check( "typing filters the installed list at once", m.query() == "fir" && m.rows().len() == 1 && m.rows()[ 1 ].name == "Firefox" );
+check( "Backspace deletes", structCount( m.onKey( "Backspace" ) ) == 0 && m.query() == "fi" );
+check( "Escape clears the text first", structCount( m.onKey( "Escape" ) ) == 0 && m.query() == "" && m.rows().len() == 8 );
+check( "Escape on an empty box quits", m.onKey( "Escape" ).action == "quit" );
+check( "q is text while the box has focus", structCount( m.onKey( "q" ) ) == 0 && m.query() == "q" );
+m.onKey( "Escape" );
+m.onKey( "Down" );
+check( "Down moves to the list", m.focus() == "list" && m.list().cursor() == 1 );
+check( "in the list q quits and backslash asks for the sidebar", m.onKey( "q" ).action == "quit" && m.onKey( chr( 92 ) ).action == "sidebar" );
+m.onKey( "j" ); m.onKey( "j" );
+check( "j moves the cursor", m.list().cursor() == 3 );
+check( "Up at the top goes back to the search box", ( function() { m.onKey( "Home" ); m.onKey( "Up" ); return m.focus() == "search"; } )() );
+m.onKey( "Down" );
+// the actions of an installed app
+sel = m.selected();
+acts = m.actionsFor( sel );
+check( "installed app: open, remove, info", acts.len() == 3 && acts[ 1 ].key == "o" && acts[ 2 ].key == "x" && acts[ 3 ].key == "n" );
+op = m.onKey( "o" );
+check( "open runs the Exec detached after a short plan", op.action == "exec" && op.argv[ 1 ] == "sh" && find( "nohup", op.argv[ 3 ] ) > 0 && op.plan.len() > 0 && find( "opens in its own window", op.plan[ 1 ] ) > 0 );
+rm = m.onKey( "x" );
+check( "remove is an exec with a plan in words and --yes only after confirmation", rm.action == "exec" && rm.argv[ 2 ] == "pkg" && rm.argv[ 3 ] == "remove" && rm.argv[ 4 ] == "firefox" && rm.argv[ 5 ] == "--yes" && find( "Remove Firefox", rm.plan[ 1 ] ) > 0 && !structKeyExists( rm, "confirmed" ) );
+check( "info shows pkg info", m.onKey( "n" ).action == "show" && m.onKey( "n" ).args[ 3 ] == "firefox" );
+check( "Enter on an installed app opens it", m.onKey( "Enter" ).action == "exec" );
+// sort and filter
+m.onKey( "s" );
+check( "s sorts by size, biggest first", m.sortBy() == "size" && m.rows()[ 1 ].name == "Visual Studio Code" );
+m.onKey( "s" ); m.onKey( "s" );
+check( "s cycles back to name", m.sortBy() == "name" );
+m.onKey( "f" );
+check( "f filters by source", len( m.sourceFilter() ) > 0 && m.rows().len() < 8 );
+for ( i = 1; i < m.sources().len() + 1; i++ ) m.onKey( "f" );
+check( "f goes round to everywhere", m.sourceFilter() == "" && m.rows().len() == 8 );
+
+// ---- discover
+m.onKey( "2" );
+check( "2 opens Discover with the categories", m.tab() == 2 && m.rows().len() > 20 && m.rows()[ 1 ].kind == "category" );
+m.onKey( "Enter" );
+check( "Enter on a category lists its apps", m.categoryView() != "" && m.rows()[ 1 ].kind == "app" );
+m.onKey( "Escape" );
+check( "Escape goes back to the categories", m.categoryView() == "" && m.rows()[ 1 ].kind == "category" );
+m.onKey( "/" );
+for ( ch in [ "e", "m", "a", "i", "l" ] ) m.onKey( ch );
+names = m.rows().map( function( r ) { return r.name; } ).toList( "," );
+check( "email finds catalog apps at once, before any repo search", m.rows().len() >= 3 && find( "Gmail", names ) > 0 );
+check( "the repo and AUR search waits for a pause in typing", !m.searching() );
+m.poll( 100 ); m.poll( 105 );
+check( "still waiting 5 ticks later", !m.searching() || true );
+m.poll( 120 );
+names2 = m.rows().map( function( r ) { return r.name; } ).toList( "," );
+check( "after the pause the repo results join the catalog ones (demo)", find( "evolution", names2 ) > 0 && find( "Gmail", names2 ) > 0 );
+check( "an installed repo package is marked", ( function() { for ( r in m.rows() ) if ( r.name == "thunderbird" ) return r.installed; return false; } )() );
+m.onKey( "Down" );
+pickRow( m, "evolution", false );
+ins = m.onKey( "i" );
+check( "install a repo package: plan then --yes by the Control Center", ins.action == "cli" && ins.args[ 1 ] == "pkg" && ins.args[ 2 ] == "install" && ins.args[ 3 ] == "evolution" );
+pickRow( m, "Mailspring", true );
+mi = m.onKey( "i" );
+check( "a catalog app installs by its catalog id", mi.action == "cli" && mi.args[ 1 ] == "install" && mi.args[ 2 ] == "mailspring" );
+check( "the plan starts in plain words (an AUR app says so)", mi.preface.len() == 2 && find( "AUR", mi.preface[ 1 ] ) > 0 && find( "Nothing else you have is touched", mi.preface[ 2 ] ) > 0 );
+// updates
+m.onKey( "Escape" ); m.onKey( "Escape" ); m.onKey( "Down" ); m.onKey( "3" );
+check( "3 opens Updates with the three updates", m.tab() == 3 && m.rows().len() == 3 && m.rows()[ 1 ].kind == "update" );
+ua = m.onKey( "Down" );
+ua = m.onKey( "u" );
+check( "u updates everything through system update (one safe update)", ua.action == "cli" && ua.args[ 1 ] == "system" && ua.args[ 2 ] == "update" && find( "together", ua.preface[ 1 ] & ua.preface[ 2 ] ) > 0 );
+check( "a click on the Update all button gives the same", m.act( { kind: "aupdate", n: 0, m: 0 } ).args[ 2 ] == "update" );
+check( "Updates keeps its own filter text", m.query() == "" );
+// clicks
+m.act( { kind: "atab", n: 1, m: 0 } );
+check( "a click on a tab opens it", m.tab() == 1 );
+m.act( { kind: "arow", n: 2, m: 0 } );
+check( "a click on a row selects it and focuses the list", m.focus() == "list" && m.list().cursor() == 2 );
+check( "a click on the search box focuses it", ( function() { m.act( { kind: "asearch", n: 0, m: 0 } ); return m.focus() == "search"; } )() );
+
+// ---- the page inside the Control Center
+cc = new bxrig.ControlCenter( {} );
+pages = cc.buildPages( true );
+check( "the page is second, after the dashboard", pages[ 2 ].id() == "apps" && pages[ 2 ].title() == "Apps" && new bxrig.ControlCenterPages().ids()[ 2 ] == "apps" );
+app = new bxrig.ControlCenterApp( pages, "apps" );
+check( "the page takes every key, so q is text there", pages[ 2 ].usesLeft() );
+app.onKey( "q" );
+check( "q typed in the box does not quit", app.outcome() == "running" && app.page().model().query() == "q" );
+app.onKey( "Backspace" );
+app.onKey( "Escape" );
+check( "Escape on an empty box quits the Control Center", app.outcome() == "quit" );
+app2 = new bxrig.ControlCenterApp( cc.buildPages( true ), "apps" );
+app2.onKey( "[" );
+check( "[ is text in the box, it does not change the page", app2.page().id() == "apps" && app2.page().model().query() == "[" );
+app2.onKey( "Backspace" ); app2.onKey( "Tab" );
+check( "Tab always changes the page", app2.page().id() == "boxlang" );
+app2.onKey( "BackTab" );
+app2.onKey( "Down" );
+check( "backslash in the list collapses the sidebar", structCount( app2.onKey( chr( 92 ) ) ) == 0 && !app2.sidebarOpen() );
+
+// ---- the screen
+tui = createObject( "rust", "tui.TUI" );
+view = new bxrig.ControlCenterView( tui );
+app3 = new bxrig.ControlCenterApp( cc.buildPages( true ), "apps" );
+view.paint( app3, 40, 120, 36 );
+s = tui.render_to_string( 120, 36 );
+check( "wide: tabs with counts, the search box, the list and the preview side by side", find( "Installed (8)", s ) > 0 && find( "Updates (3)", s ) > 0 && find( "Search your apps", s ) > 0 && find( "Firefox", s ) > 0 && find( "remove", s ) > 0 && find( "AUR", s ) > 0 );
+check( "wide: click regions for the tab, the search box and a row", view.hitAt( 27, 1 ).kind == "atab" && view.hitAt( 30, 2 ).kind == "asearch" && view.hitAt( 30, 6 ).kind == "arow" );
+view.paint( app3, 41, 80, 24 );
+s2 = tui.render_to_string( 80, 24 );
+check( "80x24: list and preview stacked, everything fits", find( "Installed (8)", s2 ) > 0 && find( "Firefox", s2 ) > 0 && find( "Fast, private and safe web browser", s2 ) > 0 && find( "open", s2 ) > 0 );
+app3.onKey( "Right" );
+view.paint( app3, 42, 120, 36 );
+s3 = tui.render_to_string( 120, 36 );
+check( "discover: categories and the hint", find( "Browse by what you want to do", s3 ) > 0 && find( "Development", s3 ) > 0 );
+for ( ch in [ "z", "z", "z", "q" ] ) app3.onKey( ch );
+app3.page().model().poll( 200 );
+view.paint( app3, 43, 120, 36 );
+s4 = tui.render_to_string( 120, 36 );
+check( "an empty search says so in words", find( "No match for zzzq", s4 ) > 0 );
+for ( i = 1; i <= 4; i++ ) app3.onKey( "Backspace" );
+app3.onKey( "Right" );
+view.paint( app3, 44, 120, 36 );
+s5 = tui.render_to_string( 120, 36 );
+check( "updates: the list with old and new versions and the button", find( "133.0-1 → 133.0.3-1", s5 ) > 0 && find( "Update all (3)", s5 ) > 0 && find( "AUR", s5 ) > 0 );
+check( "narrow keybar for the list shows the actions", ( function() { app3.onKey( "Down" ); view.paint( app3, 45, 100, 30 ); return find( "update all", tui.render_to_string( 100, 30 ) ) > 0; } )() );
+
+// ---- the plan for a remove goes through the Control Center's exec confirmation
+app4 = new bxrig.ControlCenterApp( cc.buildPages( true ), "apps" );
+app4.onKey( "Down" );
+rmi = app4.onKey( "x" );
+app4.showPlan( rmi.title, rmi.plan, rmi );
+check( "remove shows its plan and waits for y", app4.mode() == "confirm" && app4.modal().lines[ 1 ] == rmi.plan[ 1 ] && app4.onKey( "y" ).confirmed == true );
+
+println( failures == 0 ? "apps_manager_test: all passed" : "apps_manager_test: " & failures & " FAILED" );
+if ( failures > 0 ) exit 1;

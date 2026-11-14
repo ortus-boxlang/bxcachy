@@ -1,0 +1,271 @@
+// The Apps page of the Control Center: install and remove software without knowing what a package is.
+// Three tabs (Installed, Discover, Updates), a search box that is always there (typing searches), the list, and a preview with the app's icon and
+// screenshots next to it (under the list on a narrow terminal). Every change shows a plan in plain words first. The page only draws; AppsModel decides.
+//   id() title() icon() load() state() keys() paint( kit, x, y, w, h, tick, phase ) onKey( key ) act( hit ) onScroll( dir ) usesLeft()
+class AppsPage {
+    function init( demo = false ) {
+        variables.demo = arguments.demo;
+        variables.model = new bxrig.AppsModel( new bxrig.AppsData( {}, arguments.demo ) );
+        variables.icons = new bxrig.AppIcons();
+        variables.iconPaths = {};
+        variables.shotPaths = {};
+        variables.lastTick = 0;
+        return this;
+    }
+
+    function id() { return "apps"; }
+    function title() { return "Apps"; }
+    function icon() { return "cube"; }
+    function model() { return variables.model; }
+    // The search box takes letters, so every key goes to this page; the page asks for "quit" and "sidebar" itself.
+    function usesLeft() { return true; }
+    function load() { variables.model.load(); return this; }
+    function state() { return variables.model.settle( 6 ).state(); }
+    function onKey( key ) { return variables.model.onKey( arguments.key ); }
+    function act( hit ) { return variables.model.act( arguments.hit ); }
+    function onScroll( dir ) { return variables.model.onScroll( arguments.dir ); }
+
+    function keys() {
+        var m = variables.model;
+        if ( m.focus() == "search" ) return [ [ "type", "search" ], [ "↓", "results" ], [ "←→", "tabs" ], [ "Esc", m.query() == "" ? "quit" : "clear" ] ];
+        var out = [ [ "↑↓", "move" ] ];
+        var sel = m.selected();
+        if ( !isSimpleValue( sel ) ) for ( var a in m.actionsFor( sel ) ) out.append( [ a.key, a.label ] );
+        out.append( [ "←→", "tabs" ] );
+        out.append( [ "/", "search" ] );
+        return out;
+    }
+
+    // ---- text helpers ----
+    function pad( s, w ) { var t = s & ""; return len( t ) >= w ? left( t, max( 0, w - 1 ) ) & " " : t & repeatString( " ", w - len( t ) ); }
+    function padLeft( s, w ) { var t = s & ""; return len( t ) >= w ? t : repeatString( " ", w - len( t ) ) & t; }
+
+    function rowString( r, iw, kit ) {
+        var nameW = max( 12, arguments.iw - 22 );
+        if ( arguments.r.kind == "category" ) return pad( arguments.r.name, max( 12, arguments.iw - 33 ) ) & pad( arguments.r.groupTitle, 22 ) & padLeft( arguments.r.count & ( arguments.r.count == 1 ? " app" : " apps" ), 8 );
+        if ( arguments.r.kind == "update" ) return pad( arguments.r.name, nameW - 6 ) & pad( arguments.r.source, 9 ) & arguments.r.version & " → " & arguments.r.newVersion;
+        var mark = ( arguments.r.installed ?: false ) && arguments.r.kind != "installed" ? "✓ " : "";
+        var sz = ( arguments.r.size ?: 0 ) > 0 ? padLeft( arguments.kit.size( arguments.r.size ), 8 ) : padLeft( "", 8 );
+        return pad( mark & arguments.r.name, nameW ) & pad( arguments.r.source ?: "", 11 ) & sz;
+    }
+
+    function sourceColor( kit, source ) {
+        var s = arguments.source;
+        if ( s == "AUR" ) return arguments.kit.color( "YELLOW" );
+        if ( s == "Flatpak" ) return arguments.kit.color( "MAUVE" );
+        if ( s == "web app" ) return arguments.kit.color( "SKY" );
+        if ( s == "built here" ) return arguments.kit.color( "PEACH" );
+        return arguments.kit.color( "CYAN" );
+    }
+
+    function sourceWords( r ) {
+        var s = arguments.r.source ?: "";
+        if ( s == "AUR" ) return "From the AUR: build scripts shared by the community. Look before you trust.";
+        if ( s == "Flatpak" ) return "A Flatpak: it runs in its own sandbox.";
+        if ( s == "web app" ) return "A web app: it opens as its own window, nothing to install.";
+        if ( s == "built here" ) return "Installed from outside the repositories.";
+        if ( len( s ) ) return "From the " & s & " repository.";
+        return "";
+    }
+
+    // ---- pictures ----
+    // The icon path for a row, found once and tried again every few seconds until the background download is done. Never throws.
+    function iconPath( r, tick ) {
+        if ( variables.demo ) return "";
+        var key = ( arguments.r.kind ?: "" ) & ":" & ( arguments.r.id ?: "" ) & ":" & ( arguments.r.name ?: "" );
+        var hold = structKeyExists( variables.iconPaths, key ) ? variables.iconPaths[ key ] : { path: "", at: -1000 };
+        if ( !len( hold.path ) && arguments.tick - hold.at >= 60 ) {
+            var found = "";
+            try { found = variables.icons.iconFor( len( arguments.r.icon ?: "" ) ? arguments.r.icon : ( len( arguments.r.pkg ?: "" ) ? arguments.r.pkg : arguments.r.name ), "dark" ); } catch ( any e ) {}
+            hold = { path: found, at: arguments.tick };
+            variables.iconPaths[ key ] = hold;
+        }
+        return hold.path;
+    }
+
+    function shotPaths( r, tick ) {
+        if ( variables.demo || !len( arguments.r.file ?: "" ) ) return [];
+        var id = replace( getFileFromPath( arguments.r.file ), ".desktop", "" );
+        var hold = structKeyExists( variables.shotPaths, id ) ? variables.shotPaths[ id ] : { paths: [], at: -1000 };
+        if ( !hold.paths.len() && arguments.tick - hold.at >= 80 ) {
+            var found = [];
+            try { found = variables.icons.screenshotsFor( id ); } catch ( any e ) {}
+            hold = { paths: found, at: arguments.tick };
+            variables.shotPaths[ id ] = hold;
+        }
+        return hold.paths;
+    }
+
+    // ---- painting ----
+    function paint( kit, x, y, w, h, tick, phase ) {
+        var k = arguments.kit;
+        var m = variables.model;
+        var C = function( n ) { return k.color( n ); };
+        var tk = arguments.tick;
+        m.poll( tk );
+        variables.lastTick = tk;
+        // tabs and the sort and filter line
+        var tx = k.tabs( arguments.x, arguments.y, m.tabNames(), m.tab(), "atab", arguments.phase );
+        if ( m.tab() == 1 ) {
+            var info = "sorted by " & m.sortBy() & "   from: " & ( len( m.sourceFilter() ) ? m.sourceFilter() : "everywhere" );
+            if ( tx + len( info ) + 2 < arguments.x + arguments.w ) k.put( arguments.x + arguments.w - len( info ) - 1, arguments.y, info, C( "OVERLAY" ), C( "BASE" ) );
+        }
+        // the search box
+        var sy = arguments.y + 1;
+        var typing = m.focus() == "search";
+        k.fillRect( arguments.x, sy, arguments.w, 1, typing ? C( "SURFACE1" ) : C( "SURFACE0" ) );
+        var prompt = m.tab() == 1 ? "Search your apps" : ( m.tab() == 2 ? "Search for an app, like: email, browser, docker" : "Filter the updates" );
+        if ( len( m.query() ) ) k.put( arguments.x + 2, sy, m.query() & ( typing ? "▌" : "" ), C( "TEXT" ), typing ? C( "SURFACE1" ) : C( "SURFACE0" ), true );
+        else k.put( arguments.x + 2, sy, ( typing ? "▌ " : "" ) & prompt, C( "OVERLAY" ), typing ? C( "SURFACE1" ) : C( "SURFACE0" ) );
+        k.put( arguments.x + 0, sy, typing ? "›" : " ", C( "GREEN" ), typing ? C( "SURFACE1" ) : C( "SURFACE0" ), true );
+        k.hit( "asearch", arguments.x, sy, arguments.w, 1 );
+        // status line
+        var status = statusText();
+        var btnW = m.tab() == 3 && m.updateCount() > 0 ? 22 : 2;
+        k.put( arguments.x + 1, arguments.y + 2, k.trunc( status, arguments.w - btnW - 1 ), m.searching() ? C( "YELLOW" ) : C( "OVERLAY" ), C( "BASE" ) );
+        if ( m.tab() == 3 && m.updateCount() > 0 ) {
+            var lab = " u  Update all (" & m.updateCount() & ") ";
+            var bx = arguments.x + arguments.w - len( lab ) - 1;
+            k.put( bx, arguments.y + 2, lab, C( "CRUST" ), C( "GREEN" ), true );
+            k.hit( "aupdate", bx, arguments.y + 2, len( lab ), 1 );
+        }
+        var by = arguments.y + 3;
+        var bh = arguments.h - 3;
+        if ( bh < 6 ) return;
+        var wide = arguments.w >= 88;
+        var lw = wide ? max( 44, int( arguments.w * 0.54 ) ) : arguments.w;
+        var lh = wide ? bh : max( 6, int( bh * 0.5 ) );
+        k.panel( arguments.x, by, lw, lh, "", false, arguments.phase );
+        var inner = max( 1, lh - 2 );
+        m.setRowsShown( inner );
+        var rows = m.rows();
+        if ( rows.len() ) {
+            var me = this;
+            var iw = lw - 3;
+            k.listView( arguments.x + 1, by + 1, iw, inner, m.list(), "arow", function( it, on ) { return me.rowString( it, iw, k ); } );
+        } else {
+            var lines = emptyLines();
+            var ey = by + 1;
+            for ( var ln in lines ) { if ( ey >= by + lh - 1 ) break; k.put( arguments.x + 2, ey, k.trunc( ln, lw - 4 ), C( "OVERLAY" ), C( "MANTLE" ) ); ey++; }
+        }
+        if ( rows.len() > inner ) k.put( arguments.x + lw - 12, by, " " & m.list().cursor() & "/" & m.list().count() & " ", C( "OVERLAY" ), C( "MANTLE" ) );
+        // the preview
+        var px = wide ? arguments.x + lw + 1 : arguments.x;
+        var py = wide ? by : by + lh;
+        var pw = wide ? arguments.w - lw - 1 : arguments.w;
+        var ph = wide ? bh : bh - lh;
+        paintPreview( k, px, py, pw, ph, tk, arguments.phase );
+    }
+
+    function statusText() {
+        var m = variables.model;
+        if ( m.tab() == 1 ) return m.list().count() & " of " & m.installedCount() & " apps" & ( len( m.query() ) ? " match" : "" );
+        if ( m.tab() == 3 ) {
+            if ( !m.updatesDone() ) return "Checking for updates...";
+            return m.updateCount() ? m.updateCount() & " updates ready. Arch updates everything together, which is the safe way." : "";
+        }
+        if ( len( trim( m.query() ) ) < 2 ) return len( m.categoryView() ) ? listLast( m.categoryView(), "/" ) & "   (Esc goes back)" : "Browse by what you want to do, or just start typing.";
+        if ( m.searching() ) return m.list().count() & " in the catalog so far. Searching the repositories and the AUR...";
+        if ( len( m.searchError() ) ) return m.searchError();
+        return m.list().count() & " results: catalog first, then the repositories and the AUR.";
+    }
+
+    function emptyLines() {
+        var m = variables.model;
+        var q = trim( m.query() );
+        var out = [];
+        if ( !m.isLoaded() ) return [ "Reading your apps..." ];
+        if ( m.tab() == 1 ) {
+            if ( len( q ) || len( m.sourceFilter() ) ) return [ "Nothing installed matches that.", "", "Esc clears the search. Right looks for it in Discover." ];
+            out = [ "No apps found yet.", "", "Press 2 to discover apps." ];
+            for ( var n in m.notes() ) out.append( n );
+            return out;
+        }
+        if ( m.tab() == 2 ) {
+            if ( m.searching() ) return [ "Searching the repositories and the AUR for " & q & "..." ];
+            if ( len( m.searchError() ) ) return [ m.searchError() ];
+            return [ "No match for " & q & " in the catalog, the repositories or the AUR.", "", "Try a shorter or simpler word." ];
+        }
+        if ( !m.updatesDone() ) return [ "Checking for updates...", "", "This takes a few seconds." ];
+        if ( m.updatesMissing() ) return [ "The update checker (checkupdates, from pacman-contrib) is not installed.", "", "You can still run a full update from the dashboard." ];
+        if ( len( q ) ) return [ "No update matches that." ];
+        return [ "Everything is up to date." ];
+    }
+
+    function paintPreview( k, x, y, w, h, tick, phase ) {
+        var m = variables.model;
+        var C = function( n ) { return k.color( n ); };
+        k.panel( arguments.x, arguments.y, arguments.w, arguments.h, "", false, arguments.phase );
+        var sel = m.selected();
+        if ( isSimpleValue( sel ) ) {
+            k.put( arguments.x + 2, arguments.y + 1, "Pick an app to see what it is.", C( "OVERLAY" ), C( "MANTLE" ) );
+            return;
+        }
+        var tw = arguments.h >= 14 ? 12 : 8;
+        var th = arguments.h >= 14 ? 6 : 4;
+        var ix = arguments.x + 2;
+        var iy = arguments.y + 1;
+        if ( sel.kind == "category" ) {
+            k.iconTile( ix, iy, tw, th, sel.title ?: sel.name );
+        } else {
+            var shown = k.imageOrTile( ix, iy, tw, th, iconPath( sel, arguments.tick ), sel.name );
+        }
+        var tx = ix + tw + 2;
+        var textW = arguments.x + arguments.w - tx - 2;
+        if ( textW < 10 ) { tx = ix; textW = arguments.w - 4; }
+        k.put( tx, iy, k.trunc( sel.name, textW ), C( "TEXT" ), C( "MANTLE" ), true );
+        var d = m.detail();
+        var line = iy + 1;
+        if ( sel.kind == "category" ) {
+            k.put( tx, line, k.trunc( sel.count & " apps", textW ), C( "SUB" ), C( "MANTLE" ) );
+        } else {
+            var src = sel.source ?: "";
+            var nx = tx;
+            if ( len( src ) ) nx = k.badge( nx, line, src, sourceColor( k, src ) ) + 1;
+            if ( ( sel.installed ?: false ) && sel.kind != "installed" ) nx = k.badge( nx, line, "installed", C( "GREEN" ) ) + 1;
+            var ver = len( sel.newVersion ?: "" ) ? sel.version & " → " & sel.newVersion : ( len( sel.version ?: "" ) ? sel.version : ( d.version ?: "" ) );
+            line++;
+            if ( len( ver ) ) { k.put( tx, line, k.trunc( ver, textW ), C( "SUB" ), C( "MANTLE" ) ); line++; }
+            var sz = ( sel.size ?: 0 ) > 0 ? sel.size : ( d.size ?: 0 );
+            var facts = ( sz > 0 ? k.size( sz ) : "" ) & ( len( d.installed ?: "" ) ? "   since " & d.installed : "" );
+            if ( len( facts ) && line < iy + th ) { k.put( tx, line, k.trunc( facts, textW ), C( "OVERLAY" ), C( "MANTLE" ) ); line++; }
+        }
+        // description and where it comes from
+        var ty = iy + th + 1;
+        var bottom = arguments.y + arguments.h - 2;
+        var desc = len( sel.description ?: "" ) ? sel.description : ( d.description ?: "" );
+        if ( sel.kind == "category" ) desc = sel.description ?: "";
+        for ( var dl in k.wrap( desc, arguments.w - 4 ) ) { if ( ty >= bottom ) break; k.put( arguments.x + 2, ty, dl, C( "SUB" ), C( "MANTLE" ) ); ty++; }
+        var sw = sel.kind == "category" ? "" : sourceWords( sel );
+        if ( len( sw ) && ty < bottom ) { k.put( arguments.x + 2, ty, k.trunc( sw, arguments.w - 4 ), ( sel.source ?: "" ) == "AUR" ? C( "YELLOW" ) : C( "OVERLAY" ), C( "MANTLE" ) ); ty++; }
+        if ( structKeyExists( d, "depends" ) && isNumeric( d.depends ) && ty < bottom && sel.kind != "category" ) {
+            var needs = d.depends & " " & ( d.depends == 1 ? "dependency" : "dependencies" );
+            var req = isArray( d.requiredBy ?: "" ) && d.requiredBy.len() ? "   needed by " & d.requiredBy.len() & " " & ( d.requiredBy.len() == 1 ? "package" : "packages" ) : "";
+            k.put( arguments.x + 2, ty, k.trunc( needs & req, arguments.w - 4 ), C( "OVERLAY" ), C( "MANTLE" ) );
+            ty++;
+        }
+        // screenshots
+        var shots = shotPaths( sel, arguments.tick );
+        var room = bottom - ty - 1;
+        if ( shots.len() && room >= 4 && k.hasImages() ) {
+            var sx = arguments.x + 2;
+            var sh = min( room, 10 );
+            var each = min( int( ( arguments.w - 4 ) / min( 3, shots.len() ) ) - 1, sh * 4 );
+            for ( var si = 1; si <= min( 3, shots.len() ); si++ ) {
+                k.image( sx, ty + 1, each, sh, shots[ si ], { fit: "cover" } );
+                sx += each + 1;
+            }
+        }
+        // the buttons
+        var ax = arguments.x + 2;
+        var an = 0;
+        for ( var a in m.actionsFor( sel ) ) {
+            an++;
+            var lab = " " & a.key & "  " & a.label & " ";
+            if ( ax + len( lab ) > arguments.x + arguments.w - 2 ) break;
+            k.put( ax, bottom, lab, an == 1 ? C( "CRUST" ) : C( "TEXT" ), an == 1 ? C( "GREEN" ) : C( "SURFACE0" ), an == 1 );
+            k.hit( "aact", ax, bottom, len( lab ), 1, an );
+            ax += len( lab ) + 1;
+        }
+    }
+}

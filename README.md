@@ -62,6 +62,7 @@ bxrig display scale DP-2 1.5
 bxrig time sync --yes         # after you travel
 bxrig timemachine             # every backup on one timeline
 bxrig tui                     # the Control Center: dashboard and pages
+bxrig tui apps                # find, install and remove software, Windows easy
 bxrig tui databases           # one page on its own, like an app (bxrig tui list shows them all)
 bxrig launchers on --yes      # optional: an application-menu entry per page
 bxrig mail start --yes        # a local inbox for your app's mail
